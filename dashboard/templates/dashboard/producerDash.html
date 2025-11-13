@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>Producer Dashboard</title>
+    <style>
+        /* Estilos Globais e Reset */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #e3f2fd;
+            color: #333;
+        }
+
+        /* Container Principal do Dashboard */
+        .dashboard-container {
+            display: flex;
+            height: 100vh;
+            background: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 50, 0, 0.1);
+            margin: 20px;
+            overflow: hidden;
+        }
+
+        /* Sidebar (Menu Lateral Esquerdo) */
+        .sidebar {
+            width: 250px;
+            background-color: #f7fff7;
+            padding: 20px 0;
+            border-right: 1px solid #eee;
+            flex-shrink: 0;
+        }
+        .sidebar-header {
+            padding: 0 20px 30px;
+            font-size: 1.5em;
+            color: #00796b; /* Um verde forte */
+            font-weight: 600;
+        }
+        .user-info {
+            padding: 0 20px 20px;
+            font-size: 0.9em;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 15px;
+        }
+        .user-info p {
+            margin: 5px 0;
+        }
+        .menu-item {
+            display: block;
+            padding: 10px 20px;
+            color: #333;
+            text-decoration: none;
+            transition: background-color 0.2s;
+        }
+        .menu-item:hover {
+            background-color: #e0f2f1;
+        }
+        .logout-link {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: #d32f2f;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        /* Conteúdo Principal */
+        .main-content {
+            flex-grow: 1;
+            padding: 40px;
+            overflow-y: auto;
+        }
+
+        .main-header {
+            display: flex;
+            justify-content: flex-end; /* Alinha o conteúdo (o botão) à direita */
+            align-items: center;
+            padding: 10px 30px; /* Espaçamento no topo e nas laterais */
+            width: 100%;
+            /* Se quiser que fique fixo no topo, adicione: 
+            position: sticky; top: 0; background-color: white; z-index: 10; */
+        }
+
+        /* Estilo para o Botão de Logout */
+        .logout-button {
+            background-color: #d32f2f; /* Vermelho */
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+            /* Garante que o botão aparece acima de outros elementos se necessário */
+            z-index: 1; 
+        }
+
+        .logout-button:hover {
+            background-color: #b71c1c;
+        }
+
+        .main-header {
+            display: flex;
+            justify-content: space-between; 
+            align-items: center;
+            padding: 10px 30px; 
+            width: 100%;
+            
+            /* Mantenha os outros estilos que adicionou no final: */
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e0f2f1;
+            padding-bottom: 15px;
+        }
+
+        .main-header h2 {
+            margin: 0;
+            color: #004d40;
+        }
+
+        /* Abas (Tabs) */
+        .tab-bar {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ccc;
+        }
+        .tab-link {
+            background-color: transparent;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 10px 20px;
+            transition: background-color 0.2s, color 0.2s;
+            font-size: 1.0em;
+            color: #555;
+            border-radius: 5px 5px 0 0;
+        }
+        .tab-link:hover {
+            background-color: #f0f0f0;
+        }
+        .tab-link.active {
+            background-color: #e0f2f1;
+            color: #00796b;
+            font-weight: 600;
+            border: 1px solid #ccc;
+            border-bottom: none;
+        }
+        .tab-content {
+            padding: 20px 0;
+        }
+
+        /* Formulários */
+        .form-section {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #eee;
+            margin-bottom: 30px;
+        }
+        .form-section h3 {
+            color: #00796b;
+            border-bottom: 1px dashed #e0f2f1;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+        .submit-button {
+            background-color: #00796b;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s;
+            margin-top: 15px;
+        }
+        .submit-button:hover {
+            background-color: #004d40;
+        }
+
+        /* Tabelas */
+        .data-table-container {
+            margin-bottom: 40px;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .data-table th, .data-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        .data-table th {
+            background-color: #e0f2f1;
+            color: #004d40;
+            font-weight: 600;
+        }
+        .data-table tbody tr:nth-child(even) {
+            background-color: #f7f7f7;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                Eureka
+            </div>
+            <div class="user-info">
+                <p>Bem-vindo(a), <strong>{{ username }}</strong></p>
+                <p>Role: <span style="color: #00796b;">{{ role }}</span></p>
+            </div>
+            
+            <nav>
+                <a href="{% url 'producer_dashboard' %}" class="menu-item">🏠 Dashboard</a>
+            </nav>
+
+        </div>
+
+        <div class="main-content">
+            <div class="main-header">
+                <h2>Dashboard do Produtor</h2>
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-button">
+                        Logout
+                    </button>
+                </form>
+            </div>
+
+            <div class="tab-bar">
+                <button class="tab-link active" onclick="openTab(event, 'insert-info')">➕ Registar</button>
+                <button class="tab-link" onclick="openTab(event, 'data-view')">👁️ Visualizar Registos</button>
+            </div>
+
+            <div id="insert-info" class="tab-content" style="display: block;">
+                
+                <div class="form-section">
+                    <h3>🌱 1. Registar um Novo Produto</h3>
+                    <p>Registe o produto que irá cultivar.</p>
+                    
+                    <form method="POST" action="{% url 'producer_submit_product' %}">
+                        {% csrf_token %}
+                        
+                        {{ product_registration_form.as_p }}
+                        
+                        <button type="submit" class="submit-button">Registar Produto</button>
+                    </form>
+                </div>
+
+                <hr style="margin: 40px 0;">
+
+                <div class="form-section">
+                    <h3>🗓️ 2. Registar Plano de Plantação</h3>
+                    
+                    <form method="POST" action="{% url 'producer_submit_plantation' %}">
+                        {% csrf_token %}
+                        
+                        {{ plantation_plan_form.as_p }}
+                        
+                        <button type="submit" class="submit-button">Registar Plantação</button>
+                    </form>
+                </div>
+
+                <div class="form-section">
+                    <h3>🌾 3. Registar Colheita</h3>
+                    
+                    <form method="POST" action="{% url 'producer_submit_harvest' %}">
+                        {% csrf_token %}
+                        
+                        {{ harvest_form.as_p }}
+                        
+                        <button type="submit" class="submit-button">Registar Colheita e Concluir Plano</button>
+                    </form>
+                </div>
+
+            </div>
+
+            <div id="data-view" class="tab-content" style="display: none;">
+                
+            <div class="data-table-container">
+                    <h3>&#x1F464; Dados Pessoais e de Perfil</h3>
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Campo</th><th>Valor</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Username</td><td>{{ username }}</td></tr>
+                            <tr><td>Role</td><td>{{ role }}</td></tr>
+                            <tr><td>ID do Utilizador</td><td>{{ request.user.id }}</td></tr>
+                            <tr><td>Email</td><td>{{ request.user.email }}</td></tr>
+
+                            {% if user_profile %}
+                            <tr>
+                                <td>Telemóvel</td>
+                                <td>{{ user_profile.phone_number|default:"N/A" }}</td>
+                            </tr>
+                            <tr>
+                                <td>Morada Completa</td>
+                                <td>{{ user_profile.address|default:"Não especificada" }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="2" style="font-style: italic; color: #a00;">
+                                    Erro: Dados de Perfil (Telemóvel/Morada) não encontrados.
+                                </td>
+                            </tr>
+                            {% endif %}
+                            </tbody>
+                    </table>
+                </div>
+
+                <hr style="margin: 40px 0;">
+
+                <div class="data-table-container">
+                    <h3>&#x1F4E6; Produtos Registados</h3>
+                    {% if registered_products %}
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID Produto</th>
+                                <th>Nome</th>
+                                <th>Categoria</th>
+                                <th>Preço (€)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in registered_products %}
+                            <tr>
+                                <td>{{ product.product_id }}</td>
+                                <td>{{ product.name }}</td>
+                                <td>{{ product.category }}</td>
+                                <td>{{ product.price|default:"N/A" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p>Ainda não tem produtos registados.</p>
+                    {% endif %}
+                </div>
+
+                <hr style="margin: 40px 0;">
+
+                <div class="data-table-container">
+                    <h3>🗺️ Plantações</h3>
+                    {% if plantation_plans %}
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID Plano</th>
+                                <th>Produto (Nome)</th>
+                                <th>Área</th>
+                                <th>Localização</th>
+                                <th>Data Plantação</th>
+                                <th>Sementes</th>
+                                <th>Tipo Prod.</th>
+                                <th>Uso Químico</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for plan in plantation_plans %}
+                            <tr>
+                                <td>{{ plan.plantation_id }}</td>
+                                <td>{{ plan.product.name }}</td>
+                                <td>{{ plan.area }}</td>
+                                <td>{{ plan.location }}</td>
+                                <td>{{ plan.plantation_date }}</td>
+                                <td>{{ plan.quantity_of_seeds }}</td>
+                                <td>{{ plan.get_production_type_display }}</td>
+                                <td>{{ plan.get_chemical_use_display }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p>Ainda não tem planos de plantação registados.</p>
+                    {% endif %}
+                </div>
+                
+                <hr style="margin: 40px 0;">
+
+                <div class="data-table-section">
+                    <h3> 📋Histórico de Colheitas Concluídas</h3>
+                    {% if harvest_records %}
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID Colheita</th>
+                                <th>Plano Concluído</th>
+                                <th>Data Colheita</th>
+                                <th>Qt Colhida (Kg)</th>
+                                <th>Qt Aproveitada (Kg)</th>
+                                <th>Qualidade Média</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in harvest_records %}
+                            <tr>
+                                <td>{{ record.harvest_id }}</td>
+                                <td>
+                                    {% if record.plantation %}
+                                        Plano ID: {{ record.plantation.pk }} - {{ record.plantation.product.name }}
+                                    {% else %}
+                                        Plano Concluído
+                                    {% endif %}
+                                </td>
+                                <td>{{ record.harvest_date }}</td>
+                                <td>{{ record.harvest_quantity_kg }}</td>
+                                <td>{{ record.utilized_quantity_kg }}</td>
+                                <td>{{ record.avg_quality_score }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p>Ainda não há registos de colheitas concluídas.</p>
+                    {% endif %}
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        /**
+         * Função JavaScript para alternar entre as abas (tabs).
+         */
+        function openTab(evt, tabName) {
+            let i, tabcontent, tablinks;
+
+            // Esconde todo o conteúdo da aba
+            tabcontent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+
+            // Remove a classe "active" de todos os botões de aba
+            tablinks = document.getElementsByClassName("tab-link");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+
+            // Mostra a aba atual e adiciona a classe "active" ao botão que a abriu
+            document.getElementById(tabName).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
+
+        // Define a aba de "Inserir Informações" como padrão ao carregar
+        document.addEventListener("DOMContentLoaded", () => {
+            // Garante que a aba 'insert-info' e o respetivo botão estão ativos por padrão
+            document.getElementById("insert-info").style.display = "block";
+            document.querySelector(".tab-link").classList.add("active");
+        });
+    </script>
+</body>
+</html>
