@@ -8,8 +8,8 @@ from .decorators import role_required
 from django.contrib.auth.models import Group
 
 # Importações ATUALIZADAS
-from .forms import UserRegisterForm, PlantationPlanForm, ProductRegistrationForm, HarvestForm
-from .models import PlantationPlan, Product, UserProfile, Harvest
+from .forms import UserRegisterForm, PlantationPlanForm, ProductRegistrationForm, HarvestForm, WarehouseRegistrationForm, SensorRegistrationForm
+from .models import PlantationPlan, Product, UserProfile, Harvest, Warehouse, Sensor
 
 # ----------------------------------------------------------------------
 # 1. VIEWS DE ADMIN E AUTENTICAÇÃO
@@ -139,15 +139,21 @@ class ProducerDashboardView(View):
         # 3. BUSCAR REGISTOS DE COLHEITA (Variável do Template: harvest_records)
         # Histórico de todas as colheitas concluídas.
         harvest_records = Harvest.objects.filter(producer=user).order_by('-harvest_date')
-        
-        # 4. INSTANCIAR FORMULÁRIOS
-        # Mantemos os nomes do primeiro código para compatibilidade de contexto:
+    
+        # NOVAS QUERIES DE DADOS
+        # 1. Armazéns do produtor logado
+        producer_warehouses = Warehouse.objects.filter(owner=user).order_by('warehouse_id')
+        # 2. Lista de Sensores (pode ser usada numa tabela de referência ou para o form de Warehouse)
+        all_sensors = Sensor.objects.all().order_by('sensor_id')
+
+        # ... (Instanciar Formulários existentes)
         product_registration_form = ProductRegistrationForm()
         plantation_plan_form = PlantationPlanForm()
         harvest_form = HarvestForm() 
-        
-        # 5. FILTRO CRUCIAL para HarvestForm
-        # Apenas os planos existentes são planos ativos (prontos a colher).
+
+        # NOVOS FORMULÁRIOS
+        warehouse_form = WarehouseRegistrationForm()
+        sensor_form = SensorRegistrationForm()
         harvest_form.fields['plantation'].queryset = all_plantation_plans 
         
         try:
@@ -162,15 +168,19 @@ class ProducerDashboardView(View):
             'role': 'Producer',
             
             # Formulários
-            'product_registration_form': product_registration_form, # Para registar produto
-            'plantation_plan_form': plantation_plan_form,         # Para registar plantação
-            'harvest_form': harvest_form,                          # Para registar colheita (NOVO)
+            'product_registration_form': product_registration_form, 
+            'plantation_plan_form': plantation_plan_form,
+            'harvest_form': harvest_form, 
+            'warehouse_form': warehouse_form, 
+            'sensor_form': sensor_form,       
             
             # Listas de Dados
             'registered_products': registered_products,  # Lista de Produtos (Completa)
             'plantation_plans': all_plantation_plans,    # Lista de Planos (Ativos)
-            'harvest_records': harvest_records,          # Lista de Colheitas (Concluídas)
-            'user_profile': user_profile,
+            'harvest_records': harvest_records, 
+            'producer_warehouses': producer_warehouses,
+            'all_sensors': all_sensors,
+            'user_profile': user_profile,               
             
             # Mensagens de erro/sucesso 
             'db_error': request.session.pop('db_error', None),
@@ -275,3 +285,63 @@ def producer_submit_harvest(request):
         
     # Bloquear acesso GET
     return redirect('producer_dashboard')
+
+@login_required
+@role_required(['Producer'])
+def producer_submit_warehouse(request):
+    db_error = None
+
+    if request.method == 'POST':
+        # Instanciar o formulário com os dados POST
+        form = WarehouseRegistrationForm(request.POST)
+
+        if form.is_valid():
+            try:
+                # 1. Salva o objeto (sem commit)
+                warehouse_record = form.save(commit=False)
+                
+                # 2. Injeta os dados que não estão no formulário: o Dono/Owner
+                warehouse_record.owner = request.user
+                
+                # 3. Salva na base de dados (guarda os campos que não são ManyToMany)
+                warehouse_record.save()
+                
+                # 4. Salva a relação Many-to-Many para os sensores (APÓS salvar o objeto principal)
+                form.save_m2m() 
+                
+                # Sucesso
+                return redirect('producer_dashboard')
+                
+            except IntegrityError as e:
+                db_error = f"Erro ao salvar Armazém na DB: Detalhe: {e}"
+                # Pode usar request.session['db_error'] = db_error para mostrar o erro
+
+        # Se houver erro de validação ou DB, redireciona de volta
+        return redirect('producer_dashboard')
+        
+    return redirect('producer_dashboard') # Não permitir GET a esta rota
+
+@login_required
+@role_required(['Producer'])
+def producer_submit_sensor(request):
+    if request.method == 'POST':
+        form = SensorRegistrationForm(request.POST)
+
+        if form.is_valid():
+            try:
+                # O Sensor não precisa de FK para o Produtor (é um item de referência)
+                form.save()
+                
+                # Sucesso: Redireciona para o dashboard principal
+                # A próxima seção (JavaScript) irá garantir que o dropdown do Warehouse seja atualizado.
+                return redirect('producer_dashboard') 
+                
+            except IntegrityError as e:
+                # Se o sensor_id for uma chave primária e já existir
+                db_error = f"Erro ao salvar Sensor na DB: O ID '{request.POST.get('sensor_id')}' já existe. Detalhe: {e}"
+                request.session['db_error'] = db_error # Use sessions para passar o erro
+        
+        # Se houver erro de validação ou DB, redireciona de volta
+        return redirect('producer_dashboard')
+        
+    return redirect('producer_dashboard') # Não permitir GET a esta rota

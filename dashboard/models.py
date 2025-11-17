@@ -134,3 +134,62 @@ class Harvest(models.Model):
     def __str__(self):
         # Usamos o ID do plano de plantação para identificar o registo de colheita
         return f"Colheita {self.pk} - Plano {self.plantation_id}"
+    
+# DEFINIÇÃO DE CHOICES PARA DROPDOWNS
+SENSOR_TYPE_CHOICES = [
+    ('Temperature', 'Temperatura'),
+    ('Humidity', 'Humidade'),
+    ('Light', 'Luminosidade'),
+    ('Gas', 'Gás/CO2'),
+    # Adicione mais tipos conforme necessário
+]
+
+# --- 4. Tabela 'sensor' ---
+class Sensor(models.Model):
+    # Campos que pediu
+    sensor_id = models.AutoField(primary_key=True)
+    brand = models.CharField(max_length=100, verbose_name="Marca do Sensor")
+    sensor_type = models.CharField(max_length=50, choices=SENSOR_TYPE_CHOICES, verbose_name="Tipo de Sensor")
+    
+    class Meta:
+        db_table = 'sensors'
+        
+    def __str__(self):
+        return f"{self.sensor_id} - {self.brand} ({self.get_sensor_type_display()})"
+    
+# DEFINIÇÃO DE CHOICES PARA DROPDOWNS
+CONTROL_TYPE_CHOICES = [
+    ('Controlled', 'Controlado'),
+    ('Non-Controlled', 'Não Controlado'),
+]
+
+# --- 5. Tabela 'warehouse' ---
+class Warehouse(models.Model):
+    # 1. Ligação ao Produtor (o dono do armazém)
+    owner = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        limit_choices_to={'groups__name': 'Producer'}, # Opcional: limita a escolha a Produtores
+        verbose_name="Dono/Perfil"
+    )
+
+    # 2. Campos do Armazém
+    warehouse_id = models.AutoField(primary_key=True) # ID automático para simplificar
+    location = models.CharField(max_length=255, verbose_name="Localização")
+    control_type = models.CharField(max_length=20, choices=CONTROL_TYPE_CHOICES, verbose_name="Tipo de Armazém")
+    capacity = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Capacidade (m² ou Kg)")
+    
+    # 3. Relação com Sensores (Muitos-para-Muitos)
+    sensors = models.ManyToManyField(
+        Sensor, 
+        blank=True, 
+        verbose_name="Sensores Instalados"
+    )
+
+    class Meta:
+        db_table = 'warehouses'
+        verbose_name = 'Armazém'
+        verbose_name_plural = 'Armazéns'
+
+    def __str__(self):
+        return f"Armazém {self.warehouse_id} - {self.location}"

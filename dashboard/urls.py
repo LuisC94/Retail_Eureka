@@ -10,6 +10,8 @@ urlpatterns = [
     
     # 2. Dashboards Principais
     path('producer/', views.ProducerDashboardView.as_view(), name='producer_dashboard'),
+    path('submit-warehouse/', views.producer_submit_warehouse, name='producer_submit_warehouse'),
+    path('submit-sensor/', views.producer_submit_sensor, name='producer_submit_sensor'),
     
     # NOVAS ROTAS DE SUBMISSÃO
     path('submit-product/', views.producer_submit_product, name='producer_submit_product'),

@@ -1,7 +1,8 @@
 from django import forms
 from django.contrib.auth.models import User, Group
 # Importar apenas os modelos necessários
-from .models import PlantationPlan, Product, Harvest, QUALITY_SCORE_CHOICES
+from .models import PlantationPlan, Product, Harvest, QUALITY_SCORE_CHOICES, Sensor, Warehouse, SENSOR_TYPE_CHOICES
+from django.forms import CheckboxSelectMultiple
 
 # Lista de Roles (mantida)
 ROLE_CHOICES = [
@@ -103,4 +104,32 @@ class HarvestForm(forms.ModelForm):
         widgets = {
             # 3 -> Data de Colheita
             'harvest_date': forms.DateInput(attrs={'type': 'date'}), 
+        }
+
+# --- 4. Formulário de Registo de Sensor (Para o Popup) ---
+class SensorRegistrationForm(forms.ModelForm):
+    
+    class Meta:
+        model = Sensor
+        fields = ['sensor_id', 'brand', 'sensor_type']
+        # Adicione attrs para melhor estilo no seu frontend
+        widgets = {
+            'sensor_id': forms.TextInput(attrs={'class': 'form-control'}),
+            'brand': forms.TextInput(attrs={'class': 'form-control'}),
+            'sensor_type': forms.Select(attrs={'class': 'form-control'}),
+        }
+
+# --- 5. Formulário de Registo de Warehouse (Com Widget Melhorado) ---
+class WarehouseRegistrationForm(forms.ModelForm):
+    
+    class Meta:
+        model = Warehouse
+        fields = ['location', 'control_type', 'capacity', 'sensors']
+        
+        # Usar CheckboxSelectMultiple para facilitar a seleção de múltiplos sensores
+        widgets = {
+            'location': forms.TextInput(attrs={'class': 'form-control'}),
+            'control_type': forms.Select(attrs={'class': 'form-control'}),
+            'capacity': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
+            'sensors': forms.CheckboxSelectMultiple(), # Renderiza checkboxes em vez de um seletor simples
         }
