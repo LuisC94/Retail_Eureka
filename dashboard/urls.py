@@ -16,7 +16,17 @@ urlpatterns = [
     # NOVAS ROTAS DE SUBMISSÃO
     path('submit-product/', views.producer_submit_product, name='producer_submit_product'),
     path('submit-plantation/', views.producer_submit_plantation, name='producer_submit_plantation'),
+    path('submit-soil-characteristic/', views.producer_submit_soil_characteristic, name='producer_submit_soil_characteristic'),
     path('submit-harvest/', views.producer_submit_harvest, name='producer_submit_harvest'),
+    path('submit-event/', views.producer_submit_event, name='producer_submit_event'),
+    path('submit-event/fertilizer-synth/', views.producer_submit_fertilizer_synth, name='producer_submit_fertilizer_synth'),
+    path('submit-event/fertilizer-org/', views.producer_submit_fertilizer_org, name='producer_submit_fertilizer_org'),
+    path('submit-event/soil-corrective/', views.producer_submit_soil_corrective, name='producer_submit_soil_corrective'),
+    path('submit-event/pest-control/', views.producer_submit_pest_control, name='producer_submit_pest_control'),
+    path('submit-event/machinery/', views.producer_submit_machinery, name='producer_submit_machinery'),
+    path('submit-event/fuel/', views.producer_submit_fuel, name='producer_submit_fuel'),
+    path('submit-event/electric/', views.producer_submit_electric, name='producer_submit_electric'),
+    path('submit-event/water/', views.producer_submit_water, name='producer_submit_water'),
 
     path('transporter/', views.TransporterDashboardView.as_view(), name='transporter_dashboard'),
     
@@ -26,7 +36,7 @@ urlpatterns = [
     path('retailer/', views.RetailerDashboardView.as_view(), name='retailer_dashboard'),
 
     # 4. APIs e Autenticação
-    path('api/kpis/', api_views.get_kpis_data, name='api_kpis'), 
+    path('api/soil-characteristics/', api_views.get_soil_characteristics, name='api_soil_characteristics'),
     path('accounts/register/', views.RegisterView.as_view(), name='register'),
     path('accounts/logout/', auth_views.LogoutView.as_view(), name='logout'),
 ]

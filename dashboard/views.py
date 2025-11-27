@@ -1,4 +1,4 @@
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
@@ -7,9 +7,19 @@ from django.urls import reverse, reverse_lazy
 from .decorators import role_required 
 from django.contrib.auth.models import Group
 
-# Importações ATUALIZADAS
-from .forms import UserRegisterForm, PlantationPlanForm, ProductRegistrationForm, HarvestForm, WarehouseRegistrationForm, SensorRegistrationForm
-from .models import PlantationPlan, Product, UserProfile, Harvest, Warehouse, Sensor
+from .models import (
+    Product, PlantationPlan, Harvest, Warehouse, Sensor, UserProfile, PlantationEvent,
+    SoilCharacteristic, PlantationSoilValue,
+    FertilizerSyntheticData, FertilizerOrganicData, SoilCorrectiveData, PestControlData,
+    MachineryData, FuelData, ElectricEnergyData, IrrigationWaterData
+)
+
+from .forms import (
+    UserRegisterForm, ProductRegistrationForm, PlantationPlanForm, PlantationDetailForm,
+    HarvestForm, WarehouseRegistrationForm, SensorRegistrationForm, PlantationEventForm,
+    FertilizerSyntheticForm, FertilizerOrganicForm, SoilCorrectiveForm, PestControlForm,
+    MachineryForm, FuelForm, ElectricEnergyForm, IrrigationWaterForm, SoilCharacteristicForm
+)
 
 # ----------------------------------------------------------------------
 # 1. VIEWS DE ADMIN E AUTENTICAÇÃO
@@ -121,72 +131,105 @@ class RetailerDashboardView(View):
 # 3. PRODUCER DASHBOARD (ATUALIZADA)
 # ----------------------------------------------------------------------
 
-method_decorator(login_required, name='dispatch')
+# views.py (ProducerDashboardView)
+@method_decorator(login_required, name='dispatch')
 @method_decorator(role_required(['Producer']), name='dispatch')
 class ProducerDashboardView(View):
     def get(self, request):
         user = request.user
         
-        # 1. BUSCAR PRODUTOS (Variável do Template: registered_products)
-        # Lista completa dos produtos registados pelo produtor.
         registered_products = Product.objects.filter(producer=user).order_by('name')
         
-        # 2. BUSCAR PLANOS DE PLANTAÇÃO (Variável do Template: plantation_plans)
-        # Lista dos planos que AINDA NÃO FORAM colhidos (os colhidos foram apagados pela view de Harvest).
-        # Isto representa a lista de Planos Ativos para a tabela geral.
-        all_plantation_plans = PlantationPlan.objects.filter(producer=user).order_by('-plantation_date')
+        base_plantation_query = PlantationPlan.objects.filter(producer=user).order_by('-plantation_date')
         
-        # 3. BUSCAR REGISTOS DE COLHEITA (Variável do Template: harvest_records)
-        # Histórico de todas as colheitas concluídas.
+        plantation_plans = base_plantation_query.select_related(
+            'product'
+        ).prefetch_related(
+            'soil_values', 
+            'soil_values__characteristic'
+        )
+        
         harvest_records = Harvest.objects.filter(producer=user).order_by('-harvest_date')
-    
-        # NOVAS QUERIES DE DADOS
-        # 1. Armazéns do produtor logado
+        
+        # 4. BUSCAR EVENTOS DO POMAR
+        plantation_events = PlantationEvent.objects.filter(plantation__producer=user).order_by('-event_date')
+        
         producer_warehouses = Warehouse.objects.filter(owner=user).order_by('warehouse_id')
-        # 2. Lista de Sensores (pode ser usada numa tabela de referência ou para o form de Warehouse)
         all_sensors = Sensor.objects.all().order_by('sensor_id')
 
-        # ... (Instanciar Formulários existentes)
         product_registration_form = ProductRegistrationForm()
         plantation_plan_form = PlantationPlanForm()
+        plantation_detail_form = PlantationDetailForm()
         harvest_form = HarvestForm() 
 
-        # NOVOS FORMULÁRIOS
         warehouse_form = WarehouseRegistrationForm()
         sensor_form = SensorRegistrationForm()
-        harvest_form.fields['plantation'].queryset = all_plantation_plans 
+        fertilizer_synthetic_form = FertilizerSyntheticForm() 
+        fertilizer_organic_form = FertilizerOrganicForm()
+        soil_corrective_form = SoilCorrectiveForm()
+        pest_control_form = PestControlForm()
+        machinery_form = MachineryForm()
+        fuel_form = FuelForm()
+        electric_energy_form = ElectricEnergyForm()
+        irrigation_water_form = IrrigationWaterForm()
+        
+        harvest_form.fields['plantation'].queryset = base_plantation_query 
         
         try:
-            # Buscando UserProfile (mantido do seu código original)
             user_profile = UserProfile.objects.get(user=user)
         except UserProfile.DoesNotExist:
             user_profile = None
 
-        # 6. CONTEXTO
         context = {
             'username': user.username,
             'role': 'Producer',
             
-            # Formulários
             'product_registration_form': product_registration_form, 
             'plantation_plan_form': plantation_plan_form,
+            'plantation_detail_form': plantation_detail_form,
             'harvest_form': harvest_form, 
             'warehouse_form': warehouse_form, 
-            'sensor_form': sensor_form,       
+            'sensor_form': sensor_form,
+            'fertilizer_synthetic_form': fertilizer_synthetic_form, 
+            'fertilizer_organic_form': fertilizer_organic_form,
+            'soil_corrective_form': soil_corrective_form,
+            'pest_control_form': pest_control_form,
+            'machinery_form': machinery_form,
+            'fuel_form': fuel_form,
+            'electric_energy_form': electric_energy_form,
+            'irrigation_water_form': irrigation_water_form,       
             
-            # Listas de Dados
-            'registered_products': registered_products,  # Lista de Produtos (Completa)
-            'plantation_plans': all_plantation_plans,    # Lista de Planos (Ativos)
+            'registered_products': registered_products,
+            'plantation_plans': plantation_plans,
             'harvest_records': harvest_records, 
+            'plantation_events': plantation_events,
             'producer_warehouses': producer_warehouses,
             'all_sensors': all_sensors,
             'user_profile': user_profile,               
             
-            # Mensagens de erro/sucesso 
             'db_error': request.session.pop('db_error', None),
+
+            'plantation_event_form': PlantationEventForm(),
         }
         
         return render(request, 'dashboard/producerDash.html', context)
+    
+@login_required
+@role_required(['Producer'])
+def producer_submit_soil_characteristic(request):
+    if request.method == 'POST':
+        form = SoilCharacteristicForm(request.POST)
+
+        if form.is_valid():
+            try:
+                form.save()
+                # Sucesso: Redireciona para forçar o reload da dashboard e atualizar o select múltiplo
+                return redirect('producer_dashboard') 
+            except IntegrityError as e:
+                print(f"Erro ao salvar Característica de Solo na DB: Detalhe: {e}")
+
+    # Bloquear acesso GET ou formulário inválido
+    return redirect('producer_dashboard')
 
 # ----------------------------------------------------------------------
 # 4. VIEWS DE SUBMISSÃO DO PRODUTOR (NOVAS)
@@ -211,79 +254,123 @@ def producer_submit_product(request):
         return redirect('producer_dashboard')
     return redirect('producer_dashboard') 
 
-
 @login_required
 @role_required(['Producer'])
 def producer_submit_plantation(request):
     db_error = None
 
     if request.method == 'POST':
-        # Instanciar o formulário com os dados POST
-        form = PlantationPlanForm(request.POST)
+        form = PlantationPlanForm(request.POST) 
+        detail_form = PlantationDetailForm(request.POST) 
+        
+        # Filtros de segurança e validação
+        registered_products = Product.objects.filter(producer=request.user)
+        form.fields['product'].queryset = registered_products
+        
+        # Assume que a validação do solo/características foi feita antes de 'is_valid'
+        # e que o form.is_valid() não está a falhar aqui.
 
-        if form.is_valid():
+        if form.is_valid() and detail_form.is_valid():
+            
+            # --- BLOC DE SALVAMENTO E TRANSAÇÃO ---
             try:
-                # 1. Salva o objeto (sem commit)
-                plantation_record = form.save(commit=False)
-                
-                # 2. Injeta os dados que não estão no formulário:
-                # O 'product' (instância Product) JÁ ESTÁ na instância do formulário,
-                # graças ao ModelChoiceField.
-                plantation_record.producer = request.user # Liga à FK do Produtor
-                
-                # 3. Salva na base de dados (o ID é gerado automaticamente)
-                plantation_record.save()
-                
-                # Sucesso
-                return redirect('producer_dashboard')
+                # 1. Inicia a transação atómica
+                with transaction.atomic():
+                    
+                    # 2. Salvar o PlantationPlan (código existente)
+                    plantation_record = form.save(commit=False)
+                    for field in detail_form.fields:
+                        setattr(plantation_record, field, detail_form.cleaned_data[field])
+
+                    plantation_record.producer = request.user
+                    plantation_record.save()
+                    
+                    # 3. Processar e salvar os Valores Dinâmicos do Solo
+                    soil_data = {}
+                    
+                    for key, value in request.POST.items():
+                        if key.startswith('characteristic_id_') and value:
+                            suffix = key.split('characteristic_id_')[1]
+                            value_key = f'characteristic_value_{suffix}'
+                            
+                            # Obtém o valor
+                            soil_value = request.POST.get(value_key)
+                            
+                            # Adiciona ao dicionário de dados do solo se o valor existir
+                            if soil_value is not None and soil_value.strip():
+                                soil_data[value] = soil_value
+                    
+                    if soil_data:
+                        characteristics = SoilCharacteristic.objects.in_bulk(soil_data.keys()) 
+                        
+                        for char_id, soil_value_str in soil_data.items():
+                            char_obj = characteristics.get(int(char_id))
+                            
+                            if char_obj:
+                                # Tentativa de criação do registo PlantationSoilValue
+                                PlantationSoilValue.objects.create(
+                                    plantation=plantation_record,
+                                    characteristic=char_obj,
+                                    value=float(soil_value_str) # PONTO CRÍTICO: CONVERSÃO PARA FLOAT
+                                )
+                    
+                    # 4. SUCESSO: O redirect ocorre dentro da transação em caso de sucesso
+                    return redirect(reverse('producer_dashboard')) # Use reverse se for o nome da URL base
                 
             except IntegrityError as e:
-                db_error = f"Erro ao salvar Plantação na DB: Detalhe: {e}"
-
-        return redirect('producer_dashboard')
-    return redirect('producer_dashboard')
+                # Captura erros de DB e rolls back a transação
+                db_error = f"Erro de Integridade (Chave Duplicada/FK): {e}"
+            except ValueError as e:
+                # Captura erros de conversão de string para float/decimal
+                db_error = f"Erro de Conversão de Valor: Verifique se os valores do solo são números válidos. Detalhe: {e}"
+            except Exception as e:
+                # Captura qualquer outro erro inesperado (o verdadeiro causador do crash/hang)
+                db_error = f"ERRO CRÍTICO DESCONHECIDO: {e}"
+                print(f"ERRO CRÍTICO DURANTE A SUBMISSÃO: {e}") # <<<<<<<<< DEBUG AQUI
+                
+        
+        # 5. Tratamento de Erro e Redirecionamento Final
+        if db_error:
+            request.session['db_error'] = db_error # Armazena o erro para mostrar no dashboard
+            
+        return redirect(reverse('producer_dashboard')) # Garante que o fluxo HTTP termina
+        
+    return redirect(reverse('producer_dashboard')) # Bloquear acesso GET
 
 @login_required
 @role_required(['Producer'])
 def producer_submit_harvest(request):
-    """
-    Processa o formulário de colheita. 
-    Lógica Crucial: Cria o registo Harvest e REMOVE o PlantationPlan.
-    """
+    db_error = None
+
     if request.method == 'POST':
         form = HarvestForm(request.POST)
 
-        # 1. Replicar o filtro de segurança (garante que só pode colher os seus planos ativos)
-        active_plans = PlantationPlan.objects.filter(producer=request.user).exclude(harvest__isnull=False)
-        form.fields['plantation'].queryset = active_plans
+        # Filtro de Segurança: Garante que só pode colher os seus planos
+        form.fields['plantation'].queryset = PlantationPlan.objects.filter(producer=request.user)
 
         if form.is_valid():
-            # O Django já converteu o ID do formulário na instância PlantationPlan
-            plantation_instance_to_delete = form.cleaned_data['plantation']
-            
             try:
-                # 2. Salvar o novo registo de Colheita
                 harvest_record = form.save(commit=False)
                 harvest_record.producer = request.user
+                
+                # 🛑 CORREÇÃO CRÍTICA: Apenas salva a nova colheita.
                 harvest_record.save()
                 
-                # 3. Lógica CRUCIAL: Remover o registo da PlantationPlan
-                plantation_instance_to_delete.delete()
-                
-                # Sucesso
+                # 🛑 LÓGICA REMOVIDA: plantation_instance.delete()
+                # Não removemos o PlantationPlan, permitindo colheitas futuras.
+
                 return redirect('producer_dashboard')
                 
             except IntegrityError as e:
-                db_error = f"Erro ao salvar Colheita na DB: Detalhe: {e}"
+                db_error = f"Erro ao salvar Colheita: Detalhe: {e}"
                 request.session['db_error'] = db_error
             except Exception as e:
-                db_error = f"Ocorreu um erro inesperado: {e}"
+                db_error = f"Erro desconhecido: {e}"
                 request.session['db_error'] = db_error
         
-        # Se houver erro de validação ou DB, redireciona
+        # Redirecionamento após lógica/erro
         return redirect('producer_dashboard')
         
-    # Bloquear acesso GET
     return redirect('producer_dashboard')
 
 @login_required
@@ -345,3 +432,364 @@ def producer_submit_sensor(request):
         return redirect('producer_dashboard')
         
     return redirect('producer_dashboard') # Não permitir GET a esta rota
+
+@login_required
+@role_required(['Producer'])
+def producer_submit_event(request):
+    if request.method == 'POST':
+        form = PlantationEventForm(request.POST)
+
+        # Assumimos que o formulário de evento será submetido com o plantation_id 
+        # como um campo oculto ou através de uma lógica mais complexa. 
+        # Para simplificar, assumimos que o form tem um campo PlantationPlanFK.
+
+        # Se o form for válido, salva o registo de evento.
+        if form.is_valid():
+            try:
+                form.save()
+                return redirect('producer_dashboard')
+            except IntegrityError:
+                pass
+                
+        return redirect('producer_dashboard')
+    return redirect('producer_dashboard')
+
+# views.py (Fertilizantes Sintéticos)
+@login_required
+def producer_submit_fertilizer_synth(request):
+    db_error = None
+    
+    # URL de redirecionamento para sucesso ou falha
+    # Assumimos que o dashboard principal é o destino, mas pode adicionar #hash para a aba de eventos
+    REDIRECT_URL = reverse_lazy('producer_dashboard') 
+    
+    if request.method == 'POST':
+        # 1. Instanciar e Validar os dois Forms com os dados POST
+        detail_form = FertilizerSyntheticForm(request.POST) 
+        base_form = PlantationEventForm(request.POST) 
+        
+        # Nota: Você precisará de injetar a FK 'plantation' no base_form antes de base_form.is_valid()
+        # Se o campo plantation estiver no base_form (ex: como campo oculto), ignore esta nota.
+        
+        # 2. Verificação de Validade de AMBOS os formulários
+        if detail_form.is_valid() and base_form.is_valid():
+            
+            try:
+                # 3. Lógica de Transação Atómica (Tudo ou Nada)
+                with transaction.atomic():
+                    
+                    # Salva os dados específicos (Tabela FertilizerSyntheticData)
+                    detail_record = detail_form.save()
+                    
+                    # Salva o registo central PlantationEvent (sem as FKs de detalhe ainda)
+                    event_record = base_form.save(commit=False)
+                    
+                    # LIGAÇÃO CRÍTICA: Liga o Evento central ao Detalhe salvo
+                    event_record.fertilizer_synth = detail_record 
+                    
+                    # O campo plantation (FK para PlantationPlan) deve ser preenchido aqui 
+                    # se não estiver no formulário base (ex: event_record.plantation = ... )
+                    
+                    event_record.save()
+                
+                # Sucesso: Sai da transação e redireciona
+                return redirect(REDIRECT_URL) 
+                
+            except IntegrityError as e:
+                db_error = f"Erro de Integridade na DB ao salvar Evento/Detalhe. Detalhe: {e}"
+            except Exception as e:
+                db_error = f"Erro desconhecido durante a transação: {e}"
+                print(f"ERRO CRÍTICO NA TRANSAÇÃO: {e}") 
+
+        # 4. Tratamento de Erro (Validação falhada ou Exceção capturada)
+        if db_error:
+            # Se a transação falhou, armazenamos a mensagem de erro na sessão
+            request.session['db_error'] = db_error 
+        
+        # Se algum formulário for inválido (detail_form ou base_form),
+        # ou se a transação falhar, redirecionamos de volta para o dashboard
+        return redirect(REDIRECT_URL)
+
+    # 5. Fallback para requisições GET
+    return redirect(REDIRECT_URL)
+
+@login_required
+def producer_submit_fertilizer_org(request):
+    db_error = None
+    
+    # URL de redirecionamento para sucesso ou falha
+    # Assumimos que o dashboard principal é o destino
+    REDIRECT_URL = reverse_lazy('producer_dashboard') 
+    
+    if request.method == 'POST':
+        # 1. Instanciar e Validar os dois Forms com os dados POST
+        detail_form = FertilizerOrganicForm(request.POST) 
+        base_form = PlantationEventForm(request.POST) 
+        
+        # 2. Reaplicar filtro de segurança para o dropdown PlantationPlan no base_form, se necessário
+        # Assumindo que o campo de PlantationPlan existe no base_form
+        # Ex: base_form.fields['plantation'].queryset = PlantationPlan.objects.filter(producer=request.user) 
+        
+        # 3. Verificação de Validade de AMBOS os formulários
+        if detail_form.is_valid() and base_form.is_valid():
+            
+            try:
+                # 4. Lógica de Transação Atómica (Tudo ou Nada)
+                with transaction.atomic():
+                    
+                    # Salva os dados específicos do Fertilizante Orgânico (Tabela Detalhe)
+                    detail_record = detail_form.save()
+                    
+                    # Salva o registo central PlantationEvent (sem as FKs de detalhe)
+                    event_record = base_form.save(commit=False)
+                    
+                    # LIGAÇÃO CRÍTICA: Liga o Evento central ao Detalhe salvo
+                    event_record.fertilizer_org = detail_record 
+                    
+                    # Salva o registo central e finaliza a transação
+                    event_record.save()
+                
+                # Sucesso: Sai da transação e redireciona
+                return redirect(REDIRECT_URL) 
+                
+            except IntegrityError as e:
+                db_error = f"Erro de Integridade na DB ao salvar Evento/Detalhe. Detalhe: {e}"
+            except Exception as e:
+                # Captura qualquer outro erro que possa causar falha
+                db_error = f"Erro desconhecido durante a transação: {e}"
+                print(f"ERRO CRÍTICO NA TRANSAÇÃO: {e}") 
+
+        # 5. Tratamento de Erro (Validação falhada ou Exceção capturada)
+        if db_error:
+            # Armazenamos a mensagem na sessão para exibição no dashboard
+            request.session['db_error'] = db_error 
+        
+        # Redirecionamento após lógica/erro
+        return redirect(REDIRECT_URL)
+
+    # 6. Fallback para requisições GET
+    return redirect(REDIRECT_URL)
+
+@login_required
+def producer_submit_fertilizer_synth(request):
+    db_error = None
+    REDIRECT_URL = reverse_lazy('producer_dashboard') 
+    
+    if request.method == 'POST':
+        detail_form = FertilizerSyntheticForm(request.POST) 
+        base_form = PlantationEventForm(request.POST) 
+        
+        if detail_form.is_valid() and base_form.is_valid():
+            try:
+                with transaction.atomic():
+                    detail_record = detail_form.save()
+                    event_record = base_form.save(commit=False)
+                    event_record.fertilizer_synth = detail_record 
+                    event_record.save()
+                return redirect(REDIRECT_URL) 
+            except IntegrityError as e:
+                db_error = f"Erro de Integridade na DB ao salvar Evento/Detalhe. Detalhe: {e}"
+            except Exception as e:
+                db_error = f"Erro desconhecido durante a transação: {e}"
+                print(f"ERRO CRÍTICO NA TRANSAÇÃO: {e}") 
+
+        if db_error:
+            request.session['db_error'] = db_error 
+        return redirect(REDIRECT_URL)
+    return redirect(REDIRECT_URL)
+
+@login_required
+def producer_submit_fertilizer_org(request):
+    db_error = None
+    REDIRECT_URL = reverse_lazy('producer_dashboard') 
+    
+    if request.method == 'POST':
+        detail_form = FertilizerOrganicForm(request.POST) 
+        base_form = PlantationEventForm(request.POST) 
+        
+        if detail_form.is_valid() and base_form.is_valid():
+            try:
+                with transaction.atomic():
+                    detail_record = detail_form.save()
+                    event_record = base_form.save(commit=False)
+                    event_record.fertilizer_org = detail_record 
+                    event_record.save()
+                return redirect(REDIRECT_URL) 
+            except IntegrityError as e:
+                db_error = f"Erro de Integridade na DB ao salvar Evento/Detalhe. Detalhe: {e}"
+            except Exception as e:
+                db_error = f"Erro desconhecido durante a transação: {e}"
+                print(f"ERRO CRÍTICO NA TRANSAÇÃO: {e}") 
+
+        if db_error:
+            request.session['db_error'] = db_error 
+        return redirect(REDIRECT_URL)
+    return redirect(REDIRECT_URL)
+
+@login_required
+def producer_submit_soil_corrective(request):
+    db_error = None
+    REDIRECT_URL = reverse_lazy('producer_dashboard') 
+    
+    if request.method == 'POST':
+        detail_form = SoilCorrectiveForm(request.POST) 
+        base_form = PlantationEventForm(request.POST) 
+        
+        if detail_form.is_valid() and base_form.is_valid():
+            try:
+                with transaction.atomic():
+                    detail_record = detail_form.save()
+                    event_record = base_form.save(commit=False)
+                    event_record.soil_corrective = detail_record 
+                    event_record.save()
+                return redirect(REDIRECT_URL) 
+            except IntegrityError as e:
+                db_error = f"Erro de Integridade na DB: {e}"
+            except Exception as e:
+                db_error = f"Erro desconhecido: {e}"
+                print(f"ERRO CRÍTICO: {e}") 
+
+        if db_error:
+            request.session['db_error'] = db_error 
+        return redirect(REDIRECT_URL)
+    return redirect(REDIRECT_URL)
+
+@login_required
+def producer_submit_pest_control(request):
+    db_error = None
+    REDIRECT_URL = reverse_lazy('producer_dashboard') 
+    
+    if request.method == 'POST':
+        detail_form = PestControlForm(request.POST) 
+        base_form = PlantationEventForm(request.POST) 
+        
+        if detail_form.is_valid() and base_form.is_valid():
+            try:
+                with transaction.atomic():
+                    detail_record = detail_form.save()
+                    event_record = base_form.save(commit=False)
+                    event_record.pest_control = detail_record 
+                    event_record.save()
+                return redirect(REDIRECT_URL) 
+            except IntegrityError as e:
+                db_error = f"Erro de Integridade na DB: {e}"
+            except Exception as e:
+                db_error = f"Erro desconhecido: {e}"
+                print(f"ERRO CRÍTICO: {e}") 
+
+        if db_error:
+            request.session['db_error'] = db_error 
+        return redirect(REDIRECT_URL)
+    return redirect(REDIRECT_URL)
+
+@login_required
+def producer_submit_machinery(request):
+    db_error = None
+    REDIRECT_URL = reverse_lazy('producer_dashboard') 
+    
+    if request.method == 'POST':
+        detail_form = MachineryForm(request.POST) 
+        base_form = PlantationEventForm(request.POST) 
+        
+        if detail_form.is_valid() and base_form.is_valid():
+            try:
+                with transaction.atomic():
+                    detail_record = detail_form.save()
+                    event_record = base_form.save(commit=False)
+                    event_record.machinery = detail_record 
+                    event_record.save()
+                return redirect(REDIRECT_URL) 
+            except IntegrityError as e:
+                db_error = f"Erro de Integridade na DB: {e}"
+            except Exception as e:
+                db_error = f"Erro desconhecido: {e}"
+                print(f"ERRO CRÍTICO: {e}") 
+
+        if db_error:
+            request.session['db_error'] = db_error 
+        return redirect(REDIRECT_URL)
+    return redirect(REDIRECT_URL)
+
+@login_required
+def producer_submit_fuel(request):
+    db_error = None
+    REDIRECT_URL = reverse_lazy('producer_dashboard') 
+    
+    if request.method == 'POST':
+        detail_form = FuelForm(request.POST) 
+        base_form = PlantationEventForm(request.POST) 
+        
+        if detail_form.is_valid() and base_form.is_valid():
+            try:
+                with transaction.atomic():
+                    detail_record = detail_form.save()
+                    event_record = base_form.save(commit=False)
+                    event_record.fuel = detail_record 
+                    event_record.save()
+                return redirect(REDIRECT_URL) 
+            except IntegrityError as e:
+                db_error = f"Erro de Integridade na DB: {e}"
+            except Exception as e:
+                db_error = f"Erro desconhecido: {e}"
+                print(f"ERRO CRÍTICO: {e}") 
+
+        if db_error:
+            request.session['db_error'] = db_error 
+        return redirect(REDIRECT_URL)
+    return redirect(REDIRECT_URL)
+
+@login_required
+def producer_submit_electric(request):
+    db_error = None
+    REDIRECT_URL = reverse_lazy('producer_dashboard') 
+    
+    if request.method == 'POST':
+        detail_form = ElectricEnergyForm(request.POST) 
+        base_form = PlantationEventForm(request.POST) 
+        
+        if detail_form.is_valid() and base_form.is_valid():
+            try:
+                with transaction.atomic():
+                    detail_record = detail_form.save()
+                    event_record = base_form.save(commit=False)
+                    event_record.electric = detail_record 
+                    event_record.save()
+                return redirect(REDIRECT_URL) 
+            except IntegrityError as e:
+                db_error = f"Erro de Integridade na DB: {e}"
+            except Exception as e:
+                db_error = f"Erro desconhecido: {e}"
+                print(f"ERRO CRÍTICO: {e}") 
+
+        if db_error:
+            request.session['db_error'] = db_error 
+        return redirect(REDIRECT_URL)
+    return redirect(REDIRECT_URL)
+
+@login_required
+def producer_submit_water(request):
+    db_error = None
+    REDIRECT_URL = reverse_lazy('producer_dashboard') 
+    
+    if request.method == 'POST':
+        detail_form = IrrigationWaterForm(request.POST) 
+        base_form = PlantationEventForm(request.POST) 
+        
+        if detail_form.is_valid() and base_form.is_valid():
+            try:
+                with transaction.atomic():
+                    detail_record = detail_form.save()
+                    event_record = base_form.save(commit=False)
+                    event_record.water = detail_record 
+                    event_record.save()
+                return redirect(REDIRECT_URL) 
+            except IntegrityError as e:
+                db_error = f"Erro de Integridade na DB: {e}"
+            except Exception as e:
+                db_error = f"Erro desconhecido: {e}"
+                print(f"ERRO CRÍTICO: {e}") 
+
+        if db_error:
+            request.session['db_error'] = db_error 
+        return redirect(REDIRECT_URL)
+    return redirect(REDIRECT_URL)

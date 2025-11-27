@@ -1,0 +1,132 @@
+graph TD
+
+    %% ============================
+    %%      PRODUCERS
+    %% ============================
+    subgraph Producers["🌱 PRODUCERS"]
+        P1[Product Registration]
+        P2[Plantation Registration]
+        P3[Plantation Events]
+        P4[Harvests]
+        P5[Products Ready for Shipment]
+        P1 --> P2 --> P3 --> P4 --> P5
+    end
+
+    %% ============================
+    %%      AI AGENTS
+    %% ============================
+    subgraph AI_Agents["🤖 AI AGENTS"]
+        AI_Plan[Planning Agent<br/>Plans the entire chain<br/>Real-time update]
+        AI_Route[Routing Agent<br/>Optimizes routes based on<br/>the objective]
+        AI_Track[Tracking Agent<br/>Monitors transport<br/>via real-time sensors]
+        AI_Life[Lifecycle Agent<br/>Calculates product wear<br/>through sensors]
+        AI_Inv[Inventory Agent<br/>Manages quantities across<br/>the chain]
+        
+        AI_Plan -.Coordinates.-> AI_Route
+        AI_Route -.Informs.-> AI_Track
+        AI_Track -.Sensor data.-> AI_Life
+        AI_Life -.Updates stock.-> AI_Inv
+    end
+
+    %% ============================
+    %%      TRANSPORTER 1
+    %% ============================
+    subgraph Trans1["🚚 TRANSPORTER 1"]
+        T1[Transport<br/>Producer → Processor]
+    end
+
+    %% ============================
+    %%      PROCESSORS
+    %% ============================
+    subgraph Processors["🏭 PROCESSORS"]
+        PR1[Goods Reception]
+        PR2[Storage]
+        PR3[Packaging]
+        PR1 --> PR2 --> PR3
+    end
+
+    %% ============================
+    %%      TRANSPORTER 2
+    %% ============================
+    subgraph Trans2["🚚 TRANSPORTER 2"]
+        T2[Transport<br/>Processor → Consumers]
+    end
+
+    %% ============================
+    %%  QUALITY ASSESSMENT
+    %% ============================
+    subgraph Decision["⚖️ QUALITY ASSESSMENT"]
+        DEC{Product Wear<br/>Lifecycle}
+    end
+
+
+    %% ============================
+    %% RETAILERS (CORRECT SUBGRAPH!)
+    %% ============================
+    subgraph Retailers["🏪 RETAILERS"]
+        RET[Supermarkets<br/>Points of Sale]
+    end
+
+    %% ============================
+    %% ALT CONSUMERS (CORRECT SUBGRAPH!)
+    %% ============================
+    subgraph Alternative_Consumers["🍹 ALTERNATIVE CONSUMERS"]
+        CONS_ALT[Juice Factories<br/>Restaurants]
+    end
+
+    %% ============================
+    %% FINAL CONSUMERS (CORRECT SUBGRAPH!)
+    %% ============================
+    subgraph Final_Consumers["👥 FINAL CONSUMERS"]
+        CONS_FIN[End Consumer]
+    end
+
+
+    %% ============================
+    %% MAIN FLOW
+    %% ============================
+    P5 --> T1
+    T1 --> PR1
+    PR3 --> T2
+    T2 --> DEC
+    DEC -->|≥ 50% Quality| RET
+    DEC -->|< 50% Alternative| CONS_ALT
+    RET --> CONS_FIN
+
+    %% ============================
+    %% AI AGENTS
+    %% ============================
+    AI_Plan -.Plans chain.-> P5
+    AI_Route -.Optimal route.-> T1
+    AI_Track -.Monitors.-> T1
+    AI_Life -.Assesses wear.-> T1
+    AI_Inv -.Manages stock.-> P5
+
+    AI_Route -.Optimal route.-> T2
+    AI_Track -.Monitors.-> T2
+    AI_Life -.Assesses wear.-> T2
+    AI_Inv -.Manages stock.-> PR3
+    AI_Life -.Determines quality.-> DEC
+
+    AI_Inv -.Stock.-> RET
+    AI_Inv -.Stock.-> CONS_ALT
+
+
+    %% ============================
+    %% STYLES
+    %% ============================
+    classDef producerStyle fill:#90EE90,stroke:#228B22,stroke-width:2px,color:#000
+    classDef processorStyle fill:#FFD700,stroke:#FF8C00,stroke-width:2px,color:#000
+    classDef transportStyle fill:#87CEEB,stroke:#4682B4,stroke-width:2px,color:#000
+    classDef retailStyle fill:#DDA0DD,stroke:#8B008B,stroke-width:2px,color:#000
+    classDef consumerStyle fill:#FFA07A,stroke:#FF4500,stroke-width:2px,color:#000
+    classDef aiStyle fill:#FF69B4,stroke:#C71585,stroke-width:3px,color:#000
+    classDef decisionStyle fill:#FFE4B5,stroke:#FF6347,stroke-width:2px,color:#000
+    
+    class P1,P2,P3,P4,P5 producerStyle
+    class PR1,PR2,PR3 processorStyle
+    class T1,T2 transportStyle
+    class RET retailStyle
+    class CONS_ALT,CONS_FIN consumerStyle
+    class AI_Plan,AI_Route,AI_Track,AI_Life,AI_Inv aiStyle
+    class DEC decisionStyle

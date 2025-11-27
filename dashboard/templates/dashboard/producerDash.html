@@ -1,320 +1,1059 @@
 <!DOCTYPE html>
 <html lang="pt">
+
 <head>
     <meta charset="UTF-8">
-    <title>Producer Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eureka - Dashboard Produtor</title>
     <style>
-        /* Estilos Globais e Reset */
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        /* ==================== RESET & GLOBAL ==================== */
+        * {
             margin: 0;
             padding: 0;
-            background-color: #e3f2fd;
-            color: #333;
+            box-sizing: border-box;
         }
 
-        /* Container Principal do Dashboard */
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #ffffff 0%, #ffffff 100%);
+            color: #2c3e50;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* ==================== DASHBOARD CONTAINER ==================== */
         .dashboard-container {
             display: flex;
-            height: 100vh;
-            background: #ffffff;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 50, 0, 0.1);
-            margin: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             overflow: hidden;
+            min-height: calc(100vh - 40px);
         }
 
-        /* Sidebar (Menu Lateral Esquerdo) */
+        /* ==================== SIDEBAR ==================== */
         .sidebar {
-            width: 250px;
-            background-color: #f7fff7;
-            padding: 20px 0;
-            border-right: 1px solid #eee;
+            width: 280px;
+            background: linear-gradient(180deg, #00796b 0%, #004d40 100%);
+            padding: 30px 0;
             flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            position: relative;
         }
+
         .sidebar-header {
-            padding: 0 20px 30px;
-            font-size: 1.5em;
-            color: #00796b; /* Um verde forte */
+            padding: 0 30px 40px;
+            text-align: center;
+        }
+
+        .sidebar-header h1 {
+            font-size: 2em;
+            color: white;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .sidebar-header p {
+            color: #b2dfdb;
+            font-size: 0.85em;
+            margin-top: 5px;
+        }
+
+        .user-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px 30px;
+            margin: 0 20px 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .user-info p {
+            color: white;
+            margin: 8px 0;
+            font-size: 0.95em;
+        }
+
+        .user-info strong {
+            color: #b2dfdb;
             font-weight: 600;
         }
-        .user-info {
-            padding: 0 20px 20px;
-            font-size: 0.9em;
-            border-bottom: 1px solid #eee;
-            margin-bottom: 15px;
-        }
-        .user-info p {
-            margin: 5px 0;
-        }
+
         .menu-item {
-            display: block;
-            padding: 10px 20px;
-            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 15px 30px;
+            color: white;
             text-decoration: none;
-            transition: background-color 0.2s;
-        }
-        .menu-item:hover {
-            background-color: #e0f2f1;
-        }
-        .logout-link {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            color: #d32f2f;
-            text-decoration: none;
+            transition: all 0.3s ease;
             font-weight: 500;
+            border-left: 4px solid transparent;
         }
 
-        /* Conteúdo Principal */
+        .menu-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-left-color: #b2dfdb;
+            padding-left: 35px;
+        }
+
+        .menu-item.active {
+            background: rgba(255, 255, 255, 0.2);
+            border-left-color: white;
+        }
+
+        /* ==================== MAIN CONTENT ==================== */
         .main-content {
             flex-grow: 1;
             padding: 40px;
             overflow-y: auto;
+            background: #f8f9fa;
         }
 
         .main-header {
             display: flex;
-            justify-content: flex-end; /* Alinha o conteúdo (o botão) à direita */
+            justify-content: space-between;
             align-items: center;
-            padding: 10px 30px; /* Espaçamento no topo e nas laterais */
-            width: 100%;
-            /* Se quiser que fique fixo no topo, adicione: 
-            position: sticky; top: 0; background-color: white; z-index: 10; */
-        }
-
-        /* Estilo para o Botão de Logout */
-        .logout-button {
-            background-color: #d32f2f; /* Vermelho */
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background-color 0.3s;
-            /* Garante que o botão aparece acima de outros elementos se necessário */
-            z-index: 1; 
-        }
-
-        .logout-button:hover {
-            background-color: #b71c1c;
-        }
-
-        .main-header {
-            display: flex;
-            justify-content: space-between; 
-            align-items: center;
-            padding: 10px 30px; 
-            width: 100%;
-            
-            /* Mantenha os outros estilos que adicionou no final: */
-            margin-bottom: 30px;
-            border-bottom: 2px solid #e0f2f1;
-            padding-bottom: 15px;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #e0f2f1;
         }
 
         .main-header h2 {
-            margin: 0;
-            color: #004d40;
+            color: #00796b;
+            font-size: 2em;
+            font-weight: 700;
         }
 
-        /* Abas (Tabs) */
+        .logout-button {
+            background: linear-gradient(135deg, #e53935 0%, #c62828 100%);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(229, 57, 53, 0.3);
+        }
+
+        .logout-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(229, 57, 53, 0.4);
+            background: linear-gradient(135deg, #c62828 0%, #b71c1c 100%);
+        }
+
+        .logout-button:active {
+            transform: translateY(-1px);
+        }
+
+        /* ==================== TABS ==================== */
         .tab-bar {
             display: flex;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #ccc;
-        }
-        .tab-link {
-            background-color: transparent;
-            border: none;
-            outline: none;
-            cursor: pointer;
-            padding: 10px 20px;
-            transition: background-color 0.2s, color 0.2s;
-            font-size: 1.0em;
-            color: #555;
-            border-radius: 5px 5px 0 0;
-        }
-        .tab-link:hover {
-            background-color: #f0f0f0;
-        }
-        .tab-link.active {
-            background-color: #e0f2f1;
-            color: #00796b;
-            font-weight: 600;
-            border: 1px solid #ccc;
-            border-bottom: none;
-        }
-        .tab-content {
-            padding: 20px 0;
+            gap: 10px;
+            margin-bottom: 30px;
+            background: white;
+            padding: 10px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
         }
 
-        /* Formulários */
-        .form-section {
-            background: #f9f9f9;
-            padding: 20px;
-            border-radius: 8px;
-            border: 1px solid #eee;
-            margin-bottom: 30px;
+        .tab-link {
+            background: transparent;
+            border: none;
+            padding: 15px 30px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            color: #666;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
+
+        .tab-link:hover {
+            background: #f0f0f0;
+            color: #00796b;
+        }
+
+        .tab-link.active {
+            background: linear-gradient(135deg, #00796b 0%, #004d40 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(0, 121, 107, 0.3);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        /* ==================== FORM SECTIONS ==================== */
+        .form-section {
+            background: white;
+            padding: 35px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            border: 2px solid #e0f2f1;
+            transition: all 0.3s ease;
+        }
+
+        .form-section:hover {
+            border-color: #00796b;
+            box-shadow: 0 8px 30px rgba(0, 121, 107, 0.15);
+            transform: translateY(-3px);
+        }
+
         .form-section h3 {
             color: #00796b;
-            border-bottom: 1px dashed #e0f2f1;
-            padding-bottom: 10px;
-            margin-top: 0;
+            font-size: 1.6em;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #00796b;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-weight: 700;
         }
+
+        .form-section h4 {
+            color: #004d40;
+            font-size: 1.3em;
+            margin: 30px 0 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+        }
+
+        .step-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #00796b 0%, #004d40 100%);
+            color: white;
+            border-radius: 50%;
+            font-weight: 700;
+            font-size: 1.1em;
+            box-shadow: 0 3px 10px rgba(0, 121, 107, 0.4);
+        }
+
+        .info-box {
+            background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%);
+            padding: 18px 24px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            color: #004d40;
+            font-size: 0.95em;
+            border-left: 5px solid #00796b;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 2px 8px rgba(0, 121, 107, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #2c3e50;
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 1em;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            background: white;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #00796b;
+            box-shadow: 0 0 0 4px rgba(0, 121, 107, 0.1);
+        }
+
+        /* ==================== DJANGO FORM STYLING ==================== */
+        /* Estiliza os formulários gerados pelo Django com .as_p */
+        .form-section form p {
+            margin-bottom: 25px;
+        }
+
+        .form-section form p label {
+            display: block;
+            color: #2c3e50;
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 1em;
+        }
+
+        .form-section form p input[type="text"],
+        .form-section form p input[type="number"],
+        .form-section form p input[type="email"],
+        .form-section form p input[type="date"],
+        .form-section form p input[type="datetime-local"],
+        .form-section form p select,
+        .form-section form p textarea {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            background: white;
+            font-family: inherit;
+        }
+
+        .form-section form p input:focus,
+        .form-section form p select:focus,
+        .form-section form p textarea:focus {
+            outline: none;
+            border-color: #00796b;
+            box-shadow: 0 0 0 4px rgba(0, 121, 107, 0.1);
+        }
+
+        /* Grid para forms com múltiplos campos */
+        .form-section form {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0;
+        }
+
+        /* Estilo para helptext do Django */
+        .form-section form .helptext {
+            display: block;
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        /* Estilo para mensagens de erro do Django */
+        .form-section form .errorlist {
+            list-style: none;
+            padding: 10px 15px;
+            background: #ffebee;
+            border-left: 4px solid #e53935;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            color: #c62828;
+            font-weight: 500;
+        }
+
+        .form-section form .errorlist li {
+            margin: 5px 0;
+        }
+
+        .detail-fields-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 25px;
+        }
+
         .submit-button {
-            background-color: #00796b;
+            background: linear-gradient(135deg, #00796b 0%, #004d40 100%);
+            color: white;
+            padding: 16px 40px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 20px rgba(0, 121, 107, 0.3);
+            width: 100%;
+            margin-top: 25px;
+        }
+
+        .submit-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 121, 107, 0.4);
+        }
+
+        .submit-button:active {
+            transform: translateY(-1px);
+        }
+
+        .form-divider {
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #e0f2f1, transparent);
+            margin: 35px 0;
+        }
+
+        /* ==================== TABLES ==================== */
+        .data-table-container {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .data-table-container h3 {
+            color: #00796b;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #e0f2f1;
+            font-weight: 700;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 20px;
+            overflow: hidden;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .data-table th {
+            background: linear-gradient(135deg, #00796b 0%, #004d40 100%);
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            letter-spacing: 0.5px;
+        }
+
+        .data-table tbody tr {
+            transition: all 0.3s ease;
+        }
+
+        .data-table tbody tr:hover {
+            background: #e0f2f1;
+            transform: scale(1.01);
+        }
+
+        .data-table tbody tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        /* ==================== MODAL ==================== */
+        .modal {
+            display: none;
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .modal-content {
+            background: white;
+            margin: 5% auto;
+            padding: 40px;
+            width: 90%;
+            max-width: 600px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-content h3 {
+            color: #00796b;
+            margin-bottom: 25px;
+            font-size: 1.8em;
+            font-weight: 700;
+        }
+
+        .close {
+            float: right;
+            cursor: pointer;
+            font-size: 32px;
+            color: #999;
+            transition: all 0.3s ease;
+            line-height: 1;
+            margin-top: -10px;
+        }
+
+        .close:hover {
+            color: #e53935;
+            transform: rotate(90deg);
+        }
+
+        /* ==================== RESPONSIVE ==================== */
+        @media (max-width: 1024px) {
+            .dashboard-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+            }
+
+            .detail-fields-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 20px;
+            }
+
+            .form-section {
+                padding: 20px;
+            }
+
+            .tab-bar {
+                flex-direction: column;
+            }
+
+            .data-table {
+                font-size: 0.85em;
+            }
+        }
+
+        /* ==================== ANIMATIONS ==================== */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .form-section {
+            animation: slideIn 0.5s ease;
+        }
+
+        /* ==================== DASHBOARD TAB ==================== */
+        .dashboard-tab {
+            display: none;
+        }
+
+        /* Alinhamento dos botões Logout e Perfil */
+        .header-actions {
+            display: flex;
+            gap: 15px;
+            /* Espaço entre os botões */
+            align-items: center;
+        }
+
+        .header-actions form {
+            margin: 0;
+            /* Remove margem do form */
+        }
+
+        /* Botão Perfil ao lado do Logout */
+        .profile-button {
+            background: linear-gradient(135deg, #00796b 0%, #004d40 100%);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 121, 107, 0.3);
+        }
+
+        .profile-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 121, 107, 0.4);
+            background: linear-gradient(135deg, #004d40 0%, #00251a 100%);
+        }
+
+        .profile-button:active {
+            transform: translateY(-1px);
+        }
+
+        /* ==================== SENSOR BADGE ==================== */
+        .sensor-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%);
+            color: #004d40;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin: 3px;
+            border: 1px solid #00796b;
+        }
+
+        /* ==================== BOTÃO ADICIONAR SENSOR ==================== */
+        .add-sensor-btn {
+            background: linear-gradient(135deg, #00796b 0%, #004d40 100%);
             color: white;
             padding: 10px 20px;
             border: none;
-            border-radius: 5px;
+            border-radius: 10px;
             cursor: pointer;
-            font-size: 1em;
-            transition: background-color 0.2s;
-            margin-top: 15px;
-        }
-        .submit-button:hover {
-            background-color: #004d40;
+            font-weight: 600;
+            font-size: 0.95em;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 10px rgba(0, 121, 107, 0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        /* Tabelas */
-        .data-table-container {
-            margin-bottom: 40px;
+        .add-sensor-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 121, 107, 0.4);
         }
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
+
+        /* ==================== LISTA DE SENSORES ==================== */
+        .sensors-list {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
             margin-top: 15px;
+            border: 2px dashed #e0e0e0;
         }
-        .data-table th, .data-table td {
-            border: 1px solid #ddd;
-            padding: 10px;
-            text-align: left;
+
+        .sensor-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 15px;
+            background: white;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border: 2px solid #e0f2f1;
+            transition: all 0.3s ease;
         }
-        .data-table th {
-            background-color: #e0f2f1;
-            color: #004d40;
+
+        .sensor-item:hover {
+            border-color: #00796b;
+            box-shadow: 0 2px 8px rgba(0, 121, 107, 0.1);
+        }
+
+        .sensor-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .sensor-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .sensor-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #00796b 0%, #004d40 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2em;
+        }
+
+        .sensor-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sensor-name {
             font-weight: 600;
+            color: #2c3e50;
+            font-size: 1em;
         }
-        .data-table tbody tr:nth-child(even) {
-            background-color: #f7f7f7;
+
+        .sensor-type {
+            font-size: 0.85em;
+            color: #666;
+        }
+
+        /* Checkbox customizado */
+        .form-group input[type="checkbox"] {
+            width: auto;
+            margin-right: 10px;
+            cursor: pointer;
+            transform: scale(1.3);
+            accent-color: #00796b;
+        }
+
+        /* Select de múltipla escolha estilizado */
+        .form-group select[multiple] {
+            min-height: 150px;
+            padding: 10px;
+        }
+
+        .form-group select[multiple] option {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 5px 0;
+        }
+
+        .form-group select[multiple] option:checked {
+            background: linear-gradient(135deg, #00796b 0%, #004d40 100%);
+            color: white;
         }
 
     </style>
 </head>
 
 <body>
-
     <div class="dashboard-container">
-
         <!-- SIDEBAR -->
         <div class="sidebar">
             <div class="sidebar-header">
-                Eureka
+                <h1>🌿 Eureka</h1>
+                <p>Sistema de Gestão Agrícola</p>
             </div>
 
             <div class="user-info">
-                <p>Bem-vindo(a), <strong>{{ username }}</strong></p>
-                <p>Role: <span style="color: #00796b;">{{ role }}</span></p>
+                <p>👤 Bem-vindo(a), <strong>{{ username }}</strong></p>
+                <p>📋 Role: <strong>{{ role }}</strong></p>
             </div>
 
             <nav>
-                <a href="#" class="menu-item" onclick="switchSidebarTab('main-dashboard')">🏠 Dashboard</a>
-
-                <a href="#" class="menu-item" onclick="switchSidebarTab('warehouse-management')">📦 Gestão de Armazéns</a>
+                <a href="#" class="menu-item active" onclick="switchSidebarTab('main-dashboard')">
+                    🏠 Dashboard Principal
+                </a>
+                <a href="#" class="menu-item" onclick="switchSidebarTab('warehouse-management')">
+                    📦 Gestão de Armazéns
+                </a>
             </nav>
         </div>
 
-
         <!-- MAIN CONTENT -->
         <div class="main-content">
-
-            <!-- HEADER -->
             <div class="main-header">
                 <h2>Dashboard do Produtor</h2>
-                <form method="post" action="{% url 'logout' %}">
-                    {% csrf_token %}
-                    <button type="submit" class="logout-button">Logout</button>
-                </form>
+
+                <div class="header-actions">
+                    <button type="button" class="profile-button" onclick="openProfileModal()">
+                        <span aria-hidden="true">&#x1F464;</span> Perfil
+                    </button>
+
+                    <form method="post" action="{% url 'logout' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="logout-button">Logout</button>
+                    </form>
+                </div>
             </div>
 
-
-            <!-- ====================== TABS DO DASHBOARD PRINCIPAL ====================== -->
+            <!-- DASHBOARD PRINCIPAL -->
             <div id="main-dashboard" class="dashboard-tab" style="display:block;">
-
                 <div class="tab-bar">
-                    <button class="tab-link active" onclick="openTab(event, 'insert-info')">➕ Registar</button>
-                    <button class="tab-link" onclick="openTab(event, 'data-view')">👁️ Visualizar Registos</button>
+                    <button class="tab-link active" onclick="openTab(event, 'insert-info')">
+                        ➕ Registar
+                    </button>
+                    <button class="tab-link" onclick="openTab(event, 'data-view')">
+                        👁️ Visualizar Registos
+                    </button>
                 </div>
 
-                <!-- TAB 1: INSERIR INFORMAÇÕES -->
+                <!-- TAB: REGISTAR -->
                 <div id="insert-info" class="tab-content" style="display: block;">
-
+                    <!-- PRODUTO -->
                     <div class="form-section">
-                        <h3>🌱 1. Registar um Novo Produto</h3>
+                        <h3>
+                            <span class="step-badge">1</span>
+                            🌱 Registar um Novo Produto
+                        </h3>
                         <form method="POST" action="{% url 'producer_submit_product' %}">
                             {% csrf_token %}
                             {{ product_registration_form.as_p }}
-                            <button type="submit" class="submit-button">Registar Produto</button>
+                            <button type="submit" class="submit-button">✓ Registar Produto</button>
                         </form>
                     </div>
 
-                    <hr style="margin: 40px 0;">
-
+                    <!-- PLANTAÇÃO -->
                     <div class="form-section">
-                        <h3>🗓️ 2. Registar Plano de Plantação</h3>
-                        <form method="POST" action="{% url 'producer_submit_plantation' %}">
+                        <h3>
+                            <span class="step-badge">2</span>
+                            🗓️ Registar Plantação
+                        </h3>
+                        <form method="POST" action="{% url 'producer_submit_plantation' %}" id="plantationForm">
                             {% csrf_token %}
-                            {{ plantation_plan_form.as_p }}
-                            <button type="submit" class="submit-button">Registar Plantação</button>
+
+                            <div class="form-group">
+                                {{ plantation_plan_form.product.label_tag }}
+                                {{ plantation_plan_form.product }}
+                            </div>
+                            <div class="form-group">
+                                {{ plantation_plan_form.quantity_of_seeds.label_tag }}
+                                {{ plantation_plan_form.quantity_of_seeds }}
+                            </div>
+                            <div class="form-group">
+                                {{ plantation_plan_form.production_type.label_tag }}
+                                {{ plantation_plan_form.production_type }}
+                            </div>
+                            <div class="form-group">
+                                {{ plantation_plan_form.chemical_use.label_tag }}
+                                {{ plantation_plan_form.chemical_use }}
+                            </div>
+                            <div class="form-group">
+                                {{ plantation_plan_form.area.label_tag }}
+                                {{ plantation_plan_form.area }}
+                            </div>
+                            <div class="form-group">
+                                {{ plantation_plan_form.location.label_tag }}
+                                {{ plantation_plan_form.location }}
+                            </div>
+                            <div class="form-group">
+                                {{ plantation_plan_form.plantation_date.label_tag }}
+                                {{ plantation_plan_form.plantation_date }}
+                            </div>
+
+                            <h4>🌳 Detalhes do Pomar e Solo</h4>
+                            <div class="info-box">
+                                <span style="font-size: 1.4em;">ℹ️</span>
+                                <span>Campos opcionais que enriquecem o registo da sua produção.</span>
+                            </div>
+
+                            <div class="detail-fields-grid">
+                                <div class="form-group">
+                                    {{ plantation_detail_form.total_area_ha.label_tag }}
+                                    {{ plantation_detail_form.total_area_ha }}
+                                </div>
+                                <div class="form-group">
+                                    {{ plantation_detail_form.avg_plant_age_years.label_tag }}
+                                    {{ plantation_detail_form.avg_plant_age_years }}
+                                </div>
+                                <div class="form-group">
+                                    {{ plantation_detail_form.kiwi_variety.label_tag }}
+                                    {{ plantation_detail_form.kiwi_variety }}
+                                </div>
+                                <div class="form-group">
+                                    {{ plantation_detail_form.rootstock.label_tag }}
+                                    {{ plantation_detail_form.rootstock }}
+                                </div>
+                                <div class="form-group">
+                                    {{ plantation_detail_form.density_plants_ha.label_tag }}
+                                    {{ plantation_detail_form.density_plants_ha }}
+                                </div>
+                                <div class="form-group">
+                                    {{ plantation_detail_form.conduct_system.label_tag }}
+                                    {{ plantation_detail_form.conduct_system }}
+                                </div>
+                                <div class="form-group">
+                                    {{ plantation_detail_form.soil_type.label_tag }}
+                                    {{ plantation_detail_form.soil_type }}
+                                </div>
+                                <div class="form-group">
+                                    {{ plantation_detail_form.ph_soil.label_tag }}
+                                    {{ plantation_detail_form.ph_soil }}
+                                </div>
+                                <div class="form-group">
+                                    {{ plantation_detail_form.organic_matter_percent.label_tag }}
+                                    {{ plantation_detail_form.organic_matter_percent }}
+                                </div>
+                                <div class="form-group">
+                                    {{ plantation_detail_form.water_regime.label_tag }}
+                                    {{ plantation_detail_form.water_regime }}
+                                </div>
+                                <div class="form-group">
+                                    {{ plantation_detail_form.irrigation_system.label_tag }}
+                                    {{ plantation_detail_form.irrigation_system }}
+                                </div>
+                            </div>
+
+                            <button type="submit" class="submit-button">✓ Registar Plantação</button>
                         </form>
                     </div>
 
+                    <div class="form-divider" style="margin: 50px 0;"></div>
+
+                    <!-- COLHEITA -->
                     <div class="form-section">
-                        <h3>🌾 3. Registar Colheita</h3>
+                        <h3>
+                            <span class="step-badge">3</span>
+                            🌾 Registar Colheita
+                        </h3>
                         <form method="POST" action="{% url 'producer_submit_harvest' %}">
                             {% csrf_token %}
                             {{ harvest_form.as_p }}
-                            <button type="submit" class="submit-button">Registar Colheita e Concluir Plano</button>
+                            <button type="submit" class="submit-button">✓ Registar Colheita</button>
                         </form>
+                    </div>
+
+                    <div class="form-section">
+                        <h3>🗓️ 4. Registar Eventos do Pomar</h3>
+
+                        <form method="POST" action="{% url 'producer_submit_event' %}" id="baseEventForm">
+                            {% csrf_token %}
+                            {{ plantation_event_form.as_p }}
+                        </form>
+
+                        <div id="dynamic-detail-forms" style="padding-top: 10px;">
+
+                            <div id="detail_Fert_Min" class="detail-form-container" style="display: none;"
+                                data-event-type="Fert_Min">
+                                <h4>Detalhes do Fertilizante Sintético</h4>
+                                <form method="POST" action="{% url 'producer_submit_fertilizer_synth' %}"
+                                    id="detailForm_Fert_Min">
+                                    {% csrf_token %}
+                                    {{ fertilizer_synthetic_form.as_p }}
+                                    <button type="submit" class="submit-button"
+                                        onclick="return validateBaseEventForm(this);"
+                                        style="background-color: #3f51b5;">Registar Detalhe Sintético</button>
+                                </form>
+                            </div>
+
+                            <div id="detail_Fert_Org" class="detail-form-container" style="display: none;"
+                                data-event-type="Fert_Org">
+                                <h4>Detalhes do Fertilizante Orgânico</h4>
+                                <form method="POST" action="{% url 'producer_submit_fertilizer_org' %}"
+                                    id="detailForm_Fert_Org">
+                                    {% csrf_token %}
+                                    {{ fertilizer_organic_form.as_p }}
+                                    <button type="submit" class="submit-button"
+                                        onclick="return validateBaseEventForm(this);"
+                                        style="background-color: #4CAF50;">Registar Detalhe Orgânico</button>
+                                </form>
+                            </div>
+
+                            <div id="detail_Soil_Corr" class="detail-form-container" style="display: none;"
+                                data-event-type="Soil_Corr">
+                                <h4>Detalhes dos Corretivos do Solo</h4>
+                                <form method="POST" action="{% url 'producer_submit_soil_corrective' %}"
+                                    id="detailForm_Soil_Corr">
+                                    {% csrf_token %}
+                                    {{ soil_corrective_form.as_p }}
+                                    <button type="submit" class="submit-button"
+                                        onclick="return validateBaseEventForm(this);"
+                                        style="background-color: #795548;">Registar Corretivo</button>
+                                </form>
+                            </div>
+
+                            <div id="detail_Pest" class="detail-form-container" style="display: none;"
+                                data-event-type="Pest">
+                                <h4>Detalhes dos Produtos Fitofarmacêuticos</h4>
+                                <form method="POST" action="{% url 'producer_submit_pest_control' %}"
+                                    id="detailForm_Pest">
+                                    {% csrf_token %}
+                                    {{ pest_control_form.as_p }}
+                                    <button type="submit" class="submit-button"
+                                        onclick="return validateBaseEventForm(this);"
+                                        style="background-color: #f44336;">Registar Fitofarmacêutico</button>
+                                </form>
+                            </div>
+
+                            <div id="detail_Machine_Hrs" class="detail-form-container" style="display: none;"
+                                data-event-type="Machine_Hrs">
+                                <h4>Detalhes da Maquinaria</h4>
+                                <form method="POST" action="{% url 'producer_submit_machinery' %}"
+                                    id="detailForm_Machine_Hrs">
+                                    {% csrf_token %}
+                                    {{ machinery_form.as_p }}
+                                    <button type="submit" class="submit-button"
+                                        onclick="return validateBaseEventForm(this);"
+                                        style="background-color: #607d8b;">Registar Maquinaria</button>
+                                </form>
+                            </div>
+
+                            <div id="detail_Fuel" class="detail-form-container" style="display: none;"
+                                data-event-type="Fuel">
+                                <h4>Detalhes de Combustível</h4>
+                                <form method="POST" action="{% url 'producer_submit_fuel' %}" id="detailForm_Fuel">
+                                    {% csrf_token %}
+                                    {{ fuel_form.as_p }}
+                                    <button type="submit" class="submit-button"
+                                        onclick="return validateBaseEventForm(this);"
+                                        style="background-color: #ff9800;">Registar Combustível</button>
+                                </form>
+                            </div>
+
+                            <div id="detail_Electric" class="detail-form-container" style="display: none;"
+                                data-event-type="Electric">
+                                <h4>Detalhes de Energia Elétrica</h4>
+                                <form method="POST" action="{% url 'producer_submit_electric' %}"
+                                    id="detailForm_Electric">
+                                    {% csrf_token %}
+                                    {{ electric_energy_form.as_p }}
+                                    <button type="submit" class="submit-button"
+                                        onclick="return validateBaseEventForm(this);"
+                                        style="background-color: #ffeb3b; color: black;">Registar Energia
+                                        Elétrica</button>
+                                </form>
+                            </div>
+
+                            <div id="detail_Water" class="detail-form-container" style="display: none;"
+                                data-event-type="Water">
+                                <h4>Detalhes da Água de Rega</h4>
+                                <form method="POST" action="{% url 'producer_submit_water' %}" id="detailForm_Water">
+                                    {% csrf_token %}
+                                    {{ irrigation_water_form.as_p }}
+                                    <button type="submit" class="submit-button"
+                                        onclick="return validateBaseEventForm(this);"
+                                        style="background-color: #2196f3;">Registar Água</button>
+                                </form>
+                            </div>
+                        </div>
                     </div>
 
                 </div>
 
-
                 <!-- TAB 2: VISUALIZAR INFORMAÇÕES -->
                 <div id="data-view" class="tab-content" style="display:none;">
-
-                    <div class="data-table-container">
-                        <h3>&#x1F464; Dados Pessoais e de Perfil</h3>
-                        <table class="data-table">
-                            <thead><tr><th>Campo</th><th>Valor</th></tr></thead>
-                            <tbody>
-                                <tr><td>Username</td><td>{{ username }}</td></tr>
-                                <tr><td>Role</td><td>{{ role }}</td></tr>
-                                <tr><td>ID do Utilizador</td><td>{{ request.user.id }}</td></tr>
-                                <tr><td>Email</td><td>{{ request.user.email }}</td></tr>
-
-                                {% if user_profile %}
-                                <tr><td>Telemóvel</td><td>{{ user_profile.phone_number|default:"N/A" }}</td></tr>
-                                <tr><td>Morada Completa</td><td>{{ user_profile.address|default:"Não especificada" }}</td></tr>
-                                {% else %}
-                                <tr><td colspan="2" style="color:red;font-style:italic">Dados de perfil em falta</td></tr>
-                                {% endif %}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <hr style="margin:40px 0;">
 
                     <div class="data-table-container">
                         <h3>📦 Produtos Registados</h3>
                         {% if registered_products %}
                         <table class="data-table">
                             <thead>
-                                <tr><th>ID</th><th>Nome</th><th>Categoria</th><th>Preço (€)</th></tr>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nome</th>
+                                    <th>Categoria</th>
+                                    <th>Preço (€)</th>
+                                </tr>
                             </thead>
                             <tbody>
                                 {% for product in registered_products %}
@@ -330,42 +1069,73 @@
                         {% else %}<p>Sem produtos registados.</p>{% endif %}
                     </div>
 
-                    <hr style="margin:40px 0;">
-
                     <div class="data-table-container">
                         <h3>🗺️ Plantações</h3>
                         {% if plantation_plans %}
                         <table class="data-table">
                             <thead>
-                                <tr><th>ID</th><th>Produto</th><th>Área</th><th>Localização</th><th>Data</th><th>Sementes</th><th>Tipo</th><th>Químico</th></tr>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Produto</th>
+
+                                    <th>Área (m²)</th>
+                                    <th>Data</th>
+
+                                    <th>Área Pomar (ha)</th>
+                                    <th>Idade Média (anos)</th>
+                                    <th>Variedade Kiwi</th>
+                                    <th>Sistema Condução</th>
+                                    <th>pH Solo</th>
+                                    <th>Regime Hídrico</th>
+
+                                    <th>Sementes</th>
+                                    <th>Tipo Prod.</th>
+                                    <th>Químico</th>
+
+                                </tr>
                             </thead>
                             <tbody>
                                 {% for plan in plantation_plans %}
                                 <tr>
                                     <td>{{ plan.plantation_id }}</td>
                                     <td>{{ plan.product.name }}</td>
+
                                     <td>{{ plan.area }}</td>
-                                    <td>{{ plan.location }}</td>
-                                    <td>{{ plan.plantation_date }}</td>
+                                    <td>{{ plan.plantation_date|date:"Y-m-d" }}</td>
+
+                                    <td>{{ plan.total_area_ha|default:"" }}</td>
+                                    <td>{{ plan.avg_plant_age_years|default:"" }}</td>
+                                    <td>{{ plan.get_kiwi_variety_display|default:"" }}</td>
+                                    <td>{{ plan.get_conduct_system_display|default:"" }}</td>
+                                    <td>{{ plan.ph_soil|default:"" }}</td>
+                                    <td>{{ plan.get_water_regime_display|default:"" }}</td>
+
                                     <td>{{ plan.quantity_of_seeds }}</td>
                                     <td>{{ plan.get_production_type_display }}</td>
                                     <td>{{ plan.get_chemical_use_display }}</td>
+
                                 </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
-                        {% else %}<p>Sem planos registados.</p>{% endif %}
+                        {% else %}
+                        <p>Sem planos registados.</p>
+                        {% endif %}
                     </div>
 
-
-                    <hr style="margin:40px 0;">
-
-                    <div class="data-table-section">
+                    <div class="data-table-container">
                         <h3>📋 Histórico de Colheitas</h3>
                         {% if harvest_records %}
                         <table class="data-table">
                             <thead>
-                                <tr><th>ID</th><th>Plano</th><th>Data</th><th>Qt (Kg)</th><th>Qt Aproveitada</th><th>Qualidade</th></tr>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Plano</th>
+                                    <th>Data</th>
+                                    <th>Qt (Kg)</th>
+                                    <th>Qt Aproveitada</th>
+                                    <th>Qualidade</th>
+                                </tr>
                             </thead>
                             <tbody>
                                 {% for record in harvest_records %}
@@ -373,7 +1143,7 @@
                                     <td>{{ record.harvest_id }}</td>
                                     <td>
                                         {% if record.plantation %}
-                                            ID {{ record.plantation.pk }} - {{ record.plantation.product.name }}
+                                        ID {{ record.plantation.pk }} - {{ record.plantation.product.name }}
                                         {% else %}Plano Concluído{% endif %}
                                     </td>
                                     <td>{{ record.harvest_date }}</td>
@@ -387,47 +1157,115 @@
                         {% else %}<p>Ainda não existem colheitas concluídas.</p>{% endif %}
                     </div>
 
+                    <div class="data-table-container">
+                        <h3>🗓️ Eventos do Pomar</h3>
+                        {% if plantation_events %}
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Plano</th>
+                                    <th>Data</th>
+                                    <th>Tipo</th>
+                                    <th>Detalhes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for event in plantation_events %}
+                                <tr>
+                                    <td>{{ event.event_id }}</td>
+                                    <td>
+                                        {% if event.plantation %}
+                                        ID {{ event.plantation.pk }} - {{ event.plantation.product.name }}
+                                        {% else %}N/A{% endif %}
+                                    </td>
+                                    <td>{{ event.date|date:"Y-m-d" }}</td>
+                                    <td>{{ event.get_event_type_display }}</td>
+                                    <td>
+                                        {% if event.event_type == 'Fert_Min' and event.fertilizer_synth %}
+                                        {{ event.fertilizer_synth.name }} ({{ event.fertilizer_synth.quantity_kg }} kg)
+                                        {% elif event.event_type == 'Fert_Org' and event.fertilizer_org %}
+                                        {{ event.fertilizer_org.name }} ({{ event.fertilizer_org.quantity_kg }} kg)
+                                        {% elif event.event_type == 'Soil_Corr' and event.soil_corrective %}
+                                        {{ event.soil_corrective.name }} ({{ event.soil_corrective.quantity_kg }} kg)
+                                        {% elif event.event_type == 'Pest' and event.pest_control %}
+                                        {{ event.pest_control.name }} ({{ event.pest_control.quantity_lt }} L)
+                                        {% elif event.event_type == 'Machine_Hrs' and event.machinery %}
+                                        {{ event.machinery.machine_name }} ({{ event.machinery.hours_used }} h)
+                                        {% elif event.event_type == 'Fuel' and event.fuel %}
+                                        {{ event.fuel.fuel_type }} ({{ event.fuel.quantity_liters }} L)
+                                        {% elif event.event_type == 'Electric' and event.electric %}
+                                        {{ event.electric.kwh_consumed }} kWh
+                                        {% elif event.event_type == 'Water' and event.water %}
+                                        {{ event.water.quantity_m3 }} m³
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <p>Sem eventos registados.</p>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
 
-
             <!-- ====================== PÁGINA DE GESTÃO DE ARMAZÉNS ====================== -->
+            <!-- GESTÃO DE ARMAZÉNS -->
             <div id="warehouse-management" class="dashboard-tab" style="display:none;">
-
-                <h2>📦 Registo e Gestão de Armazéns</h2>
-
-                <div class="form-container">
-                    <h3>Registar Novo Armazém</h3>
+                
+                <div class="form-section">
+                    <h3>
+                        <span class="step-badge">📦</span>
+                        Registar Novo Armazém
+                    </h3>
                     <form method="post" action="{% url 'producer_submit_warehouse' %}">
                         {% csrf_token %}
-
-                        {{ warehouse_form.location.label_tag }}
-                        {{ warehouse_form.location }}
-
-                        {{ warehouse_form.control_type.label_tag }}
-                        {{ warehouse_form.control_type }}
-
-                        {{ warehouse_form.capacity.label_tag }}
-                        {{ warehouse_form.capacity }}
-
-                        <div style="display:flex; justify-content:space-between; margin-top:15px;">
-                            <label for="{{ warehouse_form.sensors.id_for_label }}">{{ warehouse_form.sensors.label }}</label>
-                            <button type="button" class="btn btn-sm btn-info" onclick="openSensorModal()">+ Novo Sensor</button>
+                        
+                        <div class="form-group">
+                            {{ warehouse_form.location.label_tag }}
+                            {{ warehouse_form.location }}
                         </div>
 
-                        {{ warehouse_form.sensors }}
+                        <div class="form-group">
+                            {{ warehouse_form.control_type.label_tag }}
+                            {{ warehouse_form.control_type }}
+                        </div>
 
-                        <button type="submit" class="submit-button">Registar Armazém</button>
+                        <div class="form-group">
+                            {{ warehouse_form.capacity.label_tag }}
+                            {{ warehouse_form.capacity }}
+                        </div>
+
+                        <div class="form-group">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                                <label>{{ warehouse_form.sensors.label }}</label>
+                                <button type="button" class="add-sensor-btn" onclick="openSensorModal()">
+                                    ➕ Novo Sensor
+                                </button>
+                            </div>                     
+                            {{ warehouse_form.sensors }}
+                        </div>
+
+                        <button type="submit" class="submit-button">✓ Registar Armazém</button>
                     </form>
                 </div>
 
-
-                <div class="data-table">
-                    <h3>Meus Armazéns ({{ producer_warehouses.count }})</h3>
+                <div class="data-table-container">
+                    <h3>🏭 Meus Armazéns ({{ producer_warehouses.count }})</h3>
                     {% if producer_warehouses %}
-                    <table>
+                    <table class="data-table">
                         <thead>
-                            <tr><th>ID</th><th>Localização</th><th>Tipo</th><th>Capacidade</th><th>Sensores</th></tr>
+                            <tr>
+                                <th>ID</th>
+                                <th>Localização</th>
+                                <th>Tipo</th>
+                                <th>Capacidade</th>
+                                <th>Sensores</th>
+                            </tr>
                         </thead>
                         <tbody>
                             {% for warehouse in producer_warehouses %}
@@ -438,34 +1276,94 @@
                                 <td>{{ warehouse.capacity }}</td>
                                 <td>
                                     {% for sensor in warehouse.sensors.all %}
-                                        {{ sensor.sensor_id }} ({{ sensor.get_sensor_type_display }})<br>
-                                    {% empty %}Nenhum{% endfor %}
+                                        <span class="sensor-badge">{{ sensor.sensor_id }} ({{ sensor.get_sensor_type_display }})</span>
+                                    {% empty %}
+                                        <span style="color:#999;font-style:italic;">Nenhum</span>
+                                    {% endfor %}
                                 </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
-                    {% else %}<p>Não há armazéns registados.</p>{% endif %}
+                    {% else %}
+                    <p style="text-align:center;color:#666;padding:20px;">Não há armazéns registados.</p>
+                    {% endif %}
                 </div>
             </div>
 
         </div>
     </div>
 
-
     <!-- ====================== MODAL SENSOR ====================== -->
-    <div id="sensorModal" class="modal" style="display:none; position:fixed; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.4);">
-        <div class="modal-content" style="background:#fff; margin:10% auto; padding:20px; width:80%; max-width:500px;">
-            <span class="close" onclick="closeSensorModal()" style="float:right; cursor:pointer; font-size:28px;">&times;</span>
-            <h3>Adicionar Novo Sensor</h3>
+    <!-- MODAL SENSOR -->
+    <div id="sensorModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeSensorModal()">&times;</span>
+            <h3>➕ Adicionar Novo Sensor</h3>
             <form method="post" action="{% url 'producer_submit_sensor' %}" id="sensorForm">
                 {% csrf_token %}
                 {{ sensor_form.as_p }}
-                <button type="submit" class="submit-button">Registar Sensor</button>
+                <button type="submit" class="submit-button">✓ Registar Sensor</button>
             </form>
         </div>
     </div>
 
+    <!-- ====================== MODAL DE DADOS PESSOAIS/PERFIL ====================== -->
+    <div id="profileModal" class="modal"
+        style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6);">
+        <div class="modal-content"
+            style="background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 600px; border-radius: 10px;">
+            <span class="close" onclick="closeProfileModal()"
+                style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+
+            <h2>&#x1F464; Dados Pessoais</h2>
+
+            <div class="data-table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Campo</th>
+                            <th>Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Username</td>
+                            <td>{{ username }}</td>
+                        </tr>
+                        <tr>
+                            <td>Role</td>
+                            <td>{{ role }}</td>
+                        </tr>
+                        <tr>
+                            <td>ID do Utilizador</td>
+                            <td>{{ request.user.id }}</td>
+                        </tr>
+                        <tr>
+                            <td>Email</td>
+                            <td>{{ request.user.email }}</td>
+                        </tr>
+
+                        {% if user_profile %}
+                        <tr>
+                            <td>Telemóvel</td>
+                            <td>{{ user_profile.phone_number|default:"N/A" }}</td>
+                        </tr>
+                        <tr>
+                            <td>Morada Completa</td>
+                            <td>{{ user_profile.address|default:"Não especificada" }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="2" style="color:red;font-style:italic">Dados de perfil em falta</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
 
 
     <!-- ====================== JAVASCRIPT ====================== -->
@@ -484,6 +1382,10 @@
         function switchSidebarTab(tabId) {
             document.querySelectorAll('.dashboard-tab').forEach(tab => tab.style.display = 'none');
             document.getElementById(tabId).style.display = 'block';
+            
+            // Atualizar menu ativo
+            document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
+            event.target.classList.add('active');
         }
 
         function openSensorModal() {
@@ -493,7 +1395,165 @@
         function closeSensorModal() {
             document.getElementById('sensorModal').style.display = "none";
         }
+
+        // Função auxiliar para fechar/abrir modais (mantidas)
+        function openSoilCharacteristicModal() {
+            document.getElementById('soilCharacteristicModal').style.display = "block";
+        }
+        function closeSoilCharacteristicModal() {
+            document.getElementById('soilCharacteristicModal').style.display = "none";
+        }
+
+        // Contador para garantir nomes de campo únicos (ex: char_0, char_1, etc.)
+        let characteristicCounter = 0;
+
+        function addSoilCharacteristicSet() {
+            const container = document.getElementById('soil-characteristic-sets');
+            characteristicCounter++;
+
+            // 1. Cria a Div de Grupo
+            const divSet = document.createElement('div');
+            divSet.className = 'form-group soil-set';
+            divSet.style.border = '1px solid #ddd';
+            divSet.style.padding = '15px';
+            divSet.style.borderRadius = '5px';
+            divSet.style.marginBottom = '10px';
+            divSet.id = `soil-set-${characteristicCounter}`;
+
+            // 2. Cria o Dropdown de Seleção (ModelChoiceField)
+            const selectLabel = document.createElement('label');
+            selectLabel.textContent = `Característica ${characteristicCounter}:`;
+            divSet.appendChild(selectLabel);
+
+            const select = document.createElement('select');
+            select.name = `characteristic_id_${characteristicCounter}`;
+            select.className = 'form-control characteristic-select';
+            select.required = true;
+
+            // 3. Adiciona Opção Placeholder
+            const defaultOption = document.createElement('option');
+            defaultOption.value = "";
+            defaultOption.textContent = "--- Selecione a Característica ---";
+            select.appendChild(defaultOption);
+
+            // 4. Cria o Input de Valor
+            const valueLabel = document.createElement('label');
+            valueLabel.textContent = 'Valor:';
+            valueLabel.style.marginTop = '10px';
+
+            const valueInput = document.createElement('input');
+            valueInput.name = `characteristic_value_${characteristicCounter}`;
+            valueInput.type = 'number';
+            valueInput.step = 'any';
+            valueInput.className = 'form-control';
+            valueInput.required = true;
+
+            // 5. Botão de Remoção
+            const removeButton = document.createElement('button');
+            removeButton.type = 'button';
+            removeButton.textContent = 'Remover';
+            removeButton.className = 'submit-button';
+            removeButton.style.backgroundColor = '#dc3545';
+            removeButton.style.marginTop = '10px';
+            removeButton.style.width = '100%';
+            removeButton.onclick = function () {
+                divSet.remove();
+            };
+
+            // Adiciona todos os elementos ao conjunto
+            divSet.appendChild(select);
+            divSet.appendChild(valueLabel);
+            divSet.appendChild(valueInput);
+            divSet.appendChild(removeButton);
+
+            container.appendChild(divSet);
+
+            // 6. Preenche as opções do dropdown via API
+            fetchAndPopulateCharacteristics(select);
+        }
+
+        // --- NOVO: Função para buscar as características do solo via AJAX (API) ---
+        function fetchAndPopulateCharacteristics(selectElement) {
+            fetch('/api/soil-characteristics/')
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.json();
+                })
+                .then(data => {
+                    // data é uma lista de objetos: [{id: 1, name: 'pH'}, {id: 2, name: 'Materia Organica'}]
+                    data.forEach(char => {
+                        const option = document.createElement('option');
+                        option.value = char.id;
+                        option.textContent = char.name; // Assumindo que o __str__ está no campo 'name'
+                        selectElement.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Erro ao buscar características do solo:', error);
+                });
+        }
+        // Funções para o Modal de Dados Pessoais/Perfil
+        function openProfileModal() {
+            document.getElementById('profileModal').style.display = "block";
+        }
+
+        function closeProfileModal() {
+            document.getElementById('profileModal').style.display = "none";
+        }
+
+        // === ATIVAÇÃO E EXPORTAÇÃO GLOBAL (Para o HTML) ===
+        document.addEventListener("DOMContentLoaded", function () {
+            const eventTypeSelect = document.getElementById('id_event_type');
+
+            // 1. Lógica de Modal (Fechamento)
+            window.onclick = function (event) {
+                let modalProfile = document.getElementById('profileModal');
+                let modalSensor = document.getElementById('sensorModal');
+                let modalSoilChar = document.getElementById('soilCharacteristicModal');
+
+                if (event.target === modalProfile) { closeProfileModal(); }
+                if (event.target === modalSensor) { closeSensorModal(); }
+                if (event.target === modalSoilChar) { closeSoilCharacteristicModal(); }
+            }
+
+            // 2. Lógica de Comutação de Eventos Dinâmicos (Para o Dropdown event_type)
+            if (eventTypeSelect) {
+                const switchDetailView = function () {
+                    const selectedType = this.value || eventTypeSelect.value;
+
+                    document.querySelectorAll('#dynamic-detail-forms .detail-form-container').forEach(div => {
+                        div.style.display = 'none';
+                    });
+
+                    const targetDetailId = 'detail_' + selectedType;
+                    const targetDetailDiv = document.getElementById(targetDetailId);
+
+                    if (targetDetailDiv) {
+                        targetDetailDiv.style.display = 'block';
+                    }
+                };
+
+                eventTypeSelect.addEventListener('change', switchDetailView);
+                eventTypeSelect.dispatchEvent(new Event('change')); // Ativa o bloco padrão no carregamento
+            }
+
+            // 3. Adicionar o primeiro conjunto de características ao carregar (se desejado)
+            // addSoilCharacteristicSet(); // Descomentar se quiser que o primeiro conjunto apareça por padrão
+
+            // 4. EXPORTAR FUNÇÃO CRÍTICA PARA O ONCLICK DO BOTÃO NO HTML
+            window.addSoilCharacteristicSet = addSoilCharacteristicSet;
+        });
+
+        // Fechar modal ao clicar fora
+        window.onclick = function(event) {
+            const modal = document.getElementById('sensorModal');
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+
     </script>
 
 </body>
+
 </html>

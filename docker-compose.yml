@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: retail_eureka_web
+    ports:
+      - "8700:8700"
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=django-insecure-u*k0s4hd=efe&2rx-!&sut%x__2x+(c3(me-2#6w+l&56g&q04
+      - ALLOWED_HOSTS=aisupply.rc,localhost,127.0.0.1
+    restart: always
+    volumes:
+      - .:/app

@@ -2,48 +2,248 @@
 <html lang="pt">
 <head>
     <meta charset="UTF-8">
-    <title>Login</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Eureka</title>
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f4f4f4; }
-        .login-container { background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 300px; }
-        input[type="text"], input[type="password"] { width: 100%; padding: 10px; margin: 8px 0; display: inline-block; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        button { background-color: #4CAF50; color: white; padding: 14px 20px; margin: 8px 0; border: none; border-radius: 4px; cursor: pointer; width: 100%; }
-        .link { text-align: center; margin-top: 15px; }
-        .errorlist { color: red; list-style: none; padding: 0; margin-bottom: 10px; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #ffffff 0%, #ffffff 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: white;
+            padding: 50px 40px;
+            border-radius: 25px;
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 450px;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .login-header h1 {
+            color: #00796b;
+            font-size: 2.5em;
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .login-header p {
+            color: #666;
+            font-size: 1em;
+            margin-top: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #2c3e50;
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 0.95em;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 15px 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            background: white;
+            font-family: inherit;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #00796b;
+            box-shadow: 0 0 0 4px rgba(0, 121, 107, 0.1);
+        }
+
+        .errorlist {
+            background: #ffebee;
+            color: #c62828;
+            padding: 12px 15px;
+            border-radius: 10px;
+            list-style: none;
+            margin-bottom: 20px;
+            border-left: 4px solid #e53935;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+
+        .errorlist li {
+            margin: 5px 0;
+        }
+
+        button[type="submit"] {
+            background: linear-gradient(135deg, #00796b 0%, #004d40 100%);
+            color: white;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 20px rgba(0, 121, 107, 0.3);
+            margin-top: 10px;
+        }
+
+        button[type="submit"]:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 121, 107, 0.4);
+        }
+
+        button[type="submit"]:active {
+            transform: translateY(-1px);
+        }
+
+        .links-container {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .link {
+            margin: 15px 0;
+            font-size: 0.95em;
+        }
+
+        .link a {
+            color: #00796b;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .link a:hover {
+            color: #004d40;
+            text-decoration: underline;
+        }
+
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #e0e0e0, transparent);
+            margin: 25px 0;
+        }
+
+        /* Animação do ícone */
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        .login-header h1 span {
+            display: inline-block;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        /* Mensagem de boas-vindas */
+        .welcome-message {
+            background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            text-align: center;
+            color: #004d40;
+            font-size: 0.9em;
+            border-left: 4px solid #00796b;
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 40px 25px;
+            }
+
+            .login-header h1 {
+                font-size: 2em;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="login-container">
-        <h2>Retail Eureka</h2>
+        <div class="login-header">
+            <h1><span>🌿</span> Eureka</h1>
+        </div>
 
         <form method="POST" action="{% url 'login' %}"> 
             {% csrf_token %} 
 
             {% if form.non_field_errors %}
-                {% for error in form.non_field_errors %}
-                    <div class="errorlist">{{ error }}</div>
-                {% endfor %}
+                <ul class="errorlist">
+                    {% for error in form.non_field_errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
             {% endif %}
 
             {% for field in form %}
-                <div class="form-group" style="margin-bottom: 15px;">
+                <div class="form-group">
                     <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                     {{ field }}
-                    {% for error in field.errors %}
-                        <div class="errorlist">{{ error }}</div>
-                    {% endfor %}
+                    {% if field.errors %}
+                        <ul class="errorlist">
+                            {% for error in field.errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
                 </div>
             {% endfor %}
 
-            <button type="submit">Login</button>
+            <button type="submit">🔐 Entrar</button>
         </form>
 
-        <div class="link">
-            Não tem conta? <a href="{% url 'register' %}">Registar</a>
-        </div>
-        
-        <div class="link">
-            <a href="{% url 'password_reset' %}">Esqueceu-se da senha?</a>
+        <div class="divider"></div>
+
+        <div class="links-container">
+            <div class="link">
+                Não tem conta? <a href="{% url 'register' %}">✨ Criar conta</a>
+            </div>
+            
+            <div class="link">
+                <a href="{% url 'password_reset' %}">🔑 Esqueceu-se da senha?</a>
+            </div>
         </div>
     </div>
 </body>
