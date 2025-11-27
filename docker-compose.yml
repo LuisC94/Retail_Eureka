@@ -10,4 +10,6 @@ services:
       - DEBUG=False
       - SECRET_KEY=django-insecure-u*k0s4hd=efe&2rx-!&sut%x__2x+(c3(me-2#6w+l&56g&q04
       - ALLOWED_HOSTS=aisupply.rc,localhost,127.0.0.1
+    extra_hosts:
+      - "aisupply.rc:10.197.37.203"
     restart: always
