@@ -178,11 +178,11 @@ class PlantationPlan(models.Model):
     plantation_date = models.DateField(verbose_name="Data de Plantação")
     
     # --- 11 CARACTERÍSTICAS DO POMAR/SOLO ---
-    total_area_ha = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Área total do pomar (ha)", blank=True, null=True)
+    total_area_ha = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Área total do pomar (m²)", blank=True, null=True)
     avg_plant_age_years = models.IntegerField(verbose_name="Idade média das plantas (anos)", blank=True, null=True)
     kiwi_variety = models.CharField(max_length=50, choices=KIWI_VARIETY_CHOICES, verbose_name="Variedade de Kiwi", blank=True, null=True)
     rootstock = models.CharField(max_length=100, blank=True, null=True, verbose_name="Porta-enxerto (se aplicável)")
-    density_plants_ha = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Densidade de plantação (plantas/ha)", blank=True, null=True)
+    density_plants_ha = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Densidade de plantação (plantas/m²)", blank=True, null=True)
     conduct_system = models.CharField(max_length=50, choices=CONDUCT_SYSTEM_CHOICES, verbose_name="Sistema de condução", blank=True, null=True)
     soil_type = models.CharField(max_length=50, choices=SOIL_TYPE_CHOICES, verbose_name="Tipo de solo", blank=True, null=True)
     ph_soil = models.DecimalField(max_digits=4, decimal_places=2, verbose_name="pH do solo", blank=True, null=True)
