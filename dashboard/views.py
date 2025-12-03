@@ -353,11 +353,7 @@ def producer_submit_harvest(request):
                 harvest_record = form.save(commit=False)
                 harvest_record.producer = request.user
                 
-                # 🛑 CORREÇÃO CRÍTICA: Apenas salva a nova colheita.
                 harvest_record.save()
-                
-                # 🛑 LÓGICA REMOVIDA: plantation_instance.delete()
-                # Não removemos o PlantationPlan, permitindo colheitas futuras.
 
                 return redirect('producer_dashboard')
                 

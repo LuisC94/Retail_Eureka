@@ -457,6 +457,12 @@
             background: #f8f9fa;
         }
 
+        .data-table th.col-date,
+        .data-table td.col-date {
+            width: 100px;  
+            white-space: nowrap; 
+        }
+
         /* ==================== MODAL ==================== */
         .modal {
             display: none;
@@ -765,6 +771,9 @@
                 </a>
                 <a href="#" class="menu-item" onclick="switchSidebarTab('warehouse-management')">
                     📦 Warehouse management
+                </a>
+                <a href="#" class="menu-item" onclick="switchSidebarTab('statistics-view')">
+                    📊 Statistics
                 </a>
             </nav>
         </div>
@@ -1078,7 +1087,7 @@
                                     <th>Product</th>
 
                                     <th>Area (m²)
-                                    <th>Date</th>
+                                    <th class="col-date">Date</th>
 
                                     <th>Orchard Area (ha)</th>
                                     <th>Avg Age (years)</th>
@@ -1100,7 +1109,7 @@
                                     <td>{{ plan.product.name }}</td>
 
                                     <td>{{ plan.area }}</td>
-                                    <td>{{ plan.plantation_date|date:"Y-m-d" }}</td>
+                                    <td class="col-date">{{ plan.plantation_date|date:"d-m-Y" }}</td>
 
                                     <td>{{ plan.total_area_ha|default:"" }}</td>
                                     <td>{{ plan.avg_plant_age_years|default:"" }}</td>
@@ -1117,9 +1126,7 @@
                                 {% endfor %}
                             </tbody>
                         </table>
-                        {% else %}
-                        <p>No plans registered.</p>
-                        {% endif %}
+                        {% else %}<p>No plans registered.</p>{% endif %}
                     </div>
 
                     <div class="data-table-container">
@@ -1145,7 +1152,7 @@
                                         ID {{ record.plantation.pk }} - {{ record.plantation.product.name }}
                                         {% else %}Plan Completed{% endif %}
                                     </td>
-                                    <td>{{ record.harvest_date }}</td>
+                                    <td>{{ record.harvest_date |date:"d-m-Y" }}</td>
                                     <td>{{ record.harvest_quantity_kg }}</td>
                                     <td>{{ record.utilized_quantity_kg }}</td>
                                     <td>{{ record.avg_quality_score }}</td>
@@ -1164,9 +1171,9 @@
                                 <tr>
                                     <th>ID</th>
                                     <th>Plan</th>
+                                    <th>Product</th>
                                     <th>Date</th>
                                     <th>Type</th>
-                                    <th>Details</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1178,29 +1185,15 @@
                                         ID {{ event.plantation.pk }} - {{ event.plantation.product.name }}
                                         {% else %}N/A{% endif %}
                                     </td>
-                                    <td>{{ event.date|date:"Y-m-d" }}</td>
-                                    <td>{{ event.get_event_type_display }}</td>
                                     <td>
-                                        {% if event.event_type == 'Fert_Min' and event.fertilizer_synth %}
-                                        {{ event.fertilizer_synth.name }} ({{ event.fertilizer_synth.quantity_kg }} kg)
-                                        {% elif event.event_type == 'Fert_Org' and event.fertilizer_org %}
-                                        {{ event.fertilizer_org.name }} ({{ event.fertilizer_org.quantity_kg }} kg)
-                                        {% elif event.event_type == 'Soil_Corr' and event.soil_corrective %}
-                                        {{ event.soil_corrective.name }} ({{ event.soil_corrective.quantity_kg }} kg)
-                                        {% elif event.event_type == 'Pest' and event.pest_control %}
-                                        {{ event.pest_control.name }} ({{ event.pest_control.quantity_lt }} L)
-                                        {% elif event.event_type == 'Machine_Hrs' and event.machinery %}
-                                        {{ event.machinery.machine_name }} ({{ event.machinery.hours_used }} h)
-                                        {% elif event.event_type == 'Fuel' and event.fuel %}
-                                        {{ event.fuel.fuel_type }} ({{ event.fuel.quantity_liters }} L)
-                                        {% elif event.event_type == 'Electric' and event.electric %}
-                                        {{ event.electric.kwh_consumed }} kWh
-                                        {% elif event.event_type == 'Water' and event.water %}
-                                        {{ event.water.quantity_m3 }} m³
+                                        {% if event.plantation and event.plantation.product %}
+                                            {{ event.plantation.product.name }}
                                         {% else %}
-                                        -
+                                            N/A
                                         {% endif %}
                                     </td>
+                                    <td>{{ event.event_date|date:"d-m-Y" }}</td>
+                                    <td>{{ event.get_event_type_display }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -1276,8 +1269,7 @@
                                 <td>{{ warehouse.capacity }}</td>
                                 <td>
                                     {% for sensor in warehouse.sensors.all %}
-                                    <span class="sensor-badge">{{ sensor.sensor_id }} ({{ sensor.get_sensor_type_display
-                                        }})</span>
+                                    <span class="sensor-badge">{{ sensor.sensor_id }} ({{ sensor.get_sensor_type_display}})</span>
                                     {% empty %}
                                     <span style="color:#999;font-style:italic;">None</span>
                                     {% endfor %}
@@ -1289,6 +1281,72 @@
                     {% else %}
                     <p style="text-align:center;color:#666;padding:20px;">No warehouses registered.</p>
                     {% endif %}
+                </div>
+            </div>
+
+            <!-- STATISTICS TAB -->
+            <div id="statistics-view" class="dashboard-tab" style="display:none;">
+                <div class="form-section">
+                    <h3>📊 Plantation Statistics</h3>
+                    <div class="form-group">
+                        <label for="plantation-select">Select Plantation:</label>
+                        <select id="plantation-select" class="form-control" onchange="updateStatistics()">
+                            <option value="">-- Select a Plantation --</option>
+                            {% for plan in plantation_plans %}
+                            <option value="{{ plan.plantation_id }}">
+                                ID: {{plan.plantation_id }} {{ plan.product.name }} ({{ plan.plantation_date|date:"d-m-Y" }})
+                            </option>
+
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div id="stats-content" style="display:none;">
+                    <!-- Plantation Details Summary -->
+                    <div class="data-table-container">
+                        <h4>📍 Plantation Details</h4>
+                        <div id="plantation-details-summary"
+                            style="padding: 10px; background: #f9f9f9; border-radius: 5px;">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Harvests Table -->
+                    <div class="data-table-container">
+                        <h4>🌾 Harvest History</h4>
+                        <table class="data-table" id="stats-harvest-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Quantity (Kg)</th>
+                                    <th>Utilized (Kg)</th>
+                                    <th>Quality</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                        <p id="no-harvests-msg" style="display:none;">No harvests recorded for this plantation.</p>
+                    </div>
+
+                    <!-- Events Table -->
+                    <div class="data-table-container">
+                        <h4>🗓️ Orchard Events</h4>
+                        <table class="data-table" id="stats-events-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                        <p id="no-events-msg" style="display:none;">No events recorded for this plantation.</p>
+                    </div>
                 </div>
             </div>
 
@@ -1369,6 +1427,145 @@
 
     <!-- ====================== JAVASCRIPT ====================== -->
     <script>
+
+        const plantationData = {};
+        {% for plan in plantation_plans %}
+        plantationData["{{ plan.plantation_id|escapejs }}"] = {
+            "product": "{{ plan.product.name|escapejs }}",
+            "date": "{{ plan.plantation_date|date:'d-m-Y' }}",
+            "area": "{{ plan.area|escapejs }}",
+            "location": "{{ plan.location|escapejs }}",
+            "production_type": "{{ plan.get_production_type_display|escapejs }}",
+            "status": "Active"
+        };
+        {% endfor %}
+
+        const harvestData = [];
+        {% for record in harvest_records %}
+        harvestData.push({
+            "plantation_id": "{% if record.plantation %}{{ record.plantation.plantation_id|escapejs }}{% endif %}",
+            "date": "{{ record.harvest_date|date:'d-m-Y' }}",
+            "quantity": "{{ record.harvest_quantity_kg|escapejs }}",
+            "utilized": "{{ record.utilized_quantity_kg|escapejs }}",
+            "quality": "{{ record.avg_quality_score|escapejs }}"
+        });
+        {% endfor %}
+
+        const eventData = [];
+        {% for event in plantation_events %}
+        eventData.push({
+            "plantation_id": "{% if event.plantation %}{{ event.plantation.plantation_id|escapejs }}{% endif %}",
+            "date": "{{ event.event_date|date:'d-m-Y' }}",
+            "type": "{{ event.get_event_type_display|escapejs }}",
+            "details": `{% if event.event_type == 'Fert_Min' and event.fertilizer_synth %}{{ event.fertilizer_synth.name|escapejs }} ({{ event.fertilizer_synth.quantity_kg }} kg){% elif event.event_type == 'Fert_Org' and event.fertilizer_org %}{{ event.fertilizer_org.name|escapejs }} ({{ event.fertilizer_org.quantity_kg }} kg){% elif event.event_type == 'Soil_Corr' and event.soil_corrective %}{{ event.soil_corrective.name|escapejs }} ({{ event.soil_corrective.quantity_kg }} kg){% elif event.event_type == 'Pest' and event.pest_control %}{{ event.pest_control.name|escapejs }} ({{ event.pest_control.quantity_lt }} L){% elif event.event_type == 'Machine_Hrs' and event.machinery %}{{ event.machinery.machine_name|escapejs }} ({{ event.machinery.hours_used }} h){% elif event.event_type == 'Fuel' and event.fuel %}{{ event.fuel.fuel_type|escapejs }} ({{ event.fuel.quantity_liters }} L){% elif event.event_type == 'Electric' and event.electric %}{{ event.electric.kwh_consumed }} kWh{% elif event.event_type == 'Water' and event.water %}{{ event.water.quantity_m3 }} m³{% else %}-{% endif %}`
+        });
+        {% endfor %}
+
+        // Function to copy base form fields (Plantation, Date, Type) into the specific detail form
+        window.validateBaseEventForm = function(button) {
+            const detailForm = button.closest('form');
+            const baseForm = document.getElementById('baseEventForm');
+            
+            if (!baseForm || !detailForm) {
+                console.error("Base form or Detail form not found");
+                return true; // Let it proceed, though it might fail on backend
+            }
+
+            // Copy fields from baseForm to detailForm
+            const inputs = baseForm.querySelectorAll('input, select, textarea');
+            
+            inputs.forEach(input => {
+                if (!input.name || input.type === 'submit') return;
+                
+                // Avoid duplicating csrfmiddlewaretoken if it exists
+                if (input.name === 'csrfmiddlewaretoken' && detailForm.elements['csrfmiddlewaretoken']) {
+                    return;
+                }
+
+                let hiddenInput = detailForm.querySelector(`input[name="${input.name}"]`);
+                if (!hiddenInput) {
+                    hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.name = input.name;
+                    detailForm.appendChild(hiddenInput);
+                }
+                hiddenInput.value = input.value;
+            });
+
+            return true;
+        };
+
+        function updateStatistics() {
+            const plantationId = document.getElementById('plantation-select').value;
+            const contentDiv = document.getElementById('stats-content');
+
+            if (!plantationId) {
+                contentDiv.style.display = 'none';
+                return;
+            }
+
+            contentDiv.style.display = 'block';
+
+            // 1. Update Plantation Details
+            const plan = plantationData[plantationId];
+            const detailsDiv = document.getElementById('plantation-details-summary');
+            if (plan) {
+                detailsDiv.innerHTML = `
+                    <p><strong>Product:</strong> ${plan.product}</p>
+                    <p><strong>Date Planted:</strong> ${plan.date}</p>
+                    <p><strong>Area:</strong> ${plan.area} m²</p>
+                    <p><strong>Location:</strong> ${plan.location}</p>
+                    <p><strong>Type:</strong> ${plan.production_type}</p>
+                `;
+            }
+
+            // 2. Filter and Render Harvests
+            const filteredHarvests = harvestData.filter(h => h.plantation_id === plantationId);
+            const harvestTbody = document.querySelector('#stats-harvest-table tbody');
+            const noHarvestsMsg = document.getElementById('no-harvests-msg');
+            const harvestTable = document.getElementById('stats-harvest-table');
+
+            harvestTbody.innerHTML = '';
+            if (filteredHarvests.length > 0) {
+                harvestTable.style.display = 'table';
+                noHarvestsMsg.style.display = 'none';
+                filteredHarvests.forEach(h => {
+                    const row = `<tr>
+                        <td>${h.date}</td>
+                        <td>${h.quantity}</td>
+                        <td>${h.utilized}</td>
+                        <td>${h.quality}</td>
+                    </tr>`;
+                    harvestTbody.innerHTML += row;
+                });
+            } else {
+                harvestTable.style.display = 'none';
+                noHarvestsMsg.style.display = 'block';
+            }
+
+            // 3. Filter and Render Events
+            const filteredEvents = eventData.filter(e => e.plantation_id === plantationId);
+            const eventTbody = document.querySelector('#stats-events-table tbody');
+            const noEventsMsg = document.getElementById('no-events-msg');
+            const eventTable = document.getElementById('stats-events-table');
+
+            eventTbody.innerHTML = '';
+            if (filteredEvents.length > 0) {
+                eventTable.style.display = 'table';
+                noEventsMsg.style.display = 'none';
+                filteredEvents.forEach(e => {
+                    const row = `<tr>
+                        <td>${e.date}</td>
+                        <td>${e.type}</td>
+                    </tr>`;
+                    eventTbody.innerHTML += row;
+                });
+            } else {
+                eventTable.style.display = 'none';
+                noEventsMsg.style.display = 'block';
+            }
+        }
+
         function openTab(evt, tabName) {
             let contents = document.getElementsByClassName("tab-content");
             let buttons = document.getElementsByClassName("tab-link");
