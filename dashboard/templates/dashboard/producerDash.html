@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eureka - Dashboard Produtor</title>
+    <title>Eureka - Producer Dashboard</title>
     <style>
         /* ==================== RESET & GLOBAL ==================== */
         * {
@@ -742,7 +742,6 @@
             background: linear-gradient(135deg, #00796b 0%, #004d40 100%);
             color: white;
         }
-
     </style>
 </head>
 
@@ -752,20 +751,20 @@
         <div class="sidebar">
             <div class="sidebar-header">
                 <h1>🌿 Eureka</h1>
-                <p>Sistema de Gestão Agrícola</p>
+                <p>Agricultural Management System</p>
             </div>
 
             <div class="user-info">
-                <p>👤 Bem-vindo(a), <strong>{{ username }}</strong></p>
+                <p>👤 Welcome, <strong>{{ username }}</strong></p>
                 <p>📋 Role: <strong>{{ role }}</strong></p>
             </div>
 
             <nav>
                 <a href="#" class="menu-item active" onclick="switchSidebarTab('main-dashboard')">
-                    🏠 Dashboard Principal
+                    ➕ Register
                 </a>
                 <a href="#" class="menu-item" onclick="switchSidebarTab('warehouse-management')">
-                    📦 Gestão de Armazéns
+                    📦 Warehouse management
                 </a>
             </nav>
         </div>
@@ -773,11 +772,11 @@
         <!-- MAIN CONTENT -->
         <div class="main-content">
             <div class="main-header">
-                <h2>Dashboard do Produtor</h2>
+                <h2>Producer Dashboard</h2>
 
                 <div class="header-actions">
                     <button type="button" class="profile-button" onclick="openProfileModal()">
-                        <span aria-hidden="true">&#x1F464;</span> Perfil
+                        <span aria-hidden="true">&#x1F464;</span> Profile
                     </button>
 
                     <form method="post" action="{% url 'logout' %}">
@@ -791,25 +790,25 @@
             <div id="main-dashboard" class="dashboard-tab" style="display:block;">
                 <div class="tab-bar">
                     <button class="tab-link active" onclick="openTab(event, 'insert-info')">
-                        ➕ Registar
+                        ➕ Register
                     </button>
                     <button class="tab-link" onclick="openTab(event, 'data-view')">
-                        👁️ Visualizar Registos
+                        👁️ View Records
                     </button>
                 </div>
 
-                <!-- TAB: REGISTAR -->
+                <!-- TAB: REGISTER -->
                 <div id="insert-info" class="tab-content" style="display: block;">
-                    <!-- PRODUTO -->
+                    <!-- PRODUCT -->
                     <div class="form-section">
                         <h3>
                             <span class="step-badge">1</span>
-                            🌱 Registar um Novo Produto
+                            🌱 Register New Product
                         </h3>
                         <form method="POST" action="{% url 'producer_submit_product' %}">
                             {% csrf_token %}
                             {{ product_registration_form.as_p }}
-                            <button type="submit" class="submit-button">✓ Registar Produto</button>
+                            <button type="submit" class="submit-button">✓ Register Product</button>
                         </form>
                     </div>
 
@@ -817,7 +816,7 @@
                     <div class="form-section">
                         <h3>
                             <span class="step-badge">2</span>
-                            🗓️ Registar Plantação
+                            🗓️ Register Plantation
                         </h3>
                         <form method="POST" action="{% url 'producer_submit_plantation' %}" id="plantationForm">
                             {% csrf_token %}
@@ -851,10 +850,10 @@
                                 {{ plantation_plan_form.plantation_date }}
                             </div>
 
-                            <h4>🌳 Detalhes do Pomar e Solo</h4>
+                            <h4>🌳 Orchard and Soil Details</h4>
                             <div class="info-box">
                                 <span style="font-size: 1.4em;">ℹ️</span>
-                                <span>Campos opcionais que enriquecem o registo da sua produção.</span>
+                                <span>Optional fields to enrich your production record.</span>
                             </div>
 
                             <div class="detail-fields-grid">
@@ -904,7 +903,7 @@
                                 </div>
                             </div>
 
-                            <button type="submit" class="submit-button">✓ Registar Plantação</button>
+                            <button type="submit" class="submit-button">✓ Register Plantation</button>
                         </form>
                     </div>
 
@@ -914,17 +913,17 @@
                     <div class="form-section">
                         <h3>
                             <span class="step-badge">3</span>
-                            🌾 Registar Colheita
+                            🌾 Register Harvest
                         </h3>
                         <form method="POST" action="{% url 'producer_submit_harvest' %}">
                             {% csrf_token %}
                             {{ harvest_form.as_p }}
-                            <button type="submit" class="submit-button">✓ Registar Colheita</button>
+                            <button type="submit" class="submit-button">✓ Register Harvest</button>
                         </form>
                     </div>
 
                     <div class="form-section">
-                        <h3>🗓️ 4. Registar Eventos do Pomar</h3>
+                        <h3>🗓️ 4. Register Orchard Events</h3>
 
                         <form method="POST" action="{% url 'producer_submit_event' %}" id="baseEventForm">
                             {% csrf_token %}
@@ -935,104 +934,104 @@
 
                             <div id="detail_Fert_Min" class="detail-form-container" style="display: none;"
                                 data-event-type="Fert_Min">
-                                <h4>Detalhes do Fertilizante Sintético</h4>
+                                <h4>Synthetic Fertilizer Details</h4>
                                 <form method="POST" action="{% url 'producer_submit_fertilizer_synth' %}"
                                     id="detailForm_Fert_Min">
                                     {% csrf_token %}
                                     {{ fertilizer_synthetic_form.as_p }}
                                     <button type="submit" class="submit-button"
                                         onclick="return validateBaseEventForm(this);"
-                                        style="background-color: #3f51b5;">Registar Detalhe Sintético</button>
+                                        style="background-color: #3f51b5;">Register Synthetic Detail</button>
                                 </form>
                             </div>
 
                             <div id="detail_Fert_Org" class="detail-form-container" style="display: none;"
                                 data-event-type="Fert_Org">
-                                <h4>Detalhes do Fertilizante Orgânico</h4>
+                                <h4>Organic Fertilizer Details</h4>
                                 <form method="POST" action="{% url 'producer_submit_fertilizer_org' %}"
                                     id="detailForm_Fert_Org">
                                     {% csrf_token %}
                                     {{ fertilizer_organic_form.as_p }}
                                     <button type="submit" class="submit-button"
                                         onclick="return validateBaseEventForm(this);"
-                                        style="background-color: #4CAF50;">Registar Detalhe Orgânico</button>
+                                        style="background-color: #4CAF50;">Register Organic Detail</button>
                                 </form>
                             </div>
 
                             <div id="detail_Soil_Corr" class="detail-form-container" style="display: none;"
                                 data-event-type="Soil_Corr">
-                                <h4>Detalhes dos Corretivos do Solo</h4>
+                                <h4>Soil Corrective Details</h4>
                                 <form method="POST" action="{% url 'producer_submit_soil_corrective' %}"
                                     id="detailForm_Soil_Corr">
                                     {% csrf_token %}
                                     {{ soil_corrective_form.as_p }}
                                     <button type="submit" class="submit-button"
                                         onclick="return validateBaseEventForm(this);"
-                                        style="background-color: #795548;">Registar Corretivo</button>
+                                        style="background-color: #795548;">Register Corrective</button>
                                 </form>
                             </div>
 
                             <div id="detail_Pest" class="detail-form-container" style="display: none;"
                                 data-event-type="Pest">
-                                <h4>Detalhes dos Produtos Fitofarmacêuticos</h4>
+                                <h4>Phytopharmaceutical Product Details</h4>
                                 <form method="POST" action="{% url 'producer_submit_pest_control' %}"
                                     id="detailForm_Pest">
                                     {% csrf_token %}
                                     {{ pest_control_form.as_p }}
                                     <button type="submit" class="submit-button"
                                         onclick="return validateBaseEventForm(this);"
-                                        style="background-color: #f44336;">Registar Fitofarmacêutico</button>
+                                        style="background-color: #f44336;">Register Phytopharmaceutical</button>
                                 </form>
                             </div>
 
                             <div id="detail_Machine_Hrs" class="detail-form-container" style="display: none;"
                                 data-event-type="Machine_Hrs">
-                                <h4>Detalhes da Maquinaria</h4>
+                                <h4>Machinery Details</h4>
                                 <form method="POST" action="{% url 'producer_submit_machinery' %}"
                                     id="detailForm_Machine_Hrs">
                                     {% csrf_token %}
                                     {{ machinery_form.as_p }}
                                     <button type="submit" class="submit-button"
                                         onclick="return validateBaseEventForm(this);"
-                                        style="background-color: #607d8b;">Registar Maquinaria</button>
+                                        style="background-color: #607d8b;">Register Machinery</button>
                                 </form>
                             </div>
 
                             <div id="detail_Fuel" class="detail-form-container" style="display: none;"
                                 data-event-type="Fuel">
-                                <h4>Detalhes de Combustível</h4>
+                                <h4>Fuel Details</h4>
                                 <form method="POST" action="{% url 'producer_submit_fuel' %}" id="detailForm_Fuel">
                                     {% csrf_token %}
                                     {{ fuel_form.as_p }}
                                     <button type="submit" class="submit-button"
                                         onclick="return validateBaseEventForm(this);"
-                                        style="background-color: #ff9800;">Registar Combustível</button>
+                                        style="background-color: #ff9800;">Register Fuel</button>
                                 </form>
                             </div>
 
                             <div id="detail_Electric" class="detail-form-container" style="display: none;"
                                 data-event-type="Electric">
-                                <h4>Detalhes de Energia Elétrica</h4>
+                                <h4>Electric Energy Details</h4>
                                 <form method="POST" action="{% url 'producer_submit_electric' %}"
                                     id="detailForm_Electric">
                                     {% csrf_token %}
                                     {{ electric_energy_form.as_p }}
                                     <button type="submit" class="submit-button"
                                         onclick="return validateBaseEventForm(this);"
-                                        style="background-color: #ffeb3b; color: black;">Registar Energia
-                                        Elétrica</button>
+                                        style="background-color: #ffeb3b; color: black;">Register Electric
+                                        Energy</button>
                                 </form>
                             </div>
 
                             <div id="detail_Water" class="detail-form-container" style="display: none;"
                                 data-event-type="Water">
-                                <h4>Detalhes da Água de Rega</h4>
+                                <h4>Irrigation Water Details</h4>
                                 <form method="POST" action="{% url 'producer_submit_water' %}" id="detailForm_Water">
                                     {% csrf_token %}
                                     {{ irrigation_water_form.as_p }}
                                     <button type="submit" class="submit-button"
                                         onclick="return validateBaseEventForm(this);"
-                                        style="background-color: #2196f3;">Registar Água</button>
+                                        style="background-color: #2196f3;">Register Water</button>
                                 </form>
                             </div>
                         </div>
@@ -1044,7 +1043,7 @@
                 <div id="data-view" class="tab-content" style="display:none;">
 
                     <div class="data-table-container">
-                        <h3>📦 Produtos Registados</h3>
+                        <h3>📦 Registered Products</h3>
                         {% if registered_products %}
                         <table class="data-table">
                             <thead>
@@ -1066,31 +1065,31 @@
                                 {% endfor %}
                             </tbody>
                         </table>
-                        {% else %}<p>Sem produtos registados.</p>{% endif %}
+                        {% else %}<p>No products registered.</p>{% endif %}
                     </div>
 
                     <div class="data-table-container">
-                        <h3>🗺️ Plantações</h3>
+                        <h3>🗺️ Plantations</h3>
                         {% if plantation_plans %}
                         <table class="data-table">
                             <thead>
                                 <tr>
                                     <th>ID</th>
-                                    <th>Produto</th>
+                                    <th>Product</th>
 
-                                    <th>Área (m²)</th>
-                                    <th>Data</th>
+                                    <th>Area (m²)
+                                    <th>Date</th>
 
-                                    <th>Área Pomar (ha)</th>
-                                    <th>Idade Média (anos)</th>
-                                    <th>Variedade Kiwi</th>
-                                    <th>Sistema Condução</th>
-                                    <th>pH Solo</th>
-                                    <th>Regime Hídrico</th>
+                                    <th>Orchard Area (ha)</th>
+                                    <th>Avg Age (years)</th>
+                                    <th>Kiwi Variety</th>
+                                    <th>Conduct System</th>
+                                    <th>Soil pH</th>
+                                    <th>Water Regime</th>
 
-                                    <th>Sementes</th>
-                                    <th>Tipo Prod.</th>
-                                    <th>Químico</th>
+                                    <th>Seeds</th>
+                                    <th>Prod. Type</th>
+                                    <th>Chemical</th>
 
                                 </tr>
                             </thead>
@@ -1119,22 +1118,22 @@
                             </tbody>
                         </table>
                         {% else %}
-                        <p>Sem planos registados.</p>
+                        <p>No plans registered.</p>
                         {% endif %}
                     </div>
 
                     <div class="data-table-container">
-                        <h3>📋 Histórico de Colheitas</h3>
+                        <h3>📋 Harvest History</h3>
                         {% if harvest_records %}
                         <table class="data-table">
                             <thead>
                                 <tr>
                                     <th>ID</th>
-                                    <th>Plano</th>
-                                    <th>Data</th>
+                                    <th>Plan</th>
+                                    <th>Date</th>
                                     <th>Qt (Kg)</th>
-                                    <th>Qt Aproveitada</th>
-                                    <th>Qualidade</th>
+                                    <th>Utilized Qt</th>
+                                    <th>Quality</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1144,7 +1143,7 @@
                                     <td>
                                         {% if record.plantation %}
                                         ID {{ record.plantation.pk }} - {{ record.plantation.product.name }}
-                                        {% else %}Plano Concluído{% endif %}
+                                        {% else %}Plan Completed{% endif %}
                                     </td>
                                     <td>{{ record.harvest_date }}</td>
                                     <td>{{ record.harvest_quantity_kg }}</td>
@@ -1154,20 +1153,20 @@
                                 {% endfor %}
                             </tbody>
                         </table>
-                        {% else %}<p>Ainda não existem colheitas concluídas.</p>{% endif %}
+                        {% else %}<p>No completed harvests yet.</p>{% endif %}
                     </div>
 
                     <div class="data-table-container">
-                        <h3>🗓️ Eventos do Pomar</h3>
+                        <h3>🗓️ Orchard Events</h3>
                         {% if plantation_events %}
                         <table class="data-table">
                             <thead>
                                 <tr>
                                     <th>ID</th>
-                                    <th>Plano</th>
-                                    <th>Data</th>
-                                    <th>Tipo</th>
-                                    <th>Detalhes</th>
+                                    <th>Plan</th>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Details</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1207,7 +1206,7 @@
                             </tbody>
                         </table>
                         {% else %}
-                        <p>Sem eventos registados.</p>
+                        <p>No events registered.</p>
                         {% endif %}
                     </div>
                 </div>
@@ -1216,15 +1215,15 @@
             <!-- ====================== PÁGINA DE GESTÃO DE ARMAZÉNS ====================== -->
             <!-- GESTÃO DE ARMAZÉNS -->
             <div id="warehouse-management" class="dashboard-tab" style="display:none;">
-                
+
                 <div class="form-section">
                     <h3>
                         <span class="step-badge">📦</span>
-                        Registar Novo Armazém
+                        Register New Warehouse
                     </h3>
                     <form method="post" action="{% url 'producer_submit_warehouse' %}">
                         {% csrf_token %}
-                        
+
                         <div class="form-group">
                             {{ warehouse_form.location.label_tag }}
                             {{ warehouse_form.location }}
@@ -1241,30 +1240,31 @@
                         </div>
 
                         <div class="form-group">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                            <div
+                                style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                                 <label>{{ warehouse_form.sensors.label }}</label>
                                 <button type="button" class="add-sensor-btn" onclick="openSensorModal()">
-                                    ➕ Novo Sensor
+                                    ➕ New Sensor
                                 </button>
-                            </div>                     
+                            </div>
                             {{ warehouse_form.sensors }}
                         </div>
 
-                        <button type="submit" class="submit-button">✓ Registar Armazém</button>
+                        <button type="submit" class="submit-button">✓ Register Warehouse</button>
                     </form>
                 </div>
 
                 <div class="data-table-container">
-                    <h3>🏭 Meus Armazéns ({{ producer_warehouses.count }})</h3>
+                    <h3>🏭 My Warehouses ({{ producer_warehouses.count }})</h3>
                     {% if producer_warehouses %}
                     <table class="data-table">
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Localização</th>
-                                <th>Tipo</th>
-                                <th>Capacidade</th>
-                                <th>Sensores</th>
+                                <th>Location</th>
+                                <th>Type</th>
+                                <th>Capacity</th>
+                                <th>Sensors</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1276,9 +1276,10 @@
                                 <td>{{ warehouse.capacity }}</td>
                                 <td>
                                     {% for sensor in warehouse.sensors.all %}
-                                        <span class="sensor-badge">{{ sensor.sensor_id }} ({{ sensor.get_sensor_type_display }})</span>
+                                    <span class="sensor-badge">{{ sensor.sensor_id }} ({{ sensor.get_sensor_type_display
+                                        }})</span>
                                     {% empty %}
-                                        <span style="color:#999;font-style:italic;">Nenhum</span>
+                                    <span style="color:#999;font-style:italic;">None</span>
                                     {% endfor %}
                                 </td>
                             </tr>
@@ -1286,7 +1287,7 @@
                         </tbody>
                     </table>
                     {% else %}
-                    <p style="text-align:center;color:#666;padding:20px;">Não há armazéns registados.</p>
+                    <p style="text-align:center;color:#666;padding:20px;">No warehouses registered.</p>
                     {% endif %}
                 </div>
             </div>
@@ -1299,12 +1300,12 @@
     <div id="sensorModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeSensorModal()">&times;</span>
-            <h3>➕ Adicionar Novo Sensor</h3>
-            <form method="post" action="{% url 'producer_submit_sensor' %}" id="sensorForm">
-                {% csrf_token %}
-                {{ sensor_form.as_p }}
-                <button type="submit" class="submit-button">✓ Registar Sensor</button>
-            </form>
+            <h3>➕ Add New Sensor
+                <form method="post" action="{% url 'producer_submit_sensor' %}" id="sensorForm">
+                    {% csrf_token %}
+                    {{ sensor_form.as_p }}
+                    <button type="submit" class="submit-button">✓ Register Sensor</button>
+                </form>
         </div>
     </div>
 
@@ -1316,14 +1317,14 @@
             <span class="close" onclick="closeProfileModal()"
                 style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
 
-            <h2>&#x1F464; Dados Pessoais</h2>
+            <h2>&#x1F464; Personal Data</h2>
 
             <div class="data-table-container">
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>Campo</th>
-                            <th>Valor</th>
+                            <th>Field</th>
+                            <th>Value
                         </tr>
                     </thead>
                     <tbody>
@@ -1336,7 +1337,7 @@
                             <td>{{ role }}</td>
                         </tr>
                         <tr>
-                            <td>ID do Utilizador</td>
+                            <td>User ID</td>
                             <td>{{ request.user.id }}</td>
                         </tr>
                         <tr>
@@ -1346,16 +1347,16 @@
 
                         {% if user_profile %}
                         <tr>
-                            <td>Telemóvel</td>
+                            <td>Mobile Phone</td>
                             <td>{{ user_profile.phone_number|default:"N/A" }}</td>
                         </tr>
                         <tr>
-                            <td>Morada Completa</td>
-                            <td>{{ user_profile.address|default:"Não especificada" }}</td>
+                            <td>Full Address</td>
+                            <td>{{ user_profile.address|default:"Not specified" }}</td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="2" style="color:red;font-style:italic">Dados de perfil em falta</td>
+                            <td colspan="2" style="color:red;font-style:italic">Profile data missing</td>
                         </tr>
                         {% endif %}
                     </tbody>
@@ -1382,7 +1383,7 @@
         function switchSidebarTab(tabId) {
             document.querySelectorAll('.dashboard-tab').forEach(tab => tab.style.display = 'none');
             document.getElementById(tabId).style.display = 'block';
-            
+
             // Atualizar menu ativo
             document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
             event.target.classList.add('active');
@@ -1422,7 +1423,7 @@
 
             // 2. Cria o Dropdown de Seleção (ModelChoiceField)
             const selectLabel = document.createElement('label');
-            selectLabel.textContent = `Característica ${characteristicCounter}:`;
+            selectLabel.textContent = `Characteristic ${characteristicCounter}:`;
             divSet.appendChild(selectLabel);
 
             const select = document.createElement('select');
@@ -1433,12 +1434,12 @@
             // 3. Adiciona Opção Placeholder
             const defaultOption = document.createElement('option');
             defaultOption.value = "";
-            defaultOption.textContent = "--- Selecione a Característica ---";
+            defaultOption.textContent = "--- Select Characteristic ---";
             select.appendChild(defaultOption);
 
             // 4. Cria o Input de Valor
             const valueLabel = document.createElement('label');
-            valueLabel.textContent = 'Valor:';
+            valueLabel.textContent = 'Value:';
             valueLabel.style.marginTop = '10px';
 
             const valueInput = document.createElement('input');
@@ -1451,7 +1452,7 @@
             // 5. Botão de Remoção
             const removeButton = document.createElement('button');
             removeButton.type = 'button';
-            removeButton.textContent = 'Remover';
+            removeButton.textContent = 'Remove';
             removeButton.className = 'submit-button';
             removeButton.style.backgroundColor = '#dc3545';
             removeButton.style.marginTop = '10px';
@@ -1545,7 +1546,7 @@
         });
 
         // Fechar modal ao clicar fora
-        window.onclick = function(event) {
+        window.onclick = function (event) {
             const modal = document.getElementById('sensorModal');
             if (event.target == modal) {
                 modal.style.display = "none";
