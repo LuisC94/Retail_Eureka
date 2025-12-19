@@ -1,4 +1,5 @@
 from django.db import IntegrityError, transaction
+from django.db.models import Sum
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
@@ -9,7 +10,7 @@ from django.contrib.auth.models import Group
 
 from .models import (
     Product, PlantationPlan, Harvest, Warehouse, Sensor, UserProfile, PlantationEvent,
-    SoilCharacteristic, PlantationSoilValue,
+    SoilCharacteristic, PlantationSoilValue, ProductSubFamily, PlantationCrop,
     FertilizerSyntheticData, FertilizerOrganicData, SoilCorrectiveData, PestControlData,
     MachineryData, FuelData, ElectricEnergyData, IrrigationWaterData
 )
@@ -18,7 +19,7 @@ from .forms import (
     UserRegisterForm, ProductRegistrationForm, PlantationPlanForm, PlantationDetailForm,
     HarvestForm, WarehouseRegistrationForm, SensorRegistrationForm, PlantationEventForm,
     FertilizerSyntheticForm, FertilizerOrganicForm, SoilCorrectiveForm, PestControlForm,
-    MachineryForm, FuelForm, ElectricEnergyForm, IrrigationWaterForm, SoilCharacteristicForm
+    MachineryForm, FuelForm, ElectricEnergyForm, IrrigationWaterForm, SoilCharacteristicForm, PlantationCropForm
 )
 
 # ----------------------------------------------------------------------
@@ -146,18 +147,35 @@ class ProducerDashboardView(View):
             'product'
         ).prefetch_related(
             'soil_values', 
-            'soil_values__characteristic'
+            'soil_values__characteristic',
+            'crops',
+            'crops__subfamily'
         )
         
-        harvest_records = Harvest.objects.filter(producer=user).order_by('-harvest_date')
+        harvest_records = Harvest.objects.filter(producer=user).select_related('plantation', 'subfamily').order_by('-harvest_date')
+        
+        # AGGREGATION: Total Kgs per Product (Current Stock)
+        harvest_sums = Harvest.objects.filter(producer=user).values(
+            'plantation__plantation_name', 
+            'subfamily__name'
+        ).annotate(
+            total_kg=Sum('harvest_quantity_kg'),
+            delivered_kg=Sum('delivered_quantity_kg')
+        ).order_by('plantation__plantation_name', 'subfamily__name')
+        
+        for item in harvest_sums:
+            item['current_stock'] = (item['total_kg'] or 0) - (item['delivered_kg'] or 0)
+
         
         # 4. BUSCAR EVENTOS DO POMAR
-        plantation_events = PlantationEvent.objects.filter(plantation__producer=user).order_by('-event_date')
+        plantation_events = PlantationEvent.objects.filter(plantation__producer=user).select_related('plantation', 'subfamily').order_by('-event_date')
+        
+        product_subfamilies = ProductSubFamily.objects.all().order_by('fruit_type', 'name')
         
         producer_warehouses = Warehouse.objects.filter(owner=user).order_by('warehouse_id')
         all_sensors = Sensor.objects.all().order_by('sensor_id')
 
-        product_registration_form = ProductRegistrationForm()
+
         plantation_plan_form = PlantationPlanForm()
         plantation_detail_form = PlantationDetailForm()
         harvest_form = HarvestForm() 
@@ -175,6 +193,16 @@ class ProducerDashboardView(View):
         
         harvest_form.fields['plantation'].queryset = base_plantation_query 
         
+        # --- MAP for Dynamic Filtering in Harvest Form ---
+        plantation_subfamilies_map = {}
+        for plan in plantation_plans:
+            # Create list of {id, name} for each subfamily
+            # Now queries PlantationCrop table
+            crops = PlantationCrop.objects.filter(plantation=plan).select_related('subfamily')
+            subs = [{'id': c.subfamily.subfamily_id, 'name': c.subfamily.name} for c in crops]
+            plantation_subfamilies_map[plan.plantation_id] = subs
+
+        
         try:
             user_profile = UserProfile.objects.get(user=user)
         except UserProfile.DoesNotExist:
@@ -184,9 +212,11 @@ class ProducerDashboardView(View):
             'username': user.username,
             'role': 'Producer',
             
-            'product_registration_form': product_registration_form, 
+            'plantation_subfamilies_map': plantation_subfamilies_map, # Pass map to template
+            
             'plantation_plan_form': plantation_plan_form,
             'plantation_detail_form': plantation_detail_form,
+            'plantation_crop_form': PlantationCropForm(), # NEW FORM
             'harvest_form': harvest_form, 
             'warehouse_form': warehouse_form, 
             'sensor_form': sensor_form,
@@ -199,9 +229,11 @@ class ProducerDashboardView(View):
             'electric_energy_form': electric_energy_form,
             'irrigation_water_form': irrigation_water_form,       
             
-            'registered_products': registered_products,
             'plantation_plans': plantation_plans,
+            'registered_products': registered_products,
+            'product_subfamilies': product_subfamilies,
             'harvest_records': harvest_records, 
+            'harvest_sums': harvest_sums, 
             'plantation_events': plantation_events,
             'producer_warehouses': producer_warehouses,
             'all_sensors': all_sensors,
@@ -213,6 +245,36 @@ class ProducerDashboardView(View):
         }
         
         return render(request, 'dashboard/producerDash.html', context)
+
+@login_required
+@role_required(['Producer'])
+def producer_submit_delivery(request):
+    if request.method == 'POST':
+        try:
+            harvest_id = request.POST.get('harvest_id')
+            quantity_to_deliver = float(request.POST.get('quantity_to_deliver'))
+            
+            harvest = get_object_or_404(Harvest, pk=harvest_id, producer=request.user)
+            
+            current_delivered = float(harvest.delivered_quantity_kg or 0)
+            total_harvested = float(harvest.harvest_quantity_kg)
+            remaining = total_harvested - current_delivered
+            
+            if quantity_to_deliver <= 0:
+                 messages.error(request, "Quantity must be greater than 0.")
+            elif quantity_to_deliver > remaining:
+                messages.error(request, f"Cannot deliver {quantity_to_deliver}kg. Only {remaining}kg available.")
+            else:
+                harvest.delivered_quantity_kg = current_delivered + quantity_to_deliver
+                harvest.save()
+                messages.success(request, f"Successfully delivered {quantity_to_deliver}kg.")
+                
+        except (ValueError, TypeError):
+             messages.error(request, "Invalid quantity.")
+        except Exception as e:
+            messages.error(request, f"Error processing delivery: {str(e)}")
+            
+    return redirect('producer_dashboard')
     
 @login_required
 @role_required(['Producer'])
@@ -235,24 +297,42 @@ def producer_submit_soil_characteristic(request):
 # 4. VIEWS DE SUBMISSÃO DO PRODUTOR (NOVAS)
 # ----------------------------------------------------------------------
 
+
+
 @login_required
 @role_required(['Producer'])
-def producer_submit_product(request):
-    """ Processa o registo de um novo Produto na tabela 'products' """
+def producer_submit_plantation_crop(request):
+    """
+    View to add a crop (ProductSubFamily) to an existing PlantationPlan.
+    """
     if request.method == 'POST':
-        form = ProductRegistrationForm(request.POST)
+        form = PlantationCropForm(request.POST)
+        
+        # Security: Validate that the plantation belongs to the user?
+        # Form cleaning or explicit check logic.
+        
         if form.is_valid():
-            product_record = form.save(commit=False)
-            product_record.producer = request.user 
             try:
-                product_record.save()
-                return redirect('producer_dashboard')
-            except IntegrityError as e:
-                db_error = f"Erro ao salvar Produto na DB: ID '{product_record.product_id}' já existe. Detalhe: {e}"
-                print(db_error)
+                # 1. Check if plantation belongs to user
+                plantation = form.cleaned_data['plantation']
+                if plantation.producer != request.user:
+                    raise IntegrityError("Não autorizado: Plantação não pertence ao utilizador.")
                 
+                # 2. Save
+                form.save()
+                return redirect('producer_dashboard')
+                
+            except IntegrityError as e:
+                # e.g. duplicate entry (pair plantation-subfamily unique)
+                request.session['db_error'] = f"Erro ao adicionar cultura: {e}"
+            except Exception as e:
+                request.session['db_error'] = f"Erro desconhecido: {e}"
+        else:
+             request.session['db_error'] = f"Formulário de Cultura Inválido: {form.errors}"
+             
         return redirect('producer_dashboard')
-    return redirect('producer_dashboard') 
+    
+    return redirect('producer_dashboard')
 
 @login_required
 @role_required(['Producer'])
@@ -264,8 +344,8 @@ def producer_submit_plantation(request):
         detail_form = PlantationDetailForm(request.POST) 
         
         # Filtros de segurança e validação
-        registered_products = Product.objects.filter(producer=request.user)
-        form.fields['product'].queryset = registered_products
+        # registered_products = Product.objects.filter(producer=request.user)
+        # form.fields['product'].queryset = registered_products
         
         # Assume que a validação do solo/características foi feita antes de 'is_valid'
         # e que o form.is_valid() não está a falhar aqui.
@@ -284,6 +364,9 @@ def producer_submit_plantation(request):
 
                     plantation_record.producer = request.user
                     plantation_record.save()
+                    
+                    # form.save_m2m() REMOVIDO: Agora gerido via PlantationCrop separado
+                    # form.save_m2m()
                     
                     # 3. Processar e salvar os Valores Dinâmicos do Solo
                     soil_data = {}

@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User, Group
 # Importar apenas os modelos necessários
-from .models import PlantationPlan, Product, Harvest, QUALITY_SCORE_CHOICES, Sensor, Warehouse, SENSOR_TYPE_CHOICES, SoilCharacteristic, PlantationEvent, FertilizerSyntheticData, FertilizerOrganicData, SoilCorrectiveData, PestControlData, MachineryData, FuelData, ElectricEnergyData, IrrigationWaterData 
+from .models import PlantationPlan, Product, Harvest, QUALITY_SCORE_CHOICES, Sensor, Warehouse, SENSOR_TYPE_CHOICES, SoilCharacteristic, PlantationEvent, FertilizerSyntheticData, FertilizerOrganicData, SoilCorrectiveData, PestControlData, MachineryData, FuelData, ElectricEnergyData, IrrigationWaterData, ProductSubFamily, PlantationCrop 
 from django.forms import CheckboxSelectMultiple
 
 # Lista de Roles (mantida)
@@ -74,18 +74,12 @@ class SoilCharacteristicForm(forms.ModelForm):
 
 class PlantationPlanForm(forms.ModelForm):
     # Campos base, mantidos no formulário principal
-    product = forms.ModelChoiceField(
-        queryset=Product.objects.all(), 
-        label='Produto a Selecionar', 
-        empty_label="--- Selecione um Produto Registado ---",
-        widget=forms.Select(attrs={'class': 'form-control'}) 
-    )
 
     class Meta:
         model = PlantationPlan
         fields = [
-            'product',
-            'quantity_of_seeds', 
+            'plantation_name',
+            'quantity_of_trees', 
             'production_type',   
             'chemical_use',      
             'area',
@@ -94,7 +88,8 @@ class PlantationPlanForm(forms.ModelForm):
         ]
         # Adicione os widgets aqui
         widgets = {
-            'quantity_of_seeds': forms.NumberInput(attrs={'class': 'form-control'}),
+            'plantation_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'quantity_of_trees': forms.NumberInput(attrs={'class': 'form-control'}),
             'production_type': forms.Select(attrs={'class': 'form-control'}),
             'chemical_use': forms.Select(attrs={'class': 'form-control'}),
             'area': forms.NumberInput(attrs={'class': 'form-control'}),
@@ -103,36 +98,62 @@ class PlantationPlanForm(forms.ModelForm):
         }
 
 # NOVO FORMULÁRIO AUXILIAR para os 11 campos detalhados (opcionais)
+# NOVO FORMULÁRIO AUXILIAR para os campos detalhados (opcionais do SOLO/LOCAL)
 class PlantationDetailForm(forms.ModelForm):
-    # Nota: Este formulário não precisa de campos extras, apenas os campos do modelo
-
     class Meta:
         model = PlantationPlan
         fields = [
-            'total_area_ha',
-            'avg_plant_age_years',
-            'kiwi_variety',
-            'rootstock',
-            'density_plants_ha',
             'conduct_system',
             'soil_type',
             'ph_soil',
             'organic_matter_percent',
             'water_regime',
-            'irrigation_system',
         ]
 
         widgets = {
-            'total_area_ha': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'avg_plant_age_years': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
-            'kiwi_variety': forms.Select(attrs={'class': 'form-control'}),
-            'rootstock': forms.TextInput(attrs={'class': 'form-control'}),
-            'density_plants_ha': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'conduct_system': forms.Select(attrs={'class': 'form-control'}),
             'soil_type': forms.Select(attrs={'class': 'form-control'}),
             'ph_soil': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'organic_matter_percent': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'water_regime': forms.Select(attrs={'class': 'form-control'}),
+        }
+
+# --- NOVO: Formulário para Adicionar Cultura à Plantação ---
+class PlantationCropForm(forms.ModelForm):
+    # plantation field will be hidden or handled in view, but useful to keep in form for validation if needed.
+    # We will exclude 'plantation' from user input in the template and inject it in the view, 
+    # OR let user select it if this is a standalone form.
+    # The requirement says: "ter uma secção onde adicione uma cultura de cada vez ás plantações criadas".
+    # So user selects plantation, then crop.
+    
+    plantation = forms.ModelChoiceField(
+        queryset=PlantationPlan.objects.all(),
+        label='Plantation',
+        empty_label="--- Select Plantation ---",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    subfamily = forms.ModelChoiceField(
+        queryset=ProductSubFamily.objects.all(),
+        label='Culture',
+        empty_label="--- Select Culture ---",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+    class Meta:
+        model = PlantationCrop
+        fields = [
+            'plantation',
+            'subfamily',
+            'avg_plant_age_years',
+            'rootstock',
+            'density_plants_ha',
+            'irrigation_system'
+        ]
+        widgets = {
+            'avg_plant_age_years': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
+            'rootstock': forms.TextInput(attrs={'class': 'form-control'}),
+            'density_plants_ha': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'irrigation_system': forms.Select(attrs={'class': 'form-control'}),
         }
 
@@ -194,13 +215,21 @@ class PlantationEventForm(forms.ModelForm):
         queryset=PlantationPlan.objects.all(), # Será filtrado em views.py
         label='Plano de Plantação',
         empty_label="--- Selecione o Pomar ---",
-        widget=forms.Select(attrs={'class': 'form-control'})
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'event_plantation_select'})
+    )
+
+    subfamily = forms.ModelChoiceField(
+        queryset=ProductSubFamily.objects.all(),
+        label='Cultura (Subfamília)',
+        empty_label="--- Selecione a Cultura ---",
+        required=True, # Obrigatório
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'event_subfamily_select'})
     )
     
     class Meta:
         model = PlantationEvent
         # Adicionar 'plantation' à lista de fields
-        fields = ['plantation', 'event_date', 'event_type', 'notes'] 
+        fields = ['plantation', 'subfamily', 'event_date', 'event_type', 'notes'] 
         
         widgets = {
             'event_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
@@ -217,15 +246,25 @@ class HarvestForm(forms.ModelForm):
     plantation = forms.ModelChoiceField(
         # Será filtrado em views.py
         queryset=PlantationPlan.objects.all(), 
-        label='Plano de Plantação a Colher',
-        empty_label="--- Selecione um Plano Ativo ---"
+        label='Plantation',
+        empty_label="--- Select Plantation ---",
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'harvest_plantation_select'})
     )
     
+    subfamily = forms.ModelChoiceField(
+        queryset=ProductSubFamily.objects.all(),
+        label='Cultures',
+        empty_label="--- Select Culture ---",
+        required=True, # Obrigatório
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'harvest_subfamily_select'})
+    )
+
     class Meta:
         model = Harvest
         # Campos a serem exibidos no formulário (o harvest_id é automático)
         fields = [
             'plantation', 
+            'subfamily',
             'harvest_date', 
             'harvest_quantity_kg', 
             'avg_quality_score', 
@@ -233,7 +272,12 @@ class HarvestForm(forms.ModelForm):
         ]
         widgets = {
             # 3 -> Data de Colheita
-            'harvest_date': forms.DateInput(attrs={'type': 'date'}), 
+            'harvest_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'plantation': forms.Select(attrs={'class': 'form-control', 'id': 'harvest_plantation_select'}), # ID para JS
+            'subfamily': forms.Select(attrs={'class': 'form-control', 'id': 'harvest_subfamily_select'}), # ID para JS
+            'harvest_quantity_kg': forms.NumberInput(attrs={'class': 'form-control'}),
+            'avg_quality_score': forms.Select(attrs={'class': 'form-control'}),
+            'utilized_quantity_kg': forms.NumberInput(attrs={'class': 'form-control'}),
         }
 
 # --- 4. Formulário de Registo de Sensor (Para o Popup) ---

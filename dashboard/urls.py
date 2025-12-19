@@ -14,8 +14,9 @@ urlpatterns = [
     path('submit-sensor/', views.producer_submit_sensor, name='producer_submit_sensor'),
     
     # NOVAS ROTAS DE SUBMISSÃO
-    path('submit-product/', views.producer_submit_product, name='producer_submit_product'),
+
     path('submit-plantation/', views.producer_submit_plantation, name='producer_submit_plantation'),
+    path('submit-plantation-crop/', views.producer_submit_plantation_crop, name='producer_submit_plantation_crop'),
     path('submit-soil-characteristic/', views.producer_submit_soil_characteristic, name='producer_submit_soil_characteristic'),
     path('submit-harvest/', views.producer_submit_harvest, name='producer_submit_harvest'),
     path('submit-event/', views.producer_submit_event, name='producer_submit_event'),
@@ -27,6 +28,7 @@ urlpatterns = [
     path('submit-event/fuel/', views.producer_submit_fuel, name='producer_submit_fuel'),
     path('submit-event/electric/', views.producer_submit_electric, name='producer_submit_electric'),
     path('submit-event/water/', views.producer_submit_water, name='producer_submit_water'),
+    path('submit-delivery/', views.producer_submit_delivery, name='producer_submit_delivery'),
 
     path('transporter/', views.TransporterDashboardView.as_view(), name='transporter_dashboard'),
     

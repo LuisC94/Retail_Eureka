@@ -772,6 +772,9 @@
                 <a href="#" class="menu-item" onclick="switchSidebarTab('warehouse-management')">
                     📦 Warehouse management
                 </a>
+                <a href="#" class="menu-item" onclick="switchSidebarTab('product-quantity-view')">
+                    ⚖️ Product Quantity
+                </a>
                 <a href="#" class="menu-item" onclick="switchSidebarTab('statistics-view')">
                     📊 Statistics
                 </a>
@@ -808,43 +811,23 @@
 
                 <!-- TAB: REGISTER -->
                 <div id="insert-info" class="tab-content" style="display: block;">
-                    <!-- PRODUCT -->
-                    <div class="form-section">
-                        <h3>
-                            <span class="step-badge">1</span>
-                            🌱 Register New Product
-                        </h3>
-                        <form method="POST" action="{% url 'producer_submit_product' %}">
-                            {% csrf_token %}
-                            {{ product_registration_form.as_p }}
-                            <button type="submit" class="submit-button">✓ Register Product</button>
-                        </form>
-                    </div>
-
                     <!-- PLANTAÇÃO -->
                     <div class="form-section">
                         <h3>
-                            <span class="step-badge">2</span>
+                            <span class="step-badge">1</span>
                             🗓️ Register Plantation
                         </h3>
                         <form method="POST" action="{% url 'producer_submit_plantation' %}" id="plantationForm">
                             {% csrf_token %}
 
+                            <!-- Subfamilies removed: Managed separately via Add Culture -->
                             <div class="form-group">
-                                {{ plantation_plan_form.product.label_tag }}
-                                {{ plantation_plan_form.product }}
+                                {{ plantation_plan_form.plantation_name.label_tag }}
+                                {{ plantation_plan_form.plantation_name }}
                             </div>
                             <div class="form-group">
-                                {{ plantation_plan_form.quantity_of_seeds.label_tag }}
-                                {{ plantation_plan_form.quantity_of_seeds }}
-                            </div>
-                            <div class="form-group">
-                                {{ plantation_plan_form.production_type.label_tag }}
-                                {{ plantation_plan_form.production_type }}
-                            </div>
-                            <div class="form-group">
-                                {{ plantation_plan_form.chemical_use.label_tag }}
-                                {{ plantation_plan_form.chemical_use }}
+                                {{ plantation_plan_form.quantity_of_trees.label_tag }}
+                                {{ plantation_plan_form.quantity_of_trees }}
                             </div>
                             <div class="form-group">
                                 {{ plantation_plan_form.area.label_tag }}
@@ -858,8 +841,16 @@
                                 {{ plantation_plan_form.plantation_date.label_tag }}
                                 {{ plantation_plan_form.plantation_date }}
                             </div>
+                            <div class="form-group">
+                                {{ plantation_plan_form.production_type.label_tag }}
+                                {{ plantation_plan_form.production_type }}
+                            </div>
+                            <div class="form-group">
+                                {{ plantation_plan_form.chemical_use.label_tag }}
+                                {{ plantation_plan_form.chemical_use }}
+                            </div>
 
-                            <h4>🌳 Orchard and Soil Details</h4>
+                            <h4>🌳 Soil Details</h4>
                             <div class="info-box">
                                 <span style="font-size: 1.4em;">ℹ️</span>
                                 <span>Optional fields to enrich your production record.</span>
@@ -867,24 +858,8 @@
 
                             <div class="detail-fields-grid">
                                 <div class="form-group">
-                                    {{ plantation_detail_form.total_area_ha.label_tag }}
-                                    {{ plantation_detail_form.total_area_ha }}
-                                </div>
-                                <div class="form-group">
-                                    {{ plantation_detail_form.avg_plant_age_years.label_tag }}
-                                    {{ plantation_detail_form.avg_plant_age_years }}
-                                </div>
-                                <div class="form-group">
-                                    {{ plantation_detail_form.kiwi_variety.label_tag }}
-                                    {{ plantation_detail_form.kiwi_variety }}
-                                </div>
-                                <div class="form-group">
-                                    {{ plantation_detail_form.rootstock.label_tag }}
-                                    {{ plantation_detail_form.rootstock }}
-                                </div>
-                                <div class="form-group">
-                                    {{ plantation_detail_form.density_plants_ha.label_tag }}
-                                    {{ plantation_detail_form.density_plants_ha }}
+                                    {{ plantation_detail_form.ph_soil.label_tag }}
+                                    {{ plantation_detail_form.ph_soil }}
                                 </div>
                                 <div class="form-group">
                                     {{ plantation_detail_form.conduct_system.label_tag }}
@@ -895,10 +870,6 @@
                                     {{ plantation_detail_form.soil_type }}
                                 </div>
                                 <div class="form-group">
-                                    {{ plantation_detail_form.ph_soil.label_tag }}
-                                    {{ plantation_detail_form.ph_soil }}
-                                </div>
-                                <div class="form-group">
                                     {{ plantation_detail_form.organic_matter_percent.label_tag }}
                                     {{ plantation_detail_form.organic_matter_percent }}
                                 </div>
@@ -906,17 +877,24 @@
                                     {{ plantation_detail_form.water_regime.label_tag }}
                                     {{ plantation_detail_form.water_regime }}
                                 </div>
-                                <div class="form-group">
-                                    {{ plantation_detail_form.irrigation_system.label_tag }}
-                                    {{ plantation_detail_form.irrigation_system }}
-                                </div>
                             </div>
 
                             <button type="submit" class="submit-button">✓ Register Plantation</button>
                         </form>
                     </div>
 
-                    <div class="form-divider" style="margin: 50px 0;"></div>
+                    <!-- ADD CULTURE TO PLANTATION -->
+                    <div class="form-section">
+                        <h3>
+                            <span class="step-badge">2</span> <!-- Or just a new number -->
+                            🌱 Add Culture to Plantation
+                        </h3>
+                        <form method="POST" action="{% url 'producer_submit_plantation_crop' %}">
+                            {% csrf_token %}
+                            {{ plantation_crop_form.as_p }}
+                            <button type="submit" class="submit-button">✓ Add Culture</button>
+                        </form>
+                    </div>
 
                     <!-- COLHEITA -->
                     <div class="form-section">
@@ -931,8 +909,61 @@
                         </form>
                     </div>
 
+                    <!-- SCRIPTS FOR HARVEST DYNAMIC FILTERING -->
+                    {{ plantation_subfamilies_map|json_script:"plantation-subs-map" }}
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            // Parse the JSON map
+                            const subsMap = JSON.parse(document.getElementById('plantation-subs-map').textContent);
+                            
+                            function setupDynamicFiltering(plantationSelectId, subfamilySelectId) {
+                                const plantationSelect = document.getElementById(plantationSelectId);
+                                const subfamilySelect = document.getElementById(subfamilySelectId);
+                                
+                                if (!plantationSelect || !subfamilySelect) return;
+
+                                function updateSubfamilies() {
+                                    const plantationId = plantationSelect.value;
+                                    const availableSubs = subsMap[plantationId] || [];
+                                    
+                                    // Clear current options, keeping the first "Select" option
+                                    const placeholder = subfamilySelect.options[0];
+                                    subfamilySelect.innerHTML = '';
+                                    if (placeholder) {
+                                        subfamilySelect.appendChild(placeholder);
+                                    }
+                                    
+                                    if (availableSubs.length > 0) {
+                                        availableSubs.forEach(sub => {
+                                            const option = document.createElement('option');
+                                            option.value = sub.id;
+                                            option.textContent = sub.name;
+                                            subfamilySelect.appendChild(option);
+                                        });
+                                        subfamilySelect.disabled = false;
+                                    } else {
+                                        const option = document.createElement('option');
+                                        option.text = "(No crops available)";
+                                        subfamilySelect.appendChild(option);
+                                        subfamilySelect.disabled = true;
+                                    }
+                                }
+
+                                plantationSelect.addEventListener('change', updateSubfamilies);
+                            }
+
+                            // Initialize for Harvest Form
+                            setupDynamicFiltering('harvest_plantation_select', 'harvest_subfamily_select');
+                            
+                            // Initialize for Event Form
+                            setupDynamicFiltering('event_plantation_select', 'event_subfamily_select');
+                        });
+                    </script>
+
                     <div class="form-section">
-                        <h3>🗓️ 4. Register Orchard Events</h3>
+                        <h3>
+                            <span class="step-badge">4</span>
+                            🗓️ Register Cultures Events</h3>
 
                         <form method="POST" action="{% url 'producer_submit_event' %}" id="baseEventForm">
                             {% csrf_token %}
@@ -1052,76 +1083,44 @@
                 <div id="data-view" class="tab-content" style="display:none;">
 
                     <div class="data-table-container">
-                        <h3>📦 Registered Products</h3>
-                        {% if registered_products %}
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Nome</th>
-                                    <th>Categoria</th>
-                                    <th>Preço (€)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for product in registered_products %}
-                                <tr>
-                                    <td>{{ product.product_id }}</td>
-                                    <td>{{ product.name }}</td>
-                                    <td>{{ product.category }}</td>
-                                    <td>{{ product.price|default:"N/A" }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                        {% else %}<p>No products registered.</p>{% endif %}
-                    </div>
-
-                    <div class="data-table-container">
                         <h3>🗺️ Plantations</h3>
                         {% if plantation_plans %}
                         <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
-                                    <th>Product</th>
-
-                                    <th>Area (m²)
+                                    <th>Name</th>
+                                    <th>Trees</th>
+                                    <th>Area (m²)</th>
+                                    <th>Location</th>
                                     <th class="col-date">Date</th>
-
-                                    <th>Orchard Area (ha)</th>
-                                    <th>Avg Age (years)</th>
-                                    <th>Kiwi Variety</th>
+                                    <th>Prod. Type</th>
+                                    <th>Chemical</th>
+                                    
+                                    <!-- Details -->
                                     <th>Conduct System</th>
                                     <th>Soil pH</th>
                                     <th>Water Regime</th>
-
-                                    <th>Seeds</th>
-                                    <th>Prod. Type</th>
-                                    <th>Chemical</th>
-
+                                    <th>Soil Type</th>
+                                    <th>Organic Matter (%)</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for plan in plantation_plans %}
                                 <tr>
-                                    <td>{{ plan.plantation_id }}</td>
-                                    <td>{{ plan.product.name }}</td>
-
+                                    <td>{{ plan.plantation_name|default:"-" }}</td>
+                                    <td>{{ plan.quantity_of_trees }}</td>
                                     <td>{{ plan.area }}</td>
+                                    <td>{{ plan.location }}</td>
                                     <td class="col-date">{{ plan.plantation_date|date:"d-m-Y" }}</td>
-
-                                    <td>{{ plan.total_area_ha|default:"" }}</td>
-                                    <td>{{ plan.avg_plant_age_years|default:"" }}</td>
-                                    <td>{{ plan.get_kiwi_variety_display|default:"" }}</td>
+                                    <td>{{ plan.get_production_type_display }}</td>
+                                    <td>{{ plan.get_chemical_use_display }}</td>
+                                    
+                                    <!-- Details -->
                                     <td>{{ plan.get_conduct_system_display|default:"" }}</td>
                                     <td>{{ plan.ph_soil|default:"" }}</td>
                                     <td>{{ plan.get_water_regime_display|default:"" }}</td>
-
-                                    <td>{{ plan.quantity_of_seeds }}</td>
-                                    <td>{{ plan.get_production_type_display }}</td>
-                                    <td>{{ plan.get_chemical_use_display }}</td>
-
+                                    <td>{{ plan.get_soil_type_display|default:"" }}</td>
+                                    <td>{{ plan.organic_matter_percent|default:"" }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -1135,9 +1134,9 @@
                         <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
-                                    <th>Plan</th>
                                     <th>Date</th>
+                                    <th>Plantation</th>
+                                    <th>Culture</th>
                                     <th>Qt (Kg)</th>
                                     <th>Utilized Qt</th>
                                     <th>Quality</th>
@@ -1146,13 +1145,21 @@
                             <tbody>
                                 {% for record in harvest_records %}
                                 <tr>
-                                    <td>{{ record.harvest_id }}</td>
+                                    <td>{{ record.harvest_date |date:"d-m-Y" }}</td>
                                     <td>
                                         {% if record.plantation %}
-                                        ID {{ record.plantation.pk }} - {{ record.plantation.product.name }}
-                                        {% else %}Plan Completed{% endif %}
+                                        {{ record.plantation.plantation_name }}
+                                        {% else %}
+                                        -
+                                        {% endif %}
                                     </td>
-                                    <td>{{ record.harvest_date |date:"d-m-Y" }}</td>
+                                    <td>
+                                        {% if record.subfamily %}
+                                        {{ record.subfamily.name }}
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
                                     <td>{{ record.harvest_quantity_kg }}</td>
                                     <td>{{ record.utilized_quantity_kg }}</td>
                                     <td>{{ record.avg_quality_score }}</td>
@@ -1165,31 +1172,49 @@
 
                     <div class="data-table-container">
                         <h3>🗓️ Orchard Events</h3>
+                        
+                        <!-- Filters -->
+                         <div class="filters-container" style="display: flex; gap: 20px; margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 10px; border: 1px solid #eee;">
+                            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                <label for="filter-plantation" style="font-weight: 600; color: #555;">Filter by Plantation:</label>
+                                <select id="filter-plantation" class="form-control">
+                                    <option value="">All Plantations</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                <label for="filter-culture" style="font-weight: 600; color: #555;">Filter by Culture:</label>
+                                <select id="filter-culture" class="form-control" disabled>
+                                    <option value="">All Cultures</option>
+                                </select>
+                            </div>
+                        </div>
+
                         {% if plantation_events %}
-                        <table class="data-table">
+                        <table class="data-table" id="view-events-table">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
-                                    <th>Plan</th>
-                                    <th>Product</th>
+                                    <th>Plantation</th>
+                                    <th>Culture</th>
                                     <th>Date</th>
                                     <th>Type</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for event in plantation_events %}
-                                <tr>
-                                    <td>{{ event.event_id }}</td>
+                                <tr data-plantation="{% if event.plantation %}{{ event.plantation.plantation_name }}{% else %}N/A{% endif %}" 
+                                    data-culture="{% if event.plantation and event.subfamily %}{{ event.subfamily.name }}{% elif event.plantation %}{{ event.plantation.product.name|default:'(No Culture)' }}{% else %}N/A{% endif %}">
                                     <td>
                                         {% if event.plantation %}
-                                        ID {{ event.plantation.pk }} - {{ event.plantation.product.name }}
-                                        {% else %}N/A{% endif %}
+                                        {{ event.plantation.plantation_name }}
+                                        {% else %}
+                                        -
+                                        {% endif %}
                                     </td>
                                     <td>
-                                        {% if event.plantation and event.plantation.product %}
-                                            {{ event.plantation.product.name }}
+                                        {% if event.subfamily %}
+                                        {{ event.subfamily.name }}
                                         {% else %}
-                                            N/A
+                                        -
                                         {% endif %}
                                     </td>
                                     <td>{{ event.event_date|date:"d-m-Y" }}</td>
@@ -1280,6 +1305,158 @@
                     </table>
                     {% else %}
                     <p style="text-align:center;color:#666;padding:20px;">No warehouses registered.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- PRODUCT QUANTITY TAB -->
+            <div id="product-quantity-view" class="dashboard-tab" style="display:none;">
+                <div class="data-table-container">
+                    <h3>⚖️ Product Quantity Summary</h3>
+                    
+                    <h4 style="margin-bottom: 20px;">Stock Status</h4>
+                    
+                    <!-- Filters for Quantity Summary -->
+                     <div class="filters-container" style="display: flex; gap: 20px; margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 10px; border: 1px solid #eee;">
+                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                            <label for="filter-qty-plantation" style="font-weight: 600; color: #555;">Filter by Plantation:</label>
+                            <select id="filter-qty-plantation" class="form-control">
+                                <option value="">All Plantations</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                            <label for="filter-qty-culture" style="font-weight: 600; color: #555;">Filter by Culture:</label>
+                            <select id="filter-qty-culture" class="form-control" disabled>
+                                <option value="">All Cultures</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {% if harvest_sums %}
+                    <table class="data-table" style="margin-bottom: 30px;" id="qty-summary-table">
+                        <thead>
+                            <tr>
+                                <th>Plantation</th>
+                                <th>Culture</th>
+                                <th>Total Harvested (Kg)</th>
+                                <th>Delivered (Kg)</th>
+                                <th>Current Stock (Kg)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in harvest_sums %}
+                            <tr data-plantation="{{ item.plantation__plantation_name|default:'N/A' }}" 
+                                data-culture="{{ item.subfamily__name|default:'N/A' }}">
+                                <td>{{ item.plantation__plantation_name|default:"-" }}</td>
+                                <td>{{ item.subfamily__name|default:"-" }}</td>
+                                <td>{{ item.total_kg }}</td>
+                                <td>{{ item.delivered_kg|default:"0" }}</td>
+                                <td><strong>{{ item.current_stock }}</strong></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p>No harvest data available for summary.</p>
+                    {% endif %}
+
+                    <!-- Detailed List -->
+                    <!-- Ready to Deliver Section -->
+                    <div style="margin-top: 40px; border-top: 1px solid #ddd; padding-top: 20px;">
+                        <h3>🚚 Ready to Deliver</h3>
+                        <p>Select a harvest to register a delivery.</p>
+                        
+                        {% if harvest_records %}
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Product</th>
+                                    <th>Total (Kg)</th>
+                                    <th>Delivered (Kg)</th>
+                                    <th>Remaining (Kg)</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in harvest_records %}
+                                    <!-- Calculate remaining in template for display -->
+                                    {% with delivered=record.delivered_quantity_kg|default:0 %}
+                                    {% with remaining=record.harvest_quantity_kg|add:"-"|add:delivered %}
+                                    
+                                    {% if remaining > 0 %}
+                                    <tr>
+                                        <td>{{ record.harvest_date|date:"d-m-Y" }}</td>
+                                        <td>
+                                            {% if record.plantation %}
+                                            {{ record.plantation.product.name }}
+                                            {% else %}
+                                            -
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ record.harvest_quantity_kg }}</td>
+                                        <td>{{ delivered }}</td>
+                                        <td><strong>{{ remaining }}</strong></td>
+                                        <td>
+                                            <form method="POST" action="{% url 'producer_submit_delivery' %}" style="display:flex; gap:10px; align-items:center;">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="harvest_id" value="{{ record.pk }}">
+                                                <input type="number" name="quantity_to_deliver" step="0.01" max="{{ remaining }}" placeholder="Kg to deliver" required style="width: 100px; padding: 5px;">
+                                                <button type="submit" class="submit-button" style="padding: 5px 10px; font-size: 0.9em;">Deliver</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% endif %}
+                                    
+                                    {% endwith %}
+                                    {% endwith %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <p>No harvest records found.</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- Detailed List -->
+                    <h4 style="margin-top: 40px;">Detailed Harvest Records (History)</h4>
+                    {% if harvest_records %}
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Plantation</th>
+                                <th>Culture</th>
+                                <th>Quantity (Kg)</th>
+                                <th>Delivered (Kg)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in harvest_records %}
+                            <tr>
+                                <td>{{ record.harvest_date|date:"d-m-Y" }}</td>
+                                <td>
+                                    {% if record.plantation %}
+                                    {{ record.plantation.plantation_name }}
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if record.subfamily %}
+                                    {{ record.subfamily.name }}
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                                <td>{{ record.harvest_quantity_kg }}</td>
+                                <td>{{ record.delivered_quantity_kg|default:"0" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p>No harvest records found.</p>
                     {% endif %}
                 </div>
             </div>
@@ -1752,6 +1929,158 @@
 
     </script>
 
-</body>
+    <script>
+        // === ORCHARD EVENTS FILTERING LOGIC ===
+        document.addEventListener("DOMContentLoaded", function() {
+            const plantationSelect = document.getElementById('filter-plantation');
+            const cultureSelect = document.getElementById('filter-culture');
+            const table = document.getElementById('view-events-table');
+            
+            if (!table || !plantationSelect || !cultureSelect) return;
 
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+
+            // 1. Populate Plantation Dropdown
+            const plantations = new Set();
+            rows.forEach(row => {
+                const p = row.getAttribute('data-plantation');
+                if (p && p !== 'N/A') plantations.add(p);
+            });
+            
+            Array.from(plantations).sort().forEach(p => {
+                const option = document.createElement('option');
+                option.value = p;
+                option.textContent = p;
+                plantationSelect.appendChild(option);
+            });
+
+            // 2. Filter Function
+            function applyFilters() {
+                const selectedPlantation = plantationSelect.value;
+                let selectedCulture = cultureSelect.value;
+                
+                // Reset available cultures if plantation changed
+                if (this === plantationSelect) {
+                    cultureSelect.innerHTML = '<option value="">All Cultures</option>';
+                    cultureSelect.disabled = !selectedPlantation;
+                    
+                    if (selectedPlantation) {
+                        const availableCultures = new Set();
+                        rows.forEach(row => {
+                            if (row.getAttribute('data-plantation') === selectedPlantation) {
+                                const c = row.getAttribute('data-culture');
+                                if (c && c !== 'N/A') availableCultures.add(c);
+                            }
+                        });
+                        
+                        Array.from(availableCultures).sort().forEach(c => {
+                            const option = document.createElement('option');
+                            option.value = c;
+                            option.textContent = c;
+                            cultureSelect.appendChild(option);
+                        });
+                    }
+                    // After resetting, query the value again (it will be "" since we just reset options)
+                    selectedCulture = cultureSelect.value;
+                }
+
+                // Show/Hide Rows
+                rows.forEach(row => {
+                    const rowPlantation = row.getAttribute('data-plantation');
+                    const rowCulture = row.getAttribute('data-culture');
+                    
+                    let show = true;
+                    
+                    if (selectedPlantation && rowPlantation !== selectedPlantation) show = false;
+                    // If a plantation is selected, we filter by culture. 
+                    // Note: If cultureSelect is disabled/empty, selectedCulture is "" so this check passes.
+                    if (selectedPlantation && selectedCulture && rowCulture !== selectedCulture) show = false;
+
+                    row.style.display = show ? '' : 'none';
+                });
+            }
+
+            plantationSelect.addEventListener('change', applyFilters);
+            cultureSelect.addEventListener('change', applyFilters);
+        });
+    </script>
+
+    </script>
+    
+    <script>
+        // === PRODUCT QUANTITY SUMMARY FILTERING LOGIC ===
+        document.addEventListener("DOMContentLoaded", function() {
+            const plantationSelect = document.getElementById('filter-qty-plantation');
+            const cultureSelect = document.getElementById('filter-qty-culture');
+            const table = document.getElementById('qty-summary-table');
+            
+            if (!table || !plantationSelect || !cultureSelect) return;
+
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+
+            // 1. Populate Plantation Dropdown
+            const plantations = new Set();
+            rows.forEach(row => {
+                const p = row.getAttribute('data-plantation');
+                if (p && p !== 'N/A') plantations.add(p);
+            });
+            
+            Array.from(plantations).sort().forEach(p => {
+                const option = document.createElement('option');
+                option.value = p;
+                option.textContent = p;
+                plantationSelect.appendChild(option);
+            });
+
+            // 2. Filter Function
+            function applyQtyFilters() {
+                const selectedPlantation = plantationSelect.value;
+                let selectedCulture = cultureSelect.value;
+                
+                // Reset available cultures if plantation changed
+                if (this === plantationSelect) {
+                    cultureSelect.innerHTML = '<option value="">All Cultures</option>';
+                    cultureSelect.disabled = !selectedPlantation;
+                    
+                    if (selectedPlantation) {
+                        const availableCultures = new Set();
+                        rows.forEach(row => {
+                            if (row.getAttribute('data-plantation') === selectedPlantation) {
+                                const c = row.getAttribute('data-culture');
+                                if (c && c !== 'N/A') availableCultures.add(c);
+                            }
+                        });
+                        
+                        Array.from(availableCultures).sort().forEach(c => {
+                            const option = document.createElement('option');
+                            option.value = c;
+                            option.textContent = c;
+                            cultureSelect.appendChild(option);
+                        });
+                    }
+                     // After resetting, query the value again (it will be "" since we just reset options)
+                     selectedCulture = cultureSelect.value;
+                }
+
+                // Show/Hide Rows
+                rows.forEach(row => {
+                    const rowPlantation = row.getAttribute('data-plantation');
+                    const rowCulture = row.getAttribute('data-culture');
+                    
+                    let show = true;
+                    
+                    if (selectedPlantation && rowPlantation !== selectedPlantation) show = false;
+                    if (selectedPlantation && selectedCulture && rowCulture !== selectedCulture) show = false;
+
+                    row.style.display = show ? '' : 'none';
+                });
+            }
+
+            plantationSelect.addEventListener('change', applyQtyFilters);
+            cultureSelect.addEventListener('change', applyQtyFilters);
+        });
+    </script>
+</body>
 </html>

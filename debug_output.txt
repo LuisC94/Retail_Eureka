@@ -1,0 +1,10 @@
+Users with harvests: <QuerySet [<User: pro>]>
+
+Checking for user: pro
+Total Harvests: 4
+First Harvest: Colheita 1 - Plano 1
+  Plantation: Plano 1 - Produto: Maçã
+    Product: 1 - Maçã
+      Name: Maçã
+Attempting aggregation...
+Aggregation Result: [{'plantation__product__name': 'Kiwi', 'total_kg': Decimal('100.00')}, {'plantation__product__name': 'Laranja', 'total_kg': Decimal('800.00')}, {'plantation__product__name': 'Maçã', 'total_kg': Decimal('100.00')}]
