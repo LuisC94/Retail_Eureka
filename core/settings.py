@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'dashboard',
     'rest_framework',
     'django_extensions',
+    'blockchain',
 ]
 
 MIDDLEWARE = [

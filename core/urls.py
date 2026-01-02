@@ -24,5 +24,6 @@ urlpatterns = [
     # Rotas de Autenticação
     path('accounts/', include('django.contrib.auth.urls')), 
     
-    path('', include('dashboard.urls')), 
+    path('', include('dashboard.urls')),
+    path('blockchain/', include('blockchain.urls')), 
 ]

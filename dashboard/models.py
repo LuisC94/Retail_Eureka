@@ -293,5 +293,52 @@ class Harvest(models.Model):
     avg_quality_score = models.IntegerField(choices=QUALITY_SCORE_CHOICES, verbose_name="Average Quality Score (1-10)")
     utilized_quantity_kg = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Utilized Quantity (Kg)")
     
+    warehouse = models.ForeignKey(Warehouse, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Stored In (Warehouse)")
+    
     class Meta: db_table = 'harvest_records'
     def __str__(self): return f"Colheita {self.pk} - Plano {self.plantation.plantation_id if self.plantation else 'N/A'}"
+    
+    @property
+    def pk_str(self): return str(self.pk)
+
+# ----------------------------------------------------------------------
+# 6. MODELO DE MARKETPLACE (TRANSAÇÕES)
+# ----------------------------------------------------------------------
+
+class MarketplaceOrder(models.Model):
+    ORDER_TYPE_CHOICES = [
+        ('BUY', 'Purchase Request (Compra)'),
+        ('SELL', 'Export Offer (Venda/Exportação)'),
+    ]
+    STATUS_CHOICES = [
+        ('OPEN', 'Open (Aberto)'),
+        ('APPROVED', 'Approved/Fulfilled (Aprovado)'),
+    ]
+
+    # Quem criou o pedido
+    requester = models.ForeignKey(User, on_delete=models.CASCADE, related_name='market_orders_requested')
+    # Perfil de quem criou (Ex: 'Retailer', 'Producer') - útil para filtragem visual
+    role = models.CharField(max_length=50, verbose_name="Perfil do Requerente")
+
+    order_type = models.CharField(max_length=10, choices=ORDER_TYPE_CHOICES, verbose_name="Tipo de Pedido")
+    
+    # O que está a ser transacionado
+    culture = models.ForeignKey(ProductSubFamily, on_delete=models.CASCADE, verbose_name="Cultura")
+    quantity_kg = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Quantidade (Kg)")
+    
+    # Detalhes Logísticos
+    warehouse_location = models.CharField(max_length=255, verbose_name="Localização do Armazém")
+    
+    # Estado e Aprovação
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='OPEN')
+    fulfilled_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='market_orders_fulfilled')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    fulfilled_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'marketplace_orders'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.order_type} - {self.culture.name} ({self.quantity_kg}kg) by {self.requester.username}"

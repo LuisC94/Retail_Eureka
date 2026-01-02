@@ -772,6 +772,9 @@
                 <a href="#" class="menu-item" onclick="switchSidebarTab('warehouse-management')">
                     📦 Warehouse management
                 </a>
+                <a href="#" class="menu-item" onclick="switchSidebarTab('marketplace-dashboard')">
+                    🤝 Marketplace
+                </a>
                 <a href="#" class="menu-item" onclick="switchSidebarTab('product-quantity-view')">
                     ⚖️ Product Quantity
                 </a>
@@ -785,6 +788,19 @@
         <div class="main-content">
             <div class="main-header">
                 <h2>Producer Dashboard</h2>
+                
+                {% if messages %}
+                <div style="margin-bottom: 20px;">
+                    {% for message in messages %}
+                    <div style="padding: 15px; border-radius: 10px; margin-bottom: 10px; font-weight: 500; 
+                        {% if message.tags == 'success' %} background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9;
+                        {% elif message.tags == 'error' %} background: #ffebee; color: #c62828; border: 1px solid #ffcdd2;
+                        {% else %} background: #e3f2fd; color: #1565c0; border: 1px solid #bbdefb; {% endif %}">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
 
                 <div class="header-actions">
                     <button type="button" class="profile-button" onclick="openProfileModal()">
@@ -905,6 +921,7 @@
                         <form method="POST" action="{% url 'producer_submit_harvest' %}">
                             {% csrf_token %}
                             {{ harvest_form.as_p }}
+                
                             <button type="submit" class="submit-button">✓ Register Harvest</button>
                         </form>
                     </div>
@@ -1309,6 +1326,128 @@
                 </div>
             </div>
 
+            <!-- MARKETPLACE TAB -->
+            <div id="marketplace-dashboard" class="dashboard-tab" style="display:none;">
+                <div class="data-table-container">
+                    <h3>🤝 Marketplace</h3>
+                    <p style="color:#666; margin-bottom:20px;">Buy and sell crops across the network.</p>
+
+                    <!-- CREATE ORDER FORM -->
+                    <div class="form-section">
+                        <h4>📢 Create New Order</h4>
+                        <form method="POST" action="{% url 'market_submit_order' %}">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                {{ market_order_form.order_type.label_tag }}
+                                {{ market_order_form.order_type }}
+                            </div>
+                            <div class="form-group">
+                                {{ market_order_form.culture.label_tag }}
+                                {{ market_order_form.culture }}
+                            </div>
+                            <div class="form-group">
+                                {{ market_order_form.quantity_kg.label_tag }}
+                                {{ market_order_form.quantity_kg }}
+                            </div>
+                            <div class="form-group">
+                                {{ market_order_form.warehouse_location.label_tag }}
+                                {{ market_order_form.warehouse_location }}
+                            </div>
+                            <button type="submit" class="submit-button">Submit Order</button>
+                        </form>
+                    </div>
+
+                    <!-- OPEN TRANSACTIONS -->
+                    <div style="margin-top: 40px;">
+                        <h4>🔓 Open Transactions</h4>
+                        {% if open_market_orders %}
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Requester</th>
+                                    <th>Role</th>
+                                    <th>Culture</th>
+                                    <th>Qty (Kg)</th>
+                                    <th>Location</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in open_market_orders %}
+                                <tr>
+                                    <td>{{ order.created_at|date:"d-m-Y H:i" }}</td>
+                                    <td>
+                                        {% if order.order_type == 'BUY' %}
+                                        <span class="badge" style="background:#e3f2fd; color:#1565c0;">BUY</span>
+                                        {% else %}
+                                        <span class="badge" style="background:#e8f5e9; color:#2e7d32;">SELL</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ order.requester.username }}</td>
+                                    <td>{{ order.role }}</td>
+                                    <td>{{ order.culture.name }}</td>
+                                    <td>{{ order.quantity_kg }}</td>
+                                    <td>{{ order.warehouse_location }}</td>
+                                    <td>
+                                        {% if order.requester != user %}
+                                        <form method="POST" action="{% url 'market_accept_order' %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="order_id" value="{{ order.id }}">
+                                            <button type="submit" class="add-sensor-btn" style="background:#4CAF50; color:white; border:none; cursor:pointer; padding:5px 10px; border-radius:5px;">Accept</button>
+                                        </form>
+                                        {% else %}
+                                        <span style="color:#999;">(Your Order)</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <p style="color:#666; text-align:center;">No open orders found.</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- TRANSACTIONS HISTORY -->
+                    <div style="margin-top: 40px;">
+                        <h4>📜 Transactions History (Completed)</h4>
+                         {% if closed_market_orders %}
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Date Fulfilled</th>
+                                    <th>Type</th>
+                                    <th>Requester</th>
+                                    <th>Role</th>
+                                    <th>Culture</th>
+                                    <th>Qty (Kg)</th>
+                                    <th>Fulfilled By</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in closed_market_orders %}
+                                <tr>
+                                    <td>{{ order.fulfilled_at|date:"d-m-Y H:i" }}</td>
+                                    <td>{{ order.get_order_type_display }}</td>
+                                    <td>{{ order.requester.username }}</td>
+                                    <td>{{ order.role }}</td>
+                                    <td>{{ order.culture.name }}</td>
+                                    <td>{{ order.quantity_kg }}</td>
+                                    <td>{{ order.fulfilled_by.username }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                         {% else %}
+                        <p style="color:#666; text-align:center;">No completed transactions yet.</p>
+                        {% endif %}
+                    </div>
+
+                </div>
+            </div>
+
             <!-- PRODUCT QUANTITY TAB -->
             <div id="product-quantity-view" class="dashboard-tab" style="display:none;">
                 <div class="data-table-container">
@@ -1360,63 +1499,7 @@
                     <p>No harvest data available for summary.</p>
                     {% endif %}
 
-                    <!-- Detailed List -->
-                    <!-- Ready to Deliver Section -->
-                    <div style="margin-top: 40px; border-top: 1px solid #ddd; padding-top: 20px;">
-                        <h3>🚚 Ready to Deliver</h3>
-                        <p>Select a harvest to register a delivery.</p>
-                        
-                        {% if harvest_records %}
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Product</th>
-                                    <th>Total (Kg)</th>
-                                    <th>Delivered (Kg)</th>
-                                    <th>Remaining (Kg)</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for record in harvest_records %}
-                                    <!-- Calculate remaining in template for display -->
-                                    {% with delivered=record.delivered_quantity_kg|default:0 %}
-                                    {% with remaining=record.harvest_quantity_kg|add:"-"|add:delivered %}
-                                    
-                                    {% if remaining > 0 %}
-                                    <tr>
-                                        <td>{{ record.harvest_date|date:"d-m-Y" }}</td>
-                                        <td>
-                                            {% if record.plantation %}
-                                            {{ record.plantation.product.name }}
-                                            {% else %}
-                                            -
-                                            {% endif %}
-                                        </td>
-                                        <td>{{ record.harvest_quantity_kg }}</td>
-                                        <td>{{ delivered }}</td>
-                                        <td><strong>{{ remaining }}</strong></td>
-                                        <td>
-                                            <form method="POST" action="{% url 'producer_submit_delivery' %}" style="display:flex; gap:10px; align-items:center;">
-                                                {% csrf_token %}
-                                                <input type="hidden" name="harvest_id" value="{{ record.pk }}">
-                                                <input type="number" name="quantity_to_deliver" step="0.01" max="{{ remaining }}" placeholder="Kg to deliver" required style="width: 100px; padding: 5px;">
-                                                <button type="submit" class="submit-button" style="padding: 5px 10px; font-size: 0.9em;">Deliver</button>
-                                            </form>
-                                        </td>
-                                    </tr>
-                                    {% endif %}
-                                    
-                                    {% endwith %}
-                                    {% endwith %}
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                        {% else %}
-                        <p>No harvest records found.</p>
-                        {% endif %}
-                    </div>
+
 
                     <!-- Detailed List -->
                     <h4 style="margin-top: 40px;">Detailed Harvest Records (History)</h4>
@@ -1427,8 +1510,10 @@
                                 <th>Date</th>
                                 <th>Plantation</th>
                                 <th>Culture</th>
+                                <th>Warehouse</th>
                                 <th>Quantity (Kg)</th>
                                 <th>Delivered (Kg)</th>
+                                <th>Blockchain</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1449,8 +1534,25 @@
                                     -
                                     {% endif %}
                                 </td>
+                                <td>
+                                    {% if record.warehouse %}
+                                    {{ record.warehouse.location }}
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
                                 <td>{{ record.harvest_quantity_kg }}</td>
                                 <td>{{ record.delivered_quantity_kg|default:"0" }}</td>
+                                <td>
+                                    <div style="display:flex; gap:5px;">
+                                        <a href="{% url 'generate_genesis_block' record.pk %}" class="submit-button" style="padding: 5px 10px; font-size: 0.8em; text-decoration: none; background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);">
+                                            ⛓️ Create
+                                        </a>
+                                        <a href="{% url 'view_batch_chain' 'LOTE-'|add:record.pk_str %}" class="submit-button" style="padding: 5px 10px; font-size: 0.8em; text-decoration: none; background: #607d8b;">
+                                            👁️ View
+                                        </a>
+                                    </div>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>

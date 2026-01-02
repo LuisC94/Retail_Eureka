@@ -30,6 +30,10 @@ urlpatterns = [
     path('submit-event/water/', views.producer_submit_water, name='producer_submit_water'),
     path('submit-delivery/', views.producer_submit_delivery, name='producer_submit_delivery'),
 
+    # MARKETPLACE URLS
+    path('market/submit-order/', views.market_submit_order, name='market_submit_order'),
+    path('market/accept-order/', views.market_accept_order, name='market_accept_order'),
+
     path('transporter/', views.TransporterDashboardView.as_view(), name='transporter_dashboard'),
     
     # 3. ROTAS DE DASHBOARD PARA OUTROS PERFIS

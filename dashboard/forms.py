@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User, Group
 # Importar apenas os modelos necessários
-from .models import PlantationPlan, Product, Harvest, QUALITY_SCORE_CHOICES, Sensor, Warehouse, SENSOR_TYPE_CHOICES, SoilCharacteristic, PlantationEvent, FertilizerSyntheticData, FertilizerOrganicData, SoilCorrectiveData, PestControlData, MachineryData, FuelData, ElectricEnergyData, IrrigationWaterData, ProductSubFamily, PlantationCrop 
+from .models import PlantationPlan, Product, Harvest, QUALITY_SCORE_CHOICES, Sensor, Warehouse, SENSOR_TYPE_CHOICES, SoilCharacteristic, PlantationEvent, FertilizerSyntheticData, FertilizerOrganicData, SoilCorrectiveData, PestControlData, MachineryData, FuelData, ElectricEnergyData, IrrigationWaterData, ProductSubFamily, PlantationCrop, MarketplaceOrder 
 from django.forms import CheckboxSelectMultiple
 
 # Lista de Roles (mantida)
@@ -268,7 +268,8 @@ class HarvestForm(forms.ModelForm):
             'harvest_date', 
             'harvest_quantity_kg', 
             'avg_quality_score', 
-            'utilized_quantity_kg'
+            'utilized_quantity_kg',
+            'warehouse'
         ]
         widgets = {
             # 3 -> Data de Colheita
@@ -278,6 +279,7 @@ class HarvestForm(forms.ModelForm):
             'harvest_quantity_kg': forms.NumberInput(attrs={'class': 'form-control'}),
             'avg_quality_score': forms.Select(attrs={'class': 'form-control'}),
             'utilized_quantity_kg': forms.NumberInput(attrs={'class': 'form-control'}),
+            'warehouse': forms.Select(attrs={'class': 'form-control'}),
         }
 
 # --- 4. Formulário de Registo de Sensor (Para o Popup) ---
@@ -306,4 +308,25 @@ class WarehouseRegistrationForm(forms.ModelForm):
             'control_type': forms.Select(attrs={'class': 'form-control'}),
             'capacity': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
             'sensors': forms.CheckboxSelectMultiple(), # Renderiza checkboxes em vez de um seletor simples
+        }
+
+# ----------------------------------------------------------------------
+# 6. FORMULÁRIO DE MARKETPLACE
+# ----------------------------------------------------------------------
+
+class MarketplaceOrderForm(forms.ModelForm):
+    class Meta:
+        model = MarketplaceOrder
+        fields = ['order_type', 'culture', 'quantity_kg', 'warehouse_location']
+        widgets = {
+            'order_type': forms.Select(attrs={'class': 'form-control'}),
+            'culture': forms.Select(attrs={'class': 'form-control'}),
+            'quantity_kg': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'warehouse_location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Armazém Norte / Sede'}),
+        }
+        labels = {
+            'order_type': 'Tipo de Pedido',
+            'culture': 'Cultura',
+            'quantity_kg': 'Quantidade (Kg)',
+            'warehouse_location': 'Localização para Entrega/Recolha',
         }

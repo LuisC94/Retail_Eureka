@@ -23,7 +23,7 @@ def populate_subfamilies(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('dashboard', '0002_productsubfamily'),
+        ('dashboard', '0001_initial'),
     ]
 
     operations = [

@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blockchain Explorer - Lote {{ batch_id }}</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f0f2f5;
+            padding: 40px;
+            color: #1a1a1a;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .header h1 {
+            color: #00796b;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #666;
+        }
+
+        /* Timeline Container */
+        .timeline {
+            position: relative;
+            padding: 20px 0;
+        }
+
+        /* Vertical Line */
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            width: 4px;
+            height: 100%;
+            background: #e0e0e0;
+            top: 0;
+            transform: translateX(-50%);
+            border-radius: 2px;
+        }
+
+        .block-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            width: 45%;
+            margin-bottom: 40px;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border: 1px solid #eee;
+            transition: transform 0.3s ease;
+        }
+
+        .block-card:hover {
+            transform: translateY(-5px);
+            border-color: #00796b;
+        }
+
+        /* Alternating sides */
+        .block-card:nth-child(odd) {
+            left: 0;
+        }
+
+        .block-card:nth-child(even) {
+            left: 55%;
+        }
+
+        /* Connecting Dots */
+        .block-card::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: #00796b;
+            border: 4px solid white;
+            border-radius: 50%;
+            top: 30px;
+            box-shadow: 0 0 0 3px #00796b;
+        }
+
+        .block-card:nth-child(odd)::after {
+            right: -11.5%; /* Adjust based on width */
+        }
+
+        .block-card:nth-child(even)::after {
+            left: -11.5%;
+        }
+
+        .block-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .block-type {
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #00796b;
+            background: #e0f2f1;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+        }
+
+        .block-id {
+            color: #999;
+            font-family: monospace;
+        }
+
+        .hash-row {
+            margin-bottom: 10px;
+        }
+
+        .hash-label {
+            font-size: 0.75em;
+            color: #888;
+            text-transform: uppercase;
+            font-weight: 600;
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        .hash-value {
+            font-family: 'Courier New', monospace;
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            word-break: break-all;
+            color: #444;
+            border: 1px solid #e0e0e0;
+        }
+
+        .verified-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9em;
+            margin-top: 15px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 50px;
+            background: white;
+            border-radius: 15px;
+            color: #666;
+            margin-top: 20px;
+        }
+
+        .back-btn {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #666;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .back-btn:hover {
+            color: #00796b;
+        }
+
+        /* --- New Data Toggle Styles --- */
+        .toggle-data-btn {
+            background: white;
+            border: 2px solid #00796b;
+            color: #00796b;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 15px;
+            width: 100%;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .toggle-data-btn:hover {
+            background: #e0f2f1;
+        }
+
+        .block-data-container {
+            display: none; /* Hidden by default */
+            margin-top: 15px;
+            background: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            overflow-x: auto;
+            border: 1px solid #3e4451;
+        }
+    </style>
+    <script>
+        function toggleData(blockId) {
+            const container = document.getElementById('data-' + blockId);
+            const btn = document.getElementById('btn-' + blockId);
+            
+            if (container.style.display === 'none' || container.style.display === '') {
+                container.style.display = 'block';
+                btn.innerHTML = '📂 Ocultar Dados Certificados';
+                btn.style.background = '#00796b';
+                btn.style.color = 'white';
+            } else {
+                container.style.display = 'none';
+                btn.innerHTML = '📂 Ver Dados Certificados';
+                btn.style.background = 'white';
+                btn.style.color = '#00796b';
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <div class="container">
+        <a href="javascript:history.back()" class="back-btn">← Voltar ao Dashboard</a>
+        
+        <div class="header">
+            <span style="font-size: 3em;">⛓️</span>
+            <h1>Blockchain Ledger</h1>
+            <p>Rastreabilidade Imutável para o Lote: <strong>{{ batch_id }}</strong></p>
+        </div>
+
+        {% if chain %}
+        <div class="timeline">
+            {% for block in chain %}
+            <div class="block-card">
+                <div class="block-header">
+                    <span class="block-type">{{ block.event_type }}</span>
+                    <span class="block-id">Block #{{ block.block_index }}</span>
+                </div>
+                
+                <div class="hash-row">
+                    <span class="hash-label">📦 Data Hash (Digital Fingerprint)</span>
+                    <div class="hash-value">{{ block.data_hash }}</div>
+                </div>
+
+                <div class="hash-row">
+                    <span class="hash-label">🔗 Previous Block Hash</span>
+                    <div class="hash-value" style="color: #999;">{{ block.previous_hash }}</div>
+                </div>
+
+                <div class="hash-row">
+                    <span class="hash-label">✍️ Signed By</span>
+                    <div class="hash-value">{{ block.signer|slice:":20" }}...</div>
+                </div>
+
+                <div class="hash-row">
+                    <span class="hash-label">🕒 Timestamp</span>
+                    <div style="font-size: 0.9em; font-weight: 500;">{{ block.timestamp }}</div>
+                </div>
+                
+                <!-- Data Toggle Button -->
+                {% if block.content %}
+                <button id="btn-{{ block.block_index }}" class="toggle-data-btn" onclick="toggleData('{{ block.block_index }}')">
+                    📂 Ver Dados Certificados
+                </button>
+                
+                <div id="data-{{ block.block_index }}" class="block-data-container">
+                    <pre>{{ block.content|json_script:"block-data" }}</pre>
+                    <!-- Formatting JSON nicely is tricky in basic Django templates without filters. 
+                         Let's try a simple print first, or rely on JS to format it if needed. 
+                         Actually, let's just dump the dict. Or use a custom filter if we had one.
+                         For now, showing the dict string is better than nothing. -->
+                    {{ block.content }}
+                </div>
+                {% endif %}
+
+                <div class="verified-badge">
+                    ✓ Verified & Immutable
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <h2>Ainda não existem blocos para este lote.</h2>
+            <p>O produtor deve iniciar a cadeia gerando o Bloco Génese.</p>
+        </div>
+        {% endif %}
+
+    </div>
+
+</body>
+</html>

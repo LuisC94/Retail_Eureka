@@ -4,6 +4,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.views import View
+from django.utils import timezone
 from django.urls import reverse, reverse_lazy 
 from .decorators import role_required 
 from django.contrib.auth.models import Group
@@ -12,14 +13,14 @@ from .models import (
     Product, PlantationPlan, Harvest, Warehouse, Sensor, UserProfile, PlantationEvent,
     SoilCharacteristic, PlantationSoilValue, ProductSubFamily, PlantationCrop,
     FertilizerSyntheticData, FertilizerOrganicData, SoilCorrectiveData, PestControlData,
-    MachineryData, FuelData, ElectricEnergyData, IrrigationWaterData
+    MachineryData, FuelData, ElectricEnergyData, IrrigationWaterData, MarketplaceOrder
 )
 
 from .forms import (
     UserRegisterForm, ProductRegistrationForm, PlantationPlanForm, PlantationDetailForm,
     HarvestForm, WarehouseRegistrationForm, SensorRegistrationForm, PlantationEventForm,
     FertilizerSyntheticForm, FertilizerOrganicForm, SoilCorrectiveForm, PestControlForm,
-    MachineryForm, FuelForm, ElectricEnergyForm, IrrigationWaterForm, SoilCharacteristicForm, PlantationCropForm
+    MachineryForm, FuelForm, ElectricEnergyForm, IrrigationWaterForm, SoilCharacteristicForm, PlantationCropForm, MarketplaceOrderForm
 )
 
 # ----------------------------------------------------------------------
@@ -97,7 +98,22 @@ class RegisterView(View):
 class TransporterDashboardView(View):
     def get(self, request):
         user = request.user
-        context = { 'username': user.username, 'role': 'Transporter' }
+        open_orders = MarketplaceOrder.objects.filter(status='OPEN').select_related('requester', 'culture').order_by('-created_at')
+        closed_orders = MarketplaceOrder.objects.filter(status='APPROVED').select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')
+        
+        try:
+            user_profile = UserProfile.objects.get(user=user)
+        except UserProfile.DoesNotExist:
+            user_profile = None
+
+        context = { 
+            'username': user.username, 
+            'role': 'Transporter',
+            'user_profile': user_profile,
+            'open_market_orders': open_orders,
+            'closed_market_orders': closed_orders,
+            'market_order_form': MarketplaceOrderForm(initial={'role': 'Transporter', 'order_type': 'BUY'})
+        }
         return render(request, 'dashboard/transporterDash.html', context)
 
 # Consumer Dashboard
@@ -106,7 +122,22 @@ class TransporterDashboardView(View):
 class ConsumerDashboardView(View):
     def get(self, request):
         user = request.user
-        context = { 'username': user.username, 'role': 'Consumer' }
+        open_orders = MarketplaceOrder.objects.filter(status='OPEN').select_related('requester', 'culture').order_by('-created_at')
+        closed_orders = MarketplaceOrder.objects.filter(status='APPROVED').select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')
+
+        try:
+            user_profile = UserProfile.objects.get(user=user)
+        except UserProfile.DoesNotExist:
+            user_profile = None
+
+        context = { 
+            'username': user.username, 
+            'role': 'Consumer',
+            'user_profile': user_profile,
+            'open_market_orders': open_orders,
+            'closed_market_orders': closed_orders,
+            'market_order_form': MarketplaceOrderForm(initial={'role': 'Consumer', 'order_type': 'BUY'})
+        }
         return render(request, 'dashboard/consumerDash.html', context)
 
 # Processor Dashboard
@@ -115,7 +146,36 @@ class ConsumerDashboardView(View):
 class ProcessorDashboardView(View):
     def get(self, request):
         user = request.user
-        context = { 'username': user.username, 'role': 'Processor' }
+        open_orders = MarketplaceOrder.objects.filter(status='OPEN').select_related('requester', 'culture').order_by('-created_at')
+        closed_orders = MarketplaceOrder.objects.filter(status='APPROVED').select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')
+
+        try:
+            user_profile = UserProfile.objects.get(user=user)
+        except UserProfile.DoesNotExist:
+            user_profile = None
+
+        context = { 
+            'username': user.username, 
+            'role': 'Processor',
+            'user_profile': user_profile,
+            'open_market_orders': open_orders,
+            'closed_market_orders': closed_orders,
+        }
+
+        # CALCULATE STOCK FOR PROCESSOR (Assuming they have Harvest records)
+        # We need to know what they have to restrict the form
+        processor_harvests = Harvest.objects.filter(producer=user).values('subfamily').distinct()
+        available_subfamily_ids = [item['subfamily'] for item in processor_harvests]
+        
+        market_order_form = MarketplaceOrderForm(initial={'role': 'Processor', 'order_type': 'SELL'})
+        if available_subfamily_ids:
+             market_order_form.fields['culture'].queryset = ProductSubFamily.objects.filter(pk__in=available_subfamily_ids).order_by('name')
+        else:
+             # If no harvests, maybe show empty or all? User said "only appear cultures they have".
+             # If they have nothing, they should see nothing.
+             market_order_form.fields['culture'].queryset = ProductSubFamily.objects.none()
+
+        context['market_order_form'] = market_order_form
         return render(request, 'dashboard/processorDash.html', context)
 
 # Retailer Dashboard
@@ -124,7 +184,22 @@ class ProcessorDashboardView(View):
 class RetailerDashboardView(View):
     def get(self, request):
         user = request.user
-        context = { 'username': user.username, 'role': 'Retailer' }
+        open_orders = MarketplaceOrder.objects.filter(status='OPEN').select_related('requester', 'culture').order_by('-created_at')
+        closed_orders = MarketplaceOrder.objects.filter(status='APPROVED').select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')
+
+        try:
+            user_profile = UserProfile.objects.get(user=user)
+        except UserProfile.DoesNotExist:
+            user_profile = None
+
+        context = { 
+            'username': user.username, 
+            'role': 'Retailer',
+            'user_profile': user_profile,
+            'open_market_orders': open_orders,
+            'closed_market_orders': closed_orders,
+            'market_order_form': MarketplaceOrderForm(initial={'role': 'Retailer', 'order_type': 'BUY'})
+        }
         return render(request, 'dashboard/retailerDash.html', context)
 
 
@@ -157,7 +232,8 @@ class ProducerDashboardView(View):
         # AGGREGATION: Total Kgs per Product (Current Stock)
         harvest_sums = Harvest.objects.filter(producer=user).values(
             'plantation__plantation_name', 
-            'subfamily__name'
+            'subfamily__name',
+            'subfamily'
         ).annotate(
             total_kg=Sum('harvest_quantity_kg'),
             delivered_kg=Sum('delivered_quantity_kg')
@@ -175,10 +251,19 @@ class ProducerDashboardView(View):
         producer_warehouses = Warehouse.objects.filter(owner=user).order_by('warehouse_id')
         all_sensors = Sensor.objects.all().order_by('sensor_id')
 
+        # 5. MARKETPLACE DATA
+        open_market_orders = MarketplaceOrder.objects.filter(status='OPEN').select_related('requester', 'culture').order_by('-created_at')
+        closed_market_orders = MarketplaceOrder.objects.filter(status='APPROVED').select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')
+
 
         plantation_plan_form = PlantationPlanForm()
         plantation_detail_form = PlantationDetailForm()
         harvest_form = HarvestForm() 
+
+        # Filter Marketplace Order Form to only show cultures in stock (Harvested)
+        available_subfamily_ids = set(item['subfamily'] for item in harvest_sums if item['subfamily'])
+        market_order_form = MarketplaceOrderForm(initial={'role': 'Producer', 'order_type': 'SELL'})
+        market_order_form.fields['culture'].queryset = ProductSubFamily.objects.filter(pk__in=available_subfamily_ids).order_by('name') 
 
         warehouse_form = WarehouseRegistrationForm()
         sensor_form = SensorRegistrationForm()
@@ -242,6 +327,9 @@ class ProducerDashboardView(View):
             'db_error': request.session.pop('db_error', None),
 
             'plantation_event_form': PlantationEventForm(),
+            'market_order_form': market_order_form,
+            'open_market_orders': open_market_orders,
+            'closed_market_orders': closed_market_orders,
         }
         
         return render(request, 'dashboard/producerDash.html', context)
@@ -871,4 +959,39 @@ def producer_submit_water(request):
         if db_error:
             request.session['db_error'] = db_error 
         return redirect(REDIRECT_URL)
+
+# ----------------------------------------------------------------------
+# 5. VIEWS DE MARKETPLACE
+# ----------------------------------------------------------------------
+
+@login_required
+def market_submit_order(request):
+    if request.method == 'POST':
+        form = MarketplaceOrderForm(request.POST)
+        if form.is_valid():
+            order = form.save(commit=False)
+            order.requester = request.user
+            # Tentar inferir perfil
+            groups = request.user.groups.all()
+            user_role = groups[0].name if groups else 'Unknown'
+            order.role = user_role
+            
+            order.save()
+            return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
+    
+    return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
+
+@login_required
+def market_accept_order(request):
+    if request.method == 'POST':
+        order_id = request.POST.get('order_id')
+        order = get_object_or_404(MarketplaceOrder, pk=order_id)
+        
+        if order.status == 'OPEN':
+            order.status = 'APPROVED'
+            order.fulfilled_by = request.user
+            order.fulfilled_at = timezone.now()
+            order.save()
+            
+    return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
     return redirect(REDIRECT_URL)
