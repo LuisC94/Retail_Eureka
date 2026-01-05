@@ -35,6 +35,10 @@ urlpatterns = [
     path('market/accept-order/', views.market_accept_order, name='market_accept_order'),
 
     path('transporter/', views.TransporterDashboardView.as_view(), name='transporter_dashboard'),
+    path('transporter/accept-job/', views.transporter_accept_job, name='transporter_accept_job'),
+    path('transporter/submit-plan/', views.transporter_submit_plan, name='transporter_submit_plan'),
+    path('transporter/validate-pickup/', views.transporter_validate_pickup, name='transporter_validate_pickup'),
+    path('transporter/submit-delivery/', views.transporter_submit_delivery, name='transporter_submit_delivery'),
     
     # 3. ROTAS DE DASHBOARD PARA OUTROS PERFIS
     path('consumer/', views.ConsumerDashboardView.as_view(), name='consumer_dashboard'),

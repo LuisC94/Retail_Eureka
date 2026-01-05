@@ -448,101 +448,180 @@
                 </div>
             </div>
 
-            <!-- MARKETPLACE VIEW -->
+            <!-- MARKETPLACE & LOGISTICS VIEW -->
             <div id="marketplace-view" class="tab-content">
-                <div class="form-section">
-                    <h3>🤝 Marketplace - Create New Order</h3>
-                    <form method="POST" action="{% url 'market_submit_order' %}">
-                        {% csrf_token %}
-                        <div class="form-grid-2">
-                            <div>
-                                <label style="display:block; margin-bottom:5px; font-weight:600;">Type:</label>
-                                {{ market_order_form.order_type }}
-                            </div>
-                            <div>
-                                 <label style="display:block; margin-bottom:5px; font-weight:600;">Culture:</label>
-                                {{ market_order_form.culture }}
-                            </div>
-                             <div>
-                                 <label style="display:block; margin-bottom:5px; font-weight:600;">Quantity (Kg):</label>
-                                {{ market_order_form.quantity_kg }}
-                            </div>
-                             <div>
-                                 <label style="display:block; margin-bottom:5px; font-weight:600;">Location:</label>
-                                {{ market_order_form.warehouse_location }}
-                            </div>
-                        </div>
-                        <button type="submit" class="submit-button">Submit Order</button>
-                    </form>
-                </div>
-
-                <!-- OPEN TRANSACTIONS -->
+                
+                <!-- 1. JOB MARKET (Available Transactions) -->
                 <div class="data-table-container">
-                    <h3>Open Transactions</h3>
-                     {% if open_market_orders %}
+                    <h3>📜 Transactions History (Completed & Available)</h3>
+                    {% if open_market_orders %}
                     <table class="data-table">
                         <thead>
                             <tr>
                                 <th>Date</th>
-                                <th>Type</th>
                                 <th>Requester</th>
+                                <th>Fulfilled By</th>
                                 <th>Culture</th>
-                                <th>Qty</th>
+                                <th>Quantity</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
-                         <tbody>
+                        <tbody>
                             {% for order in open_market_orders %}
                             <tr>
-                                <td>{{ order.created_at|date:"d/m H:i" }}</td>
-                                <td>{{ order.get_order_type_display }}</td>
+                                <td>{{ order.fulfilled_at|date:"d/m H:i" }}</td>
                                 <td>{{ order.requester.username }} ({{ order.role }})</td>
+                                <td>{{ order.fulfilled_by.username }}</td>
                                 <td>{{ order.culture.name }}</td>
-                                <td>{{ order.quantity_kg }}</td>
+                                <td>{{ order.quantity_kg }} Kg</td>
                                 <td>
-                                    {% if order.requester != user %}
-                                    <form method="POST" action="{% url 'market_accept_order' %}">
+                                    <form method="POST" action="{% url 'transporter_accept_job' %}">
                                         {% csrf_token %}
                                         <input type="hidden" name="order_id" value="{{ order.id }}">
-                                        <button type="submit" class="btn-action">Accept</button>
+                                        <button type="submit" class="btn-action">✅ Accept Job</button>
                                     </form>
-                                    {% else %}
-                                    <span style="color:gray;">Mine</span>
-                                    {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                     {% else %}
-                    <p>No open orders.</p>
+                    <p>No completed transactions waiting for transport.</p>
                     {% endif %}
                 </div>
 
-                <!-- HISTORY -->
+                <!-- 2. PLANNING (My Pending Jobs) -->
+                <div class="data-table-container" style="border-left: 5px solid #ffa000;">
+                    <h3>📋 Planning Phase (Define ETAs)</h3>
+                    {% if orders_to_plan %}
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Order #</th>
+                                <th>Origin</th>
+                                <th>Accepted At</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in orders_to_plan %}
+                            <tr>
+                                <td>#{{ order.pk }}</td>
+                                <td>{{ order.warehouse_location }}</td>
+                                <td>{{ order.fulfilled_at|date:"d/m H:i" }}</td>
+                                <td>
+                                    <button class="btn-action" style="background: #ffa000;" onclick="openPlanModal('{{ order.pk }}')">
+                                        📅 Set Plan
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p>No orders waiting for planning.</p>
+                    {% endif %}
+                </div>
+
+                <!-- 3. PICKUP (Ready to Start) -->
+                <div class="data-table-container" style="border-left: 5px solid #1976D2;">
+                    <h3>🚚 Search/Pickup (Go to Origin)</h3>
+                    {% if orders_ready_pickup %}
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Order #</th>
+                                <th>Pickup ETA</th>
+                                <th>Origin</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in orders_ready_pickup %}
+                            <tr>
+                                <td>#{{ order.pk }}</td>
+                                <td>{{ order.planned_pickup_date|date:"d/m H:i" }}</td>
+                                <td>{{ order.warehouse_location }}</td>
+                                <td>
+                                    <form method="POST" action="{% url 'transporter_validate_pickup' %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="order_id" value="{{ order.pk }}">
+                                        <button type="submit" class="btn-action" style="background: #1976D2;">
+                                            ⏱️ Validate Pickup (Start Trip)
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p>No orders ready for pickup.</p>
+                    {% endif %}
+                </div>
+
+                <!-- 4. IN TRANSIT (On the Road) -->
+                <div class="data-table-container" style="border-left: 5px solid #388E3C;">
+                    <h3>📦 In Transit (En Route)</h3>
+                    {% if orders_in_transit %}
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Order #</th>
+                                <th>Picked Up At</th>
+                                <th>Delivery ETA</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in orders_in_transit %}
+                            <tr>
+                                <td>#{{ order.pk }}</td>
+                                <td>{{ order.actual_pickup_date|date:"d/m H:i" }}</td>
+                                <td>{{ order.planned_delivery_date|date:"d/m H:i" }}</td>
+                                <td>
+                                    <button class="btn-action" style="background: #388E3C;" onclick="openDeliveryModal('{{ order.pk }}')">
+                                        🏁 Register Delivery
+                                    </button>
+                                    <a href="{% url 'view_batch_chain' batch_id='ORDER-'|add:order.pk_str %}" target="_blank" class="btn-action" style="background: #546E7A; text-decoration: none; display: inline-block; text-align: center; margin-left: 5px;">
+                                        📜 Chain
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p>No orders currently in transit.</p>
+                    {% endif %}
+                </div>
+
+                <!-- 5. HISTORY -->
                 <div class="data-table-container">
-                    <h3>Transaction History</h3>
+                    <h3>✅ Completed Job History</h3>
                     {% if closed_market_orders %}
                     <table class="data-table">
                         <thead>
                              <tr>
-                                <th>Date</th>
-                                <th>Type</th>
-                                <th>Requester</th>
+                                <th>Delivered At</th>
+                                <th>Order #</th>
                                 <th>Item</th>
-                                <th>Qty</th>
-                                <th>Fulfilled By</th>
+                                <th>Travel Time</th>
+                                <th>Proof</th>
                             </tr>
                         </thead>
                         <tbody>
                              {% for order in closed_market_orders %}
                             <tr>
-                                <td>{{ order.fulfilled_at|date:"d/m H:i" }}</td>
-                                <td>{{ order.get_order_type_display }}</td>
-                                <td>{{ order.requester.username }}</td>
+                                <td>{{ order.actual_delivery_date|date:"d/m H:i" }}</td>
+                                <td>#{{ order.pk }}</td>
                                 <td>{{ order.culture.name }}</td>
-                                <td>{{ order.quantity_kg }}</td>
-                                <td>{{ order.fulfilled_by.username }}</td>
+                                <td>-</td>
+                                <td>
+                                    <a href="{% url 'view_batch_chain' batch_id='ORDER-'|add:order.pk_str %}" target="_blank" class="btn-action" style="background: #546E7A; text-decoration: none; padding: 5px 10px; font-size: 0.8em;">
+                                        📜 View Chain
+                                    </a>
+                                </td>
                             </tr>
                              {% endfor %}
                         </tbody>
@@ -552,6 +631,50 @@
                     {% endif %}
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- MODAL: PLAN TRANSPORT -->
+    <div id="planModal" class="modal" style="display:none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6);">
+        <div class="modal-content" style="background: white; margin: 10% auto; padding: 30px; border-radius: 15px; width: 50%; max-width: 500px;">
+            <span onclick="document.getElementById('planModal').style.display='none'" style="float:right; cursor:pointer; font-size:1.5em;">&times;</span>
+            <h3 style="color:#ffa000;">📅 Logistics Plan (LIACC)</h3>
+            <p>Enter the ETAs calculated by the Algorithm.</p>
+            <form method="POST" action="{% url 'transporter_submit_plan' %}">
+                {% csrf_token %}
+                <input type="hidden" name="order_id" id="plan_order_id">
+                
+                <div style="margin-top:15px;">
+                    <label>Pickup ETA:</label>
+                    {{ transport_plan_form.planned_pickup_date }}
+                </div>
+                <div style="margin-top:15px;">
+                    <label>Delivery ETA:</label>
+                    {{ transport_plan_form.planned_delivery_date }}
+                </div>
+                
+                <button type="submit" class="submit-button" style="background: #ffa000; color: #333;">Confirm Plan</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: DELIVERY & SENSORS -->
+    <div id="deliveryModal" class="modal" style="display:none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6);">
+        <div class="modal-content" style="background: white; margin: 10% auto; padding: 30px; border-radius: 15px; width: 50%; max-width: 600px;">
+            <span onclick="document.getElementById('deliveryModal').style.display='none'" style="float:right; cursor:pointer; font-size:1.5em;">&times;</span>
+            <h3 style="color:#388E3C;">🏁 Finalize Delivery</h3>
+            <p>Upload the sensor data from the trip.</p>
+            <form method="POST" action="{% url 'transporter_submit_delivery' %}">
+                {% csrf_token %}
+                <input type="hidden" name="order_id" id="delivery_order_id">
+                
+                <div style="margin-top:15px;">
+                    <label>Sensor Data JSON:</label>
+                    {{ transport_delivery_form.transport_sensor_data }}
+                </div>
+                
+                <button type="submit" class="submit-button" style="background: #388E3C;">Confirm Delivery</button>
+            </form>
         </div>
     </div>
 
@@ -641,9 +764,24 @@
             document.getElementById('profileModal').style.display = "none";
         }
 
+        function openPlanModal(orderId) {
+            document.getElementById('plan_order_id').value = orderId;
+            document.getElementById('planModal').style.display = "block";
+        }
+
+        function openDeliveryModal(orderId) {
+            document.getElementById('delivery_order_id').value = orderId;
+            document.getElementById('deliveryModal').style.display = "block";
+        }
+
         window.onclick = function (event) {
             let modalProfile = document.getElementById('profileModal');
+            let modalPlan = document.getElementById('planModal');
+            let modalDelivery = document.getElementById('deliveryModal');
+            
             if (event.target === modalProfile) { closeProfileModal(); }
+            if (event.target === modalPlan) { modalPlan.style.display = "none"; }
+            if (event.target === modalDelivery) { modalDelivery.style.display = "none"; }
         }
     </script>
 </body>

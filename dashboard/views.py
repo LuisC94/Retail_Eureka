@@ -8,6 +8,7 @@ from django.utils import timezone
 from django.urls import reverse, reverse_lazy 
 from .decorators import role_required 
 from django.contrib.auth.models import Group
+from django.contrib import messages
 
 from .models import (
     Product, PlantationPlan, Harvest, Warehouse, Sensor, UserProfile, PlantationEvent,
@@ -15,12 +16,15 @@ from .models import (
     FertilizerSyntheticData, FertilizerOrganicData, SoilCorrectiveData, PestControlData,
     MachineryData, FuelData, ElectricEnergyData, IrrigationWaterData, MarketplaceOrder
 )
+from blockchain.services import blockchain_service
 
 from .forms import (
     UserRegisterForm, ProductRegistrationForm, PlantationPlanForm, PlantationDetailForm,
     HarvestForm, WarehouseRegistrationForm, SensorRegistrationForm, PlantationEventForm,
     FertilizerSyntheticForm, FertilizerOrganicForm, SoilCorrectiveForm, PestControlForm,
-    MachineryForm, FuelForm, ElectricEnergyForm, IrrigationWaterForm, SoilCharacteristicForm, PlantationCropForm, MarketplaceOrderForm
+    MachineryForm, FuelForm, ElectricEnergyForm, IrrigationWaterForm, SoilCharacteristicForm, PlantationCropForm, MarketplaceOrderForm,
+    MarketSellOrderForm,
+    TransportPlanForm, TransportDeliveryForm
 )
 
 # ----------------------------------------------------------------------
@@ -98,8 +102,22 @@ class RegisterView(View):
 class TransporterDashboardView(View):
     def get(self, request):
         user = request.user
-        open_orders = MarketplaceOrder.objects.filter(status='OPEN').select_related('requester', 'culture').order_by('-created_at')
-        closed_orders = MarketplaceOrder.objects.filter(status='APPROVED').select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')
+        
+        # 0. Mercado de Trabalho (Transações FEITAS, status=APPROVED, mas sem Transportador)
+        # Mostra encomendas onde Producer e Retailer já fecharam negócio.
+        open_orders = MarketplaceOrder.objects.filter(status='APPROVED', transport_status='PENDING').select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')
+
+        # 1. Encomendas ACEITES pelo Transportador (Status Transporte = ACCEPTED) -> Passam para Planeamento
+        orders_to_plan = MarketplaceOrder.objects.filter(status='APPROVED', transport_status='ACCEPTED').select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')
+        
+        # 2. Encomendas Planeadas, prontas para recolha (Status Transporte = PLANNED)
+        orders_ready_pickup = MarketplaceOrder.objects.filter(status='APPROVED', transport_status='PLANNED').select_related('requester', 'culture', 'fulfilled_by').order_by('planned_pickup_date')
+        
+        # 3. Encomendas Em Trânsito (Status Transporte = IN_TRANSIT)
+        orders_in_transit = MarketplaceOrder.objects.filter(status='APPROVED', transport_status='IN_TRANSIT').select_related('requester', 'culture', 'fulfilled_by').order_by('actual_pickup_date')
+
+        # 4. Histórico de Entregas (Status Transporte = DELIVERED)
+        closed_orders = MarketplaceOrder.objects.filter(status='APPROVED', transport_status='DELIVERED').select_related('requester', 'culture', 'fulfilled_by').order_by('-actual_delivery_date')
         
         try:
             user_profile = UserProfile.objects.get(user=user)
@@ -110,9 +128,18 @@ class TransporterDashboardView(View):
             'username': user.username, 
             'role': 'Transporter',
             'user_profile': user_profile,
+            
+            # Listas segmentadas
             'open_market_orders': open_orders,
-            'closed_market_orders': closed_orders,
-            'market_order_form': MarketplaceOrderForm(initial={'role': 'Transporter', 'order_type': 'BUY'})
+            'orders_to_plan': orders_to_plan,
+            'orders_ready_pickup': orders_ready_pickup,
+            'orders_in_transit': orders_in_transit,
+            'closed_market_orders': closed_orders, # Histórico
+            
+            # Formulários
+            'market_order_form': MarketplaceOrderForm(initial={'role': 'Transporter', 'order_type': 'BUY'}),
+            'transport_plan_form': TransportPlanForm(),
+            'transport_delivery_form': TransportDeliveryForm(),
         }
         return render(request, 'dashboard/transporterDash.html', context)
 
@@ -235,12 +262,15 @@ class ProducerDashboardView(View):
             'subfamily__name',
             'subfamily'
         ).annotate(
+        ).annotate(
             total_kg=Sum('harvest_quantity_kg'),
-            delivered_kg=Sum('delivered_quantity_kg')
+            delivered_kg=Sum('delivered_quantity_kg'),
+            utilized_kg=Sum('utilized_quantity_kg')
         ).order_by('plantation__plantation_name', 'subfamily__name')
         
         for item in harvest_sums:
-            item['current_stock'] = (item['total_kg'] or 0) - (item['delivered_kg'] or 0)
+            # Stock disponível = Total - O que já foi vendido/utilizado
+            item['current_stock'] = (item['total_kg'] or 0) - (item['utilized_kg'] or 0)
 
         
         # 4. BUSCAR EVENTOS DO POMAR
@@ -262,8 +292,10 @@ class ProducerDashboardView(View):
 
         # Filter Marketplace Order Form to only show cultures in stock (Harvested)
         available_subfamily_ids = set(item['subfamily'] for item in harvest_sums if item['subfamily'])
-        market_order_form = MarketplaceOrderForm(initial={'role': 'Producer', 'order_type': 'SELL'})
-        market_order_form.fields['culture'].queryset = ProductSubFamily.objects.filter(pk__in=available_subfamily_ids).order_by('name') 
+        
+        # WE USE A SPECIAL SELL FORM FOR PRODUCERS TO DEDUCT STOCK
+        market_order_form = None 
+        sell_order_form = MarketSellOrderForm(user=user, initial={'role': 'Producer'})
 
         warehouse_form = WarehouseRegistrationForm()
         sensor_form = SensorRegistrationForm()
@@ -328,6 +360,7 @@ class ProducerDashboardView(View):
 
             'plantation_event_form': PlantationEventForm(),
             'market_order_form': market_order_form,
+            'sell_order_form': sell_order_form, # New Producer Form
             'open_market_orders': open_market_orders,
             'closed_market_orders': closed_market_orders,
         }
@@ -967,17 +1000,45 @@ def producer_submit_water(request):
 @login_required
 def market_submit_order(request):
     if request.method == 'POST':
-        form = MarketplaceOrderForm(request.POST)
-        if form.is_valid():
-            order = form.save(commit=False)
-            order.requester = request.user
-            # Tentar inferir perfil
-            groups = request.user.groups.all()
-            user_role = groups[0].name if groups else 'Unknown'
-            order.role = user_role
-            
-            order.save()
-            return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
+        # VERIFICAR ROLE
+        if request.user.groups.filter(name='Producer').exists():
+            # lógica para PRODUTOR (Venda com abate de stock)
+            form = MarketSellOrderForm(request.POST, user=request.user)
+            if form.is_valid():
+                with transaction.atomic():
+                    order = form.save(commit=False)
+                    order.requester = request.user
+                    order.role = 'Producer'
+                    order.status = 'OPEN'
+                    
+                    # Abater Stock ao Lote Selecionado
+                    harvest = order.harvest_origin
+                    # (A validação de stock > disponível já foi feita no form.clean)
+                    harvest.utilized_quantity_kg += order.quantity_kg
+                    harvest.save()
+                    
+                    order.save()
+                    messages.success(request, f"Oferta de Venda criada! {order.quantity_kg}kg abatidos ao lote #{harvest.pk}.")
+                    return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
+            else:
+                 messages.error(request, f"Erro ao criar oferta: {form.errors}")
+        
+        else:
+            # Lógica Genérica (Retalhista a comprar, etc.)
+            form = MarketplaceOrderForm(request.POST)
+            if form.is_valid():
+                order = form.save(commit=False)
+                order.requester = request.user
+                
+                groups = request.user.groups.all()
+                user_role = groups[0].name if groups else 'Unknown'
+                order.role = user_role
+                
+                order.save()
+                messages.success(request, "Pedido criado no Mercado!")
+                return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
+            else:
+                messages.error(request, f"Erro ao criar pedido: {form.errors}")
     
     return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
 
@@ -994,4 +1055,143 @@ def market_accept_order(request):
             order.save()
             
     return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
-    return redirect(REDIRECT_URL)
+
+# ----------------------------------------------------------------------
+# 6. VIEWS DE LOGÍSTICA (TRANSPORTER)
+# ----------------------------------------------------------------------
+
+@login_required
+@role_required(['Transporter'])
+def transporter_accept_job(request):
+    """
+    Passo 1: Aceitar o trabalho (Move de 'PENDING' para 'ACCEPTED').
+    Significa "Eu vou transportar isto!".
+    """
+    if request.method == "POST":
+        order_id = request.POST.get('order_id')
+        order = get_object_or_404(MarketplaceOrder, pk=order_id)
+        
+        # Só aceitar se estiver livre (PENDING)
+        if order.transport_status == 'PENDING':
+            order.transport_status = 'ACCEPTED'
+            # Aqui poderiamos guardar order.transport_fulfilled_by = request.user se tivessemos o campo
+            order.save()
+            messages.success(request, f"Trabalho aceite! Encomenda #{order.pk} movida para Planeamento.")
+        else:
+            messages.error(request, "Esta encomenda já não está disponível.")
+            
+    return redirect('transporter_dashboard')
+
+@login_required
+@role_required(['Transporter'])
+def transporter_submit_plan(request):
+    if request.method == "POST":
+        order_id = request.POST.get('order_id')
+        order = get_object_or_404(MarketplaceOrder, pk=order_id)
+        
+        form = TransportPlanForm(request.POST, instance=order)
+        if form.is_valid():
+            order.transport_status = 'PLANNED'
+            form.save()
+            messages.success(request, f"Plano de transporte registado para Encomenda #{order.pk}!")
+        else:
+            messages.error(request, "Erro ao registar plano. Verifique as datas.")
+            
+    return redirect('transporter_dashboard')
+
+@login_required
+@role_required(['Transporter'])
+def transporter_validate_pickup(request):
+    if request.method == "POST":
+        order_id = request.POST.get('order_id')
+        order = get_object_or_404(MarketplaceOrder, pk=order_id)
+        
+        # 1. Atualizar BD
+        order.actual_pickup_date = timezone.now()
+        order.transport_status = 'IN_TRANSIT'
+        order.save()
+        
+        # 2. Blockchain Event (Proof of Custody)
+        # Assumindo que o Produtor já criou o batch (se não, criamos um novo ORDER-ID)
+        dossier = {
+            "action": "TRANSPORT_PICKUP",
+            "order_id": order.pk,
+            "transporter": request.user.username,
+            "pickup_time": order.actual_pickup_date.isoformat(),
+            "origin": order.warehouse_location,
+            "planned_pickup": order.planned_pickup_date.isoformat() if order.planned_pickup_date else "N/A"
+        }
+        
+        data_hash = blockchain_service.generate_dossier_hash(dossier)
+        
+        blockchain_service.sign_and_submit_block(
+            user_role='Transporter',
+            batch_id=f"ORDER-{order.pk}",
+            data_hash=data_hash,
+            event_type='TRANSPORT_PICKUP'
+        )
+        
+        messages.success(request, f"Carga validada! Bloco de Custódia gerado para Encomenda #{order.pk}.")
+        
+    return redirect('transporter_dashboard')
+
+@login_required
+@role_required(['Transporter'])
+def transporter_submit_delivery(request):
+    if request.method == "POST":
+        order_id = request.POST.get('order_id')
+        order = get_object_or_404(MarketplaceOrder, pk=order_id)
+        
+        form = TransportDeliveryForm(request.POST, instance=order)
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    # 1. Atualizar BD (Order)
+                    order.actual_delivery_date = timezone.now()
+                    order.transport_status = 'DELIVERED'
+                    order.save()
+                    
+                    # 2. Salvar dados do form (Sensores)
+                    # Nota: Como o form é um ModelForm, save() salva o order, 
+                    # mas precisamos garantir que os campos acima persistam.
+                    # O form.save() vai sobrepor se o form tiver esses campos, 
+                    # mas o TransportDeliveryForm só tem o sensor_data.
+                    form.save() 
+
+                    # 3. Atualizar Stock de "Delivered" no Lote de Origem (Harvest)
+                    if order.harvest_origin:
+                        harvest = order.harvest_origin
+                        # Incrementa o delivered com a quantidade desta entrega
+                        # Isto garante que a tabela "Stock Status" do Produtor 
+                        # reflita que esta quantidade saiu fisicamente.
+                        harvest.delivered_quantity_kg = (harvest.delivered_quantity_kg or 0) + order.quantity_kg
+                        harvest.save()
+            except Exception as e:
+                messages.error(request, f"Erro ao processar entrega: {e}")
+                return redirect('transporter_dashboard')
+            
+            # 2. Blockchain Event (Proof of Delivery + Sensors)
+            dossier = {
+                "action": "TRANSPORT_DELIVERY",
+                "order_id": order.pk,
+                "transporter": request.user.username,
+                "delivery_time": order.actual_delivery_date.isoformat(),
+                "sensor_data": order.transport_sensor_data or "No Data"
+            }
+            
+            data_hash = blockchain_service.generate_dossier_hash(dossier)
+            
+            try:
+                result = blockchain_service.sign_and_submit_block(
+                    user_role='Transporter',
+                    batch_id=f"ORDER-{order.pk}",
+                    data_hash=data_hash,
+                    event_type='TRANSPORT_DELIVERY'
+                )
+                messages.success(request, f"Entrega registada com sucesso! Bloco Final gerado. Hash: {result['tx_hash'][:10]}...")
+            except Exception as e:
+                messages.error(request, f"Erro Blockchain: {e}")
+        else:
+            messages.error(request, "Erro ao registar entrega.")
+            
+    return redirect('transporter_dashboard')

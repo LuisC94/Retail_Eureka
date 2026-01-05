@@ -1334,26 +1334,29 @@
 
                     <!-- CREATE ORDER FORM -->
                     <div class="form-section">
-                        <h4>📢 Create New Order</h4>
+                        <h4>📢 Vender Produção (Stock Linked)</h4>
+                        <p style="font-size: 0.9em; color: #666; margin-bottom: 15px;">
+                            Ao criar uma oferta, a quantidade será automaticamente deduzida do stock da colheita selecionada.
+                        </p>
                         <form method="POST" action="{% url 'market_submit_order' %}">
                             {% csrf_token %}
+                            
+                            <!-- The Logic automatically sets it to SELL -->
+
                             <div class="form-group">
-                                {{ market_order_form.order_type.label_tag }}
-                                {{ market_order_form.order_type }}
+                                {{ sell_order_form.harvest_origin.label_tag }}
+                                {{ sell_order_form.harvest_origin }}
+                                <small style="color: #666; font-style: italic;">Apenas colheitas com stock > 0 aparecem aqui.</small>
                             </div>
                             <div class="form-group">
-                                {{ market_order_form.culture.label_tag }}
-                                {{ market_order_form.culture }}
+                                {{ sell_order_form.quantity_kg.label_tag }}
+                                {{ sell_order_form.quantity_kg }}
                             </div>
                             <div class="form-group">
-                                {{ market_order_form.quantity_kg.label_tag }}
-                                {{ market_order_form.quantity_kg }}
+                                {{ sell_order_form.warehouse_location.label_tag }}
+                                {{ sell_order_form.warehouse_location }}
                             </div>
-                            <div class="form-group">
-                                {{ market_order_form.warehouse_location.label_tag }}
-                                {{ market_order_form.warehouse_location }}
-                            </div>
-                            <button type="submit" class="submit-button">Submit Order</button>
+                            <button type="submit" class="submit-button">Publicar Oferta de Venda</button>
                         </form>
                     </div>
 

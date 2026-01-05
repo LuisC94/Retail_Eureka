@@ -296,7 +296,12 @@ class Harvest(models.Model):
     warehouse = models.ForeignKey(Warehouse, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Stored In (Warehouse)")
     
     class Meta: db_table = 'harvest_records'
-    def __str__(self): return f"Colheita {self.pk} - Plano {self.plantation.plantation_id if self.plantation else 'N/A'}"
+    
+    @property
+    def current_stock_kg(self):
+        return self.harvest_quantity_kg - self.utilized_quantity_kg
+
+    def __str__(self): return f"Colheita {self.pk} - {self.subfamily.name if self.subfamily else 'N/A'} ({self.current_stock_kg}kg disp)"
     
     @property
     def pk_str(self): return str(self.pk)
@@ -324,6 +329,10 @@ class MarketplaceOrder(models.Model):
     
     # O que está a ser transacionado
     culture = models.ForeignKey(ProductSubFamily, on_delete=models.CASCADE, verbose_name="Cultura")
+    
+    # Só faz sentido para SELL orders (Produtor -> Mercado)
+    harvest_origin = models.ForeignKey(Harvest, on_delete=models.SET_NULL, null=True, blank=True, related_name='market_orders', verbose_name="Origem (Colheita)")
+    
     quantity_kg = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Quantidade (Kg)")
     
     # Detalhes Logísticos
@@ -336,9 +345,36 @@ class MarketplaceOrder(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     fulfilled_at = models.DateTimeField(null=True, blank=True)
 
+    # --- CAMPOS DE LOGÍSTICA (TRANSPORTE LIACC) ---
+    TRANSPORT_STATUS_CHOICES = [
+        ('PENDING', 'Pending (Pendente)'),
+        ('ACCEPTED', 'Job Accepted (Aceite)'),
+        ('PLANNED', 'Planned (Planeado)'),
+        ('IN_TRANSIT', 'In Transit (Em Trânsito)'),
+        ('DELIVERED', 'Delivered (Entregue)'),
+    ]
+    
+    transport_status = models.CharField(max_length=20, choices=TRANSPORT_STATUS_CHOICES, default='PENDING', verbose_name="Estado do Transporte")
+    
+    # Planeamento (Input da LIACC)
+    planned_pickup_date = models.DateTimeField(null=True, blank=True, verbose_name="Data Prevista de Recolha")
+    planned_delivery_date = models.DateTimeField(null=True, blank=True, verbose_name="Data Prevista de Entrega")
+    
+    # Execução Real (Input do Transportador/Blocos)
+    actual_pickup_date = models.DateTimeField(null=True, blank=True, verbose_name="Data Real de Recolha")
+    actual_delivery_date = models.DateTimeField(null=True, blank=True, verbose_name="Data Real de Entrega")
+    
+    # Dados de Sensores (JSON Dump da LIACC)
+    # Usamos TextField para simplicidade (pode conter JSON)
+    transport_sensor_data = models.TextField(null=True, blank=True, verbose_name="Dados dos Sensores (JSON)")
+
     class Meta:
         db_table = 'marketplace_orders'
         ordering = ['-created_at']
+
+    @property
+    def pk_str(self):
+        return str(self.pk)
 
     def __str__(self):
         return f"{self.order_type} - {self.culture.name} ({self.quantity_kg}kg) by {self.requester.username}"

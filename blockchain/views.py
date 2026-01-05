@@ -3,10 +3,10 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.http import JsonResponse
 from dashboard.models import Harvest, PlantationEvent, Warehouse, MarketplaceOrder
-from .services import BlockchainService
 
-# Instância global do serviço (simulando a rede persistente)
-blockchain_service = BlockchainService()
+from .services import BlockchainService, blockchain_service
+
+# Instância global removida (agora importada de services)
 
 def is_producer(user):
     return user.groups.filter(name='Producer').exists()

@@ -325,8 +325,73 @@ class MarketplaceOrderForm(forms.ModelForm):
             'warehouse_location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Armazém Norte / Sede'}),
         }
         labels = {
-            'order_type': 'Tipo de Pedido',
-            'culture': 'Cultura',
-            'quantity_kg': 'Quantidade (Kg)',
             'warehouse_location': 'Localização para Entrega/Recolha',
+        }
+
+class MarketSellOrderForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user:
+            # Filtra apenas colheitas do produtor e que tenham stock > 0
+            self.fields['harvest_origin'].queryset = Harvest.objects.filter(producer=user).order_by('-harvest_date')
+            
+            # Atualiza labels das opções para mostrar stock
+            # (O __str__ do Harvest já foi atualizado no models.py para mostrar stock)
+
+    class Meta:
+        model = MarketplaceOrder
+        fields = ['harvest_origin', 'quantity_kg', 'warehouse_location']
+        widgets = {
+            'harvest_origin': forms.Select(attrs={'class': 'form-control'}),
+            'quantity_kg': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'warehouse_location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Armazém Central'}),
+        }
+        labels = {
+            'harvest_origin': 'Lote de Origem (Stock Disponível)',
+            'quantity_kg': 'Quantidade a Vender (Kg)',
+            'warehouse_location': 'Local de Recolha',
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        harvest = cleaned_data.get('harvest_origin')
+        qty = cleaned_data.get('quantity_kg')
+        
+        if harvest and qty:
+            if qty > harvest.current_stock_kg:
+                raise forms.ValidationError(f"Quantidade excede o stock disponível ({harvest.current_stock_kg} kg).")
+            
+            # Preencher automaticamente
+            self.instance.culture = harvest.subfamily
+            self.instance.order_type = 'SELL'
+            
+        return cleaned_data
+
+# ----------------------------------------------------------------------
+# 7. FORMS LOGISTICA TRANSPORTADOR (LIACC INTERFACE)
+# ----------------------------------------------------------------------
+
+class TransportPlanForm(forms.ModelForm):
+    class Meta:
+        model = MarketplaceOrder
+        fields = ['planned_pickup_date', 'planned_delivery_date']
+        widgets = {
+            'planned_pickup_date': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+            'planned_delivery_date': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+        }
+        labels = {
+            'planned_pickup_date': 'ETA Recolha (Planeado)',
+            'planned_delivery_date': 'ETA Entrega (Planeado)',
+        }
+
+class TransportDeliveryForm(forms.ModelForm):
+    class Meta:
+        model = MarketplaceOrder
+        fields = ['transport_sensor_data']
+        widgets = {
+            'transport_sensor_data': forms.Textarea(attrs={'class': 'form-control', 'rows': 5, 'placeholder': 'Cole aqui o JSON dos sensores...'})
+        }
+        labels = {
+            'transport_sensor_data': 'Relatório de Sensores (JSON)',
         }

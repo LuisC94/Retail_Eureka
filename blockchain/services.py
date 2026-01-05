@@ -76,3 +76,6 @@ class BlockchainService:
 
     def get_chain(self):
         return self.chain
+
+# Instância Singleton partilhada (Simula a Rede/Ledger persistente em memória)
+blockchain_service = BlockchainService()
