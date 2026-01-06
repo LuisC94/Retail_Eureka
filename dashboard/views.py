@@ -17,6 +17,7 @@ from .models import (
     MachineryData, FuelData, ElectricEnergyData, IrrigationWaterData, MarketplaceOrder
 )
 from blockchain.services import blockchain_service
+from blockchain.utils import create_genesis_dossier
 
 from .forms import (
     UserRegisterForm, ProductRegistrationForm, PlantationPlanForm, PlantationDetailForm,
@@ -558,6 +559,23 @@ def producer_submit_harvest(request):
                 harvest_record.producer = request.user
                 
                 harvest_record.save()
+                
+                # --- AUTO-GENESIS BLOCK ---
+                # Criar o dossier e submeter o Bloco #0 automaticamente
+                try:
+                    dossier = create_genesis_dossier(harvest_record)
+                    data_hash = blockchain_service.generate_dossier_hash(dossier)
+                    
+                    result = blockchain_service.sign_and_submit_block(
+                        user_role='Producer',
+                        batch_id=dossier['batch_id'],
+                        data_hash=data_hash,
+                        event_type='GENESIS'
+                    )
+                    messages.success(request, f"Colheita registada e Bloco Genesis minado! Hash: {result['tx_hash'][:10]}...")
+                except Exception as e:
+                    # Se falhar a blockchain, não invalida a colheita, mas avisa
+                    messages.warning(request, f"Colheita salva, mas erro ao gerar Bloco Blockchain: {e}")
 
                 return redirect('producer_dashboard')
                 
@@ -1119,7 +1137,9 @@ def transporter_validate_pickup(request):
             "transporter": request.user.username,
             "pickup_time": order.actual_pickup_date.isoformat(),
             "origin": order.warehouse_location,
-            "planned_pickup": order.planned_pickup_date.isoformat() if order.planned_pickup_date else "N/A"
+            "planned_pickup": order.planned_pickup_date.isoformat() if order.planned_pickup_date else "N/A",
+            # LINK CRÍTICO PARA RASTREABILIDADE TOTAL:
+            "harvest_origin": order.harvest_origin.pk if order.harvest_origin else "N/A"
         }
         
         data_hash = blockchain_service.generate_dossier_hash(dossier)
@@ -1176,7 +1196,9 @@ def transporter_submit_delivery(request):
                 "order_id": order.pk,
                 "transporter": request.user.username,
                 "delivery_time": order.actual_delivery_date.isoformat(),
-                "sensor_data": order.transport_sensor_data or "No Data"
+                "sensor_data": order.transport_sensor_data or "No Data",
+                # LINK CRÍTICO (REFORÇO NA ENTREGA)
+                "harvest_origin": order.harvest_origin.pk if order.harvest_origin else "N/A"
             }
             
             data_hash = blockchain_service.generate_dossier_hash(dossier)

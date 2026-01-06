@@ -252,7 +252,9 @@
             <div class="block-card">
                 <div class="block-header">
                     <span class="block-type">{{ block.event_type }}</span>
-                    <span class="block-id">Block #{{ block.block_index }}</span>
+                    <!-- Uses visual_index (1, 2, 3...) calculated in view -->
+                    <!-- Shows global index in small tooltip or parenthesis if needed, but user wants clean sequence -->
+                    <span class="block-id">Block #{{ block.visual_index }}</span>
                 </div>
                 
                 <div class="hash-row">

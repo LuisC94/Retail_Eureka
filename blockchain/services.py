@@ -9,15 +9,39 @@ class BlockchainService:
     """
     
     def __init__(self):
-        # Em memória para demonstração. Num cenário real, ligaria ao Besu/Ganache.
+        # Persistência em Ficheiro JSON
+        self.chain_file = 'blockchain_data.json'
         self.chain = []
-        # Armazena os dados "Off-Chain" para visualização. 
-        # Na realidade estariam numa BD, mas aqui guardamos associados ao hash.
         self.off_chain_storage = {} 
+        self.load_chain()
         
+    def load_chain(self):
+        """Carrega a blockchain do ficheiro local."""
+        try:
+            with open(self.chain_file, 'r') as f:
+                data = json.load(f)
+                self.chain = data.get('chain', [])
+                self.off_chain_storage = data.get('off_chain_storage', {})
+                print(f"[Blockchain Mock] Loaded {len(self.chain)} blocks from disk.")
+        except FileNotFoundError:
+            print("[Blockchain Mock] No existing chain found. Starting fresh.")
+        except Exception as e:
+            print(f"[Blockchain Mock] Error loading chain: {e}")
+
+    def save_chain(self):
+        """Salva a blockchain no ficheiro local."""
+        try:
+            with open(self.chain_file, 'w') as f:
+                json.dump({
+                    'chain': self.chain,
+                    'off_chain_storage': self.off_chain_storage
+                }, f, indent=4, default=str)
+        except Exception as e:
+            print(f"[Blockchain Mock] Error saving chain: {e}")
+
     def generate_dossier_hash(self, data_dict):
         """Cria o Hash SHA-256 do dossier digital (JSON)."""
-        dossier_string = json.dumps(data_dict, sort_keys=True)
+        dossier_string = json.dumps(data_dict, sort_keys=True, default=str)
         data_hash = hashlib.sha256(dossier_string.encode('utf-8')).hexdigest()
         
         # Guardar para visualização futura (Simulando a BD)
@@ -64,6 +88,7 @@ class BlockchainService:
         }
         
         self.chain.append(new_block)
+        self.save_chain() # Persistir após cada bloco
         
         print(f"[Blockchain Mock] Bloco minado com sucesso: {block_hash}")
         

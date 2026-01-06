@@ -1547,14 +1547,9 @@
                                 <td>{{ record.harvest_quantity_kg }}</td>
                                 <td>{{ record.delivered_quantity_kg|default:"0" }}</td>
                                 <td>
-                                    <div style="display:flex; gap:5px;">
-                                        <a href="{% url 'generate_genesis_block' record.pk %}" class="submit-button" style="padding: 5px 10px; font-size: 0.8em; text-decoration: none; background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);">
-                                            ⛓️ Create
-                                        </a>
-                                        <a href="{% url 'view_batch_chain' 'LOTE-'|add:record.pk_str %}" class="submit-button" style="padding: 5px 10px; font-size: 0.8em; text-decoration: none; background: #607d8b;">
-                                            👁️ View
-                                        </a>
-                                    </div>
+                                    <a href="{% url 'view_batch_chain' 'LOTE-'|add:record.pk_str %}" class="submit-button" style="padding: 5px 10px; font-size: 0.8em; text-decoration: none; background: linear-gradient(135deg, #00796b 0%, #004d40 100%); width: 100%; text-align: center; display: block;">
+                                        🔗 Rastrear
+                                    </a>
                                 </td>
                             </tr>
                             {% endfor %}

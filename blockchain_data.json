@@ -1,0 +1,368 @@
+{
+    "chain": [
+        {
+            "block_index": 1,
+            "batch_id": "LOTE-11",
+            "data_hash": "e6d853d623e7bfe6e743a10a5c509786a83b1f90c24e05aa322d86054d014dcd",
+            "previous_hash": "00000000000000000000000000000000",
+            "signer": "0xProducerAddressA1B2...",
+            "role": "Producer",
+            "event_type": "GENESIS",
+            "timestamp": "2026-01-05T17:42:45.142834",
+            "block_hash": "de24aa6b30aa61126b09d1c7ac9a9a96fb74623ada3a347d98f9f39b22cc3bc0",
+            "content": {
+                "batch_id": "LOTE-11",
+                "producer_id": "antonio",
+                "creation_date": "2025-06-30",
+                "harvest": {
+                    "product": "Hayward",
+                    "quantity_kg": 75000.0,
+                    "quality_score": 9,
+                    "origin_plantation": "planta\u00e7\u00e3o do toze"
+                },
+                "plantation": {
+                    "name": "planta\u00e7\u00e3o do toze",
+                    "location": "Braga",
+                    "area_m2": 2000.0,
+                    "production_type": "Moderna",
+                    "chemical_use": "Sim",
+                    "soil_type": "Arenoso",
+                    "water_regime": "Rega Total"
+                },
+                "storage": {
+                    "id": 5,
+                    "location": "braga",
+                    "type": "Controlado",
+                    "has_sensors": "Yes"
+                },
+                "events_log": []
+            },
+            "visual_index": 1
+        },
+        {
+            "block_index": 2,
+            "batch_id": "ORDER-19",
+            "data_hash": "b3da36fda3fa5fc4e814d88f15b554636061cc4265eebf1caa351da6e1d5b0c4",
+            "previous_hash": "de24aa6b30aa61126b09d1c7ac9a9a96fb74623ada3a347d98f9f39b22cc3bc0",
+            "signer": "0xTransporterAddressC3D4...",
+            "role": "Transporter",
+            "event_type": "TRANSPORT_PICKUP",
+            "timestamp": "2026-01-05T17:46:22.132479",
+            "block_hash": "1009f7c4c2d42c68fbba328e67183491ee2c810a4db1c8a7bce92200d4372f4c",
+            "content": {
+                "action": "TRANSPORT_PICKUP",
+                "order_id": 19,
+                "transporter": "patinter",
+                "pickup_time": "2026-01-05T17:46:21.982867+00:00",
+                "origin": "Porto",
+                "planned_pickup": "2025-12-30T17:45:00+00:00"
+            },
+            "visual_index": 1
+        },
+        {
+            "block_index": 3,
+            "batch_id": "ORDER-19",
+            "data_hash": "091f6a9284253e517987afa2a2a58e30337c9907daf0e54181b51a1edf0a7dcc",
+            "previous_hash": "1009f7c4c2d42c68fbba328e67183491ee2c810a4db1c8a7bce92200d4372f4c",
+            "signer": "0xTransporterAddressC3D4...",
+            "role": "Transporter",
+            "event_type": "TRANSPORT_DELIVERY",
+            "timestamp": "2026-01-05T17:46:37.326662",
+            "block_hash": "f0d4c1a198fa519e223589c3d95ae3970170236956d60ea8a1a8df3fd77fdc38",
+            "content": {
+                "action": "TRANSPORT_DELIVERY",
+                "order_id": 19,
+                "transporter": "patinter",
+                "delivery_time": "2026-01-05T17:46:36.850848+00:00",
+                "sensor_data": "No Data"
+            },
+            "visual_index": 2
+        },
+        {
+            "block_index": 4,
+            "batch_id": "LOTE-12",
+            "data_hash": "a6f7f35b959e14523bd92a95e398fffc6d8740b764aca59e1b3d9a3254432cd6",
+            "previous_hash": "f0d4c1a198fa519e223589c3d95ae3970170236956d60ea8a1a8df3fd77fdc38",
+            "signer": "0xProducerAddressA1B2...",
+            "role": "Producer",
+            "event_type": "GENESIS",
+            "timestamp": "2026-01-06T15:51:01.728862",
+            "block_hash": "a386af1eb0d47869f1f8eee8096252a69e0b39ef5072468267f1a79d5547ac28",
+            "content": {
+                "batch_id": "LOTE-12",
+                "producer_id": "pro",
+                "creation_date": "2025-06-24",
+                "harvest": {
+                    "product": "Gala",
+                    "quantity_kg": 1000.0,
+                    "quality_score": 8,
+                    "origin_plantation": "teste"
+                },
+                "plantation": {
+                    "name": "teste",
+                    "location": "Porto",
+                    "area_m2": 123.0,
+                    "production_type": "Tradicional",
+                    "chemical_use": "N\u00e3o",
+                    "soil_type": "Argiloso",
+                    "water_regime": "Rega Total"
+                },
+                "storage": {
+                    "id": 1,
+                    "location": "Braga",
+                    "type": "Controlado",
+                    "has_sensors": "Yes"
+                },
+                "events_log": []
+            },
+            "visual_index": 1
+        },
+        {
+            "block_index": 5,
+            "batch_id": "ORDER-20",
+            "data_hash": "89d47cde37fd960e82c42c81f615dcda06d230bcf77893616de6bdf727e10873",
+            "previous_hash": "a386af1eb0d47869f1f8eee8096252a69e0b39ef5072468267f1a79d5547ac28",
+            "signer": "0xTransporterAddressC3D4...",
+            "role": "Transporter",
+            "event_type": "TRANSPORT_PICKUP",
+            "timestamp": "2026-01-06T16:03:05.552204",
+            "block_hash": "24b8df98b586dc7a9d019474c2fda04093898f2fedd210b1cfe9500f49764e3b",
+            "content": {
+                "action": "TRANSPORT_PICKUP",
+                "order_id": 20,
+                "transporter": "patinter",
+                "pickup_time": "2026-01-06T16:03:05.463608+00:00",
+                "origin": "Braga",
+                "planned_pickup": "2025-12-09T16:02:00+00:00"
+            },
+            "visual_index": 1
+        },
+        {
+            "block_index": 6,
+            "batch_id": "ORDER-20",
+            "data_hash": "a585d3a098747309d13240ad3f5f3f805c4298da009def0e3bc0cf220fb71fcd",
+            "previous_hash": "24b8df98b586dc7a9d019474c2fda04093898f2fedd210b1cfe9500f49764e3b",
+            "signer": "0xTransporterAddressC3D4...",
+            "role": "Transporter",
+            "event_type": "TRANSPORT_DELIVERY",
+            "timestamp": "2026-01-06T16:03:19.021291",
+            "block_hash": "18f2302ea592227e96e1812490142c63a2cc5664c0aaeac8eb36672430795dad",
+            "content": {
+                "action": "TRANSPORT_DELIVERY",
+                "order_id": 20,
+                "transporter": "patinter",
+                "delivery_time": "2026-01-06T16:03:18.577111+00:00",
+                "sensor_data": "No Data"
+            }
+        },
+        {
+            "block_index": 7,
+            "batch_id": "LOTE-13",
+            "data_hash": "cdcc3300dc97046b5f5a539ca5890dd6dc06d415477fb409a2f689a785b34af3",
+            "previous_hash": "18f2302ea592227e96e1812490142c63a2cc5664c0aaeac8eb36672430795dad",
+            "signer": "0xProducerAddressA1B2...",
+            "role": "Producer",
+            "event_type": "GENESIS",
+            "timestamp": "2026-01-06T16:21:43.932764",
+            "block_hash": "b580871b3ab2964c662cea88baaeff7e6a023f734c664fcb0c23dcf607c054c2",
+            "content": {
+                "batch_id": "LOTE-13",
+                "producer_id": "pro",
+                "creation_date": "2025-10-13",
+                "harvest": {
+                    "product": "Gala",
+                    "quantity_kg": 400.0,
+                    "quality_score": 10,
+                    "origin_plantation": "teste"
+                },
+                "plantation": {
+                    "name": "teste",
+                    "location": "Porto",
+                    "area_m2": 123.0,
+                    "production_type": "Tradicional",
+                    "chemical_use": "N\u00e3o",
+                    "soil_type": "Argiloso",
+                    "water_regime": "Rega Total"
+                },
+                "storage": {
+                    "id": 1,
+                    "location": "Braga",
+                    "type": "Controlado",
+                    "has_sensors": "Yes"
+                },
+                "events_log": []
+            },
+            "visual_index": 1
+        },
+        {
+            "block_index": 8,
+            "batch_id": "ORDER-21",
+            "data_hash": "4b6df6e67577ad169fe66ff8af1729cae1b973e69650af27781646705f46f674",
+            "previous_hash": "b580871b3ab2964c662cea88baaeff7e6a023f734c664fcb0c23dcf607c054c2",
+            "signer": "0xTransporterAddressC3D4...",
+            "role": "Transporter",
+            "event_type": "TRANSPORT_PICKUP",
+            "timestamp": "2026-01-06T16:24:13.309560",
+            "block_hash": "ab36791a7fef43a9bc6fa9737c4f3a65ef891fff67d3201263ccb63c7ae6a63a",
+            "content": {
+                "action": "TRANSPORT_PICKUP",
+                "order_id": 21,
+                "transporter": "patinter",
+                "pickup_time": "2026-01-06T16:24:13.139049+00:00",
+                "origin": "Barcelos",
+                "planned_pickup": "2026-01-06T13:18:00+00:00",
+                "harvest_origin": 13
+            },
+            "visual_index": 2
+        },
+        {
+            "block_index": 9,
+            "batch_id": "ORDER-21",
+            "data_hash": "bb88e2ebbc6e39696e1795f7c7ae9adb1bb0f9b684c60d6f52e8e7a78b00db57",
+            "previous_hash": "ab36791a7fef43a9bc6fa9737c4f3a65ef891fff67d3201263ccb63c7ae6a63a",
+            "signer": "0xTransporterAddressC3D4...",
+            "role": "Transporter",
+            "event_type": "TRANSPORT_DELIVERY",
+            "timestamp": "2026-01-06T16:24:39.333975",
+            "block_hash": "f306ea43af9b94713d6ff41ca280e7a866ed8e82017db04a09429045cc207568",
+            "content": {
+                "action": "TRANSPORT_DELIVERY",
+                "order_id": 21,
+                "transporter": "patinter",
+                "delivery_time": "2026-01-06T16:24:38.849119+00:00",
+                "sensor_data": "No Data",
+                "harvest_origin": 13
+            }
+        }
+    ],
+    "off_chain_storage": {
+        "e6d853d623e7bfe6e743a10a5c509786a83b1f90c24e05aa322d86054d014dcd": {
+            "batch_id": "LOTE-11",
+            "producer_id": "antonio",
+            "creation_date": "2025-06-30",
+            "harvest": {
+                "product": "Hayward",
+                "quantity_kg": 75000.0,
+                "quality_score": 9,
+                "origin_plantation": "planta\u00e7\u00e3o do toze"
+            },
+            "plantation": {
+                "name": "planta\u00e7\u00e3o do toze",
+                "location": "Braga",
+                "area_m2": 2000.0,
+                "production_type": "Moderna",
+                "chemical_use": "Sim",
+                "soil_type": "Arenoso",
+                "water_regime": "Rega Total"
+            },
+            "storage": {
+                "id": 5,
+                "location": "braga",
+                "type": "Controlado",
+                "has_sensors": "Yes"
+            },
+            "events_log": []
+        },
+        "b3da36fda3fa5fc4e814d88f15b554636061cc4265eebf1caa351da6e1d5b0c4": {
+            "action": "TRANSPORT_PICKUP",
+            "order_id": 19,
+            "transporter": "patinter",
+            "pickup_time": "2026-01-05T17:46:21.982867+00:00",
+            "origin": "Porto",
+            "planned_pickup": "2025-12-30T17:45:00+00:00"
+        },
+        "091f6a9284253e517987afa2a2a58e30337c9907daf0e54181b51a1edf0a7dcc": {
+            "action": "TRANSPORT_DELIVERY",
+            "order_id": 19,
+            "transporter": "patinter",
+            "delivery_time": "2026-01-05T17:46:36.850848+00:00",
+            "sensor_data": "No Data"
+        },
+        "a6f7f35b959e14523bd92a95e398fffc6d8740b764aca59e1b3d9a3254432cd6": {
+            "batch_id": "LOTE-12",
+            "producer_id": "pro",
+            "creation_date": "2025-06-24",
+            "harvest": {
+                "product": "Gala",
+                "quantity_kg": 1000.0,
+                "quality_score": 8,
+                "origin_plantation": "teste"
+            },
+            "plantation": {
+                "name": "teste",
+                "location": "Porto",
+                "area_m2": 123.0,
+                "production_type": "Tradicional",
+                "chemical_use": "N\u00e3o",
+                "soil_type": "Argiloso",
+                "water_regime": "Rega Total"
+            },
+            "storage": {
+                "id": 1,
+                "location": "Braga",
+                "type": "Controlado",
+                "has_sensors": "Yes"
+            },
+            "events_log": []
+        },
+        "89d47cde37fd960e82c42c81f615dcda06d230bcf77893616de6bdf727e10873": {
+            "action": "TRANSPORT_PICKUP",
+            "order_id": 20,
+            "transporter": "patinter",
+            "pickup_time": "2026-01-06T16:03:05.463608+00:00",
+            "origin": "Braga",
+            "planned_pickup": "2025-12-09T16:02:00+00:00"
+        },
+        "a585d3a098747309d13240ad3f5f3f805c4298da009def0e3bc0cf220fb71fcd": {
+            "action": "TRANSPORT_DELIVERY",
+            "order_id": 20,
+            "transporter": "patinter",
+            "delivery_time": "2026-01-06T16:03:18.577111+00:00",
+            "sensor_data": "No Data"
+        },
+        "cdcc3300dc97046b5f5a539ca5890dd6dc06d415477fb409a2f689a785b34af3": {
+            "batch_id": "LOTE-13",
+            "producer_id": "pro",
+            "creation_date": "2025-10-13",
+            "harvest": {
+                "product": "Gala",
+                "quantity_kg": 400.0,
+                "quality_score": 10,
+                "origin_plantation": "teste"
+            },
+            "plantation": {
+                "name": "teste",
+                "location": "Porto",
+                "area_m2": 123.0,
+                "production_type": "Tradicional",
+                "chemical_use": "N\u00e3o",
+                "soil_type": "Argiloso",
+                "water_regime": "Rega Total"
+            },
+            "storage": {
+                "id": 1,
+                "location": "Braga",
+                "type": "Controlado",
+                "has_sensors": "Yes"
+            },
+            "events_log": []
+        },
+        "4b6df6e67577ad169fe66ff8af1729cae1b973e69650af27781646705f46f674": {
+            "action": "TRANSPORT_PICKUP",
+            "order_id": 21,
+            "transporter": "patinter",
+            "pickup_time": "2026-01-06T16:24:13.139049+00:00",
+            "origin": "Barcelos",
+            "planned_pickup": "2026-01-06T13:18:00+00:00",
+            "harvest_origin": 13
+        },
+        "bb88e2ebbc6e39696e1795f7c7ae9adb1bb0f9b684c60d6f52e8e7a78b00db57": {
+            "action": "TRANSPORT_DELIVERY",
+            "order_id": 21,
+            "transporter": "patinter",
+            "delivery_time": "2026-01-06T16:24:38.849119+00:00",
+            "sensor_data": "No Data",
+            "harvest_origin": 13
+        }
+    }
+}

@@ -136,12 +136,84 @@ def generate_genesis_block(request, harvest_id):
 def view_batch_chain(request, batch_id):
     """
     Visualizar a cadeia de blocos de um lote (para debug/transparência).
+    Agora suporta 'Cross-Chain Linking': Se for uma Order vinda de uma Harvest, mostra ambas.
     """
-    # Filtrar apenas os blocos deste lote
     full_chain = blockchain_service.get_chain()
-    batch_chain = [b for b in full_chain if b['batch_id'] == batch_id]
+    
+    # --- LÓGICA DE UNIFICAÇÃO DE CORRENTES (BIDIRECIONAL) ---
+    # Queremos que, entre-se pelo Lote ou pela Encomenda, se veja TUDO.
+    
+    harvest_pk = None
+    order_pk = None
+    
+    # 1. Identificar Ponto de Entrada
+    if batch_id.startswith("LOTE-"):
+        try:
+            harvest_pk = batch_id.split("-")[1]
+        except IndexError:
+            pass
+    elif batch_id.startswith("ORDER-"):
+        try:
+            order_pk = batch_id.split("-")[1]
+        except IndexError:
+            pass
+            
+    # 2. Se entrámos por uma Encomenda, descobrimos o Lote de Origem (BACKWARD LOOKUP)
+    if order_pk:
+        primary_chain = [b for b in full_chain if b['batch_id'] == batch_id]
+        # Procurar 'harvest_origin' (frequentemente no Genesis da Order)
+        for block in primary_chain:
+            content = block.get('content', {})
+            possible_pk = content.get('harvest_origin')
+            # Verifica se existe e não é N/A
+            if possible_pk and str(possible_pk) != "N/A":
+                harvest_pk = str(possible_pk)
+                break
+    
+    # 3. Se temos um Lote (seja entrada direta ou descoberto via Order), 
+    # procuramos TODAS as Encomendas filhas (FORWARD LOOKUP)
+    related_orders_pks = set()
+    if harvest_pk:
+        # A. Procurar blocos de encomendas que digam "Minha origem é harvest_pk"
+        for block in full_chain:
+            # Só nos interessa blocos de encomendas (GENESIS ou outro evento que traga o link)
+            if block['batch_id'].startswith("ORDER-"):
+                content = block.get('content', {})
+                origin = str(content.get('harvest_origin', ''))
+                if origin == str(harvest_pk):
+                    # Encontrámos uma encomenda filha!
+                    b_id = block['batch_id']
+                    related_orders_pks.add(b_id)
+        
+        # B. Se entrámos por uma Order específica, garantimos que ela está na lista
+        if batch_id.startswith("ORDER-"):
+            related_orders_pks.add(batch_id)
+
+    # 4. Construir a Chain Final
+    final_chain = []
+    
+    # A. Adicionar blocos do Lote (Se existir)
+    if harvest_pk:
+        lote_id = f"LOTE-{harvest_pk}"
+        final_chain.extend([b for b in full_chain if b['batch_id'] == lote_id])
+        
+    # B. Adicionar blocos de TODAS as Encomendas Relacionadas
+    for o_id in related_orders_pks:
+        final_chain.extend([b for b in full_chain if b['batch_id'] == o_id])
+
+    # C. Se não houver relações (caso isolado), mostra apenas a chain do ID pedido
+    if not final_chain:
+        final_chain = [b for b in full_chain if b['batch_id'] == batch_id]
+
+    # 5. Ordenação Cronológica e Indexação Visual
+    # Ordenar por timestamp (assumindo formato ISO8601 string que é ordenável)
+    final_chain.sort(key=lambda x: x['timestamp'])
+    
+    # Criar índice visual sequencial (1, 2, 3...) para a View
+    for idx, block in enumerate(final_chain):
+        block['visual_index'] = idx + 1
     
     return render(request, 'blockchain/blockchain_explorer.html', {
-        'chain': batch_chain, 
-        'batch_id': batch_id
+        'chain': final_chain, 
+        'batch_id': batch_id 
     })
