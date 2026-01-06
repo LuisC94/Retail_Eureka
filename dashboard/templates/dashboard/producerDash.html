@@ -790,9 +790,9 @@
                 <h2>Producer Dashboard</h2>
                 
                 {% if messages %}
-                <div style="margin-bottom: 20px;">
+                <div id="messages-container" style="margin-bottom: 20px;">
                     {% for message in messages %}
-                    <div style="padding: 15px; border-radius: 10px; margin-bottom: 10px; font-weight: 500; 
+                    <div class="django-message" style="padding: 15px; border-radius: 10px; margin-bottom: 10px; font-weight: 500; 
                         {% if message.tags == 'success' %} background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9;
                         {% elif message.tags == 'error' %} background: #ffebee; color: #c62828; border: 1px solid #ffcdd2;
                         {% else %} background: #e3f2fd; color: #1565c0; border: 1px solid #bbdefb; {% endif %}">
@@ -800,6 +800,22 @@
                     </div>
                     {% endfor %}
                 </div>
+                <!-- SCRIPT: AUTO-DISMISS NOTIFICATIONS -->
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        setTimeout(function() {
+                            const messages = document.querySelectorAll('.django-message');
+                            messages.forEach(function(msg) {
+                                msg.style.transition = "opacity 1s ease";
+                                msg.style.opacity = "0";
+                                setTimeout(() => msg.remove(), 1000); // Wait for fade out
+                            });
+                            // Also remove container if empty
+                            const container = document.getElementById('messages-container');
+                            if(container) setTimeout(() => container.remove(), 1000);
+                        }, 5000); // 5 Seconds delay
+                    });
+                </script>
                 {% endif %}
 
                 <div class="header-actions">
@@ -1155,7 +1171,7 @@
                                     <th>Plantation</th>
                                     <th>Culture</th>
                                     <th>Qt (Kg)</th>
-                                    <th>Utilized Qt</th>
+                                    <th>Waste (Kg)</th>
                                     <th>Quality</th>
                                 </tr>
                             </thead>

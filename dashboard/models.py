@@ -211,7 +211,9 @@ class PlantationPlan(models.Model):
     
     class Meta: db_table = 'plantation_plan'
     def __str__(self): 
-        if self.product:
+        if self.plantation_name:
+            return self.plantation_name
+        elif self.product:
             return f"Plano {self.plantation_id} - Produto: {self.product.name}"
         else:
             return f"Plano {self.plantation_id}"
@@ -291,7 +293,7 @@ class Harvest(models.Model):
     harvest_quantity_kg = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Harvest Quantity (Kg)")
     delivered_quantity_kg = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Delivered Quantity (Kg)")
     avg_quality_score = models.IntegerField(choices=QUALITY_SCORE_CHOICES, verbose_name="Average Quality Score (1-10)")
-    utilized_quantity_kg = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Utilized Quantity (Kg)")
+    utilized_quantity_kg = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Waste (Kg)")
     
     warehouse = models.ForeignKey(Warehouse, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Stored In (Warehouse)")
     

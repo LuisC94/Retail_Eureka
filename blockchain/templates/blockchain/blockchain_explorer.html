@@ -238,7 +238,13 @@
 <body>
 
     <div class="container">
-        <a href="javascript:history.back()" class="back-btn">← Voltar ao Dashboard</a>
+        {% if user.groups.all.0.name == 'Transporter' %}
+            <a href="{% url 'transporter_dashboard' %}" class="back-btn">← Voltar ao Dashboard</a>
+        {% elif user.groups.all.0.name == 'Retailer' %}
+            <a href="{% url 'retailer_dashboard' %}" class="back-btn">← Voltar ao Dashboard</a>
+        {% else %}
+            <a href="{% url 'producer_dashboard' %}" class="back-btn">← Voltar ao Dashboard</a>
+        {% endif %}
         
         <div class="header">
             <span style="font-size: 3em;">⛓️</span>
