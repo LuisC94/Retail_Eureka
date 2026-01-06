@@ -255,7 +255,12 @@ class ProducerDashboardView(View):
             'crops__subfamily'
         )
         
-        harvest_records = Harvest.objects.filter(producer=user).select_related('plantation', 'subfamily').order_by('-harvest_date')
+        harvest_records = Harvest.objects.filter(producer=user).select_related('plantation', 'subfamily', 'warehouse').order_by('-harvest_date')
+
+        # MAP para Auto-Preenchimento Frontend (Harvest ID -> Warehouse Location)
+        harvest_warehouse_map = {}
+        for h in harvest_records:
+            harvest_warehouse_map[h.pk] = h.warehouse.location if h.warehouse else ""
         
         # AGGREGATION: Total Kgs per Product (Current Stock)
         harvest_sums = Harvest.objects.filter(producer=user).values(
@@ -331,6 +336,7 @@ class ProducerDashboardView(View):
             'role': 'Producer',
             
             'plantation_subfamilies_map': plantation_subfamilies_map, # Pass map to template
+            'harvest_warehouse_map': harvest_warehouse_map, # NOVO: Mapa para JS
             
             'plantation_plan_form': plantation_plan_form,
             'plantation_detail_form': plantation_detail_form,
@@ -1028,6 +1034,13 @@ def market_submit_order(request):
                     order.requester = request.user
                     order.role = 'Producer'
                     order.status = 'OPEN'
+
+                    # AUTOMATIZAÇÃO DE ARMAZÉM:
+                    # Se tiver origem numa Colheita, usamos o armazém dessa colheita como local de recolha.
+                    if order.harvest_origin and order.harvest_origin.warehouse:
+                        order.warehouse_location = order.harvest_origin.warehouse.location
+                    
+                    order.save()
                     
                     # Abater Stock ao Lote Selecionado
                     harvest = order.harvest_origin

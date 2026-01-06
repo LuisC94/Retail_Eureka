@@ -1358,6 +1358,39 @@
                             </div>
                             <button type="submit" class="submit-button">Publicar Oferta de Venda</button>
                         </form>
+
+                        <!-- SCRIPT: AUTO-FILL WAREHOUSE FROM HARVEST -->
+                        {{ harvest_warehouse_map|json_script:"harvest-warehouse-data" }}
+                        <script>
+                            document.addEventListener("DOMContentLoaded", function() {
+                                const harvestSelect = document.getElementById('id_harvest_origin');
+                                const locationInput = document.getElementById('id_warehouse_location');
+                                const dataScript = document.getElementById('harvest-warehouse-data');
+                                
+                                if (harvestSelect && locationInput && dataScript) {
+                                    const warehouseMap = JSON.parse(dataScript.textContent);
+
+                                    function updateLocation() {
+                                        const harvestId = harvestSelect.value;
+                                        const location = warehouseMap[harvestId];
+
+                                        if (location) {
+                                            locationInput.value = location;
+                                            locationInput.setAttribute('readonly', 'readonly');
+                                            locationInput.style.backgroundColor = '#e9ecef'; // Visual indication
+                                        } else {
+                                            locationInput.value = '';
+                                            locationInput.removeAttribute('readonly');
+                                            locationInput.style.backgroundColor = '';
+                                        }
+                                    }
+
+                                    harvestSelect.addEventListener('change', updateLocation);
+                                    // Run once on load just in case (e.g. form re-render)
+                                    updateLocation();
+                                }
+                            });
+                        </script>
                     </div>
 
                     <!-- OPEN TRANSACTIONS -->
