@@ -600,7 +600,7 @@
                 <div class="data-table-container">
                     <h3>✅ Completed Job History</h3>
                     {% if closed_market_orders %}
-                    <table class="data-table">
+                    <table class="data-table" id="job-history-table">
                         <thead>
                              <tr>
                                 <th>Delivered At</th>
@@ -626,6 +626,66 @@
                              {% endfor %}
                         </tbody>
                     </table>
+                    
+                    <!-- PAGINATION CONTROLS -->
+                    <div id="pagination-controls" style="margin-top: 20px; display: flex; justify-content: center; gap: 10px; align-items: center;">
+                        <button id="prevBtn" class="btn-action" style="padding: 5px 15px;">Prev</button>
+                        <span id="pageInfo" style="font-weight: 600; color: #555;">Page 1</span>
+                        <button id="nextBtn" class="btn-action" style="padding: 5px 15px;">Next</button>
+                    </div>
+
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const table = document.getElementById('job-history-table');
+                            const tbody = table.querySelector('tbody');
+                            const rows = Array.from(tbody.querySelectorAll('tr'));
+                            const rowsPerPage = 10;
+                            let currentPage = 1;
+                            const totalPages = Math.ceil(rows.length / rowsPerPage);
+                            
+                            const prevBtn = document.getElementById('prevBtn');
+                            const nextBtn = document.getElementById('nextBtn');
+                            const pageInfo = document.getElementById('pageInfo');
+
+                            function displayRows(page) {
+                                const start = (page - 1) * rowsPerPage;
+                                const end = start + rowsPerPage;
+                                
+                                rows.forEach((row, index) => {
+                                    if (index >= start && index < end) {
+                                        row.style.display = '';
+                                    } else {
+                                        row.style.display = 'none';
+                                    }
+                                });
+                                
+                                pageInfo.innerText = `Page ${page} of ${totalPages || 1}`;
+                                
+                                prevBtn.disabled = page === 1;
+                                prevBtn.style.opacity = page === 1 ? '0.5' : '1';
+                                
+                                nextBtn.disabled = page === totalPages || totalPages === 0;
+                                nextBtn.style.opacity = (page === totalPages || totalPages === 0) ? '0.5' : '1';
+                            }
+
+                            prevBtn.addEventListener('click', () => {
+                                if (currentPage > 1) {
+                                    currentPage--;
+                                    displayRows(currentPage);
+                                }
+                            });
+
+                            nextBtn.addEventListener('click', () => {
+                                if (currentPage < totalPages) {
+                                    currentPage++;
+                                    displayRows(currentPage);
+                                }
+                            });
+
+                            // Display initial page
+                            displayRows(1);
+                        });
+                    </script>
                      {% else %}
                     <p>No history.</p>
                     {% endif %}

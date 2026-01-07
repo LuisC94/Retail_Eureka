@@ -1,5 +1,5 @@
 from django.db import IntegrityError, transaction
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
@@ -151,7 +151,7 @@ class ConsumerDashboardView(View):
     def get(self, request):
         user = request.user
         open_orders = MarketplaceOrder.objects.filter(status='OPEN').select_related('requester', 'culture').order_by('-created_at')
-        closed_orders = MarketplaceOrder.objects.filter(status='APPROVED').select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')
+        closed_orders = MarketplaceOrder.objects.filter(Q(requester=user) | Q(fulfilled_by=user), status='APPROVED').select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')
 
         try:
             user_profile = UserProfile.objects.get(user=user)
@@ -175,7 +175,7 @@ class ProcessorDashboardView(View):
     def get(self, request):
         user = request.user
         open_orders = MarketplaceOrder.objects.filter(status='OPEN').select_related('requester', 'culture').order_by('-created_at')
-        closed_orders = MarketplaceOrder.objects.filter(status='APPROVED').select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')
+        closed_orders = MarketplaceOrder.objects.filter(Q(requester=user) | Q(fulfilled_by=user), status='APPROVED').select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')
 
         try:
             user_profile = UserProfile.objects.get(user=user)
@@ -247,7 +247,7 @@ class RetailerDashboardView(View):
     def get(self, request):
         user = request.user
         open_orders = MarketplaceOrder.objects.filter(status='OPEN').select_related('requester', 'culture').order_by('-created_at')
-        closed_orders = MarketplaceOrder.objects.filter(status='APPROVED').select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')
+        closed_orders = MarketplaceOrder.objects.filter(Q(requester=user) | Q(fulfilled_by=user), status='APPROVED').select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')
 
         try:
             user_profile = UserProfile.objects.get(user=user)
@@ -327,7 +327,7 @@ class ProducerDashboardView(View):
 
         # 5. MARKETPLACE DATA
         open_market_orders = MarketplaceOrder.objects.filter(status='OPEN').select_related('requester', 'culture').order_by('-created_at')
-        closed_market_orders = MarketplaceOrder.objects.filter(status='APPROVED').select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')
+        closed_market_orders = MarketplaceOrder.objects.filter(Q(requester=user) | Q(fulfilled_by=user), status='APPROVED').select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')
 
 
         plantation_plan_form = PlantationPlanForm()

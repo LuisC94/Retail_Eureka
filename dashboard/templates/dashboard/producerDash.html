@@ -1461,34 +1461,92 @@
                     <div style="margin-top: 40px;">
                         <h3>📜 Transactions History (Completed)</h3>
                          {% if closed_market_orders %}
-                        <table class="data-table">
+                        <table class="data-table" id="history-table">
                             <thead>
-                                <tr>
-                                    <th>Date Fulfilled</th>
+                                 <tr>
+                                    <th>Date</th>
                                     <th>Type</th>
                                     <th>Requester</th>
-                                    <th>Role</th>
-                                    <th>Culture</th>
-                                    <th>Qty (Kg)</th>
+                                    <th>Item</th>
+                                    <th>Qty</th>
                                     <th>Fulfilled By</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for order in closed_market_orders %}
+                                 {% for order in closed_market_orders %}
                                 <tr>
-                                    <td>{{ order.fulfilled_at|date:"d-m-Y H:i" }}</td>
+                                    <td>{{ order.fulfilled_at|date:"d/m H:i" }}</td>
                                     <td>{{ order.get_order_type_display }}</td>
                                     <td>{{ order.requester.username }}</td>
-                                    <td>{{ order.role }}</td>
                                     <td>{{ order.culture.name }}</td>
                                     <td>{{ order.quantity_kg }}</td>
                                     <td>{{ order.fulfilled_by.username }}</td>
                                 </tr>
-                                {% endfor %}
+                                 {% endfor %}
                             </tbody>
                         </table>
+                        
+                        <!-- PAGINATION CONTROLS -->
+                        <div id="pagination-controls" style="margin-top: 20px; display: flex; justify-content: center; gap: 10px; align-items: center;">
+                            <button id="prevBtn" class="btn-action" style="padding: 5px 15px;">Prev</button>
+                            <span id="pageInfo" style="font-weight: 600; color: #555;">Page 1</span>
+                            <button id="nextBtn" class="btn-action" style="padding: 5px 15px;">Next</button>
+                        </div>
+
+                        <script>
+                            document.addEventListener('DOMContentLoaded', function() {
+                                const table = document.getElementById('history-table');
+                                const tbody = table.querySelector('tbody');
+                                const rows = Array.from(tbody.querySelectorAll('tr'));
+                                const rowsPerPage = 10;
+                                let currentPage = 1;
+                                const totalPages = Math.ceil(rows.length / rowsPerPage);
+                                
+                                const prevBtn = document.getElementById('prevBtn');
+                                const nextBtn = document.getElementById('nextBtn');
+                                const pageInfo = document.getElementById('pageInfo');
+
+                                function displayRows(page) {
+                                    const start = (page - 1) * rowsPerPage;
+                                    const end = start + rowsPerPage;
+                                    
+                                    rows.forEach((row, index) => {
+                                        if (index >= start && index < end) {
+                                            row.style.display = '';
+                                        } else {
+                                            row.style.display = 'none';
+                                        }
+                                    });
+                                    
+                                    pageInfo.innerText = `Page ${page} of ${totalPages || 1}`;
+                                    
+                                    prevBtn.disabled = page === 1;
+                                    prevBtn.style.opacity = page === 1 ? '0.5' : '1';
+                                    
+                                    nextBtn.disabled = page === totalPages || totalPages === 0;
+                                    nextBtn.style.opacity = (page === totalPages || totalPages === 0) ? '0.5' : '1';
+                                }
+
+                                prevBtn.addEventListener('click', () => {
+                                    if (currentPage > 1) {
+                                        currentPage--;
+                                        displayRows(currentPage);
+                                    }
+                                });
+
+                                nextBtn.addEventListener('click', () => {
+                                    if (currentPage < totalPages) {
+                                        currentPage++;
+                                        displayRows(currentPage);
+                                    }
+                                });
+
+                                // Display initial page
+                                displayRows(1);
+                            });
+                        </script>
                          {% else %}
-                        <p style="color:#666; text-align:center;">No completed transactions yet.</p>
+                        <p style="color:#666; text-align:center;">No history.</p>
                         {% endif %}
                     </div>
 
