@@ -454,6 +454,12 @@
                 <a href="#" class="menu-item" onclick="switchSidebarTab('marketplace-view')">
                     🤝 Marketplace
                 </a>
+                <a href="#" class="menu-item" onclick="switchSidebarTab('warehouse-management')">
+                    📦 Warehouse Management
+                </a>
+                <a href="#" class="menu-item" onclick="switchSidebarTab('stock-view')">
+                    📊 Stock Management
+                </a>
             </nav>
         </div>
 
@@ -511,17 +517,21 @@
                 <div class="life-cycle-stock">
                     <div class="report-card">
                         <h3>Life Cycle</h3>
-                        <table class="data-table"> <!-- Added class -->
+                        <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th>Forecast Date</th>
-                                    <th>Value</th>
+                                    <th>Stage</th>
+                                    <th>Status</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td>10C</td>
-                                    <td>5305</td>
+                                    <td>Processing</td>
+                                    <td>Active</td>
+                                </tr>
+                                <tr>
+                                    <td>Quality Check</td>
+                                    <td>Pending</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -532,6 +542,37 @@
                             Chart Placeholder
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- STOCK MANAGEMENT VIEW -->
+            <div id="stock-view" class="tab-content">
+                <div class="report-card">
+                    <h3>📦 Current Stock Status</h3>
+                    {% if processor_stock %}
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Culture</th>
+                                <th>Available Qty (Kg)</th>
+                                <th>Warehouse</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in processor_stock %}
+                            <tr>
+                                <td style="font-weight:bold; color:#004d40;">{{ item.culture }}</td>
+                                <td>{{ item.quantity }} kg</td>
+                                <td>{{ item.warehouse|default:"N/A" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div style="height: 200px; display: flex; align-items: center; justify-content: center; color: #888; background: #f9f9f9; border-radius: 10px;">
+                        <p>No stock available created yet.</p>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
 
@@ -553,11 +594,142 @@
                              <div>
                                  <label style="display:block; margin-bottom:5px; font-weight:600;">Quantity (Kg):</label>
                                 {{ market_order_form.quantity_kg }}
+                                <small id="qty_hint" style="color:#666; font-style:italic; display:block; margin-top:5px;"></small>
                             </div>
+                             <!-- DYNAMIC WAREHOUSE SELECTOR -->
                              <div>
-                                 <label style="display:block; margin-bottom:5px; font-weight:600;">Location:</label>
-                                {{ market_order_form.warehouse_location }}
+                                 <!-- Hidden original field -->
+                                 <div style="display:none;">
+                                     {{ market_order_form.warehouse_location }}
+                                 </div>
+                                 
+                                 <label id="dynamic_wh_label" style="display:block; margin-bottom:5px; font-weight:600;">Target Warehouse:</label>
+                                 
+                                 <select id="warehouse_selector" onchange="updateWarehouseField()" style="padding: 14px 18px; border: 2px solid #e0e0e0; border-radius: 10px; width: 100%;">
+                                     {% for wh in processor_warehouses %}
+                                        <option value="{{ wh.location }} (WH: {{ wh.warehouse_id }})">{{ wh.location }} (Cap: {{ wh.capacity }})</option>
+                                     {% empty %}
+                                        <option value="" disabled>No warehouses registered</option>
+                                     {% endfor %}
+                                 </select>
+                                 {% if not processor_warehouses %}
+                                    <small style="color:red;">* You must register a warehouse first.</small>
+                                 {% endif %}
                             </div>
+
+                            <!-- PASS STOCK DATA TO JS -->
+                            {{ processor_stock|json_script:"stock-data" }}
+                            
+                            <script>
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    const orderTypeField = document.querySelector('[name="order_type"]');
+                                    const cultureField = document.querySelector('[name="culture"]');
+                                    const qtyField = document.querySelector('[name="quantity_kg"]'); // Select Quantity Field
+                                    const qtyHint = document.getElementById('qty_hint');
+                                    const whLabel = document.getElementById('dynamic_wh_label');
+                                    const whSelector = document.getElementById('warehouse_selector');
+                                    
+                                    // Parse Stock Data safely
+                                    const stockData = JSON.parse(document.getElementById('stock-data').textContent);
+                                    
+                                    // Backup all culture options to restore them later
+                                    const allCultureOptions = Array.from(cultureField.options).map(opt => ({
+                                        value: opt.value, 
+                                        text: opt.text
+                                    }));
+
+                                    function updateOrderTypeLogic() {
+                                        const isSell = orderTypeField.value === 'SELL';
+                                        
+                                        // 1. Label Update
+                                        if (isSell) {
+                                            whLabel.innerText = "Origin Warehouse (Based on Stock):";
+                                        } else {
+                                            whLabel.innerText = "Destination Warehouse (Store at):";
+                                        }
+
+                                        // 2. Culture Filtering (Only needs to happen when Order Type changes)
+                                        const currentVal = cultureField.value; // Try to preserve if possible
+                                        
+                                        if (isSell) {
+                                            const availableCultureIds = new Set(stockData.map(item => String(item.culture_id)));
+                                            cultureField.innerHTML = '';
+                                            allCultureOptions.forEach(opt => {
+                                                if (opt.value === "" || availableCultureIds.has(opt.value)) {
+                                                    const newOpt = new Option(opt.text, opt.value);
+                                                    cultureField.add(newOpt);
+                                                }
+                                            });
+                                        } else {
+                                            cultureField.innerHTML = '';
+                                            allCultureOptions.forEach(opt => {
+                                                cultureField.add(new Option(opt.text, opt.value));
+                                            });
+                                        }
+                                        
+                                        updateCultureLogic();
+                                    }
+
+                                    function updateCultureLogic() {
+                                        const isSell = orderTypeField.value === 'SELL';
+                                        
+                                        // 3. Warehouse Logic & Quantity Validation
+                                        if (isSell) {
+                                            const selectedCultureId = cultureField.value;
+                                            
+                                            // Find stock item for this culture ID
+                                            const stockItem = stockData.find(item => String(item.culture_id) === selectedCultureId);
+                                            
+                                            if (stockItem) {
+                                                // Warehouse Auto-Select
+                                                const targetVal = stockItem.full_warehouse;
+                                                whSelector.value = targetVal; 
+                                                whSelector.disabled = true; 
+                                                whSelector.style.backgroundColor = "#e0e0e0"; 
+                                                
+                                                // Quantity Logic
+                                                const maxQty = stockItem.quantity;
+                                                qtyField.max = maxQty;
+                                                qtyHint.innerText = `Max available: ${maxQty} kg`;
+                                                qtyHint.style.color = "#00796b";
+                                            } else {
+                                                whSelector.disabled = true;
+                                                whSelector.style.backgroundColor = "#e0e0e0";
+                                                whSelector.value = "";
+                                                
+                                                qtyField.removeAttribute('max');
+                                                qtyHint.innerText = "Select a valid culture from stock.";
+                                            }
+                                        } else {
+                                            // BUY Mode: Free selection
+                                            whSelector.disabled = false;
+                                            whSelector.style.backgroundColor = "white";
+                                            
+                                            // Reset Quantity Logic
+                                            qtyField.removeAttribute('max');
+                                            qtyHint.innerText = "";
+                                        }
+                                        
+                                        updateWarehouseField();
+                                    }
+
+                                    orderTypeField.addEventListener('change', updateOrderTypeLogic);
+                                    cultureField.addEventListener('change', updateCultureLogic);
+                                    
+                                    // Initial Run
+                                    updateOrderTypeLogic();
+                                });
+
+                                function updateWarehouseField() {
+                                    const selector = document.getElementById('warehouse_selector');
+                                    const hiddenInput = document.querySelector('[name="warehouse_location"]');
+                                    if (selector.value) {
+                                        hiddenInput.value = selector.value;
+                                    } else {
+                                        hiddenInput.value = "No Warehouse Selected";
+                                    }
+                                }
+                            </script>
                         </div>
                         <button type="submit" class="submit-button">Submit Order</button> <!-- Added proper class -->
                     </form>
@@ -565,7 +737,7 @@
 
                 <!-- OPEN TRANSACTIONS -->
                 <div class="data-table-container">
-                    <h3>Open Transactions</h3>
+                    <h3>🔓 Open Transactions</h3>
                      {% if open_market_orders %}
                     <table class="data-table"> <!-- Added class -->
                         <thead>
@@ -588,11 +760,10 @@
                                 <td>{{ order.quantity_kg }}</td>
                                 <td>
                                     {% if order.requester != user %}
-                                    <form method="POST" action="{% url 'market_accept_order' %}">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="order_id" value="{{ order.id }}">
-                                        <button type="submit" class="btn-action">Accept</button> <!-- Added proper class -->
-                                    </form>
+                                    <button type="button" class="btn-action" 
+                                        onclick="openAcceptModal('{{ order.id }}', '{{ order.culture.name|escapejs }}', '{{ order.quantity_kg }}')">
+                                        Accept Deal
+                                    </button>
                                     {% else %}
                                     <span style="color:gray;">Mine</span>
                                     {% endif %}
@@ -608,7 +779,7 @@
 
                 <!-- HISTORY -->
                 <div class="data-table-container">
-                    <h3>Transaction History</h3>
+                    <h3>📜 Transaction History</h3>
                     {% if closed_market_orders %}
                     <table class="data-table"> <!-- Added class -->
                         <thead>
@@ -638,9 +809,117 @@
                     <p>No history.</p>
                     {% endif %}
                 </div>
+            </div> <!-- End of Marketplace Tab -->
+
+            <!-- WAREHOUSE MANAGEMENT TAB -->
+            <div id="warehouse-management" class="tab-content">
+                <div class="form-section">
+                    <h3>
+                        <span style="display:inline-block; width:40px; height:40px; background:linear-gradient(135deg, #00796b, #004d40); color:white; border-radius:50%; text-align:center; line-height:40px; margin-right:15px; font-size:1.1em; box-shadow:0 3px 10px rgba(0,121,107,0.4);">📦</span>
+                        Register New Warehouse
+                    </h3>
+                    <form method="post" action="{% url 'processor_submit_warehouse' %}">
+                        {% csrf_token %}
+                        <!-- We manually render fields to match style or use a loop. 
+                             Since producerDash uses manual rendering for specific layout, we'll do similar simple block. -->
+                        
+                        <div style="margin-bottom: 25px;">
+                            <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">{{ warehouse_form.location.label }}</label>
+                            {{ warehouse_form.location }}
+                        </div>
+
+                        <div style="margin-bottom: 25px;">
+                            <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">{{ warehouse_form.control_type.label }}</label>
+                            {{ warehouse_form.control_type }}
+                        </div>
+
+                        <div style="margin-bottom: 25px;">
+                            <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">{{ warehouse_form.capacity.label }}</label>
+                            {{ warehouse_form.capacity }}
+                        </div>
+
+                        <div style="margin-bottom: 25px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                                <label style="display:block; color:#2c3e50; font-weight:600;">{{ warehouse_form.sensors.label }}</label>
+                                <button type="button" onclick="openSensorModal()" 
+                                    style="background:linear-gradient(135deg, #00796b, #004d40); color:white; padding:10px 20px; border:none; border-radius:10px; cursor:pointer; font-weight:600; display:inline-flex; align-items:center; gap:8px;">
+                                    ➕ New Sensor
+                                </button>
+                            </div>
+                            <div class="sensor-list-style">
+                                {{ warehouse_form.sensors }}
+                            </div>
+                        </div>
+
+                        <style>
+                            .sensor-list-style ul {
+                                list-style-type: none;
+                                padding: 0;
+                            }
+                            .sensor-list-style li {
+                                display: flex;
+                                align-items: center; /* Alinha checkbox e texto verticalmente */
+                                margin-bottom: 8px;
+                            }
+                            .sensor-list-style label {
+                                display: flex !important; /* Força comportamento flex dentro da label do Django */
+                                align-items: center;
+                                font-weight: normal !important;
+                                width: 100%;
+                            }
+                            .sensor-list-style input[type="checkbox"] {
+                                width: auto !important; /* Evita que o checkbox ocupe 100% */
+                                margin-right: 10px !important;
+                                margin-top: 0;
+                            }
+                        </style>
+
+                        <button type="submit" class="submit-button">✓ Register Warehouse</button>
+                    </form>
+                </div>
+
+                <div class="data-table-container">
+                    <h3>🏭 My Warehouses ({{ processor_warehouses.count }})</h3>
+                    {% if processor_warehouses %}
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Location</th>
+                                <th>Type</th>
+                                <th>Capacity</th>
+                                <th>Sensors</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for warehouse in processor_warehouses %}
+                            <tr>
+                                <td>{{ warehouse.warehouse_id }}</td>
+                                <td>{{ warehouse.location }}</td>
+                                <td>{{ warehouse.get_control_type_display }}</td>
+                                <td>{{ warehouse.capacity }}</td>
+                                <td>
+                                    {% for sensor in warehouse.sensors.all %}
+                                    <span style="display:inline-block; background:#e0f2f1; color:#004d40; padding:5px 12px; border-radius:20px; font-size:0.85em; font-weight:600; margin:3px; border:1px solid #00796b;">
+                                        {{ sensor.sensor_id }} ({{ sensor.get_sensor_type_display }})
+                                    </span>
+                                    {% empty %}
+                                    <span style="color:#999;font-style:italic;">None</span>
+                                    {% endfor %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p style="text-align:center;color:#666;padding:20px;">No warehouses registered.</p>
+                    {% endif %}
+                </div>
             </div>
-        </div>
-    </div>
+
+
+        </div> <!-- End of Main Section -->
+    </div> <!-- End of Dashboard Container -->
 
     <!-- ====================== MODAL DE DADOS PESSOAIS/PERFIL ====================== -->
     <div id="profileModal" class="modal"
@@ -695,7 +974,79 @@
                     </tbody>
                 </table>
             </div>
+        </div>
+    </div> <!-- End of profileModal -->
 
+    <!-- SENSOR MODAL (Reusable) -->
+    <div id="sensorModal" class="modal"
+        style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(5px);">
+        <div class="modal-content"
+            style="background-color: #fefefe; margin: 10% auto; padding: 40px; border: 1px solid #888; width: 90%; max-width: 500px; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: slideDown 0.3s ease;">
+            <span class="close" onclick="closeSensorModal()"
+                style="color: #999; float: right; font-size: 28px; font-weight: bold; cursor: pointer; transition:all 0.3s ease;">&times;</span>
+            <h3 style="color:#00796b; margin-bottom:25px; font-size:1.8em; font-weight:700;">📡 New Sensor</h3>
+
+            <form method="post" action="{% url 'processor_submit_sensor' %}">
+                {% csrf_token %}
+                
+                <div style="margin-bottom: 25px;">
+                    <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">ID / Serial Number</label>
+                    {{ sensor_form.sensor_id }}
+                </div>
+                
+                <div style="margin-bottom: 25px;">
+                    <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Brand/Model</label>
+                    {{ sensor_form.brand }}
+                </div>
+
+                <div style="margin-bottom: 25px;">
+                    <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Type</label>
+                    {{ sensor_form.sensor_type }}
+                </div>
+
+                <button type="submit" class="submit-button">✓ Create Sensor</button>
+            </form>
+        </div>
+    </div>
+    <!-- End of sensorModal -->
+
+    <!-- ACCEPT ORDER MODAL -->
+    <div id="acceptOrderModal" class="modal"
+    style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(5px);">
+        <div class="modal-content"
+            style="background-color: #fefefe; margin: 10% auto; padding: 40px; border: 1px solid #888; width: 90%; max-width: 500px; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: slideDown 0.3s ease;">
+            <span class="close" onclick="closeAcceptModal()"
+                style="color: #999; float: right; font-size: 28px; font-weight: bold; cursor: pointer; transition:all 0.3s ease;">&times;</span>
+            <h3 style="color:#00796b; margin-bottom:25px; font-size:1.6em; font-weight:700;">🤝 Accept Order</h3>
+
+            <p style="margin-bottom:20px; color:#555; font-size:1.1em;">
+                You are about to accept: <br>
+                <b id="modalOrderProduct" style="color:#004d40;"></b> - 
+                <b id="modalOrderQty" style="color:#004d40;"></b> kg
+            </p>
+
+            <form method="post" action="{% url 'processor_accept_order' %}">
+                {% csrf_token %}
+                <input type="hidden" id="modalOrderId" name="order_id">
+                
+                <div style="margin-bottom: 25px;">
+                    <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Select Destination Warehouse:</label>
+                    <select name="warehouse_id" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;">
+                        {% for wh in processor_warehouses %}
+                            <option value="{{ wh.warehouse_id }}">{{ wh.location }} (Cap: {{ wh.capacity }})</option>
+                        {% empty %}
+                            <option value="" disabled selected>No warehouses found!</option>
+                        {% endfor %}
+                    </select>
+                    {% if not processor_warehouses %}
+                        <p style="color:red; font-size:0.9em; margin-top:5px;">⚠️ You need to register a warehouse first.</p>
+                    {% endif %}
+                </div>
+
+                <button type="submit" class="submit-button" {% if not processor_warehouses %}disabled style="background:#ccc; cursor:not-allowed;"{% endif %}>
+                    ✓ Confirm & Accept
+                </button>
+            </form>
         </div>
     </div>
 
@@ -729,9 +1080,32 @@
             document.getElementById('profileModal').style.display = "none";
         }
 
+        /* Sensor Modal Functions */
+        function openSensorModal() {
+            document.getElementById('sensorModal').style.display = "block";
+        }
+        function closeSensorModal() {
+            document.getElementById('sensorModal').style.display = "none";
+        }
+
+        /* Accept Order Modal Functions */
+        function openAcceptModal(orderId, productName, quantity) {
+            document.getElementById('modalOrderId').value = orderId;
+            document.getElementById('modalOrderProduct').innerText = productName;
+            document.getElementById('modalOrderQty').innerText = quantity;
+            document.getElementById('acceptOrderModal').style.display = "block";
+        }
+        function closeAcceptModal() {
+            document.getElementById('acceptOrderModal').style.display = "none";
+        }
+
         window.onclick = function (event) {
             let modalProfile = document.getElementById('profileModal');
+            let modalSensor = document.getElementById('sensorModal');
+            let modalAccept = document.getElementById('acceptOrderModal');
             if (event.target === modalProfile) { closeProfileModal(); }
+            if (event.target === modalSensor) { closeSensorModal(); }
+            if (event.target === modalAccept) { closeAcceptModal(); }
         }
     </script>
 </body>

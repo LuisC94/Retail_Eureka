@@ -43,7 +43,13 @@ urlpatterns = [
     # 3. ROTAS DE DASHBOARD PARA OUTROS PERFIS
     path('consumer/', views.ConsumerDashboardView.as_view(), name='consumer_dashboard'),
     path('processor/', views.ProcessorDashboardView.as_view(), name='processor_dashboard'),
+    path('processor/submit-warehouse/', views.processor_submit_warehouse, name='processor_submit_warehouse'),
+    path('processor/submit-sensor/', views.processor_submit_sensor, name='processor_submit_sensor'),
+    path('processor/accept-order/', views.processor_accept_order, name='processor_accept_order'),
     path('retailer/', views.RetailerDashboardView.as_view(), name='retailer_dashboard'),
+    path('retailer/submit-warehouse/', views.retailer_submit_warehouse, name='retailer_submit_warehouse'),
+    path('retailer/submit-sensor/', views.retailer_submit_sensor, name='retailer_submit_sensor'),
+    path('retailer/accept-order/', views.retailer_accept_order, name='retailer_accept_order'),
 
     # 4. APIs e Autenticação
     path('api/soil-characteristics/', api_views.get_soil_characteristics, name='api_soil_characteristics'),

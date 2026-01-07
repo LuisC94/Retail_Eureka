@@ -1346,14 +1346,10 @@
             <div id="marketplace-dashboard" class="dashboard-tab" style="display:none;">
                 <div class="data-table-container">
                     <h3>🤝 Marketplace</h3>
-                    <p style="color:#666; margin-bottom:20px;">Buy and sell crops across the network.</p>
-
+                    
                     <!-- CREATE ORDER FORM -->
                     <div class="form-section">
-                        <h4>📢 Vender Produção (Stock Linked)</h4>
-                        <p style="font-size: 0.9em; color: #666; margin-bottom: 15px;">
-                            Ao criar uma oferta, a quantidade será automaticamente deduzida do stock da colheita selecionada.
-                        </p>
+                        <h3>📢 Vender Produção</h3>
                         <form method="POST" action="{% url 'market_submit_order' %}">
                             {% csrf_token %}
                             
@@ -1362,7 +1358,6 @@
                             <div class="form-group">
                                 {{ sell_order_form.harvest_origin.label_tag }}
                                 {{ sell_order_form.harvest_origin }}
-                                <small style="color: #666; font-style: italic;">Apenas colheitas com stock > 0 aparecem aqui.</small>
                             </div>
                             <div class="form-group">
                                 {{ sell_order_form.quantity_kg.label_tag }}
@@ -1411,7 +1406,7 @@
 
                     <!-- OPEN TRANSACTIONS -->
                     <div style="margin-top: 40px;">
-                        <h4>🔓 Open Transactions</h4>
+                        <h3>🔓 Open Transactions</h3>
                         {% if open_market_orders %}
                         <table class="data-table">
                             <thead>
@@ -1464,7 +1459,7 @@
 
                     <!-- TRANSACTIONS HISTORY -->
                     <div style="margin-top: 40px;">
-                        <h4>📜 Transactions History (Completed)</h4>
+                        <h3>📜 Transactions History (Completed)</h3>
                          {% if closed_market_orders %}
                         <table class="data-table">
                             <thead>

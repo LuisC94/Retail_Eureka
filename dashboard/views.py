@@ -182,28 +182,62 @@ class ProcessorDashboardView(View):
         except UserProfile.DoesNotExist:
             user_profile = None
 
+        # Calcular Stock Atual do Processador (Baseado em Compras - Vendas)
+        # Como o Processador não tem "Harvests", o stock é puramente transacional.
+        stock_map = {} # { (1, 'Warehouse A'): 500, ... } (Key is ID)
+        name_map = {} # { 1: "Kiwi (Hayward)" } - Store proper display name
+        
+        # 1. Somar entradas (Stock IN)
+        # a) Pedidos de COMPRA feitos por mim e aprovados E ENTREGUES
+        purchases_made = MarketplaceOrder.objects.filter(requester=user, order_type='BUY', status='APPROVED', transport_status='DELIVERED')
+        # b) Ofertas de VENDA de outros que eu aceitei (Eu sou o comprador/fulfilled_by) E ENTREGUES
+        sales_accepted = MarketplaceOrder.objects.filter(fulfilled_by=user, order_type='SELL', status='APPROVED', transport_status='DELIVERED')
+        
+        from itertools import chain
+        for p in chain(purchases_made, sales_accepted):
+            # Chave composta: (Culture ID, Armazém)
+            key = (p.culture.pk, p.warehouse_location)
+            stock_map[key] = stock_map.get(key, 0) + p.quantity_kg
+            if p.culture.pk not in name_map:
+                name_map[p.culture.pk] = str(p.culture)
+
+        # 2. Subtrair saídas (Stock OUT)
+        sales_made = MarketplaceOrder.objects.filter(requester=user, order_type='SELL').exclude(status='CANCELLED')
+        purchases_accepted = MarketplaceOrder.objects.filter(fulfilled_by=user, order_type='BUY', status='APPROVED')
+        
+        for s in chain(sales_made, purchases_accepted):
+            key = (s.culture.pk, s.warehouse_location)
+            stock_map[key] = stock_map.get(key, 0) - s.quantity_kg
+            if s.culture.pk not in name_map:
+                 name_map[s.culture.pk] = str(s.culture)
+
+        # Converter para lista para o template
+        processor_stock = []
+        for (cult_id, warehouse), qty in stock_map.items():
+            if qty > 0: # Apenas mostrar stock positivo
+                # Limpar string do armazém: "Braga (WH: 1)" -> "Braga"
+                clean_wh = warehouse.split(' (WH:')[0] if warehouse and ' (WH:' in warehouse else warehouse
+                
+                processor_stock.append({
+                    'culture_id': cult_id, # ID for JS logic
+                    'culture': name_map.get(cult_id, f"ID: {cult_id}"), # Display Name
+                    'warehouse': clean_wh, 
+                    'quantity': float(qty),
+                    'full_warehouse': warehouse 
+                })
+
         context = { 
             'username': user.username, 
             'role': 'Processor',
             'user_profile': user_profile,
             'open_market_orders': open_orders,
             'closed_market_orders': closed_orders,
+            'warehouse_form': WarehouseRegistrationForm(),
+            'sensor_form': SensorRegistrationForm(),
+            'processor_warehouses': Warehouse.objects.filter(owner=user).order_by('-warehouse_id'),
+            'market_order_form': MarketplaceOrderForm(initial={'role': 'Processor'}),
+            'processor_stock': processor_stock,
         }
-
-        # CALCULATE STOCK FOR PROCESSOR (Assuming they have Harvest records)
-        # We need to know what they have to restrict the form
-        processor_harvests = Harvest.objects.filter(producer=user).values('subfamily').distinct()
-        available_subfamily_ids = [item['subfamily'] for item in processor_harvests]
-        
-        market_order_form = MarketplaceOrderForm(initial={'role': 'Processor', 'order_type': 'SELL'})
-        if available_subfamily_ids:
-             market_order_form.fields['culture'].queryset = ProductSubFamily.objects.filter(pk__in=available_subfamily_ids).order_by('name')
-        else:
-             # If no harvests, maybe show empty or all? User said "only appear cultures they have".
-             # If they have nothing, they should see nothing.
-             market_order_form.fields['culture'].queryset = ProductSubFamily.objects.none()
-
-        context['market_order_form'] = market_order_form
         return render(request, 'dashboard/processorDash.html', context)
 
 # Retailer Dashboard
@@ -226,7 +260,11 @@ class RetailerDashboardView(View):
             'user_profile': user_profile,
             'open_market_orders': open_orders,
             'closed_market_orders': closed_orders,
-            'market_order_form': MarketplaceOrderForm(initial={'role': 'Retailer', 'order_type': 'BUY'})
+            'market_order_form': MarketplaceOrderForm(initial={'role': 'Retailer', 'order_type': 'BUY'}),
+            # Warehouse Context
+            'warehouse_form': WarehouseRegistrationForm(),
+            'sensor_form': SensorRegistrationForm(),
+            'retailer_warehouses': Warehouse.objects.filter(owner=user).order_by('-warehouse_id'),
         }
         return render(request, 'dashboard/retailerDash.html', context)
 
@@ -656,6 +694,134 @@ def producer_submit_sensor(request):
         return redirect('producer_dashboard')
         
     return redirect('producer_dashboard') # Não permitir GET a esta rota
+
+@login_required
+@role_required(['Processor'])
+def processor_submit_warehouse(request):
+    db_error = None
+    if request.method == 'POST':
+        form = WarehouseRegistrationForm(request.POST)
+        if form.is_valid():
+            try:
+                warehouse_record = form.save(commit=False)
+                warehouse_record.owner = request.user
+                warehouse_record.save()
+                form.save_m2m() 
+                return redirect('processor_dashboard')
+            except IntegrityError as e:
+                db_error = f"Erro ao salvar Armazém na DB: {e}"
+                request.session['db_error'] = db_error
+
+        return redirect('processor_dashboard')
+        
+    return redirect('processor_dashboard')
+
+@login_required
+@role_required(['Processor'])
+def processor_submit_sensor(request):
+    if request.method == 'POST':
+        form = SensorRegistrationForm(request.POST)
+        if form.is_valid():
+            try:
+                form.save()
+                return redirect('processor_dashboard') 
+            except IntegrityError as e:
+                db_error = f"Erro ao salvar Sensor: ID já existe. Detalhe: {e}"
+                request.session['db_error'] = db_error
+        
+@login_required
+@role_required(['Processor'])
+def processor_accept_order(request):
+    if request.method == 'POST':
+        order_id = request.POST.get('order_id')
+        warehouse_id = request.POST.get('warehouse_id')
+        
+        try:
+            # 1. Obter a encomenda
+            order = MarketplaceOrder.objects.get(pk=order_id, status='OPEN')
+            
+            # 2. Obter o armazém selecionado e verificar posse
+            warehouse = Warehouse.objects.get(pk=warehouse_id, owner=request.user)
+            
+            # 3. Atualizar a encomenda
+            order.status = 'APPROVED'
+            order.fulfilled_by = request.user
+            order.fulfilled_at = timezone.now()
+            
+            # Atualizar localização com base no armazém escolhido
+            # Guardamos o ID e Localização para referência futura (ou podíamos criar FK se alterássemos o modelo)
+            order.warehouse_location = f"{warehouse.location} (WH: {warehouse.warehouse_id})"
+            
+            order.save()
+            
+            return redirect('processor_dashboard')
+            
+        except (MarketplaceOrder.DoesNotExist, Warehouse.DoesNotExist):
+            # Em caso de erro (hack ou dados inválidos), redirecionar
+            return redirect('processor_dashboard')
+            
+    return redirect('processor_dashboard')
+    return redirect('processor_dashboard')
+
+# RETAILER VIEWS
+@login_required
+@role_required(['Retailer'])
+def retailer_submit_warehouse(request):
+    db_error = None
+    if request.method == 'POST':
+        form = WarehouseRegistrationForm(request.POST)
+        if form.is_valid():
+            try:
+                warehouse_record = form.save(commit=False)
+                warehouse_record.owner = request.user
+                warehouse_record.save()
+                form.save_m2m() 
+                return redirect('retailer_dashboard')
+            except IntegrityError as e:
+                db_error = f"Erro ao salvar Armazém na DB: {e}"
+                request.session['db_error'] = db_error
+
+        return redirect('retailer_dashboard')
+    return redirect('retailer_dashboard')
+
+@login_required
+@role_required(['Retailer'])
+def retailer_submit_sensor(request):
+    if request.method == 'POST':
+        form = SensorRegistrationForm(request.POST)
+        if form.is_valid():
+            try:
+                form.save()
+                return redirect('retailer_dashboard') 
+            except IntegrityError as e:
+                db_error = f"Erro ao salvar Sensor: ID já existe. Detalhe: {e}"
+                request.session['db_error'] = db_error
+        return redirect('retailer_dashboard')
+    return redirect('retailer_dashboard')
+
+@login_required
+@role_required(['Retailer'])
+def retailer_accept_order(request):
+    if request.method == 'POST':
+        order_id = request.POST.get('order_id')
+        warehouse_id = request.POST.get('warehouse_id')
+        
+        try:
+            order = MarketplaceOrder.objects.get(pk=order_id, status='OPEN')
+            warehouse = Warehouse.objects.get(pk=warehouse_id, owner=request.user)
+            
+            order.status = 'APPROVED'
+            order.fulfilled_by = request.user
+            order.fulfilled_at = timezone.now()
+            order.warehouse_location = f"{warehouse.location} (WH: {warehouse.warehouse_id})"
+            
+            order.save()
+            return redirect('retailer_dashboard')
+            
+        except (MarketplaceOrder.DoesNotExist, Warehouse.DoesNotExist):
+            return redirect('retailer_dashboard')
+            
+    return redirect('retailer_dashboard')
 
 @login_required
 @role_required(['Producer'])
