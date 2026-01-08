@@ -1,5 +1,6 @@
 from django.db import IntegrityError, transaction
 from django.db.models import Sum, Q
+from django import forms
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
@@ -254,17 +255,74 @@ class RetailerDashboardView(View):
         except UserProfile.DoesNotExist:
             user_profile = None
 
+        # Calcular Stock Atual do Retailer (Baseado em Compras - Vendas)
+        stock_map = {} 
+        name_map = {} 
+        
+        # 1. Somar entradas (Stock IN)
+        # a) Pedidos de COMPRA feitos por mim e aprovados E ENTREGUES
+        purchases_made = MarketplaceOrder.objects.filter(requester=user, order_type='BUY', status='APPROVED', transport_status='DELIVERED')
+        # b) Ofertas de VENDA de outros que eu aceitei (Eu sou o comprador/fulfilled_by) E ENTREGUES
+        sales_accepted = MarketplaceOrder.objects.filter(fulfilled_by=user, order_type='SELL', status='APPROVED', transport_status='DELIVERED')
+        
+        from itertools import chain
+        for p in chain(purchases_made, sales_accepted):
+            key = (p.culture.pk, p.warehouse_location)
+            stock_map[key] = stock_map.get(key, 0) + p.quantity_kg
+            if p.culture.pk not in name_map:
+                name_map[p.culture.pk] = str(p.culture)
+
+        # 2. Subtrair saídas (Stock OUT)
+        # a) Vendas de volta ao mercado (Ex: Excesso de stock)
+        sales_made = MarketplaceOrder.objects.filter(requester=user, order_type='SELL').exclude(status='CANCELLED')
+        # b) Compras de Consumidores (Eu sou o vendedor/fulfilled_by)
+        purchases_accepted = MarketplaceOrder.objects.filter(fulfilled_by=user, order_type='BUY', status='APPROVED')
+        
+        for s in chain(sales_made, purchases_accepted):
+            key = (s.culture.pk, s.warehouse_location)
+            stock_map[key] = stock_map.get(key, 0) - s.quantity_kg
+            if s.culture.pk not in name_map:
+                 name_map[s.culture.pk] = str(s.culture)
+
+        # Converter para lista para o template
+        retailer_stock = []
+        for (cult_id, warehouse), qty in stock_map.items():
+            if qty > 0: 
+                clean_wh = warehouse.split(' (WH:')[0] if warehouse and ' (WH:' in warehouse else warehouse
+                
+                retailer_stock.append({
+                    'culture_id': cult_id,
+                    'culture': name_map.get(cult_id, f"ID: {cult_id}"),
+                    'warehouse': clean_wh, 
+                    'quantity': float(qty),
+                    'full_warehouse': warehouse 
+                })
+
+        # Prepare Market Order Form with Warehouse Dropdown
+        market_order_form = MarketplaceOrderForm(initial={'role': 'Retailer', 'order_type': 'BUY'})
+        retailer_warehouses = Warehouse.objects.filter(owner=user).order_by('warehouse_id')
+        
+        if retailer_warehouses.exists():
+            # Create choices tuple list: (Location Name, Location Name)
+            # We use location name as value because the model expects a CharField
+            wh_choices = [(w.location, w.location) for w in retailer_warehouses]
+            market_order_form.fields['warehouse_location'].widget = forms.Select(choices=wh_choices, attrs={'class': 'form-control'})
+        else:
+            # Fallback if no warehouses (though retailer should create one)
+            market_order_form.fields['warehouse_location'].widget.attrs.update({'placeholder': 'No warehouses found. Please register one.'})
+
+
         context = { 
             'username': user.username, 
             'role': 'Retailer',
             'user_profile': user_profile,
             'open_market_orders': open_orders,
             'closed_market_orders': closed_orders,
-            'market_order_form': MarketplaceOrderForm(initial={'role': 'Retailer', 'order_type': 'BUY'}),
-            # Warehouse Context
+            'market_order_form': market_order_form,
             'warehouse_form': WarehouseRegistrationForm(),
             'sensor_form': SensorRegistrationForm(),
-            'retailer_warehouses': Warehouse.objects.filter(owner=user).order_by('-warehouse_id'),
+            'retailer_warehouses': retailer_warehouses,
+            'retailer_stock': retailer_stock, # Pass stock to template
         }
         return render(request, 'dashboard/retailerDash.html', context)
 

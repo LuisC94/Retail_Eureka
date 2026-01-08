@@ -471,7 +471,8 @@
                 "origin": "Braga (WH: 6)",
                 "planned_pickup": "2025-12-24T14:48:00+00:00",
                 "harvest_origin": 8
-            }
+            },
+            "visual_index": 1
         },
         {
             "block_index": 21,
@@ -490,7 +491,8 @@
                 "delivery_time": "2026-01-07T14:49:24.688754+00:00",
                 "sensor_data": "No Data",
                 "harvest_origin": 8
-            }
+            },
+            "visual_index": 2
         },
         {
             "block_index": 22,
@@ -669,6 +671,186 @@
                 "delivery_time": "2026-01-07T14:56:19.724230+00:00",
                 "sensor_data": "No Data",
                 "harvest_origin": "N/A"
+            }
+        },
+        {
+            "block_index": 31,
+            "batch_id": "ORDER-25",
+            "data_hash": "ee8cc5d277e0aff6474d7eadd1c9cd11ef8515fec2201217ae97358e8b7b99b0",
+            "previous_hash": "4e9ab35e10a95faf0150ac2c7d6f54a78013b17f2f57d3910ce22df759417d20",
+            "signer": "0xTransporterAddressC3D4...",
+            "role": "Transporter",
+            "event_type": "TRANSPORT_PICKUP",
+            "timestamp": "2026-01-08T16:21:37.729775",
+            "block_hash": "88496b1c6aaad90f2666f7beb9c09b7908db162a05e124bbea95fd7a39d4ff4e",
+            "content": {
+                "action": "TRANSPORT_PICKUP",
+                "order_id": 25,
+                "transporter": "patinter",
+                "pickup_time": "2026-01-08T16:21:37.574853+00:00",
+                "origin": "\u00c9vora (WH: 7)",
+                "planned_pickup": "2026-01-01T16:21:00+00:00",
+                "harvest_origin": 8
+            },
+            "visual_index": 3
+        },
+        {
+            "block_index": 32,
+            "batch_id": "ORDER-1",
+            "data_hash": "f099b47bb09a3b73f3e2a7bf900ba27932c86f442a0e5ed943c2a1bd7a365bbb",
+            "previous_hash": "88496b1c6aaad90f2666f7beb9c09b7908db162a05e124bbea95fd7a39d4ff4e",
+            "signer": "0xTransporterAddressC3D4...",
+            "role": "Transporter",
+            "event_type": "TRANSPORT_PICKUP",
+            "timestamp": "2026-01-08T16:21:41.407284",
+            "block_hash": "ceedd789ee06d0569a1dfcdb64223c32692365cc63286e7c008c517d2dafc7a1",
+            "content": {
+                "action": "TRANSPORT_PICKUP",
+                "order_id": 1,
+                "transporter": "patinter",
+                "pickup_time": "2026-01-08T16:21:41.321163+00:00",
+                "origin": "Barcelos",
+                "planned_pickup": "2026-01-01T16:21:00+00:00",
+                "harvest_origin": "N/A"
+            },
+            "visual_index": 1
+        },
+        {
+            "block_index": 33,
+            "batch_id": "ORDER-25",
+            "data_hash": "4adb2572f9925138138aeb73ead46fdc606d339fa7be09a0f1a21159640880ec",
+            "previous_hash": "ceedd789ee06d0569a1dfcdb64223c32692365cc63286e7c008c517d2dafc7a1",
+            "signer": "0xTransporterAddressC3D4...",
+            "role": "Transporter",
+            "event_type": "TRANSPORT_DELIVERY",
+            "timestamp": "2026-01-08T16:21:58.777750",
+            "block_hash": "5b3d626b163849ca055c4fbc4a2fe32dcebd4efb8694c9904128ca24f1e1737c",
+            "content": {
+                "action": "TRANSPORT_DELIVERY",
+                "order_id": 25,
+                "transporter": "patinter",
+                "delivery_time": "2026-01-08T16:21:58.355309+00:00",
+                "sensor_data": "No Data",
+                "harvest_origin": 8
+            },
+            "visual_index": 4
+        },
+        {
+            "block_index": 34,
+            "batch_id": "ORDER-1",
+            "data_hash": "7eb2bba904476b9fba656b50a98fb02e940b5f6ab58c11bc43c742c555bcee04",
+            "previous_hash": "5b3d626b163849ca055c4fbc4a2fe32dcebd4efb8694c9904128ca24f1e1737c",
+            "signer": "0xTransporterAddressC3D4...",
+            "role": "Transporter",
+            "event_type": "TRANSPORT_DELIVERY",
+            "timestamp": "2026-01-08T16:22:04.674310",
+            "block_hash": "00350f826961f366ab461c7eb0dcf9811036b0425cd384838a510a609583a834",
+            "content": {
+                "action": "TRANSPORT_DELIVERY",
+                "order_id": 1,
+                "transporter": "patinter",
+                "delivery_time": "2026-01-08T16:22:04.389619+00:00",
+                "sensor_data": "No Data",
+                "harvest_origin": "N/A"
+            },
+            "visual_index": 2
+        },
+        {
+            "block_index": 35,
+            "batch_id": "ORDER-30",
+            "data_hash": "f8c7dfab8fa4fae4a9b6306cc6fc794f7b2e38929a4c506073578b203a6cfe02",
+            "previous_hash": "00350f826961f366ab461c7eb0dcf9811036b0425cd384838a510a609583a834",
+            "signer": "0xTransporterAddressC3D4...",
+            "role": "Transporter",
+            "event_type": "TRANSPORT_PICKUP",
+            "timestamp": "2026-01-08T16:25:21.834331",
+            "block_hash": "0153729b50b28c1ecce04f5f60cf50ab9db50943d823dfef009bec37a4f9dabd",
+            "content": {
+                "action": "TRANSPORT_PICKUP",
+                "order_id": 30,
+                "transporter": "patinter",
+                "pickup_time": "2026-01-08T16:25:21.744792+00:00",
+                "origin": "\u00c9vora (WH: 7)",
+                "planned_pickup": "2026-01-02T16:25:00+00:00",
+                "harvest_origin": "N/A"
+            }
+        },
+        {
+            "block_index": 36,
+            "batch_id": "ORDER-30",
+            "data_hash": "b792929f54902072f6db0ad2fac01fd03dcefd657aadc60de6abe3c19dce6916",
+            "previous_hash": "0153729b50b28c1ecce04f5f60cf50ab9db50943d823dfef009bec37a4f9dabd",
+            "signer": "0xTransporterAddressC3D4...",
+            "role": "Transporter",
+            "event_type": "TRANSPORT_DELIVERY",
+            "timestamp": "2026-01-08T16:25:26.608680",
+            "block_hash": "0d1533b8496435864171cc847e32643af722ef4590d553ddbc1bf7b3a7631a2e",
+            "content": {
+                "action": "TRANSPORT_DELIVERY",
+                "order_id": 30,
+                "transporter": "patinter",
+                "delivery_time": "2026-01-08T16:25:26.311007+00:00",
+                "sensor_data": "No Data",
+                "harvest_origin": "N/A"
+            }
+        },
+        {
+            "block_index": 37,
+            "batch_id": "LOTE-15",
+            "data_hash": "2d25d1a269a4c52d3953eaadd2880f5b5c616159c2654e7760429ed33a5d20d7",
+            "previous_hash": "0d1533b8496435864171cc847e32643af722ef4590d553ddbc1bf7b3a7631a2e",
+            "signer": "0xProducerAddressA1B2...",
+            "role": "Producer",
+            "event_type": "GENESIS",
+            "timestamp": "2026-01-08T17:06:06.800675",
+            "block_hash": "921f8734f4d8e6ed507a602f5a1910a9b8ffde555c2984ae015b14014b8a0932",
+            "content": {
+                "batch_id": "LOTE-15",
+                "producer_id": "pro",
+                "creation_date": "2026-01-30",
+                "harvest": {
+                    "product": "Gold",
+                    "quantity_kg": 233.0,
+                    "quality_score": 10,
+                    "origin_plantation": "Norte"
+                },
+                "plantation": {
+                    "name": "Norte",
+                    "location": "Vizela",
+                    "area_m2": 150.0,
+                    "production_type": "Tradicional",
+                    "chemical_use": "N\u00e3o",
+                    "soil_type": "Arenoso",
+                    "water_regime": "Sequeiro"
+                },
+                "storage": {
+                    "id": 1,
+                    "location": "Braga",
+                    "type": "Controlado",
+                    "has_sensors": "Yes"
+                },
+                "events_log": [
+                    {
+                        "date": "2025-12-17",
+                        "type": "Fertilizantes (org\u00e2nicos)",
+                        "notes": "Fert Organico",
+                        "tech_details": {
+                            "type": "Composted manure",
+                            "origin": "Compost",
+                            "dose": "4.00 t/ha/year"
+                        }
+                    },
+                    {
+                        "date": "2025-12-19",
+                        "type": "Corretivos do solo",
+                        "notes": "Corretive",
+                        "tech_details": {
+                            "product": "Corretive",
+                            "type": "Gypsum",
+                            "dose": "3.00 kg/ha/year"
+                        }
+                    }
+                ]
             }
         }
     ],
@@ -997,6 +1179,105 @@
             "delivery_time": "2026-01-07T14:56:19.724230+00:00",
             "sensor_data": "No Data",
             "harvest_origin": "N/A"
+        },
+        "ee8cc5d277e0aff6474d7eadd1c9cd11ef8515fec2201217ae97358e8b7b99b0": {
+            "action": "TRANSPORT_PICKUP",
+            "order_id": 25,
+            "transporter": "patinter",
+            "pickup_time": "2026-01-08T16:21:37.574853+00:00",
+            "origin": "\u00c9vora (WH: 7)",
+            "planned_pickup": "2026-01-01T16:21:00+00:00",
+            "harvest_origin": 8
+        },
+        "f099b47bb09a3b73f3e2a7bf900ba27932c86f442a0e5ed943c2a1bd7a365bbb": {
+            "action": "TRANSPORT_PICKUP",
+            "order_id": 1,
+            "transporter": "patinter",
+            "pickup_time": "2026-01-08T16:21:41.321163+00:00",
+            "origin": "Barcelos",
+            "planned_pickup": "2026-01-01T16:21:00+00:00",
+            "harvest_origin": "N/A"
+        },
+        "4adb2572f9925138138aeb73ead46fdc606d339fa7be09a0f1a21159640880ec": {
+            "action": "TRANSPORT_DELIVERY",
+            "order_id": 25,
+            "transporter": "patinter",
+            "delivery_time": "2026-01-08T16:21:58.355309+00:00",
+            "sensor_data": "No Data",
+            "harvest_origin": 8
+        },
+        "7eb2bba904476b9fba656b50a98fb02e940b5f6ab58c11bc43c742c555bcee04": {
+            "action": "TRANSPORT_DELIVERY",
+            "order_id": 1,
+            "transporter": "patinter",
+            "delivery_time": "2026-01-08T16:22:04.389619+00:00",
+            "sensor_data": "No Data",
+            "harvest_origin": "N/A"
+        },
+        "f8c7dfab8fa4fae4a9b6306cc6fc794f7b2e38929a4c506073578b203a6cfe02": {
+            "action": "TRANSPORT_PICKUP",
+            "order_id": 30,
+            "transporter": "patinter",
+            "pickup_time": "2026-01-08T16:25:21.744792+00:00",
+            "origin": "\u00c9vora (WH: 7)",
+            "planned_pickup": "2026-01-02T16:25:00+00:00",
+            "harvest_origin": "N/A"
+        },
+        "b792929f54902072f6db0ad2fac01fd03dcefd657aadc60de6abe3c19dce6916": {
+            "action": "TRANSPORT_DELIVERY",
+            "order_id": 30,
+            "transporter": "patinter",
+            "delivery_time": "2026-01-08T16:25:26.311007+00:00",
+            "sensor_data": "No Data",
+            "harvest_origin": "N/A"
+        },
+        "2d25d1a269a4c52d3953eaadd2880f5b5c616159c2654e7760429ed33a5d20d7": {
+            "batch_id": "LOTE-15",
+            "producer_id": "pro",
+            "creation_date": "2026-01-30",
+            "harvest": {
+                "product": "Gold",
+                "quantity_kg": 233.0,
+                "quality_score": 10,
+                "origin_plantation": "Norte"
+            },
+            "plantation": {
+                "name": "Norte",
+                "location": "Vizela",
+                "area_m2": 150.0,
+                "production_type": "Tradicional",
+                "chemical_use": "N\u00e3o",
+                "soil_type": "Arenoso",
+                "water_regime": "Sequeiro"
+            },
+            "storage": {
+                "id": 1,
+                "location": "Braga",
+                "type": "Controlado",
+                "has_sensors": "Yes"
+            },
+            "events_log": [
+                {
+                    "date": "2025-12-17",
+                    "type": "Fertilizantes (org\u00e2nicos)",
+                    "notes": "Fert Organico",
+                    "tech_details": {
+                        "type": "Composted manure",
+                        "origin": "Compost",
+                        "dose": "4.00 t/ha/year"
+                    }
+                },
+                {
+                    "date": "2025-12-19",
+                    "type": "Corretivos do solo",
+                    "notes": "Corretive",
+                    "tech_details": {
+                        "product": "Corretive",
+                        "type": "Gypsum",
+                        "dose": "3.00 kg/ha/year"
+                    }
+                }
+            ]
         }
     }
 }

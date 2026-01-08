@@ -414,6 +414,9 @@
                 <a href="#" class="menu-item" onclick="switchSidebarTab('warehouse-management')">
                     📦 Warehouse Management
                 </a>
+                 <a href="#" class="menu-item" onclick="switchSidebarTab('stock-view')">
+                    📊 Stock Management
+                </a>
             </nav>
         </div>
 
@@ -469,14 +472,139 @@
                              <div>
                                  <label style="display:block; margin-bottom:5px; font-weight:600;">Quantity (Kg):</label>
                                 {{ market_order_form.quantity_kg }}
+                                <small id="stock-hint" style="color: #666; font-size: 0.85em; display: none;">Available: <span id="max-stock-val">0</span> kg</small>
                             </div>
                              <div>
                                  <label style="display:block; margin-bottom:5px; font-weight:600;">Location:</label>
                                 {{ market_order_form.warehouse_location }}
+                                <!-- Hidden input to send warehouse value when Disabled -->
+                                <input type="hidden" name="warehouse_location" id="hidden_warehouse_location">
                             </div>
                         </div>
                         <button type="submit" class="submit-button">Submit Order</button>
                     </form>
+                    
+                    <!-- RETAILER STOCK DATA FOR JS -->
+                    {{ retailer_stock|json_script:"retailer-stock-data" }}
+                    
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const stockData = JSON.parse(document.getElementById('retailer-stock-data').textContent || '[]');
+                            
+                            const typeSelect = document.getElementById('id_order_type');
+                            const cultureSelect = document.getElementById('id_culture');
+                            const warehouseSelect = document.getElementById('id_warehouse_location'); 
+                            const hiddenWarehouse = document.getElementById('hidden_warehouse_location');
+                            const qtyInput = document.getElementById('id_quantity_kg');
+                            const stockHint = document.getElementById('stock-hint');
+                            const maxStockVal = document.getElementById('max-stock-val');
+                            
+                            // Backup all original options
+                            const originalCultureOptions = Array.from(cultureSelect.options);
+                            // Backup original placeholder/value of warehouse if needed
+                            
+                            function updateFormState() {
+                                const isSell = typeSelect.value === 'SELL';
+                                
+                                if (isSell) {
+                                    // 1. Filter Culture Dropdown to only items in stock
+                                    cultureSelect.innerHTML = '';
+                                    // Add default placeholder
+                                    cultureSelect.appendChild(originalCultureOptions[0].cloneNode(true));
+                                    
+                                    const availableCultureIds = stockData.map(item => item.culture_id.toString());
+                                    
+                                    originalCultureOptions.forEach(opt => {
+                                        if (availableCultureIds.includes(opt.value)) {
+                                           cultureSelect.appendChild(opt.cloneNode(true)); 
+                                        }
+                                    });
+                                    
+                                    // 2. Logic when culture changes
+                                    cultureSelect.onchange = function() {
+                                        const selectedId = this.value;
+                                        const stockItem = stockData.find(item => item.culture_id.toString() === selectedId);
+                                        
+                                        if (stockItem) {
+                                            // Set Warehouse (Auto-select & Read-only)
+                                            // Robust matching logic:
+                                            let matched = false;
+                                            const targetWh = (stockItem.full_warehouse || "").trim();
+                                            
+                                            // 1. Try exact value assignment first
+                                            warehouseSelect.value = targetWh;
+                                            
+                                            if (warehouseSelect.value === targetWh && targetWh !== "") {
+                                                matched = true;
+                                            } else {
+                                                // 2. Loop through options for loose match (case-insensitive checking)
+                                                for (let i = 0; i < warehouseSelect.options.length; i++) {
+                                                    const optVal = warehouseSelect.options[i].value.trim();
+                                                    const optText = warehouseSelect.options[i].text.trim();
+                                                    
+                                                    // Check matches against stock warehouse name
+                                                    if (optVal.toLowerCase() === targetWh.toLowerCase() || 
+                                                        optText.toLowerCase() === targetWh.toLowerCase()) {
+                                                        warehouseSelect.selectedIndex = i;
+                                                        matched = true;
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                            
+                                            // 3. Fallback: If still not matched, CREATE the option dynamically
+                                            if (!matched && targetWh !== "") {
+                                                const newOption = new Option(targetWh, targetWh);
+                                                warehouseSelect.add(newOption);
+                                                warehouseSelect.value = targetWh;
+                                                matched = true;
+                                            }
+
+                                            warehouseSelect.disabled = true;
+                                            // Apply value to hidden input (crucial for form submission)
+                                            hiddenWarehouse.value = warehouseSelect.value || targetWh; 
+                                            
+                                            // Set Max Quantity
+                                            qtyInput.max = stockItem.quantity;
+                                            qtyInput.placeholder = `Max: ${stockItem.quantity}`;
+                                            maxStockVal.innerText = stockItem.quantity;
+                                            stockHint.style.display = 'block';
+                                        } else {
+                                            // Reset if no culture selected
+                                            warehouseSelect.disabled = false;
+                                            warehouseSelect.value = '';
+                                            qtyInput.removeAttribute('max');
+                                            qtyInput.placeholder = '';
+                                            stockHint.style.display = 'none';
+                                        }
+                                    };
+                                    
+                                    // Trigger change to set initial state if culture already selected
+                                    cultureSelect.dispatchEvent(new Event('change'));
+
+                                } else {
+                                    // RESET TO BUY MODE
+                                    // Restore all options
+                                    cultureSelect.innerHTML = '';
+                                    originalCultureOptions.forEach(opt => cultureSelect.appendChild(opt.cloneNode(true)));
+                                    
+                                    // Enable warehouse
+                                    warehouseSelect.disabled = false;
+                                    cultureSelect.onchange = null; // Remove specific sell listener
+                                    
+                                    // Remove max constraints
+                                    qtyInput.removeAttribute('max');
+                                    qtyInput.placeholder = '';
+                                    stockHint.style.display = 'none';
+                                }
+                            }
+                            
+                            typeSelect.addEventListener('change', updateFormState);
+                            
+                            // Init
+                            updateFormState();
+                        });
+                    </script>
                 </div>
 
                 <!-- OPEN TRANSACTIONS -->
@@ -699,6 +827,35 @@
                     </table>
                     {% else %}
                     <p style="text-align:center;color:#666;padding:20px;">No warehouses registered.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- STOCK VIEW -->
+            <div id="stock-view" class="tab-content">
+                <div class="data-table-container">
+                    <h3>📊 Current Stock Status</h3>
+                    {% if retailer_stock %}
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Item (Culture)</th>
+                                <th>Quantity (Kg)</th>
+                                <th>Warehouse Location</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in retailer_stock %}
+                            <tr>
+                                <td>{{ item.culture }}</td>
+                                <td style="font-weight: bold; color: #00796b;">{{ item.quantity }} Kg</td>
+                                <td>{{ item.warehouse }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p style="text-align: center; color: #888; margin-top: 20px;">No stock currently available.</p>
                     {% endif %}
                 </div>
             </div>

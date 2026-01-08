@@ -220,7 +220,7 @@ class PlantationEventForm(forms.ModelForm):
 
     subfamily = forms.ModelChoiceField(
         queryset=ProductSubFamily.objects.all(),
-        label='Cultura (Subfamília)',
+        label='Cultura',
         empty_label="--- Selecione a Cultura ---",
         required=True, # Obrigatório
         widget=forms.Select(attrs={'class': 'form-control', 'id': 'event_subfamily_select'})
@@ -269,6 +269,8 @@ class HarvestForm(forms.ModelForm):
             'harvest_quantity_kg', 
             'avg_quality_score', 
             'utilized_quantity_kg',
+            'caliber',
+            'soluble_solids',
             'warehouse'
         ]
         widgets = {
@@ -279,6 +281,8 @@ class HarvestForm(forms.ModelForm):
             'harvest_quantity_kg': forms.NumberInput(attrs={'class': 'form-control'}),
             'avg_quality_score': forms.Select(attrs={'class': 'form-control'}),
             'utilized_quantity_kg': forms.NumberInput(attrs={'class': 'form-control'}),
+            'caliber': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'mm'}),
+            'soluble_solids': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Brix'}),
             'warehouse': forms.Select(attrs={'class': 'form-control'}),
         }
 

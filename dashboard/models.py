@@ -295,6 +295,10 @@ class Harvest(models.Model):
     avg_quality_score = models.IntegerField(choices=QUALITY_SCORE_CHOICES, verbose_name="Average Quality Score (1-10)")
     utilized_quantity_kg = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Waste (Kg)")
     
+    # New fields requested by user
+    caliber = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name="Caliber (mm)")
+    soluble_solids = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name="Soluble Solids (Brix)")
+    
     warehouse = models.ForeignKey(Warehouse, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Stored In (Warehouse)")
     
     class Meta: db_table = 'harvest_records'

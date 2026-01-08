@@ -583,7 +583,7 @@
                                     <button class="btn-action" style="background: #388E3C;" onclick="openDeliveryModal('{{ order.pk }}')">
                                         🏁 Register Delivery
                                     </button>
-                                    <a href="{% url 'view_batch_chain' batch_id='ORDER-'|add:order.pk_str %}" target="_blank" class="btn-action" style="background: #546E7A; text-decoration: none; display: inline-block; text-align: center; margin-left: 5px;">
+                                    <a href="{% url 'view_batch_chain' batch_id='ORDER-'|add:order.pk_str %}" class="btn-action" style="background: #546E7A; text-decoration: none; display: inline-block; text-align: center; margin-left: 5px;">
                                         📜 Chain
                                     </a>
                                 </td>
@@ -618,7 +618,7 @@
                                 <td>{{ order.culture.name }}</td>
                                 <td>-</td>
                                 <td>
-                                    <a href="{% url 'view_batch_chain' batch_id='ORDER-'|add:order.pk_str %}" target="_blank" class="btn-action" style="background: #546E7A; text-decoration: none; padding: 5px 10px; font-size: 0.8em;">
+                                    <a href="{% url 'view_batch_chain' batch_id='ORDER-'|add:order.pk_str %}" class="btn-action" style="background: #546E7A; text-decoration: none; padding: 5px 10px; font-size: 0.8em;">
                                         📜 View Chain
                                     </a>
                                 </td>

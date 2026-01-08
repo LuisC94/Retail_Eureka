@@ -83,7 +83,9 @@ def create_genesis_dossier(harvest):
             "product": harvest.subfamily.name if harvest.subfamily else "N/A",
             "quantity_kg": float(harvest.harvest_quantity_kg),
             "quality_score": harvest.avg_quality_score,
-            "origin_plantation": plantation.plantation_name if plantation else "N/A"
+            "origin_plantation": plantation.plantation_name if plantation else "N/A",
+            "caliber_mm": float(harvest.caliber) if harvest.caliber else "N/A",
+            "soluble_solids_brix": float(harvest.soluble_solids) if harvest.soluble_solids else "N/A"
         },
         
         "plantation": plantation_info,

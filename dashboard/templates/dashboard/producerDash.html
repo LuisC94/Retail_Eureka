@@ -1173,6 +1173,8 @@
                                     <th>Qt (Kg)</th>
                                     <th>Waste (Kg)</th>
                                     <th>Quality</th>
+                                    <th>Caliber (mm)</th>
+                                    <th>Brix</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1196,6 +1198,8 @@
                                     <td>{{ record.harvest_quantity_kg }}</td>
                                     <td>{{ record.utilized_quantity_kg }}</td>
                                     <td>{{ record.avg_quality_score }}</td>
+                                    <td>{{ record.caliber|default:"-" }}</td>
+                                    <td>{{ record.soluble_solids|default:"-" }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
