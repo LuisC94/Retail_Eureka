@@ -852,6 +852,145 @@
                     }
                 ]
             }
+        },
+        {
+            "block_index": 38,
+            "batch_id": "LOTE-16",
+            "data_hash": "ee5b19e166e14d2099d1ea1da21aecced3081ba53185eb2225deea51cb645963",
+            "previous_hash": "921f8734f4d8e6ed507a602f5a1910a9b8ffde555c2984ae015b14014b8a0932",
+            "signer": "0xProducerAddressA1B2...",
+            "role": "Producer",
+            "event_type": "GENESIS",
+            "timestamp": "2026-01-08T18:00:20.650817",
+            "block_hash": "e88cb94049330f793af7a03e4ccde582b51eeb5d0494cf9df8d00527dd6b6fc8",
+            "content": {
+                "batch_id": "LOTE-16",
+                "producer_id": "pro",
+                "creation_date": "2026-01-06",
+                "harvest": {
+                    "product": "Hayward",
+                    "quantity_kg": 3444.0,
+                    "quality_score": 2,
+                    "origin_plantation": "Sul",
+                    "caliber_mm": 45.0,
+                    "soluble_solids_brix": 7.0
+                },
+                "plantation": {
+                    "name": "Sul",
+                    "location": "Braga",
+                    "area_m2": 200.0,
+                    "production_type": "Moderna",
+                    "chemical_use": "Sim",
+                    "soil_type": "Argiloso",
+                    "water_regime": "Rega Total"
+                },
+                "storage": {
+                    "id": 1,
+                    "location": "Braga",
+                    "type": "Controlado",
+                    "has_sensors": "Yes"
+                },
+                "events_log": [
+                    {
+                        "date": "2025-10-04",
+                        "type": "Corretivos do solo",
+                        "notes": "Corretivo x",
+                        "tech_details": {
+                            "product": "Corr",
+                            "type": "Dolomite",
+                            "dose": "3.00 kg/ha/year"
+                        }
+                    },
+                    {
+                        "date": "2025-10-14",
+                        "type": "Fertilizantes (sint\u00e9ticos minerais)",
+                        "notes": "Fert1",
+                        "tech_details": {
+                            "product": "Fert1",
+                            "npk": "NPK",
+                            "dose": "6.00 kg/ha/year"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "block_index": 39,
+            "batch_id": "ORDER-33",
+            "data_hash": "664d2da696c0a81f5d7742a629d6bdd6e6f2b41b5b7a16886bfa72d137fc8db1",
+            "previous_hash": "e88cb94049330f793af7a03e4ccde582b51eeb5d0494cf9df8d00527dd6b6fc8",
+            "signer": "0xTransporterAddressC3D4...",
+            "role": "Transporter",
+            "event_type": "TRANSPORT_PICKUP",
+            "timestamp": "2026-01-08T18:20:39.473347",
+            "block_hash": "c63fbbc8d77d6db6db47d96fa85fc72022fd57e48dc806c5f0c5e815825b0c1f",
+            "content": {
+                "action": "TRANSPORT_PICKUP",
+                "order_id": 33,
+                "transporter": "patinter",
+                "pickup_time": "2026-01-08T18:20:39.312407+00:00",
+                "origin": "Viana (WH: 10)",
+                "planned_pickup": "2026-01-01T18:20:00+00:00",
+                "harvest_origin": 16
+            }
+        },
+        {
+            "block_index": 40,
+            "batch_id": "ORDER-33",
+            "data_hash": "a4530d43baeec853f861b56a236930dfbf4b1022a7bbca3083c8b620ad759037",
+            "previous_hash": "c63fbbc8d77d6db6db47d96fa85fc72022fd57e48dc806c5f0c5e815825b0c1f",
+            "signer": "0xTransporterAddressC3D4...",
+            "role": "Transporter",
+            "event_type": "TRANSPORT_DELIVERY",
+            "timestamp": "2026-01-08T18:20:44.337967",
+            "block_hash": "16f60fd2b61c9faf790bf0c424b8f0826d95bb101bef095b710589d20be3d494",
+            "content": {
+                "action": "TRANSPORT_DELIVERY",
+                "order_id": 33,
+                "transporter": "patinter",
+                "delivery_time": "2026-01-08T18:20:43.879563+00:00",
+                "sensor_data": "No Data",
+                "harvest_origin": 16
+            }
+        },
+        {
+            "block_index": 41,
+            "batch_id": "ORDER-39",
+            "data_hash": "d325e5d25facec5ee9b2c2ee0901d6847a42fd149cae39a8e2c21e069598601f",
+            "previous_hash": "16f60fd2b61c9faf790bf0c424b8f0826d95bb101bef095b710589d20be3d494",
+            "signer": "0xTransporterAddressC3D4...",
+            "role": "Transporter",
+            "event_type": "TRANSPORT_PICKUP",
+            "timestamp": "2026-01-08T18:56:29.009193",
+            "block_hash": "51b1860fd0198516ceb04a5f5e0dd8fc4499885b4fcd25971e9ecf77b8224a98",
+            "content": {
+                "action": "TRANSPORT_PICKUP",
+                "order_id": 39,
+                "transporter": "patinter",
+                "pickup_time": "2026-01-08T18:56:28.916518+00:00",
+                "origin": "Vizela",
+                "planned_pickup": "2026-01-04T18:56:00+00:00",
+                "harvest_origin": "N/A"
+            }
+        },
+        {
+            "block_index": 42,
+            "batch_id": "ORDER-39",
+            "data_hash": "cc6ec0fe8761ce65a2082cbfc86fad9598f0f6fdd5ec6b684cf6823ca85151b8",
+            "previous_hash": "51b1860fd0198516ceb04a5f5e0dd8fc4499885b4fcd25971e9ecf77b8224a98",
+            "signer": "0xTransporterAddressC3D4...",
+            "role": "Transporter",
+            "event_type": "TRANSPORT_DELIVERY",
+            "timestamp": "2026-01-08T18:56:35.332546",
+            "block_hash": "232c9b752093d04e279fa332cc9842dff5366e366783252dd2fe76b4e406f982",
+            "content": {
+                "action": "TRANSPORT_DELIVERY",
+                "order_id": 39,
+                "transporter": "patinter",
+                "delivery_time": "2026-01-08T18:56:35.040838+00:00",
+                "sensor_data": "No Data",
+                "harvest_origin": "N/A"
+            }
         }
     ],
     "off_chain_storage": {
@@ -1278,6 +1417,90 @@
                     }
                 }
             ]
+        },
+        "ee5b19e166e14d2099d1ea1da21aecced3081ba53185eb2225deea51cb645963": {
+            "batch_id": "LOTE-16",
+            "producer_id": "pro",
+            "creation_date": "2026-01-06",
+            "harvest": {
+                "product": "Hayward",
+                "quantity_kg": 3444.0,
+                "quality_score": 2,
+                "origin_plantation": "Sul",
+                "caliber_mm": 45.0,
+                "soluble_solids_brix": 7.0
+            },
+            "plantation": {
+                "name": "Sul",
+                "location": "Braga",
+                "area_m2": 200.0,
+                "production_type": "Moderna",
+                "chemical_use": "Sim",
+                "soil_type": "Argiloso",
+                "water_regime": "Rega Total"
+            },
+            "storage": {
+                "id": 1,
+                "location": "Braga",
+                "type": "Controlado",
+                "has_sensors": "Yes"
+            },
+            "events_log": [
+                {
+                    "date": "2025-10-04",
+                    "type": "Corretivos do solo",
+                    "notes": "Corretivo x",
+                    "tech_details": {
+                        "product": "Corr",
+                        "type": "Dolomite",
+                        "dose": "3.00 kg/ha/year"
+                    }
+                },
+                {
+                    "date": "2025-10-14",
+                    "type": "Fertilizantes (sint\u00e9ticos minerais)",
+                    "notes": "Fert1",
+                    "tech_details": {
+                        "product": "Fert1",
+                        "npk": "NPK",
+                        "dose": "6.00 kg/ha/year"
+                    }
+                }
+            ]
+        },
+        "664d2da696c0a81f5d7742a629d6bdd6e6f2b41b5b7a16886bfa72d137fc8db1": {
+            "action": "TRANSPORT_PICKUP",
+            "order_id": 33,
+            "transporter": "patinter",
+            "pickup_time": "2026-01-08T18:20:39.312407+00:00",
+            "origin": "Viana (WH: 10)",
+            "planned_pickup": "2026-01-01T18:20:00+00:00",
+            "harvest_origin": 16
+        },
+        "a4530d43baeec853f861b56a236930dfbf4b1022a7bbca3083c8b620ad759037": {
+            "action": "TRANSPORT_DELIVERY",
+            "order_id": 33,
+            "transporter": "patinter",
+            "delivery_time": "2026-01-08T18:20:43.879563+00:00",
+            "sensor_data": "No Data",
+            "harvest_origin": 16
+        },
+        "d325e5d25facec5ee9b2c2ee0901d6847a42fd149cae39a8e2c21e069598601f": {
+            "action": "TRANSPORT_PICKUP",
+            "order_id": 39,
+            "transporter": "patinter",
+            "pickup_time": "2026-01-08T18:56:28.916518+00:00",
+            "origin": "Vizela",
+            "planned_pickup": "2026-01-04T18:56:00+00:00",
+            "harvest_origin": "N/A"
+        },
+        "cc6ec0fe8761ce65a2082cbfc86fad9598f0f6fdd5ec6b684cf6823ca85151b8": {
+            "action": "TRANSPORT_DELIVERY",
+            "order_id": 39,
+            "transporter": "patinter",
+            "delivery_time": "2026-01-08T18:56:35.040838+00:00",
+            "sensor_data": "No Data",
+            "harvest_origin": "N/A"
         }
     }
 }

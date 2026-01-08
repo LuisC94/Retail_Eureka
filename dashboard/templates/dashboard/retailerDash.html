@@ -480,6 +480,22 @@
                                 <!-- Hidden input to send warehouse value when Disabled -->
                                 <input type="hidden" name="warehouse_location" id="hidden_warehouse_location">
                             </div>
+
+                            <!-- QUALITY FILTERS (Auto-filled for SELL, Min Req for BUY) -->
+                            <div class="quality-filters" style="grid-column: 1 / -1; display: flex; gap: 15px; margin-top: 10px; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
+                                <div style="flex:1">
+                                    <label for="id_min_caliber" style="display:block; margin-bottom:5px; font-weight:600; font-size:0.9em; color:#555;">Min Caliber (> mm):</label>
+                                    {{ market_order_form.min_caliber }}
+                                </div>
+                                <div style="flex:1">
+                                    <label for="id_min_soluble_solids" style="display:block; margin-bottom:5px; font-weight:600; font-size:0.9em; color:#555;">Min Brix (>):</label>
+                                    {{ market_order_form.min_soluble_solids }}
+                                </div>
+                                <div style="flex:1">
+                                    <label for="id_min_quality_score" style="display:block; margin-bottom:5px; font-weight:600; font-size:0.9em; color:#555;">Min Score (1-10):</label>
+                                    {{ market_order_form.min_quality_score }}
+                                </div>
+                            </div>
                         </div>
                         <button type="submit" class="submit-button">Submit Order</button>
                     </form>
@@ -505,8 +521,19 @@
                             
                             function updateFormState() {
                                 const isSell = typeSelect.value === 'SELL';
-                                
+                                const calField = document.getElementById('id_min_caliber');
+                                const brixField = document.getElementById('id_min_soluble_solids');
+                                const scoreField = document.getElementById('id_min_quality_score');
+
                                 if (isSell) {
+                                    // LABEL UPDATE
+                                    const l1 = document.querySelector('label[for="id_min_caliber"]');
+                                    const l2 = document.querySelector('label[for="id_min_soluble_solids"]');
+                                    const l3 = document.querySelector('label[for="id_min_quality_score"]');
+                                    if (l1) l1.innerText = "Avg Caliber (mm):";
+                                    if (l2) l2.innerText = "Avg Brix:";
+                                    if (l3) l3.innerText = "Avg Score (1-10):";
+
                                     // 1. Filter Culture Dropdown to only items in stock
                                     cultureSelect.innerHTML = '';
                                     // Add default placeholder
@@ -569,6 +596,12 @@
                                             qtyInput.placeholder = `Max: ${stockItem.quantity}`;
                                             maxStockVal.innerText = stockItem.quantity;
                                             stockHint.style.display = 'block';
+
+                                            // Quality Auto-Fill
+                                            if (calField) { calField.value = stockItem.avg_caliber; calField.readOnly = true; calField.style.backgroundColor = "#e0e0e0"; }
+                                            if (brixField) { brixField.value = stockItem.avg_brix; brixField.readOnly = true; brixField.style.backgroundColor = "#e0e0e0"; }
+                                            if (scoreField) { scoreField.value = stockItem.avg_score; scoreField.readOnly = true; scoreField.style.backgroundColor = "#e0e0e0"; }
+
                                         } else {
                                             // Reset if no culture selected
                                             warehouseSelect.disabled = false;
@@ -584,6 +617,14 @@
 
                                 } else {
                                     // RESET TO BUY MODE
+                                    // restore quality labels
+                                    const l1 = document.querySelector('label[for="id_min_caliber"]');
+                                    const l2 = document.querySelector('label[for="id_min_soluble_solids"]');
+                                    const l3 = document.querySelector('label[for="id_min_quality_score"]');
+                                    if (l1) l1.innerText = "Min Caliber (> mm):";
+                                    if (l2) l2.innerText = "Min Brix (>):";
+                                    if (l3) l3.innerText = "Min Score (1-10):";
+
                                     // Restore all options
                                     cultureSelect.innerHTML = '';
                                     originalCultureOptions.forEach(opt => cultureSelect.appendChild(opt.cloneNode(true)));
@@ -596,6 +637,11 @@
                                     qtyInput.removeAttribute('max');
                                     qtyInput.placeholder = '';
                                     stockHint.style.display = 'none';
+
+                                    // Reset Quality Fields (Editable)
+                                    [calField, brixField, scoreField].forEach(f => {
+                                        if(f) { f.value = ''; f.readOnly = false; f.style.backgroundColor = "white"; }
+                                    });
                                 }
                             }
                             
@@ -610,14 +656,83 @@
                 <!-- OPEN TRANSACTIONS -->
                 <div class="data-table-container">
                     <h3>🔓 Open Transactions</h3>
-                     {% if open_market_orders %}
-                    <table class="data-table">
+                        {% if open_market_orders %}
+                        
+                        <!-- FILTERS -->
+                        <div style="background: #f1f8e9; padding: 15px; border-radius: 8px; border: 1px solid #c5e1a5; margin-bottom: 15px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                            <label style="font-weight:600; color:#33691e;">🔍 Filter By:</label>
+                            
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <label for="filter-cal" style="font-size: 0.9em; color:#555;">Caliber > </label>
+                                <input type="number" id="filter-cal" step="1" style="width: 70px; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                            </div>
+                            
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <label for="filter-brix" style="font-size: 0.9em; color:#555;">Brix > </label>
+                                <input type="number" id="filter-brix" step="0.1" style="width: 70px; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                            </div>
+                            
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <label for="filter-score" style="font-size: 0.9em; color:#555;">Score > </label>
+                                <input type="number" id="filter-score" step="0.1" style="width: 70px; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                            </div>
+                            
+                            <button onclick="filterOpenTransactions()" style="background: #33691e; color: white; border: none; padding: 6px 15px; border-radius: 5px; cursor: pointer; font-weight: 600;">Apply</button>
+                            <button onclick="clearTransactionFilters()" style="background: #bdbdbd; color: white; border: none; padding: 6px 15px; border-radius: 5px; cursor: pointer;">Clear</button>
+                        </div>
+
+                        <script>
+                        function filterOpenTransactions() {
+                            const calVal = parseFloat(document.getElementById('filter-cal').value) || 0;
+                            const brixVal = parseFloat(document.getElementById('filter-brix').value) || 0;
+                            const scoreVal = parseFloat(document.getElementById('filter-score').value) || 0;
+                            
+                            const rows = document.querySelectorAll('#open-trans-table tbody tr');
+                            
+                            rows.forEach(row => {
+                                // Columns Indices (0-based): Date(0), Type(1), Req(2), Culture(3), Cal(4), Brix(5), Score(6)
+                                // CHECK COLUMN INDICES FOR RETAILER (Might differ slightly from Producer)
+                                const calCell = row.cells[4].innerText.trim();
+                                const brixCell = row.cells[5].innerText.trim();
+                                const scoreCell = row.cells[6].innerText.trim();
+                                
+                                const calNum = parseCellVal(calCell);
+                                const brixNum = parseCellVal(brixCell);
+                                const scoreNum = parseCellVal(scoreCell);
+                                
+                                let show = true;
+                                if (calVal > 0 && calNum < calVal) show = false;
+                                if (brixVal > 0 && brixNum < brixVal) show = false;
+                                if (scoreVal > 0 && scoreNum < scoreVal) show = false;
+                                
+                                row.style.display = show ? '' : 'none';
+                            });
+                        }
+                        
+                        function parseCellVal(text) {
+                            if (text.includes('>')) text = text.replace('>', '').trim();
+                            if (text === '-') return 0;
+                            return parseFloat(text) || 0;
+                        }
+                        
+                        function clearTransactionFilters() {
+                            document.getElementById('filter-cal').value = '';
+                            document.getElementById('filter-brix').value = '';
+                            document.getElementById('filter-score').value = '';
+                            filterOpenTransactions();
+                        }
+                        </script>
+
+                    <table class="data-table" id="open-trans-table">
                         <thead>
                             <tr>
                                 <th>Date</th>
                                 <th>Type</th>
                                 <th>Requester</th>
                                 <th>Culture</th>
+                                <th>Calibre</th>
+                                <th>Brix</th>
+                                <th>Score</th>
                                 <th>Qty</th>
                                 <th>Action</th>
                             </tr>
@@ -629,6 +744,42 @@
                                 <td>{{ order.get_order_type_display }}</td>
                                 <td>{{ order.requester.username }} ({{ order.role }})</td>
                                 <td>{{ order.culture.name }}</td>
+
+                                <!-- Caliber -->
+                                <td>
+                                    {% if order.order_type == 'SELL' %}
+                                        {{ order.caliber|default_if_none:"-" }}
+                                    {% else %}
+                                        {% if order.min_caliber %}<small>>{{ order.min_caliber }}</small>{% else %}-{% endif %}
+                                    {% endif %}
+                                </td>
+
+                                <!-- Brix -->
+                                <td>
+                                    {% if order.order_type == 'SELL' %}
+                                        {{ order.soluble_solids|default_if_none:"-" }}
+                                    {% else %}
+                                        {% if order.min_soluble_solids %}<small>>{{ order.min_soluble_solids }}</small>{% else %}-{% endif %}
+                                    {% endif %}
+                                </td>
+
+                                <!-- Score -->
+                                <td>
+                                    {% if order.order_type == 'SELL' %}
+                                        {% if order.quality_score %}
+                                            {% if order.quality_score <= 3 %}
+                                                <span style="font-weight:bold; color:#d32f2f;">{{ order.quality_score }}</span>
+                                            {% elif order.quality_score <= 7 %}
+                                                <span style="font-weight:bold; color:#f57c00;">{{ order.quality_score }}</span>
+                                            {% else %}
+                                                <span style="font-weight:bold; color:#2e7d32;">{{ order.quality_score }}</span>
+                                            {% endif %}
+                                        {% else %}-{% endif %}
+                                    {% else %}
+                                        {% if order.min_quality_score %}<small>>{{ order.min_quality_score }}</small>{% else %}-{% endif %}
+                                    {% endif %}
+                                </td>
+
                                 <td>{{ order.quantity_kg }}</td>
                                 <td>
                                     {% if order.requester != user %}

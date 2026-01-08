@@ -1371,38 +1371,71 @@
                                 {{ sell_order_form.warehouse_location.label_tag }}
                                 {{ sell_order_form.warehouse_location }}
                             </div>
-                            <button type="submit" class="submit-button">Publicar Oferta de Venda</button>
+
+                            <!-- Quality Data (Read-only) -->
+                            <div style="display: flex; gap: 15px; margin-top: 15px;">
+                                <div class="form-group" style="flex:1;">
+                                    {{ sell_order_form.caliber.label_tag }}
+                                    {{ sell_order_form.caliber }}
+                                </div>
+                                <div class="form-group" style="flex:1;">
+                                    {{ sell_order_form.soluble_solids.label_tag }}
+                                    {{ sell_order_form.soluble_solids }}
+                                </div>
+                                <div class="form-group" style="flex:1;">
+                                    {{ sell_order_form.quality_score.label_tag }}
+                                    {{ sell_order_form.quality_score }}
+                                </div>
+                            </div>
+
+                            <button type="submit" class="submit-button" style="margin-top:20px;">Publicar Oferta de Venda</button>
                         </form>
 
-                        <!-- SCRIPT: AUTO-FILL WAREHOUSE FROM HARVEST -->
-                        {{ harvest_warehouse_map|json_script:"harvest-warehouse-data" }}
+                        <!-- SCRIPT: AUTO-FILL WAREHOUSE & QUALITY FROM HARVEST -->
+                        {{ harvest_data_map|json_script:"harvest-data-map" }}
                         <script>
                             document.addEventListener("DOMContentLoaded", function() {
-                                const harvestSelect = document.getElementById('id_harvest_origin');
-                                const locationInput = document.getElementById('id_warehouse_location');
-                                const dataScript = document.getElementById('harvest-warehouse-data');
+                                // Updated IDs to match MarketSellOrderForm custom IDs
+                                const harvestSelect = document.getElementById('id_sell_harvest_origin');
+                                const locationInput = document.getElementById('id_sell_warehouse_location');
+                                const caliberInput = document.getElementById('id_sell_caliber');
+                                const brixInput = document.getElementById('id_sell_soluble_solids');
+                                const scoreInput = document.getElementById('id_sell_quality_score');
+
+                                const dataScript = document.getElementById('harvest-data-map');
                                 
-                                if (harvestSelect && locationInput && dataScript) {
-                                    const warehouseMap = JSON.parse(dataScript.textContent);
+                                if (harvestSelect && dataScript) {
+                                    const dataMap = JSON.parse(dataScript.textContent);
 
-                                    function updateLocation() {
+                                    function updateFields() {
                                         const harvestId = harvestSelect.value;
-                                        const location = warehouseMap[harvestId];
+                                        const data = dataMap[harvestId];
 
-                                        if (location) {
-                                            locationInput.value = location;
-                                            locationInput.setAttribute('readonly', 'readonly');
-                                            locationInput.style.backgroundColor = '#e9ecef'; // Visual indication
+                                        if (data) {
+                                            if (locationInput) {
+                                                locationInput.value = data.location || '';
+                                                locationInput.setAttribute('readonly', 'readonly');
+                                                locationInput.style.backgroundColor = '#e9ecef';
+                                            }
+                                            if (caliberInput) caliberInput.value = data.caliber || '';
+                                            if (brixInput) brixInput.value = data.brix || '';
+                                            if (scoreInput) scoreInput.value = data.score || '';
                                         } else {
-                                            locationInput.value = '';
-                                            locationInput.removeAttribute('readonly');
-                                            locationInput.style.backgroundColor = '';
+                                            // Reset
+                                            if (locationInput) {
+                                                locationInput.value = '';
+                                                locationInput.removeAttribute('readonly');
+                                                locationInput.style.backgroundColor = '';
+                                            }
+                                            if (caliberInput) caliberInput.value = '';
+                                            if (brixInput) brixInput.value = '';
+                                            if (scoreInput) scoreInput.value = '';
                                         }
                                     }
 
-                                    harvestSelect.addEventListener('change', updateLocation);
-                                    // Run once on load just in case (e.g. form re-render)
-                                    updateLocation();
+                                    harvestSelect.addEventListener('change', updateFields);
+                                    // Run once on load
+                                    updateFields();
                                 }
                             });
                         </script>
@@ -1412,7 +1445,82 @@
                     <div style="margin-top: 40px;">
                         <h3>🔓 Open Transactions</h3>
                         {% if open_market_orders %}
-                        <table class="data-table">
+                        
+                        <!-- FILTERS -->
+                        <div style="background: #f1f8e9; padding: 15px; border-radius: 8px; border: 1px solid #c5e1a5; margin-bottom: 15px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                            <label style="font-weight:600; color:#33691e;">🔍 Filter By:</label>
+                            
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <label for="filter-cal" style="font-size: 0.9em; color:#555;">Caliber > </label>
+                                <input type="number" id="filter-cal" step="1" style="width: 70px; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                            </div>
+                            
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <label for="filter-brix" style="font-size: 0.9em; color:#555;">Brix > </label>
+                                <input type="number" id="filter-brix" step="0.1" style="width: 70px; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                            </div>
+                            
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <label for="filter-score" style="font-size: 0.9em; color:#555;">Score > </label>
+                                <input type="number" id="filter-score" step="0.1" style="width: 70px; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                            </div>
+                            
+                            <button onclick="filterOpenTransactions()" style="background: #33691e; color: white; border: none; padding: 6px 15px; border-radius: 5px; cursor: pointer; font-weight: 600;">Apply</button>
+                            <button onclick="clearTransactionFilters()" style="background: #bdbdbd; color: white; border: none; padding: 6px 15px; border-radius: 5px; cursor: pointer;">Clear</button>
+                        </div>
+
+                        <script>
+                        function filterOpenTransactions() {
+                            const calVal = parseFloat(document.getElementById('filter-cal').value) || 0;
+                            const brixVal = parseFloat(document.getElementById('filter-brix').value) || 0;
+                            const scoreVal = parseFloat(document.getElementById('filter-score').value) || 0;
+                            
+                            const table = document.querySelector('.data-table'); // Helper: Ensure this targets the correct table if multiple exist.
+                            // Better selector: find table inside the "Open Transactions" container or add ID to table.
+                            // Assuming first .data-table in this context or adding ID 'open-trans-table' would be safer.
+                            // Let's rely on adding ID to table in next step or assuming standard order. 
+                            // *Wait*, I should add ID 'open-trans-table' to the table in lines below.
+                            
+                            const rows = document.querySelectorAll('#open-trans-table tbody tr');
+                            
+                            rows.forEach(row => {
+                                // Columns Indices (0-based): Date(0), Type(1), Req(2), Role(3), Culture(4), Cal(5), Brix(6), Score(7)
+                                const calCell = row.cells[5].innerText.trim();
+                                const brixCell = row.cells[6].innerText.trim();
+                                const scoreCell = row.cells[7].innerText.trim();
+                                
+                                const calNum = parseCellVal(calCell);
+                                const brixNum = parseCellVal(brixCell);
+                                const scoreNum = parseCellVal(scoreCell);
+                                
+                                let show = true;
+                                if (calVal > 0 && calNum < calVal) show = false;
+                                if (brixVal > 0 && brixNum < brixVal) show = false;
+                                if (scoreVal > 0 && scoreNum < scoreVal) show = false;
+                                
+                                row.style.display = show ? '' : 'none';
+                            });
+                        }
+                        
+                        function parseCellVal(text) {
+                            // Handle "> 50"
+                            if (text.includes('>')) {
+                                text = text.replace('>', '').trim();
+                            }
+                            // Handle "-"
+                            if (text === '-') return 0;
+                            return parseFloat(text) || 0;
+                        }
+                        
+                        function clearTransactionFilters() {
+                            document.getElementById('filter-cal').value = '';
+                            document.getElementById('filter-brix').value = '';
+                            document.getElementById('filter-score').value = '';
+                            filterOpenTransactions();
+                        }
+                        </script>
+
+                        <table class="data-table" id="open-trans-table">
                             <thead>
                                 <tr>
                                     <th>Date</th>
@@ -1420,6 +1528,9 @@
                                     <th>Requester</th>
                                     <th>Role</th>
                                     <th>Culture</th>
+                                    <th>Calibre</th>
+                                    <th>Brix</th>
+                                    <th>Score</th>
                                     <th>Qty (Kg)</th>
                                     <th>Location</th>
                                     <th>Action</th>
@@ -1439,6 +1550,42 @@
                                     <td>{{ order.requester.username }}</td>
                                     <td>{{ order.role }}</td>
                                     <td>{{ order.culture.name }}</td>
+                                    
+                                    <!-- Caliber -->
+                                    <td>
+                                        {% if order.order_type == 'SELL' %}
+                                            {{ order.caliber|default_if_none:"-" }}
+                                        {% else %}
+                                            {% if order.min_caliber %}<small>>{{ order.min_caliber }}</small>{% else %}-{% endif %}
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- Brix -->
+                                    <td>
+                                        {% if order.order_type == 'SELL' %}
+                                            {{ order.soluble_solids|default_if_none:"-" }}
+                                        {% else %}
+                                            {% if order.min_soluble_solids %}<small>>{{ order.min_soluble_solids }}</small>{% else %}-{% endif %}
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- Score -->
+                                    <td>
+                                        {% if order.order_type == 'SELL' %}
+                                            {% if order.quality_score %}
+                                                {% if order.quality_score <= 3 %}
+                                                    <span style="font-weight:bold; color:#d32f2f;">{{ order.quality_score }}</span>
+                                                {% elif order.quality_score <= 7 %}
+                                                    <span style="font-weight:bold; color:#f57c00;">{{ order.quality_score }}</span>
+                                                {% else %}
+                                                    <span style="font-weight:bold; color:#2e7d32;">{{ order.quality_score }}</span>
+                                                {% endif %}
+                                            {% else %}-{% endif %}
+                                        {% else %}
+                                            {% if order.min_quality_score %}<small>>{{ order.min_quality_score }}</small>{% else %}-{% endif %}
+                                        {% endif %}
+                                    </td>
+
                                     <td>{{ order.quantity_kg }}</td>
                                     <td>{{ order.warehouse_location }}</td>
                                     <td>

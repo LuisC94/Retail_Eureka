@@ -321,15 +321,24 @@ class WarehouseRegistrationForm(forms.ModelForm):
 class MarketplaceOrderForm(forms.ModelForm):
     class Meta:
         model = MarketplaceOrder
-        fields = ['order_type', 'culture', 'quantity_kg', 'warehouse_location']
+        fields = ['order_type', 'culture', 'quantity_kg', 'warehouse_location', 
+                  'min_caliber', 'min_soluble_solids', 'min_quality_score']
         widgets = {
             'order_type': forms.Select(attrs={'class': 'form-control'}),
             'culture': forms.Select(attrs={'class': 'form-control'}),
             'quantity_kg': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'warehouse_location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Armazém Norte / Sede'}),
+            
+            # Quality Filters (Buy)
+            'min_caliber': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Min mm'}),
+            'min_soluble_solids': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Min Brix'}),
+            'min_quality_score': forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'max': '10', 'placeholder': 'Min Score (1-10)'}),
         }
         labels = {
             'warehouse_location': 'Localização para Entrega/Recolha',
+            'min_caliber': 'Calibre Mínimo (> mm)',
+            'min_soluble_solids': 'Brix Mínimo (> Brix)',
+            'min_quality_score': 'Qualidade Mínima (> 0-10)',
         }
 
 class MarketSellOrderForm(forms.ModelForm):
@@ -345,16 +354,25 @@ class MarketSellOrderForm(forms.ModelForm):
 
     class Meta:
         model = MarketplaceOrder
-        fields = ['harvest_origin', 'quantity_kg', 'warehouse_location']
+        fields = ['harvest_origin', 'quantity_kg', 'warehouse_location',
+                  'caliber', 'soluble_solids', 'quality_score']
         widgets = {
-            'harvest_origin': forms.Select(attrs={'class': 'form-control'}),
-            'quantity_kg': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'warehouse_location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Armazém Central'}),
+            'harvest_origin': forms.Select(attrs={'class': 'form-control', 'id': 'id_sell_harvest_origin'}),
+            'quantity_kg': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'id': 'id_sell_quantity_kg'}),
+            'warehouse_location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Armazém Central', 'id': 'id_sell_warehouse_location'}),
+            
+            # Read-only Auto-filled Quality Data
+            'caliber': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly', 'style': 'background-color: #e9ecef;', 'id': 'id_sell_caliber'}),
+            'soluble_solids': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly', 'style': 'background-color: #e9ecef;', 'id': 'id_sell_soluble_solids'}),
+            'quality_score': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly', 'style': 'background-color: #e9ecef;', 'id': 'id_sell_quality_score'}),
         }
         labels = {
             'harvest_origin': 'Lote de Origem (Stock Disponível)',
             'quantity_kg': 'Quantidade a Vender (Kg)',
             'warehouse_location': 'Local de Recolha',
+            'caliber': 'Calibre (mm)',
+            'soluble_solids': 'Brix',
+            'quality_score': 'Score',
         }
 
     def clean(self):

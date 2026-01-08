@@ -344,6 +344,17 @@ class MarketplaceOrder(models.Model):
     # Detalhes Logísticos
     warehouse_location = models.CharField(max_length=255, verbose_name="Localização do Armazém")
     
+    # --- Quality Metrics (Premium Market) ---
+    # For SELL Orders (Specific Batch Data)
+    caliber = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name="Caliber (mm)")
+    soluble_solids = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name="Soluble Solids (Brix)")
+    quality_score = models.IntegerField(null=True, blank=True, verbose_name="Quality Score (1-10)")
+
+    # For BUY Orders (Minimum Requirements)
+    min_caliber = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name="Min Caliber (mm)")
+    min_soluble_solids = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name="Min Soluble Solids (Brix)")
+    min_quality_score = models.IntegerField(null=True, blank=True, verbose_name="Min Quality Score (1-10)")
+    
     # Estado e Aprovação
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='OPEN')
     fulfilled_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='market_orders_fulfilled')

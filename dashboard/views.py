@@ -189,16 +189,35 @@ class ProcessorDashboardView(View):
         name_map = {} # { 1: "Kiwi (Hayward)" } - Store proper display name
         
         # 1. Somar entradas (Stock IN)
-        # a) Pedidos de COMPRA feitos por mim e aprovados E ENTREGUES
         purchases_made = MarketplaceOrder.objects.filter(requester=user, order_type='BUY', status='APPROVED', transport_status='DELIVERED')
-        # b) Ofertas de VENDA de outros que eu aceitei (Eu sou o comprador/fulfilled_by) E ENTREGUES
         sales_accepted = MarketplaceOrder.objects.filter(fulfilled_by=user, order_type='SELL', status='APPROVED', transport_status='DELIVERED')
         
         from itertools import chain
+        # Structure: key -> {'qty': net_qty, 'qty_in': total_in, 'mass_cal': 0, 'mass_brix': 0, 'mass_score': 0}
+        
         for p in chain(purchases_made, sales_accepted):
-            # Chave composta: (Culture ID, Armazém)
             key = (p.culture.pk, p.warehouse_location)
-            stock_map[key] = stock_map.get(key, 0) + p.quantity_kg
+            if key not in stock_map:
+                stock_map[key] = {'qty': 0, 'qty_in': 0, 'mass_cal': 0, 'mass_brix': 0, 'mass_score': 0}
+            
+            qty = p.quantity_kg
+            stock_map[key]['qty'] += qty
+            stock_map[key]['qty_in'] += qty
+            
+            # Determine Quality Values (Use Actual for SELL, Min Req for BUY as proxy)
+            if p.order_type == 'SELL':
+                cal = float(p.caliber) if p.caliber else 0.0
+                brix = float(p.soluble_solids) if p.soluble_solids else 0.0
+                score = float(p.quality_score) if p.quality_score else 0.0
+            else:
+                cal = float(p.min_caliber) if p.min_caliber else 0.0
+                brix = float(p.min_soluble_solids) if p.min_soluble_solids else 0.0
+                score = float(p.min_quality_score) if p.min_quality_score else 0.0
+            
+            stock_map[key]['mass_cal'] += (cal * float(qty))
+            stock_map[key]['mass_brix'] += (brix * float(qty))
+            stock_map[key]['mass_score'] += (score * float(qty))
+
             if p.culture.pk not in name_map:
                 name_map[p.culture.pk] = str(p.culture)
 
@@ -208,23 +227,32 @@ class ProcessorDashboardView(View):
         
         for s in chain(sales_made, purchases_accepted):
             key = (s.culture.pk, s.warehouse_location)
-            stock_map[key] = stock_map.get(key, 0) - s.quantity_kg
-            if s.culture.pk not in name_map:
-                 name_map[s.culture.pk] = str(s.culture)
+            if key in stock_map:
+                stock_map[key]['qty'] -= s.quantity_kg
 
         # Converter para lista para o template
         processor_stock = []
-        for (cult_id, warehouse), qty in stock_map.items():
-            if qty > 0: # Apenas mostrar stock positivo
-                # Limpar string do armazém: "Braga (WH: 1)" -> "Braga"
+        for (cult_id, warehouse), data in stock_map.items():
+            net_qty = data['qty']
+            if net_qty > 0.001: # Margin for float errors
                 clean_wh = warehouse.split(' (WH:')[0] if warehouse and ' (WH:' in warehouse else warehouse
                 
+                # Calculate Averages based on INCOMING history
+                total_in = data['qty_in']
+                avg_cal = (data['mass_cal'] / float(total_in)) if total_in > 0 else 0
+                avg_brix = (data['mass_brix'] / float(total_in)) if total_in > 0 else 0
+                avg_score = (data['mass_score'] / float(total_in)) if total_in > 0 else 0
+
                 processor_stock.append({
-                    'culture_id': cult_id, # ID for JS logic
-                    'culture': name_map.get(cult_id, f"ID: {cult_id}"), # Display Name
+                    'culture_id': cult_id,
+                    'culture': name_map.get(cult_id, f"ID: {cult_id}"),
                     'warehouse': clean_wh, 
-                    'quantity': float(qty),
-                    'full_warehouse': warehouse 
+                    'quantity': float(net_qty),
+                    'full_warehouse': warehouse,
+                    # Quality Data
+                    'avg_caliber': round(avg_cal, 2),
+                    'avg_brix': round(avg_brix, 2),
+                    'avg_score': round(avg_score, 1)
                 })
 
         context = { 
@@ -266,9 +294,31 @@ class RetailerDashboardView(View):
         sales_accepted = MarketplaceOrder.objects.filter(fulfilled_by=user, order_type='SELL', status='APPROVED', transport_status='DELIVERED')
         
         from itertools import chain
+        # Structure: key -> {'qty': net_qty, 'qty_in': total_in, 'mass_cal': 0, 'mass_brix': 0, 'mass_score': 0}
+        
         for p in chain(purchases_made, sales_accepted):
             key = (p.culture.pk, p.warehouse_location)
-            stock_map[key] = stock_map.get(key, 0) + p.quantity_kg
+            if key not in stock_map:
+                stock_map[key] = {'qty': 0, 'qty_in': 0, 'mass_cal': 0, 'mass_brix': 0, 'mass_score': 0}
+            
+            qty = p.quantity_kg
+            stock_map[key]['qty'] += qty
+            stock_map[key]['qty_in'] += qty
+            
+            # Determine Quality Values (Use Actual for SELL, Min Req for BUY as proxy)
+            if p.order_type == 'SELL':
+                cal = float(p.caliber) if p.caliber else 0.0
+                brix = float(p.soluble_solids) if p.soluble_solids else 0.0
+                score = float(p.quality_score) if p.quality_score else 0.0
+            else:
+                cal = float(p.min_caliber) if p.min_caliber else 0.0
+                brix = float(p.min_soluble_solids) if p.min_soluble_solids else 0.0
+                score = float(p.min_quality_score) if p.min_quality_score else 0.0
+            
+            stock_map[key]['mass_cal'] += (cal * float(qty))
+            stock_map[key]['mass_brix'] += (brix * float(qty))
+            stock_map[key]['mass_score'] += (score * float(qty))
+
             if p.culture.pk not in name_map:
                 name_map[p.culture.pk] = str(p.culture)
 
@@ -280,22 +330,32 @@ class RetailerDashboardView(View):
         
         for s in chain(sales_made, purchases_accepted):
             key = (s.culture.pk, s.warehouse_location)
-            stock_map[key] = stock_map.get(key, 0) - s.quantity_kg
-            if s.culture.pk not in name_map:
-                 name_map[s.culture.pk] = str(s.culture)
+            if key in stock_map:
+                stock_map[key]['qty'] -= s.quantity_kg
 
         # Converter para lista para o template
         retailer_stock = []
-        for (cult_id, warehouse), qty in stock_map.items():
-            if qty > 0: 
+        for (cult_id, warehouse), data in stock_map.items():
+            net_qty = data['qty']
+            if net_qty > 0.001: 
                 clean_wh = warehouse.split(' (WH:')[0] if warehouse and ' (WH:' in warehouse else warehouse
                 
+                # Calculate Averages
+                total_in = data['qty_in']
+                avg_cal = (data['mass_cal'] / float(total_in)) if total_in > 0 else 0
+                avg_brix = (data['mass_brix'] / float(total_in)) if total_in > 0 else 0
+                avg_score = (data['mass_score'] / float(total_in)) if total_in > 0 else 0
+
                 retailer_stock.append({
                     'culture_id': cult_id,
                     'culture': name_map.get(cult_id, f"ID: {cult_id}"),
                     'warehouse': clean_wh, 
-                    'quantity': float(qty),
-                    'full_warehouse': warehouse 
+                    'quantity': float(net_qty),
+                    'full_warehouse': warehouse,
+                    # Quality Data
+                    'avg_caliber': round(avg_cal, 2),
+                    'avg_brix': round(avg_brix, 2),
+                    'avg_score': round(avg_score, 1)
                 })
 
         # Prepare Market Order Form with Warehouse Dropdown
@@ -354,9 +414,15 @@ class ProducerDashboardView(View):
         harvest_records = Harvest.objects.filter(producer=user).select_related('plantation', 'subfamily', 'warehouse').order_by('-harvest_date')
 
         # MAP para Auto-Preenchimento Frontend (Harvest ID -> Warehouse Location)
-        harvest_warehouse_map = {}
+        # MAP para Auto-Preenchimento Frontend (Harvest ID -> Details)
+        harvest_data_map = {}
         for h in harvest_records:
-            harvest_warehouse_map[h.pk] = h.warehouse.location if h.warehouse else ""
+            harvest_data_map[h.pk] = {
+                'location': h.warehouse.location if h.warehouse else "",
+                'caliber': float(h.caliber) if h.caliber is not None else "",
+                'brix': float(h.soluble_solids) if h.soluble_solids is not None else "",
+                'score': h.avg_quality_score if h.avg_quality_score is not None else ""
+            }
         
         # AGGREGATION: Total Kgs per Product (Current Stock)
         harvest_sums = Harvest.objects.filter(producer=user).values(
@@ -432,7 +498,7 @@ class ProducerDashboardView(View):
             'role': 'Producer',
             
             'plantation_subfamilies_map': plantation_subfamilies_map, # Pass map to template
-            'harvest_warehouse_map': harvest_warehouse_map, # NOVO: Mapa para JS
+            'harvest_data_map': harvest_data_map, # Updated for Quality
             
             'plantation_plan_form': plantation_plan_form,
             'plantation_detail_form': plantation_detail_form,
@@ -1288,6 +1354,17 @@ def market_submit_order(request):
                 groups = request.user.groups.all()
                 user_role = groups[0].name if groups else 'Unknown'
                 order.role = user_role
+                
+                # Logic for Processor/Retailer SELL Orders (Export/Sales):
+                # The form uses min_caliber/etc for input, but for SELL orders these are ACTUAL values.
+                if order.order_type == 'SELL':
+                    order.caliber = order.min_caliber
+                    order.soluble_solids = order.min_soluble_solids
+                    order.quality_score = order.min_quality_score
+                    # Clear "Min" fields as they don't apply to specific items being sold
+                    order.min_caliber = None
+                    order.min_soluble_solids = None
+                    order.min_quality_score = None
                 
                 order.save()
                 messages.success(request, "Pedido criado no Mercado!")
