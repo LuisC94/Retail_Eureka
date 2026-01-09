@@ -417,3 +417,18 @@ class TransportDeliveryForm(forms.ModelForm):
         labels = {
             'transport_sensor_data': 'Relatório de Sensores (JSON)',
         }
+
+# --- PROCESSOR FORMS ---
+
+class ProcessorProcessingForm(forms.ModelForm):
+    class Meta:
+        model = MarketplaceOrder
+        fields = ['packaging_type', 'preservation_treatment']
+        labels = {
+            'packaging_type': 'Tipo de Embalagem',
+            'preservation_treatment': 'Tratamento de Conservação',
+        }
+        widgets = {
+            'packaging_type': forms.Select(attrs={'class': 'form-control'}),
+            'preservation_treatment': forms.Select(attrs={'class': 'form-control'}),
+        }

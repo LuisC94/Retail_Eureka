@@ -26,7 +26,7 @@ from .forms import (
     FertilizerSyntheticForm, FertilizerOrganicForm, SoilCorrectiveForm, PestControlForm,
     MachineryForm, FuelForm, ElectricEnergyForm, IrrigationWaterForm, SoilCharacteristicForm, PlantationCropForm, MarketplaceOrderForm,
     MarketSellOrderForm,
-    TransportPlanForm, TransportDeliveryForm
+    TransportPlanForm, TransportDeliveryForm, ProcessorProcessingForm
 )
 
 # ----------------------------------------------------------------------
@@ -189,8 +189,17 @@ class ProcessorDashboardView(View):
         name_map = {} # { 1: "Kiwi (Hayward)" } - Store proper display name
         
         # 1. Somar entradas (Stock IN)
-        purchases_made = MarketplaceOrder.objects.filter(requester=user, order_type='BUY', status='APPROVED', transport_status='DELIVERED')
-        sales_accepted = MarketplaceOrder.objects.filter(fulfilled_by=user, order_type='SELL', status='APPROVED', transport_status='DELIVERED')
+        # SÓ CONTA SE TIVER SIDO PROCESSADO (is_processed=True)
+        purchases_made = MarketplaceOrder.objects.filter(requester=user, order_type='BUY', status='APPROVED', transport_status='DELIVERED', is_processed=True)
+        sales_accepted = MarketplaceOrder.objects.filter(fulfilled_by=user, order_type='SELL', status='APPROVED', transport_status='DELIVERED', is_processed=True)
+        
+        # Encomendas que chegaram mas ainda não foram processadas
+        unprocessed_orders = MarketplaceOrder.objects.filter(
+            Q(requester=user) | Q(fulfilled_by=user),
+            status='APPROVED',
+            transport_status='DELIVERED',
+            is_processed=False
+        ).order_by('actual_delivery_date')
         
         from itertools import chain
         # Structure: key -> {'qty': net_qty, 'qty_in': total_in, 'mass_cal': 0, 'mass_brix': 0, 'mass_score': 0}
@@ -266,6 +275,8 @@ class ProcessorDashboardView(View):
             'processor_warehouses': Warehouse.objects.filter(owner=user).order_by('-warehouse_id'),
             'market_order_form': MarketplaceOrderForm(initial={'role': 'Processor'}),
             'processor_stock': processor_stock,
+            'unprocessed_orders': unprocessed_orders,
+            'processing_form': ProcessorProcessingForm(),
         }
         return render(request, 'dashboard/processorDash.html', context)
 
@@ -382,10 +393,9 @@ class RetailerDashboardView(View):
             'warehouse_form': WarehouseRegistrationForm(),
             'sensor_form': SensorRegistrationForm(),
             'retailer_warehouses': retailer_warehouses,
-            'retailer_stock': retailer_stock, # Pass stock to template
+            'retailer_stock': retailer_stock, 
         }
         return render(request, 'dashboard/retailerDash.html', context)
-
 
 # ----------------------------------------------------------------------
 # 3. PRODUCER DASHBOARD (ATUALIZADA)
@@ -846,13 +856,35 @@ def processor_submit_sensor(request):
     if request.method == 'POST':
         form = SensorRegistrationForm(request.POST)
         if form.is_valid():
-            try:
-                form.save()
-                return redirect('processor_dashboard') 
-            except IntegrityError as e:
-                db_error = f"Erro ao salvar Sensor: ID já existe. Detalhe: {e}"
-                request.session['db_error'] = db_error
+            # Não associamos user diretamente ao sensor, mas ao armazém depois
+            # Mas aqui apenas criamos o sensor solto? 
+            # O sistema atual parece assumir que sensor é criado e depois ligado ao armazém
+            # Mas o form create sensor não liga a armazém.
+            # Vamos assumir que é criado com sucesso.
+            form.save()
+            return redirect('processor_dashboard')
+    return redirect('processor_dashboard')
+
+@login_required
+@role_required(['Processor'])
+def processor_submit_processing(request):
+    if request.method == 'POST':
+        order_id = request.POST.get('order_id')
+        order = get_object_or_404(MarketplaceOrder, pk=order_id)
         
+        # Verify ownership
+        if order.requester != request.user and order.fulfilled_by != request.user:
+             return redirect('processor_dashboard')
+
+        form = ProcessorProcessingForm(request.POST, instance=order)
+        if form.is_valid():
+            processing = form.save(commit=False)
+            processing.is_processed = True
+            processing.save()
+            return redirect('processor_dashboard')
+    
+    return redirect('processor_dashboard')
+
 @login_required
 @role_required(['Processor'])
 def processor_accept_order(request):
@@ -884,7 +916,6 @@ def processor_accept_order(request):
             # Em caso de erro (hack ou dados inválidos), redirecionar
             return redirect('processor_dashboard')
             
-    return redirect('processor_dashboard')
     return redirect('processor_dashboard')
 
 # RETAILER VIEWS

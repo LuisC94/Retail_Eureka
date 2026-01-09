@@ -385,6 +385,21 @@ class MarketplaceOrder(models.Model):
     # Usamos TextField para simplicidade (pode conter JSON)
     transport_sensor_data = models.TextField(null=True, blank=True, verbose_name="Dados dos Sensores (JSON)")
 
+    # --- PROCESSOR: PROCESSING FIELDS ---
+    is_processed = models.BooleanField(default=False, verbose_name="Processado?")
+    packaging_type = models.CharField(
+        max_length=50, 
+        choices=[('Plastic', 'Plástico'), ('Cardboard', 'Cartão'), ('Other', 'Outro')],
+        null=True, blank=True,
+        verbose_name="Tipo de Embalagem"
+    )
+    preservation_treatment = models.CharField(
+        max_length=50,
+        choices=[('Natural', 'Tratamento Natural'), ('Conventional', 'Convencional/Químico'), ('None', 'Nenhum')],
+        null=True, blank=True,
+        verbose_name="Tratamento de Conservação"
+    )
+    
     class Meta:
         db_table = 'marketplace_orders'
         ordering = ['-created_at']

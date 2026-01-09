@@ -991,6 +991,45 @@
                 "sensor_data": "No Data",
                 "harvest_origin": "N/A"
             }
+        },
+        {
+            "block_index": 43,
+            "batch_id": "ORDER-40",
+            "data_hash": "524ec9578b8945eca7435dd25e1e65841c4a119588ed391517c879e3c677a045",
+            "previous_hash": "232c9b752093d04e279fa332cc9842dff5366e366783252dd2fe76b4e406f982",
+            "signer": "0xTransporterAddressC3D4...",
+            "role": "Transporter",
+            "event_type": "TRANSPORT_PICKUP",
+            "timestamp": "2026-01-09T16:42:30.464765",
+            "block_hash": "7ddebfa8cb3050feb133ee91e9a9c1a9b895cf00340a966dd2320b9f2678e013",
+            "content": {
+                "action": "TRANSPORT_PICKUP",
+                "order_id": 40,
+                "transporter": "patinter",
+                "pickup_time": "2026-01-09T16:42:30.351670+00:00",
+                "origin": "Viana (WH: 10)",
+                "planned_pickup": "2025-12-30T16:42:00+00:00",
+                "harvest_origin": "N/A"
+            }
+        },
+        {
+            "block_index": 44,
+            "batch_id": "ORDER-40",
+            "data_hash": "798cfd9da4e916cd7ccd3a47196bca7c8c4ae1c58df756f78c64ab9be005379f",
+            "previous_hash": "7ddebfa8cb3050feb133ee91e9a9c1a9b895cf00340a966dd2320b9f2678e013",
+            "signer": "0xTransporterAddressC3D4...",
+            "role": "Transporter",
+            "event_type": "TRANSPORT_DELIVERY",
+            "timestamp": "2026-01-09T16:42:36.944920",
+            "block_hash": "0dfa3025f1d6e8b6ea484cd0c5b3863dad864fe50f5efe70cdf99a4a397b014b",
+            "content": {
+                "action": "TRANSPORT_DELIVERY",
+                "order_id": 40,
+                "transporter": "patinter",
+                "delivery_time": "2026-01-09T16:42:36.631527+00:00",
+                "sensor_data": "No Data",
+                "harvest_origin": "N/A"
+            }
         }
     ],
     "off_chain_storage": {
@@ -1499,6 +1538,23 @@
             "order_id": 39,
             "transporter": "patinter",
             "delivery_time": "2026-01-08T18:56:35.040838+00:00",
+            "sensor_data": "No Data",
+            "harvest_origin": "N/A"
+        },
+        "524ec9578b8945eca7435dd25e1e65841c4a119588ed391517c879e3c677a045": {
+            "action": "TRANSPORT_PICKUP",
+            "order_id": 40,
+            "transporter": "patinter",
+            "pickup_time": "2026-01-09T16:42:30.351670+00:00",
+            "origin": "Viana (WH: 10)",
+            "planned_pickup": "2025-12-30T16:42:00+00:00",
+            "harvest_origin": "N/A"
+        },
+        "798cfd9da4e916cd7ccd3a47196bca7c8c4ae1c58df756f78c64ab9be005379f": {
+            "action": "TRANSPORT_DELIVERY",
+            "order_id": 40,
+            "transporter": "patinter",
+            "delivery_time": "2026-01-09T16:42:36.631527+00:00",
             "sensor_data": "No Data",
             "harvest_origin": "N/A"
         }

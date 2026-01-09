@@ -547,6 +547,43 @@
 
             <!-- STOCK MANAGEMENT VIEW -->
             <div id="stock-view" class="tab-content">
+                
+                <!-- NEW: INCOMING GOODS (PROCESSING QUEUE) -->
+                <div class="data-table-container" style="border-left: 5px solid #ff9800;">
+                    <h3 style="color:#e65100;">⏳ Awaiting Processing</h3>
+                    {% if unprocessed_orders %}
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Date Arrived</th>
+                                <th>Item</th>
+                                <th>Origin</th>
+                                <th>Quantity</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in unprocessed_orders %}
+                            <tr>
+                                <td>{{ order.actual_delivery_date|date:"d/m H:i" }}</td>
+                                <td>{{ order.culture.name }}</td>
+                                <td>{{ order.warehouse_location }}</td>
+                                <td style="font-weight:bold;">{{ order.quantity_kg }} kg</td>
+                                <td>
+                                    <button onclick="openProcessingModal('{{ order.id }}', '{{ order.culture.name|escapejs }}', '{{ order.quantity_kg }}')" 
+                                            class="btn-action" style="background:linear-gradient(135deg, #ff9800, #f57c00);">
+                                        ⚙️ Process
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p style="color:#888; font-style:italic;">No pending items for processing.</p>
+                    {% endif %}
+                </div>
+
                 <div class="report-card">
                     <h3>📦 Current Stock Status</h3>
                     {% if processor_stock %}
@@ -1314,6 +1351,62 @@
             if (event.target === modalProfile) { closeProfileModal(); }
             if (event.target === modalSensor) { closeSensorModal(); }
             if (event.target === modalAccept) { closeAcceptModal(); }
+        }
+    </script>
+    <!-- PROCESSING MODAL -->
+    <div id="processingModal" class="modal"
+    style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(5px);">
+        <div class="modal-content"
+            style="background-color: #fefefe; margin: 5% auto; padding: 40px; border: 1px solid #888; width: 90%; max-width: 500px; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: slideDown 0.3s ease;">
+            <span class="close" onclick="closeProcessingModal()"
+                style="color: #999; float: right; font-size: 28px; font-weight: bold; cursor: pointer; transition:all 0.3s ease;">&times;</span>
+            <h3 style="color:#e65100; margin-bottom:25px; font-size:1.6em; font-weight:700;">⚙️ Process Goods</h3>
+
+            <p style="margin-bottom:20px; color:#555; font-size:1.1em;">
+                Processing: <b id="procModalItem" style="color:#004d40;"></b> (<span id="procModalQty"></span> kg)
+            </p>
+
+            <form method="post" action="{% url 'processor_submit_processing' %}">
+                {% csrf_token %}
+                <input type="hidden" id="procModalOrderId" name="order_id">
+                
+                <div style="margin-bottom: 25px;">
+                    <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">{{ processing_form.packaging_type.label }}</label>
+                    {{ processing_form.packaging_type }}
+                </div>
+                
+                <div style="margin-bottom: 25px;">
+                    <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">{{ processing_form.preservation_treatment.label }}</label>
+                    {{ processing_form.preservation_treatment }}
+                </div>
+
+                <button type="submit" class="submit-button" style="background:linear-gradient(135deg, #ff9800, #f57c00);">
+                    ✓ Complete Processing
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // ... (Existing Scripts) ...
+
+        /* Processing Modal Functions */
+        function openProcessingModal(orderId, itemName, qty) {
+            document.getElementById('procModalOrderId').value = orderId;
+            document.getElementById('procModalItem').innerText = itemName;
+            document.getElementById('procModalQty').innerText = qty;
+            document.getElementById('processingModal').style.display = "block";
+        }
+        function closeProcessingModal() {
+            document.getElementById('processingModal').style.display = "none";
+        }
+        
+        // Add to window.onclick
+        const existingOnclick = window.onclick;
+        window.onclick = function (event) {
+            if (existingOnclick) existingOnclick(event);
+            let modalProc = document.getElementById('processingModal');
+            if (event.target === modalProc) { closeProcessingModal(); }
         }
     </script>
 </body>
