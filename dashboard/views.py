@@ -512,7 +512,7 @@ class ProducerDashboardView(View):
             
             'plantation_plan_form': plantation_plan_form,
             'plantation_detail_form': plantation_detail_form,
-            'plantation_crop_form': PlantationCropForm(), # NEW FORM
+            'plantation_crop_form': PlantationCropForm(user=user), # NEW FORM
             'harvest_form': harvest_form, 
             'warehouse_form': warehouse_form, 
             'sensor_form': sensor_form,
@@ -537,7 +537,7 @@ class ProducerDashboardView(View):
             
             'db_error': request.session.pop('db_error', None),
 
-            'plantation_event_form': PlantationEventForm(),
+            'plantation_event_form': PlantationEventForm(user=user),
             'market_order_form': market_order_form,
             'sell_order_form': sell_order_form, # New Producer Form
             'open_market_orders': open_market_orders,
@@ -606,7 +606,7 @@ def producer_submit_plantation_crop(request):
     View to add a crop (ProductSubFamily) to an existing PlantationPlan.
     """
     if request.method == 'POST':
-        form = PlantationCropForm(request.POST)
+        form = PlantationCropForm(request.POST, user=request.user)
         
         # Security: Validate that the plantation belongs to the user?
         # Form cleaning or explicit check logic.

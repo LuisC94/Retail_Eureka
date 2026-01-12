@@ -140,6 +140,12 @@ class PlantationCropForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-control'})
     )
 
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields['plantation'].queryset = PlantationPlan.objects.filter(producer=user).order_by('-plantation_date')
+
     class Meta:
         model = PlantationCrop
         fields = [
@@ -226,6 +232,12 @@ class PlantationEventForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-control', 'id': 'event_subfamily_select'})
     )
     
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields['plantation'].queryset = PlantationPlan.objects.filter(producer=user).order_by('-plantation_date')
+
     class Meta:
         model = PlantationEvent
         # Adicionar 'plantation' à lista de fields
