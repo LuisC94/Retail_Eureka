@@ -135,81 +135,91 @@ def generate_genesis_block(request, harvest_id):
 @login_required
 def view_batch_chain(request, batch_id):
     """
-    Visualizar a cadeia de blocos de um lote (para debug/transparência).
-    Agora suporta 'Cross-Chain Linking': Se for uma Order vinda de uma Harvest, mostra ambas.
+    Visualizar a cadeia de blocos com rastreabilidade completa (Genealogia).
+    Implementa recursividade para encontrar todos os lotes "pais" (Inputs)
+    e unificar a cadeia.
     """
     full_chain = blockchain_service.get_chain()
     
-    # --- LÓGICA DE UNIFICAÇÃO DE CORRENTES (BIDIRECIONAL) ---
-    # Queremos que, entre-se pelo Lote ou pela Encomenda, se veja TUDO.
-    
-    harvest_pk = None
-    order_pk = None
-    
-    # 1. Identificar Ponto de Entrada
-    if batch_id.startswith("LOTE-"):
-        try:
-            harvest_pk = batch_id.split("-")[1]
-        except IndexError:
-            pass
-    elif batch_id.startswith("ORDER-"):
-        try:
-            order_pk = batch_id.split("-")[1]
-        except IndexError:
-            pass
+    # 1. Função Recursiva para explorar a genealogia (Backwards Traceability)
+    def fetch_genealogy(current_batch_id, visited=None):
+        if visited is None:
+            visited = set()
+        
+        if current_batch_id in visited:
+            return []
+        
+        visited.add(current_batch_id)
+        related_blocks = []
+        
+        # A. Encontrar blocos diretos deste Batch ID
+        my_blocks = [b for b in full_chain if b['batch_id'] == current_batch_id]
+        related_blocks.extend(my_blocks)
+        
+        # Flag to track if we found upstream parents in the blockchain data
+        parents_found = False
+
+        # B. Explorar Pais (Inputs/Origins) em cada bloco
+        for block in my_blocks:
+            # FIX: Model field is 'data_content', not 'content'
+            content = block.get('data_content', {}) or {}
+            if isinstance(content, str):
+                try:
+                    content = json.loads(content)
+                except:
+                    content = {}
             
-    # 2. Se entrámos por uma Encomenda, descobrimos o Lote de Origem (BACKWARD LOOKUP)
-    if order_pk:
-        primary_chain = [b for b in full_chain if b['batch_id'] == batch_id]
-        # Procurar 'harvest_origin' (frequentemente no Genesis da Order)
-        for block in primary_chain:
-            content = block.get('content', {})
-            possible_pk = content.get('harvest_origin')
-            # Verifica se existe e não é N/A
-            if possible_pk and str(possible_pk) != "N/A":
-                harvest_pk = str(possible_pk)
-                break
-    
-    # 3. Se temos um Lote (seja entrada direta ou descoberto via Order), 
-    # procuramos TODAS as Encomendas filhas (FORWARD LOOKUP)
-    related_orders_pks = set()
-    if harvest_pk:
-        # A. Procurar blocos de encomendas que digam "Minha origem é harvest_pk"
-        for block in full_chain:
-            # Só nos interessa blocos de encomendas (GENESIS ou outro evento que traga o link)
-            if block['batch_id'].startswith("ORDER-"):
-                content = block.get('content', {})
-                origin = str(content.get('harvest_origin', ''))
-                if origin == str(harvest_pk):
-                    # Encontrámos uma encomenda filha!
-                    b_id = block['batch_id']
-                    related_orders_pks.add(b_id)
-        
-        # B. Se entrámos por uma Order específica, garantimos que ela está na lista
-        if batch_id.startswith("ORDER-"):
-            related_orders_pks.add(batch_id)
+            # B1. Verificar 'inputs' (Agregação/Processamento)
+            inputs = content.get('inputs', [])
+            if inputs and isinstance(inputs, list):
+                for inp in inputs:
+                    parent_id = inp.get('batch_id')
+                    if parent_id:
+                        parents_found = True
+                        related_blocks.extend(fetch_genealogy(parent_id, visited))
+            
+            # B2. Verificar 'harvest_origin' (Legado/Atalhos) - caso ainda use fields flat
+            # Tenta obter de 'harvest_origin' (Transport blocks often have this inside 'dossier' or root content)
+            harvest_origin = content.get('harvest_origin')
+            
+            # Se não estiver na raiz, tenta procurar dentro de 'order_details' ou chaves similares comuns em Transport
+            if not harvest_origin and 'order' in content:
+                 harvest_origin = content['order'].get('harvest_origin')
 
-    # 4. Construir a Chain Final
-    final_chain = []
-    
-    # A. Adicionar blocos do Lote (Se existir)
-    if harvest_pk:
-        lote_id = f"LOTE-{harvest_pk}"
-        final_chain.extend([b for b in full_chain if b['batch_id'] == lote_id])
-        
-    # B. Adicionar blocos de TODAS as Encomendas Relacionadas
-    for o_id in related_orders_pks:
-        final_chain.extend([b for b in full_chain if b['batch_id'] == o_id])
+            if harvest_origin and str(harvest_origin) != "N/A":
+                parents_found = True
+                # Se é apenas o ID numérico (ex: 15), converte para formato LOTE-15
+                parent_id = f"LOTE-{harvest_origin}" if not str(harvest_origin).startswith('LOTE-') else harvest_origin
+                related_blocks.extend(fetch_genealogy(parent_id, visited))
 
-    # C. Se não houver relações (caso isolado), mostra apenas a chain do ID pedido
-    if not final_chain:
-        final_chain = [b for b in full_chain if b['batch_id'] == batch_id]
+        # C. FALLBACK: Database Bridge (If Blockchain link is missing)
+        # Se estamos num Batch tipo "ORDER-123" e ainda não achámos o pai via blocos (parents_found=False), vamos ao DB.
+        if current_batch_id.startswith('ORDER-') and not parents_found: 
+            try:
+                # Extrair ID numérico
+                order_pk = current_batch_id.replace('ORDER-', '')
+                order_obj = MarketplaceOrder.objects.filter(pk=order_pk).first()
+                if order_obj and order_obj.harvest_origin:
+                    # Encontrámos o Harvest no DB! Vamos buscar os blocos dele.
+                    harvest_batch_id = f"LOTE-{order_obj.harvest_origin.pk}"
+                    related_blocks.extend(fetch_genealogy(harvest_batch_id, visited))
+            except Exception as e:
+                print(f"Error bridging Order to Harvest via DB: {e}")
 
-    # 5. Ordenação Cronológica e Indexação Visual
-    # Ordenar por timestamp (assumindo formato ISO8601 string que é ordenável)
-    final_chain.sort(key=lambda x: x['timestamp'])
+        return related_blocks
+
+    # 2. Executar a busca
+    # Se o ID passado for uma ORDER (ex: ORDER-50), a função vai buscar o bloco dessa Order,
+    # ver quem é o pai (harvest_origin) e buscar a cadeia do pai recursivamente.
+    raw_chain = fetch_genealogy(batch_id)
     
-    # Criar índice visual sequencial (1, 2, 3...) para a View
+    # 3. Remover duplicados (baseado no block_hash)
+    unique_chain = {b['block_hash']: b for b in raw_chain}.values()
+    
+    # 4. Ordenar Cronologicamente
+    final_chain = sorted(unique_chain, key=lambda x: x['timestamp'])
+    
+    # 5. Adicionar índice visual sequencial
     for idx, block in enumerate(final_chain):
         block['visual_index'] = idx + 1
     

@@ -866,6 +866,7 @@ def processor_submit_sensor(request):
     return redirect('processor_dashboard')
 
 @login_required
+@login_required
 @role_required(['Processor'])
 def processor_submit_processing(request):
     if request.method == 'POST':
@@ -881,6 +882,54 @@ def processor_submit_processing(request):
             processing = form.save(commit=False)
             processing.is_processed = True
             processing.save()
+            
+            # --- BLOCKCHAIN AGGREGATION LOGIC ---
+            try:
+                # 1. Definir o Input Batch (Lot de Origem)
+                # Alteração para Rastreabilidade Completa:
+                # Usamos o ID da ENCOMENDA (ORDER-X) como input.
+                # Como a Encomenda tem os blocos de Transporte e o link para a Harvest, 
+                # a chain ficará: Transformation -> Delivery -> Pickup -> Harvest
+                input_batch_id = f"ORDER-{order.id}"
+                
+                # 2. Definir o Output Batch (Novo Lote Processado)
+                # Ex: PROC-{order_id}-{timestamp}
+                new_batch_id = f"LOTE-PROC-{order.id}"
+                
+                # 3. Preparar Metadados (Inputs)
+                inputs = [
+                    {
+                        "batch_id": input_batch_id, 
+                        "quantity_kg": float(order.quantity_kg),
+                        "origin_producer": order.fulfilled_by.username if order.fulfilled_by else "N/A"
+                    }
+                ]
+                
+                # 4. Dados do Processamento (Payload)
+                data_dict = {
+                    "product": order.culture.name,
+                    "packaging": processing.packaging_type,
+                    "treatment": processing.preservation_treatment,
+                    "output_quantity": float(order.quantity_kg) # Assumindo 1:1 para simplificação
+                }
+                
+                # 5. Minar o Bloco de Transformação
+                data_hash = blockchain_service.generate_dossier_hash(data_dict)
+                
+                blockchain_service.sign_and_submit_block(
+                    user_role='Processor',
+                    batch_id=new_batch_id,
+                    data_hash=data_hash,
+                    event_type='TRANSFORMATION',
+                    inputs=inputs # <--- AQUI ESTÁ A AGREGAÇÃO
+                )
+                
+                messages.success(request, f"Processamento registado e Bloco '{new_batch_id}' minado!")
+                
+            except Exception as e:
+                print(f"Erro na Blockchain: {e}")
+                messages.warning(request, f"Processado, mas erro na Blockchain: {e}")
+
             return redirect('processor_dashboard')
     
     return redirect('processor_dashboard')
@@ -1409,13 +1458,50 @@ def market_submit_order(request):
 def market_accept_order(request):
     if request.method == 'POST':
         order_id = request.POST.get('order_id')
+        harvest_id = request.POST.get('harvest_id') # NEW: ID do Lote selecionado no Modal
+        
         order = get_object_or_404(MarketplaceOrder, pk=order_id)
         
         if order.status == 'OPEN':
-            order.status = 'APPROVED'
-            order.fulfilled_by = request.user
-            order.fulfilled_at = timezone.now()
-            order.save()
+            # Validação Extra: Se for Producer aceitando uma compra (BUY), DEVE ter um harvest_id
+            if request.user.groups.filter(name='Producer').exists() and order.order_type == 'BUY':
+                if not harvest_id:
+                     messages.error(request, "Erro: Tens de selecionar um Lote (Harvest) para abastecer este pedido!")
+                     return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
+                
+                # Obter Lote e Validar Stock
+                harvest = get_object_or_404(Harvest, pk=harvest_id, producer=request.user)
+                if harvest.current_stock_kg < order.quantity_kg:
+                    messages.error(request, f"Stock insuficiente no Lote #{harvest.pk}. Disponível: {harvest.current_stock_kg}kg")
+                    return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
+
+                # Lógica de Dedução e Link
+                with transaction.atomic():
+                    # 1. Atualizar Order
+                    order.status = 'APPROVED'
+                    order.fulfilled_by = request.user
+                    order.fulfilled_at = timezone.now()
+                    
+                    # LINK CRÍTICO: Associar a origem
+                    order.harvest_origin = harvest
+                    # Herdar warehouse do lote
+                    if harvest.warehouse:
+                         order.warehouse_location = harvest.warehouse.location
+                    
+                    # 2. Atualizar Stock do Lote
+                    harvest.utilized_quantity_kg += order.quantity_kg
+                    harvest.save()
+                    order.save()
+                    
+                    messages.success(request, f"Pedido aceite! {order.quantity_kg}kg alocados do Lote #{harvest.pk}.")
+            
+            else:
+                # Fallback para outros roles ou SELL orders (onde stock já foi abatido na criação)
+                order.status = 'APPROVED'
+                order.fulfilled_by = request.user
+                order.fulfilled_at = timezone.now()
+                order.save()
+                messages.success(request, f"Pedido #{order.pk} aceite!")
             
     return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
 

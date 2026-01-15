@@ -1590,11 +1590,20 @@
                                     <td>{{ order.warehouse_location }}</td>
                                     <td>
                                         {% if order.requester != user %}
-                                        <form method="POST" action="{% url 'market_accept_order' %}">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="order_id" value="{{ order.id }}">
-                                            <button type="submit" class="add-sensor-btn" style="background:#4CAF50; color:white; border:none; cursor:pointer; padding:5px 10px; border-radius:5px;">Accept</button>
-                                        </form>
+                                        {% if order.order_type == 'BUY' %}
+                                            <button type="button" 
+                                                onclick="openAcceptModal('{{ order.id }}', '{{ order.culture.name|escapejs }}', '{{ order.quantity_kg }}')"
+                                                class="add-sensor-btn" 
+                                                style="background:#4CAF50; color:white; border:none; cursor:pointer; padding:5px 10px; border-radius:5px;">
+                                                Accept
+                                            </button>
+                                        {% else %}
+                                            <form method="POST" action="{% url 'market_accept_order' %}">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="order_id" value="{{ order.id }}">
+                                                <button type="submit" class="add-sensor-btn" style="background:#4CAF50; color:white; border:none; cursor:pointer; padding:5px 10px; border-radius:5px;">Accept</button>
+                                            </form>
+                                        {% endif %}
                                         {% else %}
                                         <span style="color:#999;">(Your Order)</span>
                                         {% endif %}
@@ -1880,11 +1889,98 @@
                 </div>
             </div>
 
+            <!-- INCOMING ORDERS TAB -->
+            <div id="incoming-orders-view" class="dashboard-tab" style="display:none;">
+                <div class="data-table-container">
+                    <h3>🛒 Incoming Orders</h3>
+                    {% if incoming_orders %}
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Customer</th>
+                                <th>Product</th>
+                                <th>Quantity (Kg)</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in incoming_orders %}
+                            <tr>
+                                <td>{{ order.id }}</td>
+                                <td>{{ order.customer.username }}</td>
+                                <td>{{ order.culture.name }}</td>
+                                <td>{{ order.quantity_kg }}</td>
+                                <td>{{ order.get_status_display }}</td>
+                                <td>
+                                    <button class="btn-action" style="background:#4caf50;" 
+                                            onclick="openAcceptModal('{{ order.id }}', '{{ order.culture.name|escapejs }}', '{{ order.quantity_kg }}')">
+                                        ✓ Accept
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p>No open orders available.</p>
+                    {% endif %}
+                </div>
+            </div>
+
         </div>
     </div>
 
-    <!-- ====================== MODAL SENSOR ====================== -->
-    <!-- MODAL SENSOR -->
+    <!-- ACCEPT ORDER MODAL (Producer) -->
+    <div id="acceptOrderModal" class="modal"
+         style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(5px);">
+        <div class="modal-content"
+             style="background-color: #fefefe; margin: 10% auto; padding: 30px; border: 1px solid #888; width: 90%; max-width: 500px; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h3 style="margin:0; color:#2e7d32;">✅ Accept Order</h3>
+                <span onclick="closeAcceptModal()" style="color:#aaa; font-size:28px; font-weight:bold; cursor:pointer;">&times;</span>
+            </div>
+
+            <p style="color:#555; margin-bottom:20px;">
+                You are accepting to supply <b><span id="modalOrderQty"></span> kg</b> of <b><span id="modalOrderProduct"></span></b>.
+                <br><br>
+                Please select the <b>Source Harvest Batch</b> to deduct stock from:
+            </p>
+
+            <form method="POST" action="{% url 'market_accept_order' %}">
+                {% csrf_token %}
+                <input type="hidden" name="order_id" id="modalOrderId">
+                
+                <div style="margin-bottom:20px;">
+                    <label style="display:block; font-weight:600; margin-bottom:8px;">Harvest Lot (Stock):</label>
+                    <select name="harvest_id" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;">
+                        <option value="" disabled selected>--- Select Harvest ---</option>
+                        {% for h in harvest_records %}
+                            {% if h.current_stock_kg > 0 %}
+                            <option value="{{ h.pk }}">
+                                Lote #{{ h.pk }} - {{ h.subfamily.name }} ({{ h.harvest_date|date:"d/m" }}) - Stock: {{ h.current_stock_kg }}kg
+                            </option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div style="text-align:right;">
+                    <button type="button" onclick="closeAcceptModal()" 
+                            style="background:#ccc; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; margin-right:10px;">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                            style="background:#4caf50; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold;">
+                        Confirm & Deduct Stock
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- SENSOR MODAL (Existing) -->
     <div id="sensorModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeSensorModal()">&times;</span>
@@ -2272,13 +2368,13 @@
             window.addSoilCharacteristicSet = addSoilCharacteristicSet;
         });
 
-        // Fechar modal ao clicar fora
-        window.onclick = function (event) {
-            const modal = document.getElementById('sensorModal');
-            if (event.target == modal) {
-                modal.style.display = "none";
-            }
-        }
+        // Fechar modal ao clicar fora (This global handler is now redundant due to the DOMContentLoaded handler)
+        // window.onclick = function (event) {
+        //     const modal = document.getElementById('sensorModal');
+        //     if (event.target == modal) {
+        //         modal.style.display = "none";
+        //     }
+        // }
 
     </script>
 
@@ -2434,6 +2530,32 @@
             plantationSelect.addEventListener('change', applyQtyFilters);
             cultureSelect.addEventListener('change', applyQtyFilters);
         });
+    </script>
+    </script>
+    
+    <script>
+        // NEW: Accept Order Modal Logic
+        var acceptModal = document.getElementById("acceptOrderModal");
+        
+        function openAcceptModal(orderId, productName, quantity) {
+            document.getElementById('modalOrderId').value = orderId;
+            document.getElementById('modalOrderProduct').innerText = productName;
+            document.getElementById('modalOrderQty').innerText = quantity;
+            if(acceptModal) acceptModal.style.display = "block";
+        }
+        
+        function closeAcceptModal() {
+            if(acceptModal) acceptModal.style.display = "none";
+        }
+
+        // Add to window.onclick
+        const prevOnClick = window.onclick;
+        window.onclick = function(event) {
+            if(prevOnClick) prevOnClick(event);
+            if (event.target == acceptModal) {
+                acceptModal.style.display = "none";
+            }
+        }
     </script>
 </body>
 </html>

@@ -975,6 +975,7 @@
                                 <th>Item</th>
                                 <th>Qty</th>
                                 <th>Fulfilled By</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -986,6 +987,12 @@
                                 <td>{{ order.culture.name }}</td>
                                 <td>{{ order.quantity_kg }}</td>
                                 <td>{{ order.fulfilled_by.username }}</td>
+                                <td>
+                                    <!-- Link to the PROCESSED BATCH ID (LOTE-PROC-{order_id}) to see the Transformation Block + Genealogy -->
+                                    <a href="{% url 'view_batch_chain' 'LOTE-PROC-'|add:order.pk_str %}" target="_blank" style="text-decoration:none; background:#00796b; color:white; padding:4px 8px; border-radius:4px; font-size:0.8em; display:inline-block;">
+                                        🔗 Track
+                                    </a>
+                                </td>
                             </tr>
                              {% endfor %}
                         </tbody>
