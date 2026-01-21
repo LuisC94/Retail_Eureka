@@ -219,9 +219,18 @@ def view_batch_chain(request, batch_id):
     # 4. Ordenar Cronologicamente
     final_chain = sorted(unique_chain, key=lambda x: x['timestamp'])
     
-    # 5. Adicionar índice visual sequencial
+    # 5. Adicionar índice visual sequencial e Normalizar Content
     for idx, block in enumerate(final_chain):
         block['visual_index'] = idx + 1
+        
+        # Ensure 'content' is available as a dict for the template
+        d_content = block.get('data_content', {}) or {}
+        if isinstance(d_content, str):
+            try:
+                d_content = json.loads(d_content)
+            except:
+                d_content = {}
+        block['content'] = d_content
     
     return render(request, 'blockchain/blockchain_explorer.html', {
         'chain': final_chain, 

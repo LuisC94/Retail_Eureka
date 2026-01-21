@@ -299,23 +299,23 @@
                      </ul>
                 </div>
                 {% endif %}
-                
-                <!-- Data Toggle Button -->
+
+                <!-- Block Data Content (Business Payload) - Simple View -->
                 {% if block.content %}
-                <button id="btn-{{ block.block_index }}" class="toggle-data-btn" onclick="toggleData('{{ block.block_index }}')">
-                    📂 Ver Dados Certificados
-                </button>
-                
-                <div id="data-{{ block.block_index }}" class="block-data-container">
-                    <pre>{{ block.content|json_script:"block-data" }}</pre>
-                    <!-- Formatting JSON nicely is tricky in basic Django templates without filters. 
-                         Let's try a simple print first, or rely on JS to format it if needed. 
-                         Actually, let's just dump the dict. Or use a custom filter if we had one.
-                         For now, showing the dict string is better than nothing. -->
-                    {{ block.content }}
+                <div class="hash-row" style="border-top: 1px solid #eee; margin-top: 10px; padding-top: 10px;">
+                    <span class="hash-label">📄 Block Data Content</span>
+                    <ul style="list-style: none; padding: 0; margin: 5px 0 0 0; font-size: 0.9em;">
+                        {% for key, value in block.content.items %}
+                            {% if key != 'inputs' and key != 'data_hash' and key != 'batch_id' %}
+                                <li style="margin-bottom: 5px; border-bottom: 1px dashed #eee; padding-bottom: 2px;">
+                                    <strong style="color: #555; text-transform: capitalize; min-width: 120px; display: inline-block;">{{ key|title }}:</strong> 
+                                    <span style="color: #333; word-break: break-all;">{{ value }}</span>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                    </ul>
                 </div>
                 {% endif %}
-
                 <div class="verified-badge">
                     ✓ Verified & Immutable
                 </div>

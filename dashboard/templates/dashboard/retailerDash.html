@@ -437,6 +437,19 @@
                 </div>
             </div>
 
+            {% if messages %}
+            <div id="messages-container" style="margin-bottom: 20px;">
+                {% for message in messages %}
+                <div class="django-message" style="padding: 15px; border-radius: 10px; margin-bottom: 10px; font-weight: 500; 
+                    {% if message.tags == 'success' %} background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9;
+                    {% elif message.tags == 'error' %} background: #ffebee; color: #c62828; border: 1px solid #ffcdd2;
+                    {% else %} background: #e3f2fd; color: #1565c0; border: 1px solid #bbdefb; {% endif %}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
             <!-- HOME VIEW -->
             <div id="home-view" class="tab-content active">
                 <h3 style="color: #00796b; margin-bottom: 20px;">Global Supply Chain Map</h3>
@@ -477,8 +490,8 @@
                              <div>
                                  <label style="display:block; margin-bottom:5px; font-weight:600;">Location:</label>
                                 {{ market_order_form.warehouse_location }}
-                                <!-- Hidden input to send warehouse value when Disabled -->
-                                <input type="hidden" name="warehouse_location" id="hidden_warehouse_location">
+                                <!-- Hidden input to send warehouse value when Disabled (Starts disabled to avoid conflict) -->
+                                <input type="hidden" name="warehouse_location" id="hidden_warehouse_location" disabled>
                             </div>
 
                             <!-- QUALITY FILTERS (Auto-filled for SELL, Min Req for BUY) -->
@@ -588,8 +601,9 @@
                                             }
 
                                             warehouseSelect.disabled = true;
-                                            // Apply value to hidden input (crucial for form submission)
+                                            // Apply value to hidden input and ENABLE it
                                             hiddenWarehouse.value = warehouseSelect.value || targetWh; 
+                                            hiddenWarehouse.disabled = false;
                                             
                                             // Set Max Quantity
                                             qtyInput.max = stockItem.quantity;
@@ -605,6 +619,7 @@
                                         } else {
                                             // Reset if no culture selected
                                             warehouseSelect.disabled = false;
+                                            hiddenWarehouse.disabled = true; // Disable hidden
                                             warehouseSelect.value = '';
                                             qtyInput.removeAttribute('max');
                                             qtyInput.placeholder = '';
@@ -629,8 +644,9 @@
                                     cultureSelect.innerHTML = '';
                                     originalCultureOptions.forEach(opt => cultureSelect.appendChild(opt.cloneNode(true)));
                                     
-                                    // Enable warehouse
+                                    // Enable warehouse, Disable hidden
                                     warehouseSelect.disabled = false;
+                                    hiddenWarehouse.disabled = true;
                                     cultureSelect.onchange = null; // Remove specific sell listener
                                     
                                     // Remove max constraints

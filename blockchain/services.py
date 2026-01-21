@@ -15,7 +15,7 @@ class BlockchainService:
         data_hash = hashlib.sha256(dossier_string.encode('utf-8')).hexdigest()
         return data_hash
 
-    def sign_and_submit_block(self, user_role, batch_id, data_hash, event_type, inputs=None):
+    def sign_and_submit_block(self, user_role, batch_id, data_hash, event_type, inputs=None, data_payload=None):
         """
         Cria, assina e persiste um novo bloco na Base de Dados.
         Suporta Agregação (inputs) para traceabilidade de lotes transformados.
@@ -53,10 +53,12 @@ class BlockchainService:
             "batch_id": batch_id, # Redundante mas util no JSON
             "inputs": inputs if inputs else [], # Genealogia: Lista de Parents
             "data_hash": data_hash
-            # O conteudo original do dossier geralmente estaria aqui ou off-chain.
-            # Como a funcao recebe apenas o hash, assumimos que o 'data_hash' é o link.
-            # Mas para efeitos de visualizacao, poderiamos passar o 'content' tambem.
         }
+        
+        # Merge Business Data (Dossier) if provided
+        if data_payload:
+            # We merge payload into content so it's accessible in UI
+            final_data_content.update(data_payload)
 
         # 5. Persistir na BD
         new_block = BlockchainBlock.objects.create(

@@ -748,7 +748,8 @@ def producer_submit_harvest(request):
                         user_role='Producer',
                         batch_id=dossier['batch_id'],
                         data_hash=data_hash,
-                        event_type='GENESIS'
+                        event_type='GENESIS',
+                        data_payload=dossier  # Pass full dossier content
                     )
                     messages.success(request, f"Colheita registada e Bloco Genesis minado! Hash: {result['tx_hash'][:10]}...")
                 except Exception as e:
@@ -921,7 +922,8 @@ def processor_submit_processing(request):
                     batch_id=new_batch_id,
                     data_hash=data_hash,
                     event_type='TRANSFORMATION',
-                    inputs=inputs # <--- AQUI ESTÁ A AGREGAÇÃO
+                    inputs=inputs, # <--- AQUI ESTÁ A AGREGAÇÃO
+                    data_payload=data_dict  # Pass full business data
                 )
                 
                 messages.success(request, f"Processamento registado e Bloco '{new_batch_id}' minado!")
@@ -1579,7 +1581,8 @@ def transporter_validate_pickup(request):
             user_role='Transporter',
             batch_id=f"ORDER-{order.pk}",
             data_hash=data_hash,
-            event_type='TRANSPORT_PICKUP'
+            event_type='TRANSPORT_PICKUP',
+            data_payload=dossier  # Pass full dossier content
         )
         
         messages.success(request, f"Carga validada! Bloco de Custódia gerado para Encomenda #{order.pk}.")
@@ -1639,7 +1642,8 @@ def transporter_submit_delivery(request):
                     user_role='Transporter',
                     batch_id=f"ORDER-{order.pk}",
                     data_hash=data_hash,
-                    event_type='TRANSPORT_DELIVERY'
+                    event_type='TRANSPORT_DELIVERY',
+                    data_payload=dossier  # Pass full dossier content
                 )
                 messages.success(request, f"Entrega registada com sucesso! Bloco Final gerado. Hash: {result['tx_hash'][:10]}...")
             except Exception as e:
