@@ -1,13 +1,20 @@
 version: '3.8'
 
 services:
-  streamlit-buyer-agent:
+  # Django Web Application (Retail Eureka Dashboard)
+  django-platform:
     build:
-      context: ./rl_buyer_interface
+      context: .
       dockerfile: Dockerfile
-    container_name: streamlit-buyer-agent
+    container_name: django-platform
     ports:
-      - "8501:8501"
+      - "8000:8000"
     restart: always
     environment:
       - PYTHONUNBUFFERED=1
+      - DB_NAME=retail_eureka
+      - DB_USER=aisupply
+      - DB_PASSWORD=H6.yLBweMW1w\$$P&ub60
+      - DB_HOST=aisupply.rc
+      - DB_PORT=5432
+      - FABRIC_API_URL=http://localhost:3000
