@@ -623,7 +623,7 @@ with tab_test:
             S_max=S_max,
             update_interval_days=update_interval,
             online_lr_actor=online_lr_act,
-            online_lr_critic=online_lr_critic,
+            online_lr_critic=online_lr_crit,
             online_batch_size=online_batch,
             save_dir=temp_load_dir,
             holding_cost=st.session_state.holding_cost,
