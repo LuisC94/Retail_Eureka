@@ -293,6 +293,37 @@ with tab_train:
     max_episodes = 1000
     seed = 1337
 
+    st.markdown(f"#### 🎯 {T('Função Objetivo (Lucro Diário)', 'Objective Function (Daily Profit)')}")
+    st.markdown(T(
+        "A recompensa diária do agente RL é baseada no lucro líquido otimizado pela seguinte função objetivo:",
+        "The daily reward of the RL agent is based on the net profit optimized by the following objective function:"
+    ))
+    
+    st.latex(r"""
+    \text{Lucro} = (\text{Vendas} \cdot P) - \text{Custos}_{\text{arm}} - \text{Custos}_{\text{trans}} - \text{Penalização}_{\text{vendas perdidas}} - \text{Penalização}_{\text{desperdício}} - \text{Penalização}_{\text{stockout}}
+    """)
+    
+    with st.expander(T("🔎 Detalhes Matemáticos da Equação", "🔎 Mathematical Equation Details")):
+        st.latex(r"""
+        \begin{aligned}
+        \text{Custos}_{\text{arm}} &= \text{Stock Final} \cdot V_{\text{prod}} \cdot C_{\text{arm}} \\
+        \text{Custos}_{\text{trans}} &= \mathbb{I}_{\{\text{Encomenda} > 0\}} \cdot \left( F_{\text{trans}} + \text{Encomenda} \cdot V_{\text{prod}} \cdot C_{\text{trans}} \right) \\
+        \text{Penalização}_{\text{vendas perdidas}} &= \text{Procura Perdida} \cdot P \cdot \alpha \\
+        \text{Penalização}_{\text{desperdício}} &= (\text{Apodrecimento} + \text{Excesso}) \cdot P \cdot \beta \\
+        \text{Penalização}_{\text{stockout}} &= \mathbb{I}_{\{\text{Stock Final} \le 0\}} \cdot P \cdot \gamma
+        \end{aligned}
+        """)
+        st.markdown(T(
+            r"onde $P$ é o preço unitário do SKU, $V_{\text{prod}}$ é o volume do produto ($m^3$), "
+            r"$C_{\text{arm}}$ é o Custo de Armazenamento, $C_{\text{trans}}$ é o Custo de Transporte, "
+            r"$F_{\text{trans}}$ é a Taxa Fixa, $\alpha$ é a Penalização de Vendas Perdidas, "
+            r"$\beta$ é a Penalização de Desperdício e $\gamma$ é a Penalização de Stockout.",
+            r"where $P$ is the SKU unit price, $V_{\text{prod}}$ is the product volume ($m^3$), "
+            r"$C_{\text{arm}}$ is the Storage Cost, $C_{\text{trans}}$ is the Transport Cost, "
+            r"$F_{\text{trans}}$ is the Fixed Fee, $\alpha$ is the Lost Sales Penalty, "
+            r"$\beta$ is the Waste Penalty, and $\gamma$ is the Stockout Penalty."
+        ))
+
     st.markdown(f"#### ⚖️ {T('Custos de Logística e Penalizações', 'Logistics Costs & Penalties')}")
     col_hp1, col_hp2, col_hp3 = st.columns(3)
     with col_hp1:
