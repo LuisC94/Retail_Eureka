@@ -693,6 +693,9 @@ def run_testing_simulation(excel_path, train_split, max_capacity, initial_model_
             "oracle_action": info_oracle['order_placed'],
             "real_demand": real_demand,
             "stock_level": stock_final_hoje,
+            "order_placed": info['order_placed'],
+            "spoilage": spoilage,
+            "overflow_waste": overcapacity_waste,
             "update_triggered": update_triggered,
             "version_count": len(update_days)
         }
