@@ -581,7 +581,6 @@ with tab_test:
         fig2.add_trace(go.Scatter(x=[], y=[], mode='lines', name=T('Procura Real', 'Real Demand'), line=dict(color='#3b82f6', width=2)))
         fig2.add_trace(go.Scatter(x=[], y=[], mode='markers', name=T('Stockout', 'Stockout'), marker=dict(symbol='circle', color='#ffffff', size=8, line=dict(color='#000000', width=1.5))))
         fig2.add_trace(go.Scatter(x=[], y=[], mode='markers', name=T('Apodrecimento', 'Spoilage'), marker=dict(symbol='diamond', color='#fbbf24', size=8, line=dict(color='#b45309', width=1.5))))
-        fig2.add_trace(go.Scatter(x=[], y=[], mode='markers', name=T('Excesso de Armazém', 'Dock Overflow'), marker=dict(symbol='triangle-up', color='#ef4444', size=8, line=dict(color='#991b1b', width=1.5))))
         fig2.update_layout(
             title=T("Fluxo Operacional Diário (Procura, Encomendas e Penalidades)", "Daily Operational Flow (Demand, Orders & Penalties)"),
             xaxis_title=T("Dias", "Days"),
@@ -657,9 +656,6 @@ with tab_test:
                     
                     spoilage_x = [d for idx, d in enumerate(plot_data["Dia"]) if plot_data["Spoilage"][idx] > 0]
                     spoilage_y = [plot_data["Orders"][idx] for idx, d in enumerate(plot_data["Dia"]) if plot_data["Spoilage"][idx] > 0]
-                    
-                    overflow_x = [d for idx, d in enumerate(plot_data["Dia"]) if plot_data["Overflow"][idx] > 0]
-                    overflow_y = [plot_data["Orders"][idx] for idx, d in enumerate(plot_data["Dia"]) if plot_data["Overflow"][idx] > 0]
 
                     # Criar novo gráfico operacional
                     fig_ops = go.Figure()
@@ -667,7 +663,6 @@ with tab_test:
                     fig_ops.add_trace(go.Scatter(x=plot_data["Dia"], y=plot_data["Real Demand"], mode='lines', fill='tozeroy', fillcolor='rgba(59, 130, 246, 0.05)', name=T('Procura Real', 'Real Demand'), line=dict(color='#3b82f6', width=2, shape='spline')))
                     fig_ops.add_trace(go.Scatter(x=stockout_x, y=stockout_y, mode='markers', name=T('Stockout', 'Stockout'), marker=dict(symbol='circle', color='#ffffff', size=8, line=dict(color='#000000', width=1.5))))
                     fig_ops.add_trace(go.Scatter(x=spoilage_x, y=spoilage_y, mode='markers', name=T('Apodrecimento', 'Spoilage'), marker=dict(symbol='diamond', color='#fbbf24', size=8, line=dict(color='#b45309', width=1.5))))
-                    fig_ops.add_trace(go.Scatter(x=overflow_x, y=overflow_y, mode='markers', name=T('Excesso de Armazém', 'Dock Overflow'), marker=dict(symbol='triangle-up', color='#ef4444', size=8, line=dict(color='#991b1b', width=1.5))))
                     
                     fig_ops.update_layout(
                         title=T("Fluxo Operacional Diário (Procura, Encomendas e Penalidades)", "Daily Operational Flow (Demand, Orders & Penalties)"),
@@ -721,16 +716,12 @@ with tab_test:
                 
                 spoilage_x = [d for idx, d in enumerate(plot_data["Dia"]) if plot_data["Spoilage"][idx] > 0]
                 spoilage_y = [plot_data["Orders"][idx] for idx, d in enumerate(plot_data["Dia"]) if plot_data["Spoilage"][idx] > 0]
-                
-                overflow_x = [d for idx, d in enumerate(plot_data["Dia"]) if plot_data["Overflow"][idx] > 0]
-                overflow_y = [plot_data["Orders"][idx] for idx, d in enumerate(plot_data["Dia"]) if plot_data["Overflow"][idx] > 0]
 
                 fig_final_ops = go.Figure()
                 fig_final_ops.add_trace(go.Bar(x=plot_data["Dia"], y=plot_data["Orders"], name=T('Encomendas do Agente', 'Agent Orders'), marker=dict(color='rgba(245, 158, 11, 0.75)', line=dict(color='#d97706', width=1))))
                 fig_final_ops.add_trace(go.Scatter(x=plot_data["Dia"], y=plot_data["Real Demand"], mode='lines', fill='tozeroy', fillcolor='rgba(59, 130, 246, 0.05)', name=T('Procura Real', 'Real Demand'), line=dict(color='#3b82f6', width=2, shape='spline')))
                 fig_final_ops.add_trace(go.Scatter(x=stockout_x, y=stockout_y, mode='markers', name=T('Stockout', 'Stockout'), marker=dict(symbol='circle', color='#ffffff', size=8, line=dict(color='#000000', width=1.5))))
                 fig_final_ops.add_trace(go.Scatter(x=spoilage_x, y=spoilage_y, mode='markers', name=T('Apodrecimento', 'Spoilage'), marker=dict(symbol='diamond', color='#fbbf24', size=8, line=dict(color='#b45309', width=1.5))))
-                fig_final_ops.add_trace(go.Scatter(x=overflow_x, y=overflow_y, mode='markers', name=T('Excesso de Armazém', 'Dock Overflow'), marker=dict(symbol='triangle-up', color='#ef4444', size=8, line=dict(color='#991b1b', width=1.5))))
                 
                 fig_final_ops.update_layout(
                     title=T("Fluxo Operacional Final (Procura, Encomendas e Penalidades)", "Final Operational Flow (Demand, Orders & Penalties)"),
