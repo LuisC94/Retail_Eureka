@@ -102,7 +102,9 @@ class StockEnvironment:
         }
     }
 
-    def __init__(self, excel_path, is_training=True, train_split=0.6, max_capacity=1000, shared_stats=None):
+    def __init__(self, excel_path, is_training=True, train_split=0.6, max_capacity=1000, shared_stats=None,
+                 holding_cost=0.70, transport_cost=10.0, fixed_transport_cost=10.0,
+                 stockout_penalty=0.25, waste_penalty=1.0, zero_stock_penalty=5.0):
         # 1. Load Data
         if isinstance(excel_path, pd.DataFrame):
             self.df = excel_path
@@ -148,9 +150,12 @@ class StockEnvironment:
         self.stock_inicial = 100.0
         
         # --- LOGÍSTICA VOLUMÉTRICA UNIVERSAL (M3) ---
-        self.CUSTO_ARMAZEM_POR_M3 = 0.70    # Custo de 1m³ por dia no armazém
-        self.CUSTO_TRANSPORTE_POR_M3 = 10.0 # Custo de transportar 1m³ no camião
-        self.TAXA_PARAGEM_CAMIAO = 10.0     # Taxa fixa por encomenda/descarga
+        self.CUSTO_ARMAZEM_POR_M3 = holding_cost
+        self.CUSTO_TRANSPORTE_POR_M3 = transport_cost
+        self.TAXA_PARAGEM_CAMIAO = fixed_transport_cost
+        self.STOCKOUT_PENALTY_MULT = stockout_penalty
+        self.WASTE_PENALTY_MULT = waste_penalty
+        self.ZERO_STOCK_PENALTY_MULT = zero_stock_penalty
         
         # Extrair Volume do Produto (m3) e Preço Médio (se a coluna não existir, usa Fallbacks)
         self.product_volume_m3 = self.data['volume'].iloc[0] if 'volume' in self.data.columns else 0.002
@@ -587,10 +592,10 @@ class StockEnvironment:
         else:
             transport_cost = 0.0
             
-        stockout_cost = missed_sales * (price_today * 0.25) 
+        stockout_cost = missed_sales * (price_today * self.STOCKOUT_PENALTY_MULT) 
         total_lost_boxes = overflow_waste + spoilage
-        waste_cost = total_lost_boxes * (price_today * 1.0)
-        zero_stock_cost = (price_today * 5.0) if final_daily_stock <= 0 else 0.0
+        waste_cost = total_lost_boxes * (price_today * self.WASTE_PENALTY_MULT)
+        zero_stock_cost = (price_today * self.ZERO_STOCK_PENALTY_MULT) if final_daily_stock <= 0 else 0.0
 
         daily_profit = gross_profit - storage_cost - transport_cost - stockout_cost - waste_cost - zero_stock_cost
         

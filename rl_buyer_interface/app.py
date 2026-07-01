@@ -202,6 +202,18 @@ with st.sidebar:
         st.warning(T("Aceleração GPU (CUDA) indisponível. Usando CPU.", "GPU acceleration (CUDA) unavailable. Using CPU."))
         
     st.markdown("---")
+    st.markdown(f"### ⚖️ {T('Custos & Penalizações', 'Costs & Penalties')}")
+    
+    holding_cost = st.number_input(T("Custo Armazenamento (€/m³/dia):", "Storage Cost (€/m³/day):"), min_value=0.0, max_value=10.0, value=0.70, step=0.05, format="%.2f", help=T("Custo diário de armazenar 1m³ de produto.", "Daily cost of storing 1m³ of product."))
+    transport_cost = st.number_input(T("Custo Transporte (€/m³):", "Transport Cost (€/m³):"), min_value=0.0, max_value=100.0, value=10.00, step=0.50, format="%.2f", help=T("Custo variável de transportar 1m³ no camião.", "Variable cost of transporting 1m³ in the truck."))
+    fixed_transport_cost = st.number_input(T("Taxa Fixa Camião (€):", "Fixed Truck Fee (€):"), min_value=0.0, max_value=500.0, value=10.00, step=1.00, format="%.2f", help=T("Taxa fixa cobrada por descarga/entrega.", "Fixed fee charged per unloading/delivery."))
+    
+    stockout_penalty_pct = st.number_input(T("Penalização Rutura (% preço):", "Stockout Penalty (% price):"), min_value=0.0, max_value=200.0, value=25.0, step=5.0) / 100.0
+    waste_penalty_pct = st.number_input(T("Penalização Desperdício (% preço):", "Waste Penalty (% price):"), min_value=0.0, max_value=500.0, value=100.0, step=10.0) / 100.0
+    zero_stock_penalty_pct = st.number_input(T("Penalização Stock Zero (% preço):", "Zero Stock Penalty (% price):"), min_value=0.0, max_value=1000.0, value=500.0, step=50.0) / 100.0
+
+        
+    st.markdown("---")
     st.markdown(f"#### ℹ️ {T('Estrutura do Dataset Esperada', 'Expected Dataset Structure')}")
     st.info(
         T("**Variáveis Necessárias:**\n"
@@ -271,20 +283,16 @@ with tab_train:
     with col_cap:
         max_capacity = st.number_input(T("Capacidade Máxima do Armazém (unidades):", "Maximum Warehouse Capacity (units):"), min_value=100, max_value=5000, value=500, step=100)
         
-    st.markdown(f"#### {T('Hiperparâmetros de RL', 'RL Hyperparameters')}")
-    col_hp1, col_hp2, col_hp3, col_hp4 = st.columns(4)
-    with col_hp1:
-        lr_act = st.number_input("Learning Rate (Actor):", min_value=1e-5, max_value=1e-2, value=0.0003, format="%.5f")
-        lr_crit = st.number_input("Learning Rate (Critic):", min_value=1e-5, max_value=1e-2, value=0.001, format="%.5f")
-    with col_hp2:
-        gamma = st.number_input("Discount Factor (Gamma):", min_value=0.5, max_value=0.99, value=0.8, format="%.2f")
-        eps_clip = st.number_input("PPO Clip Epsilon:", min_value=0.05, max_value=0.4, value=0.2, format="%.2f")
-    with col_hp3:
-        k_epochs = st.number_input("K-Epochs por update:", min_value=5, max_value=100, value=30, step=5)
-        batch_size = st.selectbox("Tamanho do Batch:", [32, 64, 128, 256, 512, 1024, 2048], index=6)
-    with col_hp4:
-        max_episodes = st.number_input(T("Total de Episódios (Máximo):", "Total Episodes (Maximum):"), min_value=100, max_value=50000, value=1000, step=500)
-        seed = st.number_input("Random Seed:", min_value=1, max_value=99999, value=1337)
+    # Hiperparâmetros de RL pré-definidos (escondidos do utilizador para simplificar a UI de negócios)
+    lr_act = 0.0003
+    lr_crit = 0.001
+    gamma = 0.8
+    eps_clip = 0.2
+    k_epochs = 30
+    batch_size = 2048
+    max_episodes = 1000
+    seed = 1337
+
         
     st.markdown(f"#### {T('Configuração de Hardware & Paralelização', 'Hardware Configuration & Parallelization')}")
     col_hw1, col_hw2 = st.columns(2)
@@ -327,7 +335,13 @@ with tab_train:
                 batch_size=batch_size,
                 max_episodes_total=max_episodes,
                 num_envs=num_envs,
-                save_dir=temp_model_dir
+                save_dir=temp_model_dir,
+                holding_cost=holding_cost,
+                transport_cost=transport_cost,
+                fixed_transport_cost=fixed_transport_cost,
+                stockout_penalty=stockout_penalty_pct,
+                waste_penalty=waste_penalty_pct,
+                zero_stock_penalty=zero_stock_penalty_pct
             )
         else:
             gen = train_multi_core_generator(
@@ -344,7 +358,13 @@ with tab_train:
                 max_episodes_total=max_episodes,
                 num_envs=num_envs,
                 num_workers=workers,
-                save_dir=temp_model_dir
+                save_dir=temp_model_dir,
+                holding_cost=holding_cost,
+                transport_cost=transport_cost,
+                fixed_transport_cost=fixed_transport_cost,
+                stockout_penalty=stockout_penalty_pct,
+                waste_penalty=waste_penalty_pct,
+                zero_stock_penalty=zero_stock_penalty_pct
             )
             
         progress_bar = st.progress(0.0)
@@ -498,17 +518,18 @@ with tab_test:
                 st.info(T("Para correr o teste, faça upload do Actor (*_actor.pth) e do Econ Stat (*_econ_stat.pth).", "To run the test, upload the Actor (*_actor.pth) and Econ Stat (*_econ_stat.pth)."))
         st.markdown('</div>', unsafe_allow_html=True)
         
-    st.markdown(f"#### {T('Parâmetros de Simulação e Fine-Tuning', 'Simulation & Fine-Tuning Parameters')}")
-    col_t1, col_t2, col_t3 = st.columns(3)
+    st.markdown(f"#### {T('Parâmetros de Simulação', 'Simulation Parameters')}")
+    col_t1, = st.columns(1)
     with col_t1:
         s_min = st.number_input(T("Valor Mínimo Baseline (s):", "Minimum Baseline Value (s):"), min_value=1, max_value=500, value=24, help=T("Desencadeia encomenda no Baseline Min-Max se o stock estimado for inferior a este valor.", "Triggers an order in the Min-Max Baseline if the estimated stock is lower than this value."))
         S_max = st.number_input(T("Valor Máximo Baseline (S):", "Maximum Baseline Value (S):"), min_value=50, max_value=2000, value=60, help=T("Nível de stock alvo após encomenda no Baseline Min-Max.", "Target stock level after ordering in the Min-Max Baseline."))
-    with col_t2:
-        update_interval = st.number_input(T("Intervalo de Fine-Tuning (dias):", "Fine-Tuning Interval (days):"), min_value=1, max_value=90, value=15, help=T("Frequência em dias com que o agente atualiza online os seus pesos com dados reais do mercado.", "Frequency in days with which the agent updates its weights online with real market data."))
-        online_batch = st.selectbox(T("Tamanho do Batch Online:", "Online Batch Size:"), [16, 32, 64, 128], index=1)
-    with col_t3:
-        online_lr_act = st.number_input("Online Actor Learning Rate:", min_value=1e-7, max_value=1e-3, value=1e-5, format="%.7f", help=T("Learning rate ultra baixo para evitar esquecimento catastrófico.", "Ultra low learning rate to avoid catastrophic forgetting."))
-        online_lr_crit = st.number_input("Online Critic Learning Rate:", min_value=1e-7, max_value=1e-3, value=5e-5, format="%.7f")
+        
+    # Parâmetros de fine-tuning fixos na retaguarda
+    update_interval = 15
+    online_batch = 32
+    online_lr_act = 1e-5
+    online_lr_crit = 5e-5
+
 
     # Botão para correr simulação
     st.markdown("---")
@@ -546,7 +567,13 @@ with tab_test:
             online_lr_actor=online_lr_act,
             online_lr_critic=online_lr_crit,
             online_batch_size=online_batch,
-            save_dir=temp_load_dir
+            save_dir=temp_load_dir,
+            holding_cost=holding_cost,
+            transport_cost=transport_cost,
+            fixed_transport_cost=fixed_transport_cost,
+            stockout_penalty=stockout_penalty_pct,
+            waste_penalty=waste_penalty_pct,
+            zero_stock_penalty=zero_stock_penalty_pct
         )
         
         # Preparar dataframes para a atualização gráfica em tempo real

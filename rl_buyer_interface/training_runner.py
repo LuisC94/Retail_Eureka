@@ -17,7 +17,9 @@ except ImportError:
     from rl_buyer_interface.agent.ppo_agent import ParallelPPOAgent
 
 # --- WORKER FOR MULTI-CORE PPO ---
-def ppo_worker(worker_id, excel_path, train_split, num_envs, capacity, weights_queue, results_queue, shared_stats, horizon=90):
+def ppo_worker(worker_id, excel_path, train_split, num_envs, capacity, weights_queue, results_queue, shared_stats, horizon=90,
+               holding_cost=0.70, transport_cost=10.0, fixed_transport_cost=10.0,
+               stockout_penalty=0.25, waste_penalty=1.0, zero_stock_penalty=5.0):
     """ Worker that manages a block of PPO environments in synchronization """
     # Set seed for this worker to ensure diversity
     worker_seed = 42 + worker_id
@@ -26,7 +28,9 @@ def ppo_worker(worker_id, excel_path, train_split, num_envs, capacity, weights_q
     torch.manual_seed(worker_seed)
     
     envs = [StockEnvironment(excel_path=excel_path, is_training=True, train_split=train_split, 
-                             max_capacity=capacity, shared_stats=shared_stats) for _ in range(num_envs)]
+                             max_capacity=capacity, shared_stats=shared_stats,
+                             holding_cost=holding_cost, transport_cost=transport_cost, fixed_transport_cost=fixed_transport_cost,
+                             stockout_penalty=stockout_penalty, waste_penalty=waste_penalty, zero_stock_penalty=zero_stock_penalty) for _ in range(num_envs)]
     
     max_order_limit = envs[0].max_order_limit
     agent = ParallelPPOAgent(state_dim=17, action_dim=1, max_action=max_order_limit)
@@ -91,7 +95,9 @@ def ppo_worker(worker_id, excel_path, train_split, num_envs, capacity, weights_q
         })
 
 # --- SINGLE CORE TRAINING GENERATOR ---
-def train_single_core_generator(seed, excel_path, train_split, max_capacity, lr_actor, lr_critic, gamma, k_epochs, eps_clip, batch_size, max_episodes_total, num_envs, horizon=90, save_dir="modelos_producao_constrained"):
+def train_single_core_generator(seed, excel_path, train_split, max_capacity, lr_actor, lr_critic, gamma, k_epochs, eps_clip, batch_size, max_episodes_total, num_envs, horizon=90, save_dir="modelos_producao_constrained",
+                                holding_cost=0.70, transport_cost=10.0, fixed_transport_cost=10.0,
+                                stockout_penalty=0.25, waste_penalty=1.0, zero_stock_penalty=5.0):
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -111,7 +117,9 @@ def train_single_core_generator(seed, excel_path, train_split, max_capacity, lr_
     }
     
     envs = [StockEnvironment(excel_path=excel_path, is_training=True, train_split=train_split, 
-                             max_capacity=max_capacity, shared_stats=shared_stats) for _ in range(num_envs)]
+                             max_capacity=max_capacity, shared_stats=shared_stats,
+                             holding_cost=holding_cost, transport_cost=transport_cost, fixed_transport_cost=fixed_transport_cost,
+                             stockout_penalty=stockout_penalty, waste_penalty=waste_penalty, zero_stock_penalty=zero_stock_penalty) for _ in range(num_envs)]
     
     agent = ParallelPPOAgent(state_dim=17, action_dim=1, max_action=MAX_ORDER_LIMIT, 
                              lr_actor=lr_actor, lr_critic=lr_critic, gamma=gamma, K_epochs=k_epochs, eps_clip=eps_clip, batch_size=batch_size)
@@ -222,7 +230,9 @@ def train_single_core_generator(seed, excel_path, train_split, max_capacity, lr_
     yield "[SUCCESS] Single-Core Training completed successfully!"
 
 # --- MULTI CORE TRAINING GENERATOR ---
-def train_multi_core_generator(seed, excel_path, train_split, max_capacity, lr_actor, lr_critic, gamma, k_epochs, eps_clip, batch_size, max_episodes_total, num_envs, num_workers, horizon=90, save_dir="modelos_producao_constrained"):
+def train_multi_core_generator(seed, excel_path, train_split, max_capacity, lr_actor, lr_critic, gamma, k_epochs, eps_clip, batch_size, max_episodes_total, num_envs, num_workers, horizon=90, save_dir="modelos_producao_constrained",
+                               holding_cost=0.70, transport_cost=10.0, fixed_transport_cost=10.0,
+                               stockout_penalty=0.25, waste_penalty=1.0, zero_stock_penalty=5.0):
     try:
         mp.set_start_method('spawn', force=True)
     except RuntimeError:
@@ -256,7 +266,9 @@ def train_multi_core_generator(seed, excel_path, train_split, max_capacity, lr_a
     
     processes = []
     for i in range(num_workers):
-        p = mp.Process(target=ppo_worker, args=(i, excel_path, train_split, env_per_worker if 'env_per_worker' in locals() else envs_per_worker, max_capacity, weights_queues[i], results_queue, shared_stats, horizon))
+        p = mp.Process(target=ppo_worker, args=(i, excel_path, train_split, envs_per_worker, max_capacity, weights_queues[i], results_queue, shared_stats, horizon,
+                                               holding_cost, transport_cost, fixed_transport_cost,
+                                               stockout_penalty, waste_penalty, zero_stock_penalty))
         p.start()
         processes.append(p)
         
@@ -413,7 +425,9 @@ def continual_training_step(agent, new_experiences, env_train, max_action_val, l
     agent.update()
 
 # --- SIMULATION RUNNER ---
-def run_testing_simulation(excel_path, train_split, max_capacity, initial_model_base_path, s_min, S_max, update_interval_days=15, online_lr_actor=1e-5, online_lr_critic=5e-5, online_batch_size=32, save_dir="modelos_producao_constrained"):
+def run_testing_simulation(excel_path, train_split, max_capacity, initial_model_base_path, s_min, S_max, update_interval_days=15, online_lr_actor=1e-5, online_lr_critic=5e-5, online_batch_size=32, save_dir="modelos_producao_constrained",
+                           holding_cost=0.70, transport_cost=10.0, fixed_transport_cost=10.0,
+                           stockout_penalty=0.25, waste_penalty=1.0, zero_stock_penalty=5.0):
     """
     Runs evaluation simulation, comparing RL Agent, Min-Max Baseline, and Oracle
     Yields data dictionary daily for Streamlit live charting and logging.
@@ -421,13 +435,21 @@ def run_testing_simulation(excel_path, train_split, max_capacity, initial_model_
     yield {"status": "init", "msg": "[INIT] Preparando ambientes de teste..."}
     
     # 1. Initialize Environments
-    env_test = StockEnvironment(excel_path=excel_path, is_training=False, train_split=train_split, max_capacity=max_capacity)
-    env_minmax = StockEnvironment(excel_path=excel_path, is_training=False, train_split=train_split, max_capacity=max_capacity)
+    env_test = StockEnvironment(excel_path=excel_path, is_training=False, train_split=train_split, max_capacity=max_capacity,
+                                holding_cost=holding_cost, transport_cost=transport_cost, fixed_transport_cost=fixed_transport_cost,
+                                stockout_penalty=stockout_penalty, waste_penalty=waste_penalty, zero_stock_penalty=zero_stock_penalty)
+    env_minmax = StockEnvironment(excel_path=excel_path, is_training=False, train_split=train_split, max_capacity=max_capacity,
+                                  holding_cost=holding_cost, transport_cost=transport_cost, fixed_transport_cost=fixed_transport_cost,
+                                  stockout_penalty=stockout_penalty, waste_penalty=waste_penalty, zero_stock_penalty=zero_stock_penalty)
     env_minmax.max_order_limit = float('inf') # Sem limite de encomenda para o Baseline
-    env_oracle = StockEnvironment(excel_path=excel_path, is_training=False, train_split=train_split, max_capacity=max_capacity)
+    env_oracle = StockEnvironment(excel_path=excel_path, is_training=False, train_split=train_split, max_capacity=max_capacity,
+                                  holding_cost=holding_cost, transport_cost=transport_cost, fixed_transport_cost=fixed_transport_cost,
+                                  stockout_penalty=stockout_penalty, waste_penalty=waste_penalty, zero_stock_penalty=zero_stock_penalty)
     env_oracle.max_order_limit = float('inf') # Sem limite de encomenda para o Oráculo
     
-    env_train = StockEnvironment(excel_path=excel_path, is_training=True, train_split=train_split, max_capacity=max_capacity)
+    env_train = StockEnvironment(excel_path=excel_path, is_training=True, train_split=train_split, max_capacity=max_capacity,
+                                 holding_cost=holding_cost, transport_cost=transport_cost, fixed_transport_cost=fixed_transport_cost,
+                                 stockout_penalty=stockout_penalty, waste_penalty=waste_penalty, zero_stock_penalty=zero_stock_penalty)
     
     state_dim = 17
     action_dim = 1
