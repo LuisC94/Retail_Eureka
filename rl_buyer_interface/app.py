@@ -297,13 +297,13 @@ with tab_train:
     col_hp1, col_hp2, col_hp3 = st.columns(3)
     with col_hp1:
         holding_cost = st.number_input(T("Custo Armazenamento (€/m³/dia):", "Storage Cost (€/m³/day):"), min_value=0.0, max_value=10.0, value=0.70, step=0.05, format="%.2f", key="holding_cost", help=T("Custo diário de armazenar 1m³ de produto.", "Daily cost of storing 1m³ of product."))
-        stockout_penalty_val = st.number_input(T("Penalização Rutura (% preço):", "Stockout Penalty (% price):"), min_value=0.0, max_value=200.0, value=25.0, step=5.0, key="stockout_penalty_pct") / 100.0
+        stockout_penalty_val = st.number_input(T("Penalização Vendas Perdidas (% preço):", "Lost Sales Penalty (% price):"), min_value=0.0, max_value=200.0, value=25.0, step=5.0, key="stockout_penalty_pct") / 100.0
     with col_hp2:
         transport_cost = st.number_input(T("Custo Transporte (€/m³):", "Transport Cost (€/m³):"), min_value=0.0, max_value=100.0, value=10.00, step=0.50, format="%.2f", key="transport_cost", help=T("Custo variável de transportar 1m³ no camião.", "Variable cost of transporting 1m³ in the truck."))
         waste_penalty_val = st.number_input(T("Penalização Desperdício (% preço):", "Waste Penalty (% price):"), min_value=0.0, max_value=500.0, value=100.0, step=10.0, key="waste_penalty_pct") / 100.0
     with col_hp3:
         fixed_transport_cost = st.number_input(T("Taxa Fixa Camião (€):", "Fixed Truck Fee (€):"), min_value=0.0, max_value=500.0, value=10.00, step=1.00, format="%.2f", key="fixed_transport_cost", help=T("Taxa fixa cobrada por descarga/entrega.", "Fixed fee charged per unloading/delivery."))
-        zero_stock_penalty_val = st.number_input(T("Penalização Stock Zero (% preço):", "Zero Stock Penalty (% price):"), min_value=0.0, max_value=1000.0, value=500.0, step=50.0, key="zero_stock_penalty_pct") / 100.0
+        zero_stock_penalty_val = st.number_input(T("Penalização Stockout / Stock Zero (% preço):", "Stockout / Zero Stock Penalty (% price):"), min_value=0.0, max_value=1000.0, value=500.0, step=50.0, key="zero_stock_penalty_pct") / 100.0
         
     st.markdown(f"#### {T('Configuração de Hardware & Paralelização', 'Hardware Configuration & Parallelization')}")
     col_hw1, col_hw2 = st.columns(2)
