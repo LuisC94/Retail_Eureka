@@ -299,20 +299,36 @@ with tab_train:
         "The daily reward of the RL agent is based on the net profit optimized by the following objective function:"
     ))
     
-    st.latex(r"""
-    \text{Lucro} = (\text{Vendas} \cdot P) - \text{Custos}_{\text{arm}} - \text{Custos}_{\text{trans}} - \text{Penalização}_{\text{vendas perdidas}} - \text{Penalização}_{\text{desperdício}} - \text{Penalização}_{\text{stockout}}
-    """)
+    if lang == "English":
+        st.latex(r"""
+        \text{Profit} = (\text{Sales} \cdot P) - \text{Costs}_{\text{storage}} - \text{Costs}_{\text{trans}} - \text{Penalty}_{\text{lost sales}} - \text{Penalty}_{\text{waste}} - \text{Penalty}_{\text{stockout}}
+        """)
+    else:
+        st.latex(r"""
+        \text{Lucro} = (\text{Vendas} \cdot P) - \text{Custos}_{\text{arm}} - \text{Custos}_{\text{trans}} - \text{Penalização}_{\text{vendas perdidas}} - \text{Penalização}_{\text{desperdício}} - \text{Penalização}_{\text{stockout}}
+        """)
     
     with st.expander(T("🔎 Detalhes Matemáticos da Equação", "🔎 Mathematical Equation Details")):
-        st.latex(r"""
-        \begin{aligned}
-        \text{Custos}_{\text{arm}} &= \text{Stock Final} \cdot V_{\text{prod}} \cdot C_{\text{arm}} \\
-        \text{Custos}_{\text{trans}} &= \mathbb{I}_{\{\text{Encomenda} > 0\}} \cdot \left( F_{\text{trans}} + \text{Encomenda} \cdot V_{\text{prod}} \cdot C_{\text{trans}} \right) \\
-        \text{Penalização}_{\text{vendas perdidas}} &= \text{Procura Perdida} \cdot P \cdot \alpha \\
-        \text{Penalização}_{\text{desperdício}} &= (\text{Apodrecimento} + \text{Excesso}) \cdot P \cdot \beta \\
-        \text{Penalização}_{\text{stockout}} &= \mathbb{I}_{\{\text{Stock Final} \le 0\}} \cdot P \cdot \gamma
-        \end{aligned}
-        """)
+        if lang == "English":
+            st.latex(r"""
+            \begin{aligned}
+            \text{Costs}_{\text{storage}} &= \text{Final Stock} \cdot V_{\text{prod}} \cdot C_{\text{storage}} \\
+            \text{Costs}_{\text{trans}} &= \mathbb{I}_{\{\text{Order} > 0\}} \cdot \left( F_{\text{trans}} + \text{Order} \cdot V_{\text{prod}} \cdot C_{\text{trans}} \right) \\
+            \text{Penalty}_{\text{lost sales}} &= \text{Lost Sales} \cdot P \cdot \alpha \\
+            \text{Penalty}_{\text{waste}} &= (\text{Spoilage} + \text{Overflow}) \cdot P \cdot \beta \\
+            \text{Penalty}_{\text{stockout}} &= \mathbb{I}_{\{\text{Final Stock} \le 0\}} \cdot P \cdot \gamma
+            \end{aligned}
+            """)
+        else:
+            st.latex(r"""
+            \begin{aligned}
+            \text{Custos}_{\text{arm}} &= \text{Stock Final} \cdot V_{\text{prod}} \cdot C_{\text{arm}} \\
+            \text{Custos}_{\text{trans}} &= \mathbb{I}_{\{\text{Encomenda} > 0\}} \cdot \left( F_{\text{trans}} + \text{Encomenda} \cdot V_{\text{prod}} \cdot C_{\text{trans}} \right) \\
+            \text{Penalização}_{\text{vendas perdidas}} &= \text{Procura Perdida} \cdot P \cdot \alpha \\
+            \text{Penalização}_{\text{desperdício}} &= (\text{Apodrecimento} + \text{Excesso}) \cdot P \cdot \beta \\
+            \text{Penalização}_{\text{stockout}} &= \mathbb{I}_{\{\text{Stock Final} \le 0\}} \cdot P \cdot \gamma
+            \end{aligned}
+            """)
         st.markdown(T(
             r"onde $P$ é o preço unitário do SKU, $V_{\text{prod}}$ é o volume do produto ($m^3$), "
             r"$C_{\text{arm}}$ é o Custo de Armazenamento, $C_{\text{trans}}$ é o Custo de Transporte, "
