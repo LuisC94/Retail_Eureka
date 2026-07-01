@@ -96,14 +96,14 @@ def train_single_core_generator(seed, excel_path, train_split, max_capacity, lr_
     np.random.seed(seed)
     torch.manual_seed(seed)
     
-    yield "[INFO] Inicializando treino em modo SINGLE-CORE..."
+    yield "[INFO] Initializing training in SINGLE-CORE mode..."
     
     # 1. Determinar dinamicamente o limite de encomenda
     df_temp = pd.read_excel(excel_path)
     split_idx = int(len(df_temp) * train_split)
     MAX_ORDER_LIMIT = float(df_temp.iloc[:split_idx]['real_value'].max())
     
-    yield f"[INFO] Limite Máximo de Encomenda Diária (MAX_ORDER_LIMIT) = {MAX_ORDER_LIMIT} un (Capacidade Armazém = {max_capacity} un)"
+    yield f"[INFO] Max Daily Order Limit (MAX_ORDER_LIMIT) = {MAX_ORDER_LIMIT} units (Warehouse Capacity = {max_capacity} units)"
     yield f"[INFO] State dimension = 17, Action dimension = 1"
     
     shared_stats = {
@@ -128,7 +128,7 @@ def train_single_core_generator(seed, excel_path, train_split, max_capacity, lr_
     losses_actor = []
     losses_critic = []
     
-    yield "[START] Treino iniciado com sucesso."
+    yield "[START] Training started successfully."
     
     while episodes_played < max_episodes_total:
         iteration += 1
@@ -208,8 +208,8 @@ def train_single_core_generator(seed, excel_path, train_split, max_capacity, lr_
         plt.plot(losses_total, label="Total Loss", color="#1f77b4")
         plt.plot(losses_actor, label="Actor Loss", color="#2ca02c", alpha=0.7)
         plt.plot(losses_critic, label="Critic Loss", color="#d62728", alpha=0.7)
-        plt.title(f"Evolução das Losses de Treino (PPO Constrangido)")
-        plt.xlabel("Iterações")
+        plt.title(f"Evolution of Training Losses (Constrained PPO)")
+        plt.xlabel("Iterations")
         plt.ylabel("Loss")
         plt.legend()
         plt.grid(True, linestyle="--", alpha=0.5)
@@ -217,9 +217,9 @@ def train_single_core_generator(seed, excel_path, train_split, max_capacity, lr_
         plt.savefig(plot_path, dpi=200)
         plt.close()
     except Exception as e:
-        yield f"[AVISO] Não foi possível criar o gráfico de losses: {e}"
+        yield f"[WARNING] Could not create loss chart: {e}"
         
-    yield "[SUCCESS] Treino Single-Core concluído com sucesso!"
+    yield "[SUCCESS] Single-Core Training completed successfully!"
 
 # --- MULTI CORE TRAINING GENERATOR ---
 def train_multi_core_generator(seed, excel_path, train_split, max_capacity, lr_actor, lr_critic, gamma, k_epochs, eps_clip, batch_size, max_episodes_total, num_envs, num_workers, horizon=90, save_dir="modelos_producao_constrained"):
@@ -232,14 +232,14 @@ def train_multi_core_generator(seed, excel_path, train_split, max_capacity, lr_a
     np.random.seed(seed)
     torch.manual_seed(seed)
     
-    yield f"[INFO] Inicializando treino em modo MULTI-CORE com {num_workers} workers..."
+    yield f"[INFO] Initializing training in MULTI-CORE mode with {num_workers} workers..."
     
     # Determinar dinamicamente o limite de encomenda
     df_temp = pd.read_excel(excel_path)
     split_idx = int(len(df_temp) * train_split)
     MAX_ORDER_LIMIT = float(df_temp.iloc[:split_idx]['real_value'].max())
     
-    yield f"[INFO] Limite Máximo de Encomenda Diária (MAX_ORDER_LIMIT) = {MAX_ORDER_LIMIT} un (Capacidade Armazém = {max_capacity} un)"
+    yield f"[INFO] Max Daily Order Limit (MAX_ORDER_LIMIT) = {MAX_ORDER_LIMIT} units (Warehouse Capacity = {max_capacity} units)"
     
     shared_stats = {
         'econ': EnvRunningStat(), 'eco': EnvRunningStat(), 'risk': EnvRunningStat()
@@ -267,7 +267,7 @@ def train_multi_core_generator(seed, excel_path, train_split, max_capacity, lr_a
     losses_actor = []
     losses_critic = []
     
-    yield "[START] Treino multi-core iniciado."
+    yield "[START] Multi-core training started."
     
     try:
         while episodes_played < max_episodes_total:
@@ -325,9 +325,9 @@ def train_multi_core_generator(seed, excel_path, train_split, max_capacity, lr_a
                 torch.save(econ_state, checkpoint_path + '_econ_stat.pth')
                 
     except Exception as e:
-        yield f"[ERRO] Falha no loop de treino: {e}"
+        yield f"[ERROR] Failure in training loop: {e}"
     finally:
-        yield "[CLEANUP] Encerrando subprocessos..."
+        yield "[CLEANUP] Terminating subprocesses..."
         for q in weights_queues: 
             q.put(None)
         for p in processes: 
@@ -349,8 +349,8 @@ def train_multi_core_generator(seed, excel_path, train_split, max_capacity, lr_a
             plt.plot(losses_total, label="Total Loss", color="#1f77b4")
             plt.plot(losses_actor, label="Actor Loss", color="#2ca02c", alpha=0.7)
             plt.plot(losses_critic, label="Critic Loss", color="#d62728", alpha=0.7)
-            plt.title(f"Evolução das Losses de Treino (PPO Constrangido) - Multi-Core")
-            plt.xlabel("Iterações")
+            plt.title(f"Evolution of Training Losses (Constrained PPO) - Multi-Core")
+            plt.xlabel("Iterations")
             plt.ylabel("Loss")
             plt.legend()
             plt.grid(True, linestyle="--", alpha=0.5)
@@ -358,9 +358,9 @@ def train_multi_core_generator(seed, excel_path, train_split, max_capacity, lr_a
             plt.savefig(plot_path, dpi=200)
             plt.close()
         except Exception as e:
-            yield f"[AVISO] Não foi possível criar o gráfico de losses: {e}"
+            yield f"[WARNING] Could not create loss chart: {e}"
             
-        yield "[SUCCESS] Treino Multi-Core finalizado com sucesso!"
+        yield "[SUCCESS] Multi-Core Training finished successfully!"
 
 # --- TEST AND FINE-TUNING SIMULATOR STEP ---
 def continual_training_step(agent, new_experiences, env_train, max_action_val, lr_actor=1e-5, lr_critic=5e-5, batch_size=32):
@@ -433,16 +433,16 @@ def run_testing_simulation(excel_path, train_split, max_capacity, initial_model_
     action_dim = 1
     max_order_limit = env_test.max_order_limit
     
-    yield {"status": "init", "msg": f"[INIT] Limite Máximo de Encomenda Diária (Action Cap): {max_order_limit} un"}
+    yield {"status": "init", "msg": f"[INIT] Max Daily Order Limit (Action Cap): {max_order_limit} units"}
     
     # 2. Instantiate and Load Agent
     agent = ParallelPPOAgent(state_dim=state_dim, action_dim=action_dim, max_action=max_order_limit, batch_size=online_batch_size)
     
     try:
         agent.load(initial_model_base_path)
-        yield {"status": "init", "msg": f"[OK] Modelo Base carregado com sucesso!"}
+        yield {"status": "init", "msg": f"[OK] Base Model successfully loaded!"}
     except Exception as e:
-        yield {"status": "error", "msg": f"[ERRO CRÍTICO] Falha ao carregar modelo base: {e}"}
+        yield {"status": "error", "msg": f"[CRITICAL ERROR] Failed to load base model: {e}"}
         return
         
     # Load running stats for Z-score if exists
@@ -450,15 +450,15 @@ def run_testing_simulation(excel_path, train_split, max_capacity, initial_model_
     if os.path.exists(econ_stat_path):
         try:
             econ_state = torch.load(econ_stat_path, weights_only=False, map_location='cpu')
-            yield {"status": "init", "msg": "[OK] Estatísticas Z-Score do ambiente carregadas!"}
+            yield {"status": "init", "msg": "[OK] Environment Z-Score stats loaded!"}
             for env in [env_test, env_minmax, env_oracle, env_train]:
                 env.stat_profit.n = econ_state['n']
                 env.stat_profit.mean = econ_state['mean']
                 env.stat_profit.S = econ_state['S']
         except Exception as e:
-            yield {"status": "init", "msg": f"[AVISO] Falha ao carregar {econ_stat_path}: {e}. Começando do zero."}
+            yield {"status": "init", "msg": f"[WARNING] Failed to load {econ_stat_path}: {e}. Starting from scratch."}
     else:
-        yield {"status": "init", "msg": "[AVISO] Arquivo _econ_stat.pth não encontrado. Scaler dinâmico começará a zeros."}
+        yield {"status": "init", "msg": "[WARNING] _econ_stat.pth file not found. Dynamic scaler will start from zero."}
         
     agent.policy_old_actor.to(agent.device)
     agent.policy_old_actor.eval()
@@ -532,7 +532,7 @@ def run_testing_simulation(excel_path, train_split, max_capacity, initial_model_
     
     current_15d_buffer = []
     
-    yield {"status": "start", "msg": "[PRODUÇÃO] Simulação contínua de mercado iniciada."}
+    yield {"status": "start", "msg": "[PRODUCTION] Continuous market simulation started."}
     
     while not done:
         day = env_test.current_step
@@ -678,7 +678,7 @@ def run_testing_simulation(excel_path, train_split, max_capacity, initial_model_
             
             current_15d_buffer = []
             agent.policy_old_actor.eval()
-            log_msg += f" -> [FINE-TUNING ATIVADO: Modelo v{len(update_days)}]"
+            log_msg += f" -> [FINE-TUNING ACTIVE: Model v{len(update_days)}]"
             
         # Yield daily stats to display in UI dynamically
         yield {
@@ -757,11 +757,11 @@ def run_testing_simulation(excel_path, train_split, max_capacity, initial_model_
         })
         df_excel.to_excel(excel_report_path, index=False)
     except Exception as e:
-        yield {"status": "warning", "msg": f"[AVISO] Falha ao salvar relatório Excel: {e}"}
+        yield {"status": "warning", "msg": f"[WARNING] Failed to save Excel report: {e}"}
         
     yield {
         "status": "complete",
-        "msg": f"[CONCLUÍDO] Simulação finalizada de {dias_simulados} dias.",
+        "msg": f"[COMPLETED] Simulation finished after {dias_simulados} days.",
         "cum_profit_agent": cum_profit_agent,
         "cum_profit_minmax": cum_profit_minmax,
         "cum_profit_oracle": cum_profit_oracle,

@@ -33,7 +33,7 @@ st.set_page_config(
 )
 
 # --- IDIOMA / LANGUAGE SELECTOR ---
-lang = st.sidebar.selectbox("🌐 Idioma / Language", ["Português", "English"], index=0)
+lang = st.sidebar.selectbox("🌐 Language / Idioma", ["English", "Português"], index=0)
 
 def T(pt, en):
     return en if lang == "English" else pt
@@ -283,7 +283,7 @@ with tab_train:
         k_epochs = st.number_input("K-Epochs por update:", min_value=5, max_value=100, value=30, step=5)
         batch_size = st.selectbox("Tamanho do Batch:", [32, 64, 128, 256, 512, 1024, 2048], index=6)
     with col_hp4:
-        max_episodes = st.number_input("Total de Episódios (Máximo):", min_value=100, max_value=50000, value=1000, step=500)
+        max_episodes = st.number_input(T("Total de Episódios (Máximo):", "Total Episodes (Maximum):"), min_value=100, max_value=50000, value=1000, step=500)
         seed = st.number_input("Random Seed:", min_value=1, max_value=99999, value=1337)
         
     st.markdown(f"#### {T('Configuração de Hardware & Paralelização', 'Hardware Configuration & Parallelization')}")
@@ -558,16 +558,16 @@ with tab_test:
         }
         
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=[], y=[], mode='lines', name=T('RL Agent (Profit Acumulado)', 'RL Agent (Cumulative Profit)'), line=dict(color='#00ffaa', width=2.5)))
+        fig.add_trace(go.Scatter(x=[], y=[], mode='lines', name=T('RL Agent (Profit Acumulado)', 'RL Agent (Cumulative Profit)'), line=dict(color='#10b981', width=2.5)))
         fig.add_trace(go.Scatter(x=[], y=[], mode='lines', name=T('Min-Max Baseline', 'Min-Max Baseline'), line=dict(color='#8c9cb3', width=1.5, dash='dot')))
         fig.add_trace(go.Scatter(x=[], y=[], mode='lines', name=T('Oráculo (God Mode)', 'Oracle (God Mode)'), line=dict(color='#ffaa00', width=2.0, dash='dash')))
         fig.update_layout(
             title=T("Evolução Comparativa do Lucro Acumulado em Tempo Real", "Comparative Real-Time Cumulative Profit Evolution"),
             xaxis_title=T("Dias", "Days"),
             yaxis_title=T("Lucro Acumulado (€)", "Cumulative Profit (€)"),
-            paper_bgcolor="#11141e",
-            plot_bgcolor="#11141e",
-            font=dict(color="#e5e9f0"),
+            paper_bgcolor="#ffffff",
+            plot_bgcolor="#ffffff",
+            font=dict(color="#1e293b"),
             legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center")
         )
         chart_placeholder.plotly_chart(fig, use_container_width=True)
@@ -583,7 +583,7 @@ with tab_test:
                     unsafe_allow_html=True
                 )
                 if status == "error":
-                    st.error("Erro crítico na inicialização.")
+                    st.error(T("Erro crítico na inicialização.", "Critical initialization error."))
                     break
                     
             elif status == "running":
@@ -610,7 +610,7 @@ with tab_test:
                 if sim_step["day"] % 3 == 0 or sim_step["update_triggered"]:
                     # Criar nova figure com os arrays acumulados
                     fig_real = go.Figure()
-                    fig_real.add_trace(go.Scatter(x=plot_data["Dia"], y=plot_data["RL Agent"], mode='lines', name=f'RL Agent ({plot_data["RL Agent"][-1]:.0f}€)', line=dict(color='#00ffaa', width=2.5)))
+                    fig_real.add_trace(go.Scatter(x=plot_data["Dia"], y=plot_data["RL Agent"], mode='lines', name=f'RL Agent ({plot_data["RL Agent"][-1]:.0f}€)', line=dict(color='#10b981', width=2.5)))
                     fig_real.add_trace(go.Scatter(x=plot_data["Dia"], y=plot_data["Min-Max"], mode='lines', name=f'Min-Max ({plot_data["Min-Max"][-1]:.0f}€)', line=dict(color='#8c9cb3', width=1.5, dash='dot')))
                     fig_real.add_trace(go.Scatter(x=plot_data["Dia"], y=plot_data["Oracle"], mode='lines', name=f'Oráculo ({plot_data["Oracle"][-1]:.0f}€)', line=dict(color='#ffaa00', width=2.0, dash='dash')))
                     
@@ -618,9 +618,9 @@ with tab_test:
                         title=T("Evolução Comparativa do Lucro Acumulado em Tempo Real", "Comparative Real-Time Cumulative Profit Evolution"),
                         xaxis_title=T("Dias", "Days"),
                         yaxis_title=T("Lucro Acumulado (€)", "Cumulative Profit (€)"),
-                        paper_bgcolor="#11141e",
-                        plot_bgcolor="#11141e",
-                        font=dict(color="#e5e9f0"),
+                        paper_bgcolor="#ffffff",
+                        plot_bgcolor="#ffffff",
+                        font=dict(color="#1e293b"),
                         legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center"),
                         margin=dict(t=50, b=40, l=40, r=40)
                     )
@@ -639,7 +639,7 @@ with tab_test:
                 
                 # Plot final
                 fig_final = go.Figure()
-                fig_final.add_trace(go.Scatter(x=plot_data["Dia"], y=plot_data["RL Agent"], mode='lines', name=f'RL Agent ({sim_step["cum_profit_agent"]:.1f}€)', line=dict(color='#00ffaa', width=3.0)))
+                fig_final.add_trace(go.Scatter(x=plot_data["Dia"], y=plot_data["RL Agent"], mode='lines', name=f'RL Agent ({sim_step["cum_profit_agent"]:.1f}€)', line=dict(color='#10b981', width=3.0)))
                 fig_final.add_trace(go.Scatter(x=plot_data["Dia"], y=plot_data["Min-Max"], mode='lines', name=f'Min-Max ({sim_step["cum_profit_minmax"]:.1f}€)', line=dict(color='#8c9cb3', width=1.5, dash='dot')))
                 fig_final.add_trace(go.Scatter(x=plot_data["Dia"], y=plot_data["Oracle"], mode='lines', name=f'Oráculo ({sim_step["cum_profit_oracle"]:.1f}€)', line=dict(color='#ffaa00', width=2.0, dash='dash')))
                 
@@ -651,9 +651,9 @@ with tab_test:
                     title=T("Evolução Comparativa do Lucro Acumulado Final", "Comparative Final Cumulative Profit Evolution"),
                     xaxis_title=T("Dias", "Days"),
                     yaxis_title=T("Lucro Acumulado (€)", "Cumulative Profit (€)"),
-                    paper_bgcolor="#11141e",
-                    plot_bgcolor="#11141e",
-                    font=dict(color="#e5e9f0"),
+                    paper_bgcolor="#ffffff",
+                    plot_bgcolor="#ffffff",
+                    font=dict(color="#1e293b"),
                     legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center")
                 )
                 chart_placeholder.plotly_chart(fig_final, use_container_width=True)
@@ -698,7 +698,7 @@ with tab_test:
             st.markdown(
                 f'<div class="metric-card">'
                 f'<div class="metric-label">{T("Dias Stock Zero", "Stockout Days")}</div>'
-                f'<div class="metric-val" style="color: #ff4757;">{res["stockout_days"]} dias</div>'
+                f'<div class="metric-val" style="color: #ff4757;">{res["stockout_days"]} {T("dias", "days")}</div>'
                 f'</div>', unsafe_allow_html=True
             )
             
