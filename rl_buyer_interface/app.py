@@ -522,6 +522,7 @@ with tab_test:
     col_chart, col_side_logs = st.columns([8, 4])
     with col_chart:
         chart_placeholder = st.empty()
+        chart_placeholder_2 = st.empty()
         
     with col_side_logs:
         st.markdown(f'<div class="console-header">🤖 {T("Logs Diários da Simulação", "Daily Simulation Logs")}</div>', unsafe_allow_html=True)
@@ -554,7 +555,10 @@ with tab_test:
             "Min-Max": [],
             "Oracle": [],
             "Real Demand": [],
-            "Stock Level": []
+            "Stock Level": [],
+            "Orders": [],
+            "Spoilage": [],
+            "Overflow": []
         }
         
         fig = go.Figure()
@@ -571,6 +575,24 @@ with tab_test:
             legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center")
         )
         chart_placeholder.plotly_chart(fig, use_container_width=True)
+
+        fig2 = go.Figure()
+        fig2.add_trace(go.Scatter(x=[], y=[], mode='lines', name=T('Nível de Stock', 'Stock Level'), line=dict(color='#3b82f6', width=2)))
+        fig2.add_trace(go.Bar(x=[], y=[], name=T('Encomendas do Agente', 'Agent Orders'), marker=dict(color='#10b981', opacity=0.6)))
+        fig2.add_trace(go.Scatter(x=[], y=[], mode='lines', name=T('Procura Real', 'Real Demand'), line=dict(color='#f59e0b', width=1.5, dash='dash')))
+        fig2.add_trace(go.Bar(x=[], y=[], name=T('Apodrecimento', 'Spoilage'), marker=dict(color='#ef4444')))
+        fig2.add_trace(go.Bar(x=[], y=[], name=T('Excesso de Armazém', 'Dock Overflow'), marker=dict(color='#8b5cf6')))
+        fig2.update_layout(
+            title=T("Fluxo Operacional Diário (Stock, Encomendas e Descarte)", "Daily Operational Flow (Stock, Orders & Waste)"),
+            xaxis_title=T("Dias", "Days"),
+            yaxis_title=T("Quantidade (unidades)", "Quantity (units)"),
+            paper_bgcolor="#ffffff",
+            plot_bgcolor="#ffffff",
+            font=dict(color="#1e293b"),
+            barmode='group',
+            legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center")
+        )
+        chart_placeholder_2.plotly_chart(fig2, use_container_width=True)
         
         for sim_step in sim_gen:
             status = sim_step.get("status")
@@ -605,6 +627,9 @@ with tab_test:
                 plot_data["Oracle"].append(sim_step["oracle_profit_cum"])
                 plot_data["Real Demand"].append(sim_step["real_demand"])
                 plot_data["Stock Level"].append(sim_step["stock_level"])
+                plot_data["Orders"].append(sim_step["order_placed"])
+                plot_data["Spoilage"].append(sim_step["spoilage"])
+                plot_data["Overflow"].append(sim_step["overflow_waste"])
                 
                 # Fazer o redesenho parcial a cada 3 dias para suavizar performance do Streamlit
                 if sim_step["day"] % 3 == 0 or sim_step["update_triggered"]:
@@ -625,6 +650,27 @@ with tab_test:
                         margin=dict(t=50, b=40, l=40, r=40)
                     )
                     chart_placeholder.plotly_chart(fig_real, use_container_width=True)
+
+                    # Criar novo gráfico operacional
+                    fig_ops = go.Figure()
+                    fig_ops.add_trace(go.Scatter(x=plot_data["Dia"], y=plot_data["Stock Level"], mode='lines', name=T('Nível de Stock', 'Stock Level'), line=dict(color='#3b82f6', width=2)))
+                    fig_ops.add_trace(go.Bar(x=plot_data["Dia"], y=plot_data["Orders"], name=T('Encomendas do Agente', 'Agent Orders'), marker=dict(color='#10b981', opacity=0.6)))
+                    fig_ops.add_trace(go.Scatter(x=plot_data["Dia"], y=plot_data["Real Demand"], mode='lines', name=T('Procura Real', 'Real Demand'), line=dict(color='#f59e0b', width=1.5, dash='dash')))
+                    fig_ops.add_trace(go.Bar(x=plot_data["Dia"], y=plot_data["Spoilage"], name=T('Apodrecimento', 'Spoilage'), marker=dict(color='#ef4444')))
+                    fig_ops.add_trace(go.Bar(x=plot_data["Dia"], y=plot_data["Overflow"], name=T('Excesso de Armazém', 'Dock Overflow'), marker=dict(color='#8b5cf6')))
+                    
+                    fig_ops.update_layout(
+                        title=T("Fluxo Operacional Diário (Stock, Encomendas e Descarte)", "Daily Operational Flow (Stock, Orders & Waste)"),
+                        xaxis_title=T("Dias", "Days"),
+                        yaxis_title=T("Quantidade (unidades)", "Quantity (units)"),
+                        paper_bgcolor="#ffffff",
+                        plot_bgcolor="#ffffff",
+                        font=dict(color="#1e293b"),
+                        barmode='group',
+                        legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center"),
+                        margin=dict(t=50, b=40, l=40, r=40)
+                    )
+                    chart_placeholder_2.plotly_chart(fig_ops, use_container_width=True)
                     
             elif status == "complete":
                 st.session_state.test_log += msg + "\n"
@@ -657,6 +703,26 @@ with tab_test:
                     legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center")
                 )
                 chart_placeholder.plotly_chart(fig_final, use_container_width=True)
+
+                # Plot final operacional
+                fig_final_ops = go.Figure()
+                fig_final_ops.add_trace(go.Scatter(x=plot_data["Dia"], y=plot_data["Stock Level"], mode='lines', name=T('Nível de Stock', 'Stock Level'), line=dict(color='#3b82f6', width=2)))
+                fig_final_ops.add_trace(go.Bar(x=plot_data["Dia"], y=plot_data["Orders"], name=T('Encomendas do Agente', 'Agent Orders'), marker=dict(color='#10b981', opacity=0.6)))
+                fig_final_ops.add_trace(go.Scatter(x=plot_data["Dia"], y=plot_data["Real Demand"], mode='lines', name=T('Procura Real', 'Real Demand'), line=dict(color='#f59e0b', width=1.5, dash='dash')))
+                fig_final_ops.add_trace(go.Bar(x=plot_data["Dia"], y=plot_data["Spoilage"], name=T('Apodrecimento', 'Spoilage'), marker=dict(color='#ef4444')))
+                fig_final_ops.add_trace(go.Bar(x=plot_data["Dia"], y=plot_data["Overflow"], name=T('Excesso de Armazém', 'Dock Overflow'), marker=dict(color='#8b5cf6')))
+                
+                fig_final_ops.update_layout(
+                    title=T("Fluxo Operacional Final (Stock, Encomendas e Descarte)", "Final Operational Flow (Stock, Orders & Waste)"),
+                    xaxis_title=T("Dias", "Days"),
+                    yaxis_title=T("Quantidade (unidades)", "Quantity (units)"),
+                    paper_bgcolor="#ffffff",
+                    plot_bgcolor="#ffffff",
+                    font=dict(color="#1e293b"),
+                    barmode='group',
+                    legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center")
+                )
+                chart_placeholder_2.plotly_chart(fig_final_ops, use_container_width=True)
 
     # Exibir Scorecard e downloaders ao completar a simulação
     if st.session_state.test_completed and st.session_state.test_results is not None:
