@@ -69,59 +69,7 @@ def continual_training_step(agent, new_experiences, env_train, max_action_val):
     # 3. Executar otimização matemática PPO (K-epochs = 30)
     agent.update()
 
-def run_true_oracle_lookahead(env_oracle, lookahead_days=3, action_steps=11, max_capacity=500):
-    """
-    Pesquisa recursiva (Backtracking) para encontrar a ação ótima no passo atual,
-    maximizando o lucro acumulado ao longo de uma janela de dias futuros (lookahead_days).
-    """
-    ckpt = env_oracle.get_checkpoint()
-    
-    # Discretiza as decisões possíveis usando a capacidade máxima como limite superior seguro
-    action_candidates = np.linspace(0, max_capacity, action_steps)
-    
-    best_action = 0.0
-    best_total_profit = -float('inf')
-    
-    def search(depth, current_profit):
-        nonlocal best_total_profit
-        
-        # Caso base da pesquisa
-        if depth == lookahead_days:
-            if current_profit > best_total_profit:
-                best_total_profit = current_profit
-            return
-            
-        # Guarda o estado deste ramo antes de simular
-        depth_ckpt = env_oracle.get_checkpoint()
-        
-        for act in action_candidates:
-            # Simula 1 dia com a ação candidata (sem atualizar estatísticas globais do ambiente)
-            _, _, _, info = env_oracle.step(act, update_stats=False)
-            daily_prof = info['profit']
-            
-            # Avança recursivamente na simulação
-            search(depth + 1, current_profit + daily_prof)
-            
-            # Backtrack (restaura o estado)
-            env_oracle.load_checkpoint(depth_ckpt)
 
-    # Avalia qual a primeira ação (dia atual) que maximiza a trajetória futura
-    best_action = 0.0
-    for act in action_candidates:
-        env_oracle.load_checkpoint(ckpt)
-        _, _, _, info = env_oracle.step(act, update_stats=False)
-        daily_prof = info['profit']
-        
-        # Inicia a pesquisa a partir do dia seguinte
-        current_best = best_total_profit
-        search(1, daily_prof)
-        
-        if best_total_profit > current_best:
-            best_action = act
-            
-    # Restaura o ambiente para o estado original antes de devolver a decisão
-    env_oracle.load_checkpoint(ckpt)
-    return best_action
 
 def run_buyer_agent_simulation(product_sku, max_capacity=500, update_interval_days=15, num_days=150, min_threshold=35, max_threshold=130):
     """
@@ -259,13 +207,23 @@ def run_buyer_agent_simulation(product_sku, max_capacity=500, update_interval_da
         cum_waste_minmax += float(info_minmax['overflow_waste'])
         cum_lost_sales_minmax += float(max(0, vendas_hoje_minmax - info_minmax['sales']))
 
-        # --- TRUE ORACLE LOOKAHEAD (Dynamic Programming / Backtracking Search) ---
-        action_oracle = run_true_oracle_lookahead(
-            env_oracle=env_oracle, 
-            lookahead_days=3, 
-            action_steps=11, 
-            max_capacity=max_capacity
-        )
+        # --- BASELINE: ORÁCULO PERFEITO ---
+        stock_hoje_oracle = sum(env_oracle.stock_profile) + env_oracle.in_transit.get(env_oracle.current_step, 0)
+        vendas_hoje_oracle = env_oracle.data.iloc[env_oracle.current_step]['real_value']
+        stock_amanha_oracle = max(0, stock_hoje_oracle - vendas_hoje_oracle) + env_oracle.in_transit.get(env_oracle.current_step + 1, 0)
+        
+        action_oracle = 0
+        demand_tomorrow = env_oracle.data.iloc[env_oracle.current_step + 1]['real_value'] if env_oracle.current_step + 1 <= env_oracle.max_steps else 0
+        
+        if stock_amanha_oracle < demand_tomorrow:
+            future_demand = 0
+            for i in range(1, 5):
+                idx = env_oracle.current_step + i
+                if idx <= env_oracle.max_steps:
+                    future_demand += env_oracle.data.iloc[idx]['real_value']
+            
+            action_oracle = max(0, future_demand - stock_amanha_oracle)
+            action_oracle = min(action_oracle, max_capacity)
             
         _, _, _, info_oracle = env_oracle.step(action_oracle)
         cum_profit_oracle += info_oracle['profit']
