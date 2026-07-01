@@ -32,43 +32,52 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- CUSTOM CSS: PREMIUM DARK & GLASSMORPHISM ---
+# --- IDIOMA / LANGUAGE SELECTOR ---
+lang = st.sidebar.selectbox("🌐 Idioma / Language", ["Português", "English"], index=0)
+
+def T(pt, en):
+    return en if lang == "English" else pt
+
+# --- CUSTOM CSS: PREMIUM LIGHT ORANGE THEME ---
 st.markdown("""
 <style>
-    /* Importar Fonte Outfit */
-    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
+    /* Configuração Geral de Fontes - Neo Tech Std Medium */
+    @font-face {
+        font-family: 'Neo Tech Std Medium';
+        font-style: normal;
+        font-weight: 500;
+        src: local('Neo Tech Std Medium'), local('NeoTechStd-Medium'), local('Neo Tech Std');
+    }
     
-    /* Configuração Geral de Fontes */
     html, body, [class*="css"], .stApp {
-        font-family: 'Outfit', sans-serif;
+        font-family: 'Neo Tech Std Medium', sans-serif !important;
     }
     
-    /* Tema Escuro customizado */
+    /* Tema Claro Branco e Laranja */
     .stApp {
-        background-color: #0b0d12;
-        color: #e5e9f0;
+        background-color: #ffffff;
+        color: #1e293b;
     }
     
-    /* Sidebar styling */
+    /* Sidebar styling - Light gray background with orange touch */
     section[data-testid="stSidebar"] {
-        background-color: #121620;
-        border-right: 1px solid #1f283d;
+        background-color: #f8fafc;
+        border-right: 1px solid #e2e8f0;
     }
     
-    /* Custom Card container */
+    /* Custom Card container - Clean light border and white background */
     .custom-card {
-        background: rgba(30, 37, 53, 0.45);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
         border-radius: 12px;
         padding: 20px;
         margin-bottom: 20px;
-        backdrop-filter: blur(10px);
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
     }
     
-    /* Header Gradient styling */
+    /* Header Gradient styling - Orange and Warm yellow/Darker Orange gradient */
     .main-title {
-        background: linear-gradient(135deg, #00d2ff 0%, #0066ff 50%, #9b51e0 100%);
+        background: linear-gradient(135deg, #ff8c00 0%, #ff4500 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         font-weight: 700;
@@ -76,33 +85,33 @@ st.markdown("""
         margin-bottom: 5px;
     }
     .subtitle {
-        color: #8c9cb3;
+        color: #64748b;
         font-size: 1.1rem;
         margin-bottom: 25px;
     }
     
-    /* Terminal Console style */
+    /* Terminal Console style - Light terminal or clean dark console */
     .console-header {
-        background-color: #1a1e29;
+        background-color: #0f172a;
         border-radius: 8px 8px 0 0;
-        border: 1px solid #2e384e;
+        border: 1px solid #1e293b;
         border-bottom: none;
         padding: 8px 15px;
         font-size: 0.85rem;
-        color: #00d2ff;
+        color: #ff8c00;
         font-family: monospace;
         display: flex;
         align-items: center;
         gap: 8px;
     }
     .console-box {
-        background-color: #080a0f;
-        border: 1px solid #2e384e;
+        background-color: #020617;
+        border: 1px solid #1e293b;
         border-radius: 0 0 8px 8px;
         padding: 15px;
         font-family: 'Courier New', Courier, monospace;
         font-size: 0.9rem;
-        color: #a3be8c;
+        color: #38bdf8;
         height: 350px;
         overflow-y: auto;
         white-space: pre-wrap;
@@ -117,21 +126,21 @@ st.markdown("""
         height: 50px;
         font-size: 1.1rem;
         font-weight: 600;
-        color: #8c9cb3;
+        color: #64748b;
         border-bottom-width: 2px;
     }
     .stTabs [data-baseweb="tab"]:hover {
-        color: #00d2ff;
+        color: #ff8c00;
     }
     .stTabs [aria-selected="true"] {
-        color: #00d2ff !important;
-        border-bottom-color: #00d2ff !important;
+        color: #ff8c00 !important;
+        border-bottom-color: #ff8c00 !important;
     }
     
     /* Metric Card Custom styling */
     .metric-card {
-        background: linear-gradient(145deg, #181d2a, #11141e);
-        border: 1px solid #222b3d;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
         border-radius: 8px;
         padding: 15px;
         text-align: center;
@@ -139,12 +148,12 @@ st.markdown("""
     .metric-val {
         font-size: 1.8rem;
         font-weight: 700;
-        color: #00ffaa;
+        color: #ea580c;
         margin: 5px 0;
     }
     .metric-label {
         font-size: 0.85rem;
-        color: #8c9cb3;
+        color: #64748b;
         text-transform: uppercase;
     }
 </style>
@@ -174,34 +183,41 @@ def create_model_zip_bytes(model_base_path):
 col_logo, col_desc = st.columns([1, 12])
 with col_desc:
     st.markdown('<h1 class="main-title">RL Buyer Agent - Eureka</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="subtitle">Interface Interativa de Inteligência Artificial para Gestão Automática de Inventário Fruta & Logística</p>', unsafe_allow_html=True)
+    st.markdown(f'<p class="subtitle">{T("Interface Interativa de Inteligência Artificial para Gestão Automática de Inventário Fruta & Logística", "Interactive Artificial Intelligence Interface for Automatic Fruit Inventory & Logistics Management")}</p>', unsafe_allow_html=True)
 
 # ----------------- SIDEBAR: DATA UPLOAD & GLOBAL CONFIG -----------------
 with st.sidebar:
-    st.markdown("### 📥 Carregar Dataset de Demanda")
+    st.markdown(f"### {T('📥 Carregar Dataset de Demanda', '📥 Load Demand Dataset')}")
     uploaded_file = st.file_uploader(
-        "Selecione o arquivo Excel ou CSV com dados de vendas históricas e meteorologia:",
+        T("Selecione o arquivo Excel ou CSV com dados de vendas históricas e meteorologia:", "Select Excel or CSV file with historical sales and weather data:"),
         type=["xlsx", "csv"],
-        help="O arquivo deve conter as colunas: real_value, prediction, price, temperature, humidity, ethylene."
+        help=T("O arquivo deve conter as colunas: real_value, prediction, price, temperature, humidity, ethylene.", "The file must contain the columns: real_value, prediction, price, temperature, humidity, ethylene.")
     )
     
     st.markdown("---")
-    st.markdown("### ⚙️ Configuração Global")
-    device_opt = st.selectbox("Hardware de Execução (PyTorch):", ["CPU", "GPU"], index=0)
+    st.markdown(f"### ⚙️ {T('Configuração Global', 'Global Configuration')}")
+    device_opt = st.selectbox(T("Hardware de Execução (PyTorch):", "Execution Hardware (PyTorch):"), ["CPU", "GPU"], index=0)
     device = "cuda" if device_opt == "GPU" and torch.cuda.is_available() else "cpu"
     if device_opt == "GPU" and not torch.cuda.is_available():
-        st.warning("Aceleração GPU (CUDA) indisponível. Usando CPU.")
+        st.warning(T("Aceleração GPU (CUDA) indisponível. Usando CPU.", "GPU acceleration (CUDA) unavailable. Using CPU."))
         
     st.markdown("---")
-    st.markdown("#### ℹ️ Estrutura do Dataset Esperada")
+    st.markdown(f"#### ℹ️ {T('Estrutura do Dataset Esperada', 'Expected Dataset Structure')}")
     st.info(
-        "**Variáveis Necessárias:**\n"
-        "- `real_value`: Vendas Reais\n"
-        "- `prediction`: Procura Prevista\n"
-        "- `price`: Preço Unitário\n"
-        "- `temperature`: Temperatura do dia\n"
-        "- `humidity`: Humidade Relativa\n"
-        "- `ethylene`: Concentração Etileno"
+        T("**Variáveis Necessárias:**\n"
+          "- `real_value`: Vendas Reais\n"
+          "- `prediction`: Procura Prevista\n"
+          "- `price`: Preço Unitário\n"
+          "- `temperature`: Temperatura do dia\n"
+          "- `humidity`: Humidade Relativa\n"
+          "- `ethylene`: Concentração Etileno",
+          "**Required Variables:**\n"
+          "- `real_value`: Real Sales\n"
+          "- `prediction`: Predicted Demand\n"
+          "- `price`: Unit Price\n"
+          "- `temperature`: Daily Temperature\n"
+          "- `humidity`: Relative Humidity\n"
+          "- `ethylene`: Ethylene Concentration")
     )
 
 # ----------------- SESSION STATE INITS -----------------
@@ -219,7 +235,7 @@ if 'test_results' not in st.session_state:
 # Verificação inicial se há dataset carregado
 if uploaded_file is None:
     st.markdown('<div class="custom-card">', unsafe_allow_html=True)
-    st.warning("👋 Por favor, faça upload de um ficheiro de dataset na barra lateral para começar a interagir com o agente de compras RL.")
+    st.warning(T("👋 Por favor, faça upload de um ficheiro de dataset na barra lateral para começar a interagir com o agente de compras RL.", "👋 Please upload a dataset file in the sidebar to start interacting with the RL buyer agent."))
     st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
 
@@ -232,30 +248,30 @@ def load_uploaded_df(file_obj):
         return pd.read_csv(file_obj)
 
 df_data = load_uploaded_df(uploaded_file)
-st.sidebar.success(f"Dataset carregado com {len(df_data)} dias de registos!")
+st.sidebar.success(T(f"Dataset carregado com {len(df_data)} dias de registos!", f"Dataset loaded with {len(df_data)} days of records!"))
 
 # Criar arquivo temporário local para a leitura das rotinas do modelo
 temp_dataset_path = os.path.join(tempfile.gettempdir(), "uploaded_dataset.xlsx")
 df_data.to_excel(temp_dataset_path, index=False)
 
 # ----------------- TABS PRINCIPAIS -----------------
-tab_train, tab_test = st.tabs(["🏋️ Treinar Modelo", "🧪 Testar & Fine-Tuning"])
+tab_train, tab_test = st.tabs([T("🏋️ Treinar Modelo", "🏋️ Train Model"), T("🧪 Testar & Fine-Tuning", "🧪 Test & Fine-Tuning")])
 
 # =====================================================================
 # TAB 1: TREINO DO MODELO
 # =====================================================================
 with tab_train:
-    st.markdown("### Treino Offline do Modelo PPO")
-    st.markdown("Configure as variáveis de ambiente e os hiperparâmetros mais importantes do algoritmo Proximal Policy Optimization (PPO) abaixo.")
+    st.markdown(f"### {T('Treino Offline do Modelo PPO', 'Offline Training of the PPO Model')}")
+    st.markdown(T("Configure as variáveis de ambiente e os hiperparâmetros mais importantes do algoritmo Proximal Policy Optimization (PPO) abaixo.", "Configure environmental variables and the most important hyperparameters of the Proximal Policy Optimization (PPO) algorithm below."))
     
     col_split, col_cap = st.columns(2)
     with col_split:
-        train_split = st.slider("Percentagem (%) de Dados para Treino:", min_value=30, max_value=90, value=60, step=5,
-                                help="Apenas esta fração inicial do dataset será usada para treinar o agente. O restante é reservado para teste.")
+        train_split = st.slider(T("Percentagem (%) de Dados para Treino:", "Percentage (%) of Data for Training:"), min_value=30, max_value=90, value=60, step=5,
+                                help=T("Apenas esta fração inicial do dataset será usada para treinar o agente. O restante é reservado para teste.", "Only this initial fraction of the dataset will be used to train the agent. The rest is reserved for testing."))
     with col_cap:
-        max_capacity = st.number_input("Capacidade Máxima do Armazém (unidades):", min_value=100, max_value=5000, value=500, step=100)
+        max_capacity = st.number_input(T("Capacidade Máxima do Armazém (unidades):", "Maximum Warehouse Capacity (units):"), min_value=100, max_value=5000, value=500, step=100)
         
-    st.markdown("#### Hiperparâmetros de RL")
+    st.markdown(f"#### {T('Hiperparâmetros de RL', 'RL Hyperparameters')}")
     col_hp1, col_hp2, col_hp3, col_hp4 = st.columns(4)
     with col_hp1:
         lr_act = st.number_input("Learning Rate (Actor):", min_value=1e-5, max_value=1e-2, value=0.0003, format="%.5f")
@@ -270,25 +286,26 @@ with tab_train:
         max_episodes = st.number_input("Total de Episódios (Máximo):", min_value=100, max_value=50000, value=1000, step=500)
         seed = st.number_input("Random Seed:", min_value=1, max_value=99999, value=1337)
         
-    st.markdown("#### Configuração de Hardware & Paralelização")
+    st.markdown(f"#### {T('Configuração de Hardware & Paralelização', 'Hardware Configuration & Parallelization')}")
     col_hw1, col_hw2 = st.columns(2)
     with col_hw1:
-        num_envs = st.slider("Número de Ambientes Paralelos:", min_value=4, max_value=128, value=64, step=4,
-                             help="Quantidade de simulações concorrentes para recolha de trajetórias.")
+        num_envs = st.slider(T("Número de Ambientes Paralelos:", "Number of Parallel Environments:"), min_value=4, max_value=128, value=64, step=4,
+                             help=T("Quantidade de simulações concorrentes para recolha de trajetórias.", "Amount of concurrent simulations for trajectory collection."))
     with col_hw2:
-        core_mode = st.radio("Modo de Processamento:", ["Single-Core (Estável em Cloud)", "Multi-Core (Mais Rápido Localmente)"], index=0)
+        # Wrap radio options in translated list
+        core_mode = st.radio(T("Modo de Processamento:", "Processing Mode:"), [T("Single-Core (Estável em Cloud)", "Single-Core (Stable in Cloud)"), T("Multi-Core (Mais Rápido Localmente)", "Multi-Core (Faster Locally)")], index=0)
         
     workers = 4
-    if "Multi-Core" in core_mode:
-        workers = st.slider("Número de Cores Físicos (Workers):", min_value=2, max_value=16, value=4, step=2)
+    if "Multi-Core" in core_mode or "Faster Locally" in core_mode:
+        workers = st.slider(T("Número de Cores Físicos (Workers):", "Number of Physical Cores (Workers):"), min_value=2, max_value=16, value=4, step=2)
 
     # Iniciar Treino
-    btn_train = st.button("🚀 Iniciar Treino do Agente", use_container_width=True)
+    btn_train = st.button(T("🚀 Iniciar Treino do Agente", "🚀 Start Agent Training"), use_container_width=True)
     
     # Contentor de logs
-    st.markdown('<div class="console-header">📁 Terminal do PPO Agent - Logs de Treino</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="console-header">📁 {T("Terminal do PPO Agent - Logs de Treino", "PPO Agent Terminal - Training Logs")}</div>', unsafe_allow_html=True)
     console_placeholder = st.empty()
-    console_placeholder.markdown('<div class="console-box">Agente à espera de comando...</div>', unsafe_allow_html=True)
+    console_placeholder.markdown(f'<div class="console-box">{T("Agente à espera de comando...", "Agent waiting for command...")}</div>', unsafe_allow_html=True)
     
     if btn_train:
         st.session_state.train_log = ""
@@ -352,13 +369,13 @@ with tab_train:
                     pass
         
         progress_bar.progress(1.0)
-        st.success("🎉 Treino concluído com sucesso!")
+        st.success(T("🎉 Treino concluído com sucesso!", "🎉 Training completed successfully!"))
         
     # Exibir o botão de download caso os arquivos já existam
     if st.session_state.trained_model_dir is not None:
         st.markdown('<div class="custom-card">', unsafe_allow_html=True)
-        st.markdown("#### 💾 Guardar Ficheiros Finais do Modelo")
-        st.write("Transfira o modelo treinado com os pesos do Actor, Critic, Scaler e estatísticas Z-Score compilados num ficheiro ZIP:")
+        st.markdown(f"#### 💾 {T('Guardar Ficheiros Finais do Modelo', 'Save Final Model Files')}")
+        st.write(T("Transfira o modelo treinado com os pesos do Actor, Critic, Scaler e estatísticas Z-Score compilados num ficheiro ZIP:", "Download the trained model with Actor, Critic, Scaler weights and compiled Z-Score statistics in a ZIP file:"))
         
         # Gerar o arquivo ZIP em memória
         base_path = os.path.join(st.session_state.trained_model_dir, "ppo_constrained_final")
@@ -366,7 +383,7 @@ with tab_train:
         
         if zip_bytes is not None:
             st.download_button(
-                label="📥 Descarregar Ficheiros de Treino (.ZIP)",
+                label=T("📥 Descarregar Ficheiros de Treino (.ZIP)", "📥 Download Training Files (.ZIP)"),
                 data=zip_bytes,
                 file_name="modelo_ppo_buyer_agente.zip",
                 mime="application/zip",
@@ -377,64 +394,64 @@ with tab_train:
             plot_path = os.path.join(st.session_state.trained_model_dir, "losses_plot.png")
             if os.path.exists(plot_path):
                 st.markdown("---")
-                st.markdown("##### Curva de Aprendizagem (Loss Evolution)")
-                st.image(plot_path, caption="Gráficos de Losses de Treino (Actor, Critic e Total)", use_container_width=True)
+                st.markdown(f"##### {T('Curva de Aprendizagem (Loss Evolution)', 'Learning Curve (Loss Evolution)')}")
+                st.image(plot_path, caption=T("Gráficos de Losses de Treino (Actor, Critic e Total)", "Training Loss Charts (Actor, Critic and Total)"), use_container_width=True)
         else:
-            st.error("Não foram encontrados ficheiros de pesos do modelo no diretório temporário.")
+            st.error(T("Não foram encontrados ficheiros de pesos do modelo no diretório temporário.", "No model weight files found in the temporary directory."))
         st.markdown('</div>', unsafe_allow_html=True)
 
 # =====================================================================
 # TAB 2: TESTE E FINE-TUNING DO MODELO
 # =====================================================================
 with tab_test:
-    st.markdown("### Simulação em Produção & Fine-Tuning Contínuo")
-    st.markdown("Execute a simulação no período de teste do dataset e avalie o desempenho do RL Agent em tempo real face a estratégias Baseline.")
+    st.markdown(f"### {T('Simulação em Produção & Fine-Tuning Contínuo', 'Production Simulation & Continuous Fine-Tuning')}")
+    st.markdown(T("Execute a simulação no período de teste do dataset e avalie o desempenho do RL Agent em tempo real face a estratégias Baseline.", "Run the simulation on the test period of the dataset and evaluate the RL Agent's performance in real time against Baseline strategies."))
     
     col_ds, col_model = st.columns(2)
     with col_ds:
         st.markdown('<div class="custom-card" style="height: 100%;">', unsafe_allow_html=True)
-        st.markdown("##### 1. Configurar Dados de Teste")
+        st.markdown(f"##### {T('1. Configurar Dados de Teste', '1. Configure Test Data')}")
         test_split_option = st.radio(
-            "Origem dos dias de teste:",
-            ["Usar os restantes (100 - X)% do dataset de treino carregado", "Carregar outro ficheiro com novos dias"]
+            T("Origem dos dias de teste:", "Source of test days:"),
+            [T("Usar os restantes (100 - X)% do dataset de treino carregado", "Use the remaining (100 - X)% of the loaded training dataset"), T("Carregar outro ficheiro com novos dias", "Load another file with new days")]
         )
         
         test_split_val = 0.6
-        if "Usar os restantes" in test_split_option:
+        if "Usar os restantes" in test_split_option or "Use the remaining" in test_split_option:
             test_split_val = train_split / 100.0
-            st.info(f"A simulação usará a fração restante dos dados ({100 - train_split}% de {len(df_data)} dias = {int(len(df_data) * (1 - test_split_val))} dias).")
+            st.info(T(f"A simulação usará a fração restante dos dados ({100 - train_split}% de {len(df_data)} dias = {int(len(df_data) * (1 - test_split_val))} dias).", f"The simulation will use the remaining data fraction ({100 - train_split}% of {len(df_data)} days = {int(len(df_data) * (1 - test_split_val))} days)."))
             final_test_dataset_path = temp_dataset_path
         else:
             uploaded_test_file = st.file_uploader(
-                "Carregar Dataset de Teste / Futuro:",
+                T("Carregar Dataset de Teste / Futuro:", "Upload Test / Future Dataset:"),
                 type=["xlsx", "csv"],
                 key="test_dataset_uploader"
             )
             if uploaded_test_file is not None:
                 df_test = load_uploaded_df(uploaded_test_file)
-                st.success(f"Novos dias de teste carregados ({len(df_test)} dias).")
+                st.success(T(f"Novos dias de teste carregados ({len(df_test)} dias).", f"New test days loaded ({len(df_test)} days)."))
                 # Escrever ficheiro temporário para teste
                 final_test_dataset_path = os.path.join(tempfile.gettempdir(), "test_dataset.xlsx")
                 df_test.to_excel(final_test_dataset_path, index=False)
                 test_split_val = 0.0 # Todo o ficheiro novo é usado para o teste
             else:
-                st.warning("A aguardar carregamento do ficheiro de teste...")
+                st.warning(T("A aguardar carregamento do ficheiro de teste...", "Waiting for test file upload..."))
                 st.markdown('</div>', unsafe_allow_html=True)
                 st.stop()
         st.markdown('</div>', unsafe_allow_html=True)
         
     with col_model:
         st.markdown('<div class="custom-card" style="height: 100%;">', unsafe_allow_html=True)
-        st.markdown("##### 2. Upload do Modelo Treinado")
-        st.write("Faça upload do ficheiro ZIP ou dos ficheiros individuais (.pth) contendo os pesos treinados:")
+        st.markdown(f"##### {T('2. Upload do Modelo Treinado', '2. Upload Trained Model')}")
+        st.write(T("Faça upload do ficheiro ZIP ou dos ficheiros individuais (.pth) contendo os pesos treinados:", "Upload the ZIP file or individual files (.pth) containing the trained weights:"))
         
-        upload_mode = st.radio("Tipo de upload:", ["Ficheiro ZIP", "Ficheiros Individuais (.pth)"])
+        upload_mode = st.radio(T("Tipo de upload:", "Upload type:"), [T("Ficheiro ZIP", "ZIP File"), T("Ficheiros Individuais (.pth)", "Individual Files (.pth)")])
         
         temp_load_dir = tempfile.mkdtemp()
         model_loaded_ok = False
         
-        if upload_mode == "Ficheiro ZIP":
-            zip_model_file = st.file_uploader("Upload do Modelo ZIP:", type=["zip"])
+        if upload_mode == "Ficheiro ZIP" or upload_mode == "ZIP File":
+            zip_model_file = st.file_uploader(T("Upload do Modelo ZIP:", "Upload ZIP Model:"), type=["zip"])
             if zip_model_file is not None:
                 try:
                     with zipfile.ZipFile(zip_model_file) as zf:
@@ -446,19 +463,19 @@ with tab_test:
                         base_model_name = actor_file[0].split('_actor.pth')[0]
                         initial_model_base_path = os.path.join(temp_load_dir, base_model_name)
                         model_loaded_ok = True
-                        st.success(f"Modelo ZIP descompactado! Identificado: {base_model_name}")
+                        st.success(T(f"Modelo ZIP descompactado! Identificado: {base_model_name}", f"ZIP model unpacked! Identified: {base_model_name}"))
                     else:
-                        st.error("O ficheiro ZIP não contém arquivos no formato esperado (*_actor.pth).")
+                        st.error(T("O ficheiro ZIP não contém arquivos no formato esperado (*_actor.pth).", "The ZIP file does not contain files in the expected format (*_actor.pth)."))
                 except Exception as e:
-                    st.error(f"Erro ao descompactar o ZIP: {e}")
+                    st.error(T(f"Erro ao descompactar o ZIP: {e}", f"Error unpacking ZIP: {e}"))
         else:
             col_a1, col_a2 = st.columns(2)
             with col_a1:
-                uploaded_actor = st.file_uploader("Ficheiro Actor (*_actor.pth)", type=["pth"])
-                uploaded_scaler = st.file_uploader("Ficheiro Scaler (*_scaler.pth) [Opcional]", type=["pth"])
+                uploaded_actor = st.file_uploader(T("Ficheiro Actor (*_actor.pth)", "Actor File (*_actor.pth)"), type=["pth"])
+                uploaded_scaler = st.file_uploader(T("Ficheiro Scaler (*_scaler.pth) [Opcional]", "Scaler File (*_scaler.pth) [Optional]"), type=["pth"])
             with col_a2:
-                uploaded_critic = st.file_uploader("Ficheiro Critic (*_critic.pth) [Opcional]", type=["pth"])
-                uploaded_econ = st.file_uploader("Ficheiro Econ Stat (*_econ_stat.pth)", type=["pth"])
+                uploaded_critic = st.file_uploader(T("Ficheiro Critic (*_critic.pth) [Opcional]", "Critic File (*_critic.pth) [Optional]"), type=["pth"])
+                uploaded_econ = st.file_uploader(T("Ficheiro Econ Stat (*_econ_stat.pth)", type=["pth"]))
                 
             if uploaded_actor is not None and uploaded_econ is not None:
                 # Gravar com sufixos corretos no diretório temporário
@@ -476,30 +493,30 @@ with tab_test:
                         
                 initial_model_base_path = os.path.join(temp_load_dir, "my_model")
                 model_loaded_ok = True
-                st.success("Pesos do Actor e do Econ Stat carregados com sucesso!")
+                st.success(T("Pesos do Actor e do Econ Stat carregados com sucesso!", "Actor and Econ Stat weights loaded successfully!"))
             else:
-                st.info("Para correr o teste, faça upload do Actor (*_actor.pth) e do Econ Stat (*_econ_stat.pth).")
+                st.info(T("Para correr o teste, faça upload do Actor (*_actor.pth) e do Econ Stat (*_econ_stat.pth).", "To run the test, upload the Actor (*_actor.pth) and Econ Stat (*_econ_stat.pth)."))
         st.markdown('</div>', unsafe_allow_html=True)
         
-    st.markdown("#### Parâmetros de Simulação e Fine-Tuning")
+    st.markdown(f"#### {T('Parâmetros de Simulação e Fine-Tuning', 'Simulation & Fine-Tuning Parameters')}")
     col_t1, col_t2, col_t3 = st.columns(3)
     with col_t1:
-        s_min = st.number_input("Valor Mínimo Baseline (s):", min_value=1, max_value=500, value=24, help="Desencadeia encomenda no Baseline Min-Max se o stock estimado for inferior a este valor.")
-        S_max = st.number_input("Valor Máximo Baseline (S):", min_value=50, max_value=2000, value=60, help="Nível de stock alvo após encomenda no Baseline Min-Max.")
+        s_min = st.number_input(T("Valor Mínimo Baseline (s):", "Minimum Baseline Value (s):"), min_value=1, max_value=500, value=24, help=T("Desencadeia encomenda no Baseline Min-Max se o stock estimado for inferior a este valor.", "Triggers an order in the Min-Max Baseline if the estimated stock is lower than this value."))
+        S_max = st.number_input(T("Valor Máximo Baseline (S):", "Maximum Baseline Value (S):"), min_value=50, max_value=2000, value=60, help=T("Nível de stock alvo após encomenda no Baseline Min-Max.", "Target stock level after ordering in the Min-Max Baseline."))
     with col_t2:
-        update_interval = st.number_input("Intervalo de Fine-Tuning (dias):", min_value=1, max_value=90, value=15, help="Frequência em dias com que o agente atualiza online os seus pesos com dados reais do mercado.")
-        online_batch = st.selectbox("Tamanho do Batch Online:", [16, 32, 64, 128], index=1)
+        update_interval = st.number_input(T("Intervalo de Fine-Tuning (dias):", "Fine-Tuning Interval (days):"), min_value=1, max_value=90, value=15, help=T("Frequência em dias com que o agente atualiza online os seus pesos com dados reais do mercado.", "Frequency in days with which the agent updates its weights online with real market data."))
+        online_batch = st.selectbox(T("Tamanho do Batch Online:", "Online Batch Size:"), [16, 32, 64, 128], index=1)
     with col_t3:
-        online_lr_act = st.number_input("Online Actor Learning Rate:", min_value=1e-7, max_value=1e-3, value=1e-5, format="%.7f", help="Learning rate ultra baixo para evitar esquecimento catastrófico.")
+        online_lr_act = st.number_input("Online Actor Learning Rate:", min_value=1e-7, max_value=1e-3, value=1e-5, format="%.7f", help=T("Learning rate ultra baixo para evitar esquecimento catastrófico.", "Ultra low learning rate to avoid catastrophic forgetting."))
         online_lr_crit = st.number_input("Online Critic Learning Rate:", min_value=1e-7, max_value=1e-3, value=5e-5, format="%.7f")
 
     # Botão para correr simulação
     st.markdown("---")
     btn_disabled = not model_loaded_ok
-    btn_test = st.button("🏁 Iniciar Teste e Fine-Tuning Contínuo", use_container_width=True, disabled=btn_disabled)
+    btn_test = st.button(T("🏁 Iniciar Teste e Fine-Tuning Contínuo", "🏁 Start Test & Continuous Fine-Tuning"), use_container_width=True, disabled=btn_disabled)
     
     if btn_disabled:
-        st.warning("⚠️ O botão de teste está desativado. Por favor, carregue os pesos do modelo (Actor e Econ Stat) primeiro.")
+        st.warning(T("⚠️ O botão de teste está desativado. Por favor, carregue os pesos do modelo (Actor e Econ Stat) primeiro.", "⚠️ The test button is disabled. Please upload the model weights (Actor and Econ Stat) first."))
 
     # Contentores dinâmicos
     col_chart, col_side_logs = st.columns([8, 4])
@@ -507,9 +524,9 @@ with tab_test:
         chart_placeholder = st.empty()
         
     with col_side_logs:
-        st.markdown('<div class="console-header">🤖 Logs Diários da Simulação</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="console-header">🤖 {T("Logs Diários da Simulação", "Daily Simulation Logs")}</div>', unsafe_allow_html=True)
         test_console_placeholder = st.empty()
-        test_console_placeholder.markdown('<div class="console-box">Simulação parada...</div>', unsafe_allow_html=True)
+        test_console_placeholder.markdown(f'<div class="console-box">{T("Simulação parada...", "Simulation stopped...")}</div>', unsafe_allow_html=True)
 
     if btn_test and model_loaded_ok:
         st.session_state.test_log = ""
@@ -541,13 +558,13 @@ with tab_test:
         }
         
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=[], y=[], mode='lines', name='RL Agent (Profit Acumulado)', line=dict(color='#00ffaa', width=2.5)))
-        fig.add_trace(go.Scatter(x=[], y=[], mode='lines', name='Min-Max Baseline', line=dict(color='#8c9cb3', width=1.5, dash='dot')))
-        fig.add_trace(go.Scatter(x=[], y=[], mode='lines', name='Oráculo (God Mode)', line=dict(color='#ffaa00', width=2.0, dash='dash')))
+        fig.add_trace(go.Scatter(x=[], y=[], mode='lines', name=T('RL Agent (Profit Acumulado)', 'RL Agent (Cumulative Profit)'), line=dict(color='#00ffaa', width=2.5)))
+        fig.add_trace(go.Scatter(x=[], y=[], mode='lines', name=T('Min-Max Baseline', 'Min-Max Baseline'), line=dict(color='#8c9cb3', width=1.5, dash='dot')))
+        fig.add_trace(go.Scatter(x=[], y=[], mode='lines', name=T('Oráculo (God Mode)', 'Oracle (God Mode)'), line=dict(color='#ffaa00', width=2.0, dash='dash')))
         fig.update_layout(
-            title="Evolução Comparativa do Lucro Acumulado em Tempo Real",
-            xaxis_title="Dias",
-            yaxis_title="Lucro Acumulado (€)",
+            title=T("Evolução Comparativa do Lucro Acumulado em Tempo Real", "Comparative Real-Time Cumulative Profit Evolution"),
+            xaxis_title=T("Dias", "Days"),
+            yaxis_title=T("Lucro Acumulado (€)", "Cumulative Profit (€)"),
             paper_bgcolor="#11141e",
             plot_bgcolor="#11141e",
             font=dict(color="#e5e9f0"),
@@ -598,9 +615,9 @@ with tab_test:
                     fig_real.add_trace(go.Scatter(x=plot_data["Dia"], y=plot_data["Oracle"], mode='lines', name=f'Oráculo ({plot_data["Oracle"][-1]:.0f}€)', line=dict(color='#ffaa00', width=2.0, dash='dash')))
                     
                     fig_real.update_layout(
-                        title="Evolução Comparativa do Lucro Acumulado em Tempo Real",
-                        xaxis_title="Dias",
-                        yaxis_title="Lucro Acumulado (€)",
+                        title=T("Evolução Comparativa do Lucro Acumulado em Tempo Real", "Comparative Real-Time Cumulative Profit Evolution"),
+                        xaxis_title=T("Dias", "Days"),
+                        yaxis_title=T("Lucro Acumulado (€)", "Cumulative Profit (€)"),
                         paper_bgcolor="#11141e",
                         plot_bgcolor="#11141e",
                         font=dict(color="#e5e9f0"),
@@ -631,9 +648,9 @@ with tab_test:
                     fig_final.add_vline(x=ud, line_width=1, line_dash="dash", line_color="#ff4757", annotation_text="Fine-Tuning", annotation_position="top left")
                 
                 fig_final.update_layout(
-                    title="Evolução Comparativa do Lucro Acumulado Final",
-                    xaxis_title="Dias",
-                    yaxis_title="Lucro Acumulado (€)",
+                    title=T("Evolução Comparativa do Lucro Acumulado Final", "Comparative Final Cumulative Profit Evolution"),
+                    xaxis_title=T("Dias", "Days"),
+                    yaxis_title=T("Lucro Acumulado (€)", "Cumulative Profit (€)"),
                     paper_bgcolor="#11141e",
                     plot_bgcolor="#11141e",
                     font=dict(color="#e5e9f0"),
@@ -646,41 +663,41 @@ with tab_test:
         res = st.session_state.test_results
         
         st.markdown("---")
-        st.markdown("### 📊 Scorecard de Resultados")
+        st.markdown(f"### 📊 {T('Scorecard de Resultados', 'Results Scorecard')}")
         
         c1, c2, c3, c4, c5 = st.columns(5)
         with c1:
             st.markdown(
                 f'<div class="metric-card">'
-                f'<div class="metric-label">Lucro Agente</div>'
+                f'<div class="metric-label">{T("Lucro Agente", "Agent Profit")}</div>'
                 f'<div class="metric-val">{res["cum_profit_agent"]:,.2f}€</div>'
                 f'</div>', unsafe_allow_html=True
             )
         with c2:
             st.markdown(
                 f'<div class="metric-card">'
-                f'<div class="metric-label">Lucro Min-Max</div>'
+                f'<div class="metric-label">{T("Lucro Min-Max", "Min-Max Profit")}</div>'
                 f'<div class="metric-val" style="color: #8c9cb3;">{res["cum_profit_minmax"]:,.2f}€</div>'
                 f'</div>', unsafe_allow_html=True
             )
         with c3:
             st.markdown(
                 f'<div class="metric-card">'
-                f'<div class="metric-label">Apodrecimento</div>'
+                f'<div class="metric-label">{T("Apodrecimento", "Spoilage")}</div>'
                 f'<div class="metric-val" style="color: #ff4757;">{res["spoilage_total"]:.0f} un</div>'
                 f'</div>', unsafe_allow_html=True
             )
         with c4:
             st.markdown(
                 f'<div class="metric-card">'
-                f'<div class="metric-label">Vendas Perdidas</div>'
+                f'<div class="metric-label">{T("Vendas Perdidas", "Lost Sales")}</div>'
                 f'<div class="metric-val" style="color: #ffb300;">{res["lost_sales_total"]:.0f} un</div>'
                 f'</div>', unsafe_allow_html=True
             )
         with c5:
             st.markdown(
                 f'<div class="metric-card">'
-                f'<div class="metric-label">Dias Stock Zero</div>'
+                f'<div class="metric-label">{T("Dias Stock Zero", "Stockout Days")}</div>'
                 f'<div class="metric-val" style="color: #ff4757;">{res["stockout_days"]} dias</div>'
                 f'</div>', unsafe_allow_html=True
             )
@@ -689,14 +706,14 @@ with tab_test:
         profit_diff = res["cum_profit_agent"] - res["cum_profit_minmax"]
         pct_improvement = (profit_diff / max(1.0, abs(res["cum_profit_minmax"]))) * 100.0
         
-        st.markdown("#### Resumo Executivo")
+        st.markdown(f"#### {T('Resumo Executivo', 'Executive Summary')}")
         if profit_diff > 0:
-            st.success(f"📈 O Agente PPO superou o baseline Min-Max tradicional em **{profit_diff:.2f}€** (+{pct_improvement:.2f}%).")
+            st.success(T(f"📈 O Agente PPO superou o baseline Min-Max tradicional em **{profit_diff:.2f}€** (+{pct_improvement:.2f}%).", f"📈 The PPO Agent outperformed the traditional Min-Max baseline by **{profit_diff:.2f}€** (+{pct_improvement:.2f}%)."))
         else:
-            st.warning(f"📉 O Agente PPO obteve um lucro inferior ao baseline Min-Max tradicional em **{abs(profit_diff):.2f}€** ({pct_improvement:.2f}%).")
+            st.warning(T(f"📉 O Agente PPO obteve um lucro inferior ao baseline Min-Max tradicional em **{abs(profit_diff):.2f}€** ({pct_improvement:.2f}%).", f"📉 The PPO Agent obtained a profit lower than the traditional Min-Max baseline by **{abs(profit_diff):.2f}€** ({pct_improvement:.2f}%)."))
             
         st.markdown('<div class="custom-card">', unsafe_allow_html=True)
-        st.markdown("#### 📥 Exportar Resultados e Modelo Otimizado")
+        st.markdown(f"#### {T('📥 Exportar Resultados e Modelo Otimizado', '📥 Export Results & Optimized Model')}")
         col_down1, col_down2 = st.columns(2)
         
         with col_down1:
@@ -704,7 +721,7 @@ with tab_test:
             if os.path.exists(res["excel_report_path"]):
                 with open(res["excel_report_path"], "rb") as f:
                     st.download_button(
-                        label="📊 Descarregar Relatório Excel (.xlsx)",
+                        label=T("📊 Descarregar Relatório Excel (.xlsx)", "📊 Download Excel Report (.xlsx)"),
                         data=f.read(),
                         file_name="relatorio_simulacao_buyer_agent.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -716,7 +733,7 @@ with tab_test:
             zip_final_bytes = create_model_zip_bytes(res["final_model_path"])
             if zip_final_bytes is not None:
                 st.download_button(
-                    label="📥 Descarregar Modelo Otimizado / Fine-Tuned (.ZIP)",
+                    label=T("📥 Descarregar Modelo Otimizado / Fine-Tuned (.ZIP)", "📥 Download Optimized / Fine-Tuned Model (.ZIP)"),
                     data=zip_final_bytes,
                     file_name="modelo_ppo_buyer_agent_fine_tuned.zip",
                     mime="application/zip",
