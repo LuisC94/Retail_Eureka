@@ -202,18 +202,6 @@ with st.sidebar:
         st.warning(T("Aceleração GPU (CUDA) indisponível. Usando CPU.", "GPU acceleration (CUDA) unavailable. Using CPU."))
         
     st.markdown("---")
-    st.markdown(f"### ⚖️ {T('Custos & Penalizações', 'Costs & Penalties')}")
-    
-    holding_cost = st.number_input(T("Custo Armazenamento (€/m³/dia):", "Storage Cost (€/m³/day):"), min_value=0.0, max_value=10.0, value=0.70, step=0.05, format="%.2f", help=T("Custo diário de armazenar 1m³ de produto.", "Daily cost of storing 1m³ of product."))
-    transport_cost = st.number_input(T("Custo Transporte (€/m³):", "Transport Cost (€/m³):"), min_value=0.0, max_value=100.0, value=10.00, step=0.50, format="%.2f", help=T("Custo variável de transportar 1m³ no camião.", "Variable cost of transporting 1m³ in the truck."))
-    fixed_transport_cost = st.number_input(T("Taxa Fixa Camião (€):", "Fixed Truck Fee (€):"), min_value=0.0, max_value=500.0, value=10.00, step=1.00, format="%.2f", help=T("Taxa fixa cobrada por descarga/entrega.", "Fixed fee charged per unloading/delivery."))
-    
-    stockout_penalty_pct = st.number_input(T("Penalização Rutura (% preço):", "Stockout Penalty (% price):"), min_value=0.0, max_value=200.0, value=25.0, step=5.0) / 100.0
-    waste_penalty_pct = st.number_input(T("Penalização Desperdício (% preço):", "Waste Penalty (% price):"), min_value=0.0, max_value=500.0, value=100.0, step=10.0) / 100.0
-    zero_stock_penalty_pct = st.number_input(T("Penalização Stock Zero (% preço):", "Zero Stock Penalty (% price):"), min_value=0.0, max_value=1000.0, value=500.0, step=50.0) / 100.0
-
-        
-    st.markdown("---")
     st.markdown(f"#### ℹ️ {T('Estrutura do Dataset Esperada', 'Expected Dataset Structure')}")
     st.info(
         T("**Variáveis Necessárias:**\n"
@@ -243,6 +231,18 @@ if 'test_completed' not in st.session_state:
     st.session_state.test_completed = False
 if 'test_results' not in st.session_state:
     st.session_state.test_results = None
+if 'holding_cost' not in st.session_state:
+    st.session_state.holding_cost = 0.70
+if 'transport_cost' not in st.session_state:
+    st.session_state.transport_cost = 10.00
+if 'fixed_transport_cost' not in st.session_state:
+    st.session_state.fixed_transport_cost = 10.00
+if 'stockout_penalty_pct' not in st.session_state:
+    st.session_state.stockout_penalty_pct = 25.0
+if 'waste_penalty_pct' not in st.session_state:
+    st.session_state.waste_penalty_pct = 100.0
+if 'zero_stock_penalty_pct' not in st.session_state:
+    st.session_state.zero_stock_penalty_pct = 500.0
 
 # Verificação inicial se há dataset carregado
 if uploaded_file is None:
@@ -293,6 +293,17 @@ with tab_train:
     max_episodes = 1000
     seed = 1337
 
+    st.markdown(f"#### ⚖️ {T('Custos de Logística e Penalizações', 'Logistics Costs & Penalties')}")
+    col_hp1, col_hp2, col_hp3 = st.columns(3)
+    with col_hp1:
+        holding_cost = st.number_input(T("Custo Armazenamento (€/m³/dia):", "Storage Cost (€/m³/day):"), min_value=0.0, max_value=10.0, value=0.70, step=0.05, format="%.2f", key="holding_cost", help=T("Custo diário de armazenar 1m³ de produto.", "Daily cost of storing 1m³ of product."))
+        stockout_penalty_val = st.number_input(T("Penalização Rutura (% preço):", "Stockout Penalty (% price):"), min_value=0.0, max_value=200.0, value=25.0, step=5.0, key="stockout_penalty_pct") / 100.0
+    with col_hp2:
+        transport_cost = st.number_input(T("Custo Transporte (€/m³):", "Transport Cost (€/m³):"), min_value=0.0, max_value=100.0, value=10.00, step=0.50, format="%.2f", key="transport_cost", help=T("Custo variável de transportar 1m³ no camião.", "Variable cost of transporting 1m³ in the truck."))
+        waste_penalty_val = st.number_input(T("Penalização Desperdício (% preço):", "Waste Penalty (% price):"), min_value=0.0, max_value=500.0, value=100.0, step=10.0, key="waste_penalty_pct") / 100.0
+    with col_hp3:
+        fixed_transport_cost = st.number_input(T("Taxa Fixa Camião (€):", "Fixed Truck Fee (€):"), min_value=0.0, max_value=500.0, value=10.00, step=1.00, format="%.2f", key="fixed_transport_cost", help=T("Taxa fixa cobrada por descarga/entrega.", "Fixed fee charged per unloading/delivery."))
+        zero_stock_penalty_val = st.number_input(T("Penalização Stock Zero (% preço):", "Zero Stock Penalty (% price):"), min_value=0.0, max_value=1000.0, value=500.0, step=50.0, key="zero_stock_penalty_pct") / 100.0
         
     st.markdown(f"#### {T('Configuração de Hardware & Paralelização', 'Hardware Configuration & Parallelization')}")
     col_hw1, col_hw2 = st.columns(2)
@@ -339,9 +350,9 @@ with tab_train:
                 holding_cost=holding_cost,
                 transport_cost=transport_cost,
                 fixed_transport_cost=fixed_transport_cost,
-                stockout_penalty=stockout_penalty_pct,
-                waste_penalty=waste_penalty_pct,
-                zero_stock_penalty=zero_stock_penalty_pct
+                stockout_penalty=stockout_penalty_val,
+                waste_penalty=waste_penalty_val,
+                zero_stock_penalty=zero_stock_penalty_val
             )
         else:
             gen = train_multi_core_generator(
@@ -362,9 +373,9 @@ with tab_train:
                 holding_cost=holding_cost,
                 transport_cost=transport_cost,
                 fixed_transport_cost=fixed_transport_cost,
-                stockout_penalty=stockout_penalty_pct,
-                waste_penalty=waste_penalty_pct,
-                zero_stock_penalty=zero_stock_penalty_pct
+                stockout_penalty=stockout_penalty_val,
+                waste_penalty=waste_penalty_val,
+                zero_stock_penalty=zero_stock_penalty_val
             )
             
         progress_bar = st.progress(0.0)
@@ -565,15 +576,15 @@ with tab_test:
             S_max=S_max,
             update_interval_days=update_interval,
             online_lr_actor=online_lr_act,
-            online_lr_critic=online_lr_crit,
+            online_lr_critic=online_lr_critic,
             online_batch_size=online_batch,
             save_dir=temp_load_dir,
-            holding_cost=holding_cost,
-            transport_cost=transport_cost,
-            fixed_transport_cost=fixed_transport_cost,
-            stockout_penalty=stockout_penalty_pct,
-            waste_penalty=waste_penalty_pct,
-            zero_stock_penalty=zero_stock_penalty_pct
+            holding_cost=st.session_state.holding_cost,
+            transport_cost=st.session_state.transport_cost,
+            fixed_transport_cost=st.session_state.fixed_transport_cost,
+            stockout_penalty=st.session_state.stockout_penalty_pct / 100.0,
+            waste_penalty=st.session_state.waste_penalty_pct / 100.0,
+            zero_stock_penalty=st.session_state.zero_stock_penalty_pct / 100.0
         )
         
         # Preparar dataframes para a atualização gráfica em tempo real
