@@ -1,0 +1,277 @@
+<div class="row gy-5 g-xl-8 mb-5">
+    <div class="col-xxl-12">
+        <div class="card">
+            <div class="card-header border-0 pt-0">
+                <h3 class="card-title align-items-start flex-column">
+                    <span class="card-label fw-bolder fs-3 mb-1">
+                        {{header | translate}}
+                    </span>
+                </h3>
+                <div class="card-toolbar" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-trigger="hover">
+
+                    <a style="width: 100%;" class="btn btn-lg btn-ghost-light fw-bolder" (click)="goToAllProducts()">
+                        {{'ALL_PRODUCTS' | translate}} &nbsp;
+                        <i class="fa fa-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row" *ngIf="items && items.length > 0">
+                    <div class="col-xxl-1 text-center my-auto">
+                        <button (click)="onPrevButtonClick()" [disabled]="prevButtonDisabled" class="btn btn-primary" attr.data-bs-target="#carousel{{id}}" data-bs-slide="prev"
+                            role="button">
+                            <i class="fa fa-arrow-left"></i>
+                        </button>
+                    </div>
+                    <div attr.id="carousel{{id}}" class="col-xxl-10 carousel slide">
+                        <div class="carousel-inner">
+                            <ng-container *ngFor="let key of itemKeys">
+                                <div *ngIf="key == 'active4'" class="carousel-item active">
+                                    <div class="row">
+                                        <ng-container *ngFor="let item of itemsMap.get(key)">
+                                            <div class="col-xxl-3">
+                                                <div class="card card-xl-stretch mb-xl-8">
+                                                    <div *ngIf="item.sale > 0" class="card-header border-1 pt-0">
+                                                        <h3 class="card-title align-items-start flex-column">
+                                                            <span *ngIf="item.sale > 0"
+                                                                class="badge badge-light-warning">
+                                                                <span
+                                                                    [inlineSVG]="'./assets/media/icons/duotune/ecommerce/ecm003.svg'"
+                                                                    class="svg-icon svg-icon-3"></span>
+                                                                {{item.sale}} {{'DISCOUNT' | translate}}
+                                                            </span>
+                                                        </h3>
+                                                    </div>
+                                                    <div class="card-body py-3">
+                                                        <div class="mb-2" style="text-align: center;">
+                                                            <img [src]="item.fileResult.fileContents"
+                                                                style="height: 10.75rem; width: auto;">
+                                                        </div>
+                                                        <span *ngIf="item.isMostRating"
+                                                            class="mb-2 badge badge-light-success"
+                                                            style="width: 100%; text-align: center;">
+                                                            <div class="rating">
+                                                                <div class="rating-label me-2 checked">
+                                                                    <i class="bi bi-star-fill fs-5"></i>
+                                                                </div>
+
+                                                                {{'HIGHEST_RATED_PRODUCT' | translate}}
+                                                            </div>
+
+                                                        </span>
+                                                        <div class="mb-2" style="text-align: center;">
+                                                            <div class="d-flex justify-content-start flex-column">
+                                                                <a
+                                                                    class="text-gray-900 fw-bolder text-hover-primary fs-6">
+                                                                    {{item.name}}
+                                                                </a>
+                                                            </div>
+                                                        </div>
+                                                        <div class="mb-2" *ngIf="item.rating">
+                                                            <div class="d-flex justify-content-start flex-column">
+                                                                <a class="text-gray-900 fw-normal fs-6">
+                                                                    <div class="rating ms-15">
+                                                                        {{item.rating.toFixed(1)}}&nbsp;&nbsp;
+
+                                                                        <ng-container
+                                                                            *ngFor="let status of item.starsStatus">
+                                                                            <div class="rating-label me-2 {{status}}">
+                                                                                <i class="bi bi-star-fill"></i>
+                                                                            </div>
+                                                                        </ng-container>
+                                                                    </div>
+                                                                </a>
+                                                            </div>
+                                                        </div>
+                                                        <div class="mb-2" *ngIf="item.commentsCount > 0"
+                                                            style="text-align: center;">
+                                                            <div class="d-flex justify-content-start flex-column">
+                                                                <a (click)="goToComments(item.id)"
+                                                                    class="text-gray-800 fw-normal text-hover-primary">
+                                                                    <span
+                                                                        class="fw-bolder">{{item.commentsCount}}</span>
+                                                                    {{'EVALUATION' | translate}}
+                                                                </a>
+                                                            </div>
+                                                        </div>
+                                                        <div class="mb-5" style="text-align: center;">
+                                                            <div class="d-flex justify-content-start flex-column">
+                                                                <a class="fw-bolder fs-6" style="text-align: center;">
+                                                                    <span *ngIf="item.sale > 0" class="text-danger"
+                                                                        style="text-decoration: line-through;">
+                                                                        {{item.price.toFixed(2)}} ₺</span>
+                                                                </a>
+                                                                <a class="fw-bolder fs-6" style="text-align: center;">
+                                                                    <span *ngIf="item.sale > 0">
+                                                                        {{item.discountedPrice.toFixed(2)}} ₺</span>
+                                                                </a>
+                                                                <a class="fw-bolder fs-6" style="text-align: center;">
+                                                                    <span *ngIf="item.sale <= 0">
+                                                                        {{item.price.toFixed(2)}} ₺</span>
+                                                                </a>
+                                                            </div>
+                                                        </div>
+                                                        <div style="text-align: center;" *ngIf="item.stock > 0">
+                                                            <a style="width: 100%;" title="Click to Add"
+                                                                class="btn btn-sm btn-light-primary"
+                                                                (click)="addToBasket(item)">
+                                                                <span
+                                                                    [inlineSVG]="'./assets/media/icons/duotune/arrows/arr075.svg'"
+                                                                    class="svg-icon svg-icon-3"></span>
+                                                                {{'ADD_TO_BASKET' | translate}}
+                                                            </a>
+                                                        </div>
+                                                        <span *ngIf="item.stock == 0" class="badge badge-light-danger"
+                                                            style="width: 100%; height: 35px; text-align: center;">
+                                                            <div>
+                                                                {{'OUT_OF_STOCK' | translate}}
+                                                            </div>
+
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </ng-container>
+                                    </div>
+                                </div>
+                                <div *ngIf="key != 'active4'" class="carousel-item">
+                                    <div class="row">
+                                        <ng-container *ngFor="let item of itemsMap.get(key)">
+                                            <div class="col-xxl-3">
+                                                <div class="card card-xl-stretch mb-xl-8">
+                                                    <div *ngIf="item.sale > 0" class="card-header border-1 pt-0">
+                                                        <h3 class="card-title align-items-start flex-column">
+                                                            <span *ngIf="item.sale > 0"
+                                                                class="badge badge-light-warning">
+                                                                <span
+                                                                    [inlineSVG]="'./assets/media/icons/duotune/ecommerce/ecm003.svg'"
+                                                                    class="svg-icon svg-icon-3"></span>
+                                                                {{item.sale}} {{'DISCOUNT' | translate}}
+                                                            </span>
+                                                        </h3>
+                                                    </div>
+                                                    <div class="card-body py-3">
+                                                        <div class="mb-2" style="text-align: center;">
+                                                            <img [src]="item.fileResult.fileContents"
+                                                                style="height: 10.75rem; width: auto;">
+                                                        </div>
+                                                        <span *ngIf="item.isMostRating"
+                                                            class="mb-2 badge badge-light-success"
+                                                            style="width: 100%; text-align: center;">
+                                                            <div class="rating">
+                                                                <div class="rating-label me-2 checked">
+                                                                    <i class="bi bi-star-fill fs-5"></i>
+                                                                </div>
+
+                                                                {{'HIGHEST_RATED_PRODUCT' | translate}}
+                                                            </div>
+
+                                                        </span>
+                                                        <div class="mb-2" style="text-align: center;">
+                                                            <div class="d-flex justify-content-start flex-column">
+                                                                <a
+                                                                    class="text-gray-900 fw-bolder text-hover-primary fs-6">
+                                                                    {{item.name}}
+                                                                </a>
+                                                            </div>
+                                                        </div>
+                                                        <div class="mb-2" *ngIf="item.rating">
+                                                            <div class="d-flex justify-content-start flex-column">
+                                                                <a class="text-gray-900 fw-normal fs-6">
+                                                                    <div class="rating ms-15">
+                                                                        {{item.rating.toFixed(1)}}&nbsp;&nbsp;
+
+                                                                        <ng-container
+                                                                            *ngFor="let status of item.starsStatus">
+                                                                            <div class="rating-label me-2 {{status}}">
+                                                                                <i class="bi bi-star-fill"></i>
+                                                                            </div>
+                                                                        </ng-container>
+                                                                    </div>
+                                                                </a>
+                                                            </div>
+                                                        </div>
+                                                        <div class="mb-2" *ngIf="item.commentsCount > 0"
+                                                            style="text-align: center;">
+                                                            <div class="d-flex justify-content-start flex-column">
+                                                                <a (click)="goToComments(item.id)"
+                                                                    class="text-gray-800 fw-normal text-hover-primary">
+                                                                    <span
+                                                                        class="fw-bolder">{{item.commentsCount}}</span>
+                                                                    {{'EVALUATION' | translate}}
+                                                                </a>
+                                                            </div>
+                                                        </div>
+                                                        <div class="mb-5" style="text-align: center;">
+                                                            <div class="d-flex justify-content-start flex-column">
+                                                                <a class="fw-bolder fs-6" style="text-align: center;">
+                                                                    <span *ngIf="item.sale > 0" class="text-danger"
+                                                                        style="text-decoration: line-through;">
+                                                                        {{item.price.toFixed(2)}} ₺</span>
+                                                                </a>
+                                                                <a class="fw-bolder fs-6" style="text-align: center;">
+                                                                    <span *ngIf="item.sale > 0">
+                                                                        {{item.discountedPrice.toFixed(2)}} ₺</span>
+                                                                </a>
+                                                                <a class="fw-bolder fs-6" style="text-align: center;">
+                                                                    <span *ngIf="item.sale <= 0">
+                                                                        {{item.price.toFixed(2)}} ₺</span>
+                                                                </a>
+                                                            </div>
+                                                        </div>
+                                                        <div style="text-align: center;" *ngIf="item.stock > 0">
+                                                            <a style="width: 100%;" title="Click to Add"
+                                                                class="btn btn-sm btn-light-primary"
+                                                                (click)="addToBasket(item)">
+                                                                <span
+                                                                    [inlineSVG]="'./assets/media/icons/duotune/arrows/arr075.svg'"
+                                                                    class="svg-icon svg-icon-3"></span>
+                                                                {{'ADD_TO_BASKET' | translate}}
+                                                            </a>
+                                                        </div>
+                                                        <span *ngIf="item.stock == 0" class="badge badge-light-danger"
+                                                            style="width: 100%; height: 35px; text-align: center;">
+                                                            <div>
+                                                                {{'OUT_OF_STOCK' | translate}}
+                                                            </div>
+
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </ng-container>
+                                    </div>
+                                </div>
+                            </ng-container>
+                        </div>
+                    </div>
+                    <div class="col-xxl-1 text-center my-auto">
+                        <button (click)="onNextButtonClick()" [disabled]="nextButtonDisabled" class="btn btn-primary" attr.data-bs-target="#carousel{{id}}" data-bs-slide="next"
+                            role="button">
+                            <i class="fa fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="row">
+                    <ng-container *ngIf="items && items.length == 0">
+                        <div class="col-xxl-12" style="text-align: center; align-items: center;">
+                            <div class="card card-xl-stretch mb-xl-8">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-start flex-column" style="position: absolute;
+                                left: 50%;
+                                top: 50%;
+                                -webkit-transform: translate(-50%, -50%);
+                                transform: translate(-50%, -50%);">
+                                        <a class="text-gray-900 fw-bolder text-hover-primary fs-6">
+                                            {{'NO_DATA_AVAILABLE' | translate}}
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </ng-container>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

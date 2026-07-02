@@ -242,6 +242,8 @@
             <a href="{% url 'transporter_dashboard' %}" class="back-btn">← Voltar ao Dashboard</a>
         {% elif user.groups.all.0.name == 'Retailer' %}
             <a href="{% url 'retailer_dashboard' %}" class="back-btn">← Voltar ao Dashboard</a>
+        {% elif user.groups.all.0.name == 'Processor' %}
+            <a href="{% url 'processor_dashboard' %}" class="back-btn">← Voltar ao Dashboard</a>
         {% else %}
             <a href="{% url 'producer_dashboard' %}" class="back-btn">← Voltar ao Dashboard</a>
         {% endif %}

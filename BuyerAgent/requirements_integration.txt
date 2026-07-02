@@ -1,0 +1,5 @@
+# Dependências mínimas para integração do Agente PPO em Django / PostgreSQL
+torch>=2.0.0
+numpy>=1.22.0
+pandas>=1.4.0
+openpyxl>=3.0.0

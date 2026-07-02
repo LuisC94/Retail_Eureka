@@ -1,0 +1,258 @@
+erDiagram
+    UserProfile {
+        BigAutoField id
+        OneToOne user
+        CharField phone_number
+        CharField address
+    }
+    User ||--|| UserProfile : "user"
+    Product {
+        ForeignKey plantationplan
+        AutoField product_id
+        CharField name
+        CharField category
+        DecimalField price
+        ForeignKey producer
+    }
+    User ||--o{ Product : "producer"
+    ProductSubFamily {
+        ForeignKey plantationcrop
+        ForeignKey plantationevent
+        ForeignKey harvest
+        ForeignKey marketplaceorder
+        AutoField subfamily_id
+        CharField name
+        CharField fruit_type
+    }
+    SoilCharacteristic {
+        ManyToMany plantations
+        ForeignKey plantationsoilvalue
+        BigAutoField id
+        CharField category
+        CharField sub_category
+        CharField unit
+    }
+    SoilCharacteristic }o--o{ PlantationPlan : "plantations"
+    Sensor {
+        ManyToMany warehouse
+        AutoField sensor_id
+        CharField brand
+        CharField sensor_type
+    }
+    Sensor }o--o{ Warehouse : "warehouse"
+    Warehouse {
+        ForeignKey harvest
+        ForeignKey owner
+        AutoField warehouse_id
+        CharField location
+        CharField control_type
+        DecimalField capacity
+        ManyToMany sensors
+    }
+    User ||--o{ Warehouse : "owner"
+    Warehouse }o--o{ Sensor : "sensors"
+    FertilizerSyntheticData {
+        ForeignKey events_synth
+        BigAutoField id
+        CharField commercial_product
+        CharField form_npk
+        DecimalField n_content
+        DecimalField p2o5_content
+        DecimalField k2o_content
+        DecimalField total_dose_kg_ha_year
+        IntegerField num_applications
+        CharField application_season
+    }
+    FertilizerOrganicData {
+        ForeignKey events_org
+        BigAutoField id
+        CharField organic_fertilizer_type
+        CharField origin
+        DecimalField n_content_kgt
+        DecimalField p_content_kgt
+        DecimalField k_content_kgt
+        DecimalField dose_tha_year
+        CharField application_mode
+    }
+    SoilCorrectiveData {
+        ForeignKey events_soil
+        BigAutoField id
+        CharField commercial_product
+        CharField corrective_type
+        DecimalField caco3_content
+        DecimalField dose_kg_ha_year
+        IntegerField frequency_years
+        TextField observations
+    }
+    PestControlData {
+        ForeignKey events_pest
+        BigAutoField id
+        CharField commercial_product
+        CharField active_substance
+        CharField pest_type
+        CharField dose_per_application
+        IntegerField num_applications_year
+        CharField application_mode
+    }
+    MachineryData {
+        ForeignKey events_machinery
+        BigAutoField id
+        CharField machinery_type
+        CharField main_operation
+        DecimalField hours_per_year
+        CharField power
+        TextField observations
+    }
+    FuelData {
+        ForeignKey events_fuel
+        BigAutoField id
+        CharField fuel_type
+        DecimalField annual_consumption
+        CharField unit
+        CharField main_usage_season
+        TextField notes
+    }
+    ElectricEnergyData {
+        ForeignKey events_electric
+        BigAutoField id
+        CharField main_usage
+        DecimalField total_consumption_kwh_year
+        DecimalField percent_grid
+        DecimalField percent_photovoltaic
+        DecimalField percent_other_renewable
+        TextField notes
+    }
+    IrrigationWaterData {
+        ForeignKey events_water
+        BigAutoField id
+        CharField water_source
+        DecimalField volume_m3_year
+        CharField extraction_method
+        DecimalField pumping_height_m
+        CharField irrigation_system
+        DecimalField estimated_efficiency
+    }
+    PlantationPlan {
+        ForeignKey crops
+        ForeignKey soil_values
+        ForeignKey events
+        ForeignKey harvest_records
+        AutoField plantation_id
+        ForeignKey producer
+        ForeignKey product
+        CharField plantation_name
+        IntegerField quantity_of_trees
+        CharField production_type
+        CharField chemical_use
+        DecimalField area
+        CharField location
+        DateField plantation_date
+        DecimalField total_area_ha
+        CharField conduct_system
+        CharField soil_type
+        DecimalField ph_soil
+        DecimalField organic_matter_percent
+        CharField water_regime
+        ManyToMany soil_characteristics
+    }
+    User ||--o{ PlantationPlan : "producer"
+    Product ||--o{ PlantationPlan : "product"
+    PlantationPlan }o--o{ SoilCharacteristic : "soil_characteristics"
+    PlantationCrop {
+        BigAutoField id
+        ForeignKey plantation
+        ForeignKey subfamily
+        IntegerField avg_plant_age_years
+        CharField rootstock
+        DecimalField density_plants_ha
+        CharField irrigation_system
+    }
+    PlantationPlan ||--o{ PlantationCrop : "plantation"
+    ProductSubFamily ||--o{ PlantationCrop : "subfamily"
+    PlantationSoilValue {
+        BigAutoField id
+        ForeignKey plantation
+        ForeignKey characteristic
+        DecimalField value
+    }
+    PlantationPlan ||--o{ PlantationSoilValue : "plantation"
+    SoilCharacteristic ||--o{ PlantationSoilValue : "characteristic"
+    PlantationEvent {
+        AutoField event_id
+        ForeignKey plantation
+        DateField event_date
+        CharField event_type
+        ForeignKey subfamily
+        TextField notes
+        ForeignKey fertilizer_synth
+        ForeignKey fertilizer_org
+        ForeignKey soil_corrective
+        ForeignKey pest_control
+        ForeignKey machinery
+        ForeignKey fuel
+        ForeignKey electric
+        ForeignKey water
+    }
+    PlantationPlan ||--o{ PlantationEvent : "plantation"
+    ProductSubFamily ||--o{ PlantationEvent : "subfamily"
+    FertilizerSyntheticData ||--o{ PlantationEvent : "fertilizer_synth"
+    FertilizerOrganicData ||--o{ PlantationEvent : "fertilizer_org"
+    SoilCorrectiveData ||--o{ PlantationEvent : "soil_corrective"
+    PestControlData ||--o{ PlantationEvent : "pest_control"
+    MachineryData ||--o{ PlantationEvent : "machinery"
+    FuelData ||--o{ PlantationEvent : "fuel"
+    ElectricEnergyData ||--o{ PlantationEvent : "electric"
+    IrrigationWaterData ||--o{ PlantationEvent : "water"
+    Harvest {
+        ForeignKey market_orders
+        AutoField harvest_id
+        ForeignKey plantation
+        ForeignKey producer
+        ForeignKey subfamily
+        DateField harvest_date
+        DecimalField harvest_quantity_kg
+        DecimalField delivered_quantity_kg
+        IntegerField avg_quality_score
+        DecimalField utilized_quantity_kg
+        DecimalField caliber
+        DecimalField soluble_solids
+        ForeignKey warehouse
+    }
+    PlantationPlan ||--o{ Harvest : "plantation"
+    User ||--o{ Harvest : "producer"
+    ProductSubFamily ||--o{ Harvest : "subfamily"
+    Warehouse ||--o{ Harvest : "warehouse"
+    MarketplaceOrder {
+        BigAutoField id
+        ForeignKey requester
+        CharField role
+        CharField order_type
+        ForeignKey culture
+        ForeignKey harvest_origin
+        DecimalField quantity_kg
+        DecimalField price_per_kg
+        CharField warehouse_location
+        DecimalField caliber
+        DecimalField soluble_solids
+        IntegerField quality_score
+        DecimalField min_caliber
+        DecimalField min_soluble_solids
+        IntegerField min_quality_score
+        CharField status
+        ForeignKey fulfilled_by
+        DateTimeField created_at
+        DateTimeField fulfilled_at
+        CharField transport_status
+        DateTimeField planned_pickup_date
+        DateTimeField planned_delivery_date
+        DateTimeField actual_pickup_date
+        DateTimeField actual_delivery_date
+        TextField transport_sensor_data
+        BooleanField is_processed
+        CharField packaging_type
+        CharField preservation_treatment
+    }
+    User ||--o{ MarketplaceOrder : "requester"
+    ProductSubFamily ||--o{ MarketplaceOrder : "culture"
+    Harvest ||--o{ MarketplaceOrder : "harvest_origin"
+    User ||--o{ MarketplaceOrder : "fulfilled_by"

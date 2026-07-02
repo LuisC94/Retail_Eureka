@@ -1,0 +1,78 @@
+<app-confirmation #confirmationComponent (dismissButtonClick)="delete($event)"></app-confirmation>
+<app-address-editsave #editSaveComponent (isSuccess)="isSuccess($event)"></app-address-editsave>
+
+<div class="card mb-5 mb-xl-10" *ngIf="user">
+  <div class="card-header border-0 cursor-pointer" role="button" data-bs-toggle="collapse"
+    data-bs-target="#kt_account_address_list" aria-expanded="true" aria-controls="kt_account_address_list">
+    <div class="card-title m-0">
+      <h3 class="fw-bolder m-0">{{'MYADDRESSES' | translate}}</h3>
+    </div>
+    <div class="card-toolbar" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-trigger="hover">
+      <a (click)="openSaveModal()" title="Click to Add" class="btn btn-sm btn-light-primary">
+        <span [inlineSVG]="'./assets/media/icons/duotune/arrows/arr075.svg'" class="svg-icon svg-icon-3"></span>
+        {{'MENU.NEW' | translate}}
+      </a>
+    </div>
+  </div>
+  <div class="card-body border-top p-9">
+    <div class="row gy-5 g-xl-8">
+      <ng-container *ngFor="let item of addresses">
+        <div class="col-xxl-3">
+          <div class="card card-xl-stretch mb-xl-8">
+            <div class="card-header border-1 pt-0">
+              <div class="card-title m-0">
+                <h3 class="fw-bolder m-0"> {{item.addressHeader}}
+                </h3>
+              </div>
+              <div class="card-toolbar" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-trigger="hover">
+                <button (click)="openDeleteModal(item.id)" type="button" class="btn btn-sm btn-icon btn-color-danger btn-active-light-danger me-4"
+                  title="Delete">
+                  <span [inlineSVG]="'./assets/media/icons/duotune/general/gen027.svg'"
+                    class="svg-icon svg-icon-2"></span>
+                </button>
+                <button (click)="openEditModal(item.id)" type="button" class="btn btn-sm btn-icon btn-color-primary btn-active-light-primary"
+                  title="Edit">
+                  <span [inlineSVG]="'./assets/media/icons/duotune/art/art005.svg'"
+                    class="svg-icon svg-icon-2"></span>
+                </button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="row mb-2">
+                <span class="fw-bold text-gray-800">{{item.name}} {{item.surname}}</span>
+              </div>
+              <div class="row mb-1">
+                <span class="text-muted fw-bolder fs-7 ps-3">{{item.address}}</span>
+              </div>
+              <div class="row mb-1">
+                <span class="text-muted fw-bolder fs-7 ps-3">{{item.district}}/{{item.city}}</span>
+              </div>
+              <div class="row mb-1">
+                <span class="text-muted fw-bolder fs-7 ps-3">{{item.country}}</span>
+              </div>
+              <div class="row mb-1">
+                <span class="fw-bolder fs-7 ps-3">{{item.phone}}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+      <ng-container *ngIf="addresses.length == 0">
+        <div class="col-xxl-12" style="height: 500px; text-align: center; align-items: center;">
+            <div class="card card-xl-stretch mb-xl-8">
+                <div class="card-body">
+                    <div class="d-flex justify-content-start flex-column" style="position: absolute;
+                left: 50%;
+                top: 50%;
+                -webkit-transform: translate(-50%, -50%);
+                transform: translate(-50%, -50%);">
+                        <a class="text-gray-900 fw-bolder text-hover-primary fs-6">
+                            {{'NO_DATA_AVAILABLE' | translate}}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </ng-container>
+    </div>
+  </div>

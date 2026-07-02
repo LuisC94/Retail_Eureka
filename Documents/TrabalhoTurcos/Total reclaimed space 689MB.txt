@@ -1,0 +1,355 @@
+Total reclaimed space: 689MB
+sofia@RC-PT-1091:~/fabric-dev/fabric-samples/test-network$ ./network.sh up createChannel -c mychannel -ca
+Using docker and docker-compose
+Creating channel 'mychannel'.
+If network is not up, starting nodes with CLI timeout of '5' tries and CLI delay of '3' seconds and using database 'leveldb with crypto from 'Certificate Authorities'
+Bringing up network
+Unable to find image 'hyperledger/fabric-peer:latest' locally
+latest: Pulling from hyperledger/fabric-peer
+10c4590f9e5d: Pull complete
+82103e97d566: Pull complete
+cb259a83ac3d: Pull complete
+01993590a761: Pull complete
+b8133aa35de7: Pull complete
+4438df48fcce: Download complete
+Digest: sha256:e07c735b6f2d131315f3ae6e582c5aa602143d9d14805bb98be8ebc9d6baa82c
+Status: Downloaded newer image for hyperledger/fabric-peer:latest
+LOCAL_VERSION=v2.5.9
+DOCKER_IMAGE_VERSION=v3.1.5
+Local fabric binaries and docker images are out of sync. This may cause problems.
+Unable to find image 'hyperledger/fabric-ca:latest' locally
+latest: Pulling from hyperledger/fabric-ca
+19c418075cc4: Pull complete
+40d16f30db40: Pull complete
+86bf369cd11c: Pull complete
+0a3732590ac9: Pull complete
+c78e2942bcec: Download complete
+Digest: sha256:45753b198d5a15ee22c3f7ddad6078ac8cf9f06c1afa18bc6b9cfb0904d33bba
+Status: Downloaded newer image for hyperledger/fabric-ca:latest
+CA_LOCAL_VERSION=v1.5.12
+CA_DOCKER_IMAGE_VERSION=v1.5.21
+Local fabric-ca binaries and docker images are out of sync. This may cause problems.
+Generating certificates using Fabric CA
+Creating network "fabric_test" with the default driver
+Creating ca_orderer ... done
+Creating ca_org2    ... done
+Creating ca_org1    ... done
++ fabric-ca-client getcainfo -u https://admin:adminpw@localhost:7054 --caname ca-org1 --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/org1/ca-cert.pem
+2026/06/29 16:57:55 [INFO] Configuration file location: /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/fabric-ca-client-config.yaml
+2026/06/29 16:57:55 [INFO] TLS Enabled
+2026/06/29 16:57:55 [INFO] Stored root CA certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/msp/cacerts/localhost-7054-ca-org1.pem
+2026/06/29 16:57:55 [INFO] Stored Issuer public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/msp/IssuerPublicKey
+2026/06/29 16:57:55 [INFO] Stored Issuer revocation public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/msp/IssuerRevocationPublicKey
++ res=0
+Creating Org1 Identities
+Enrolling the CA admin
++ fabric-ca-client enroll -u https://admin:adminpw@localhost:7054 --caname ca-org1 --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/org1/ca-cert.pem
+2026/06/29 16:57:55 [INFO] Created a default configuration file at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/fabric-ca-client-config.yaml
+2026/06/29 16:57:55 [INFO] TLS Enabled
+2026/06/29 16:57:55 [INFO] generating key: &{A:ecdsa S:256}
+2026/06/29 16:57:55 [INFO] encoded CSR
+2026/06/29 16:57:55 [INFO] Stored client certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/msp/signcerts/cert.pem
+2026/06/29 16:57:55 [INFO] Stored root CA certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/msp/cacerts/localhost-7054-ca-org1.pem
+2026/06/29 16:57:55 [INFO] Stored Issuer public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/msp/IssuerPublicKey
+2026/06/29 16:57:55 [INFO] Stored Issuer revocation public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/msp/IssuerRevocationPublicKey
+Registering peer0
++ fabric-ca-client register --caname ca-org1 --id.name peer0 --id.secret peer0pw --id.type peer --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/org1/ca-cert.pem
+2026/06/29 16:57:55 [INFO] Configuration file location: /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/fabric-ca-client-config.yaml
+2026/06/29 16:57:55 [INFO] TLS Enabled
+2026/06/29 16:57:55 [INFO] TLS Enabled
+Password: peer0pw
+Registering user
++ fabric-ca-client register --caname ca-org1 --id.name user1 --id.secret user1pw --id.type client --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/org1/ca-cert.pem
+2026/06/29 16:57:56 [INFO] Configuration file location: /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/fabric-ca-client-config.yaml
+2026/06/29 16:57:56 [INFO] TLS Enabled
+2026/06/29 16:57:56 [INFO] TLS Enabled
+Password: user1pw
+Registering the org admin
++ fabric-ca-client register --caname ca-org1 --id.name org1admin --id.secret org1adminpw --id.type admin --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/org1/ca-cert.pem
+2026/06/29 16:57:56 [INFO] Configuration file location: /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/fabric-ca-client-config.yaml
+2026/06/29 16:57:56 [INFO] TLS Enabled
+2026/06/29 16:57:56 [INFO] TLS Enabled
+Password: org1adminpw
+Generating the peer0 msp
++ fabric-ca-client enroll -u https://peer0:peer0pw@localhost:7054 --caname ca-org1 -M /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/msp --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/org1/ca-cert.pem
+2026/06/29 16:57:56 [INFO] TLS Enabled
+2026/06/29 16:57:56 [INFO] generating key: &{A:ecdsa S:256}
+2026/06/29 16:57:56 [INFO] encoded CSR
+2026/06/29 16:57:56 [INFO] Stored client certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/msp/signcerts/cert.pem
+2026/06/29 16:57:56 [INFO] Stored root CA certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/msp/cacerts/localhost-7054-ca-org1.pem
+2026/06/29 16:57:56 [INFO] Stored Issuer public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/msp/IssuerPublicKey
+2026/06/29 16:57:56 [INFO] Stored Issuer revocation public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/msp/IssuerRevocationPublicKey
+Generating the peer0-tls certificates, use --csr.hosts to specify Subject Alternative Names
++ fabric-ca-client enroll -u https://peer0:peer0pw@localhost:7054 --caname ca-org1 -M /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls --enrollment.profile tls --csr.hosts peer0.org1.example.com --csr.hosts localhost --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/org1/ca-cert.pem
+2026/06/29 16:57:56 [INFO] TLS Enabled
+2026/06/29 16:57:56 [INFO] generating key: &{A:ecdsa S:256}
+2026/06/29 16:57:56 [INFO] encoded CSR
+2026/06/29 16:57:56 [INFO] Stored client certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/signcerts/cert.pem
+2026/06/29 16:57:56 [INFO] Stored TLS root CA certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/tlscacerts/tls-localhost-7054-ca-org1.pem
+2026/06/29 16:57:56 [INFO] Stored Issuer public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/IssuerPublicKey
+2026/06/29 16:57:56 [INFO] Stored Issuer revocation public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/IssuerRevocationPublicKey
+Generating the user msp
++ fabric-ca-client enroll -u https://user1:user1pw@localhost:7054 --caname ca-org1 -M /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/org1/ca-cert.pem
+2026/06/29 16:57:56 [INFO] TLS Enabled
+2026/06/29 16:57:56 [INFO] generating key: &{A:ecdsa S:256}
+2026/06/29 16:57:56 [INFO] encoded CSR
+2026/06/29 16:57:56 [INFO] Stored client certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/signcerts/cert.pem
+2026/06/29 16:57:56 [INFO] Stored root CA certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/cacerts/localhost-7054-ca-org1.pem
+2026/06/29 16:57:56 [INFO] Stored Issuer public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/IssuerPublicKey
+2026/06/29 16:57:56 [INFO] Stored Issuer revocation public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/IssuerRevocationPublicKey
+Generating the org admin msp
++ fabric-ca-client enroll -u https://org1admin:org1adminpw@localhost:7054 --caname ca-org1 -M /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/org1/ca-cert.pem
+2026/06/29 16:57:56 [INFO] TLS Enabled
+2026/06/29 16:57:56 [INFO] generating key: &{A:ecdsa S:256}
+2026/06/29 16:57:56 [INFO] encoded CSR
+2026/06/29 16:57:56 [INFO] Stored client certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/signcerts/cert.pem
+2026/06/29 16:57:56 [INFO] Stored root CA certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/cacerts/localhost-7054-ca-org1.pem
+2026/06/29 16:57:56 [INFO] Stored Issuer public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/IssuerPublicKey
+2026/06/29 16:57:56 [INFO] Stored Issuer revocation public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp/IssuerRevocationPublicKey
+Creating Org2 Identities
+Enrolling the CA admin
++ fabric-ca-client enroll -u https://admin:adminpw@localhost:8054 --caname ca-org2 --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/org2/ca-cert.pem
+2026/06/29 16:57:56 [INFO] Created a default configuration file at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/fabric-ca-client-config.yaml
+2026/06/29 16:57:56 [INFO] TLS Enabled
+2026/06/29 16:57:56 [INFO] generating key: &{A:ecdsa S:256}
+2026/06/29 16:57:56 [INFO] encoded CSR
+2026/06/29 16:57:56 [INFO] Stored client certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/msp/signcerts/cert.pem
+2026/06/29 16:57:56 [INFO] Stored root CA certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/msp/cacerts/localhost-8054-ca-org2.pem
+2026/06/29 16:57:56 [INFO] Stored Issuer public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/msp/IssuerPublicKey
+2026/06/29 16:57:56 [INFO] Stored Issuer revocation public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/msp/IssuerRevocationPublicKey
+Registering peer0
++ fabric-ca-client register --caname ca-org2 --id.name peer0 --id.secret peer0pw --id.type peer --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/org2/ca-cert.pem
+2026/06/29 16:57:57 [INFO] Configuration file location: /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/fabric-ca-client-config.yaml
+2026/06/29 16:57:57 [INFO] TLS Enabled
+2026/06/29 16:57:57 [INFO] TLS Enabled
+Password: peer0pw
+Registering user
++ fabric-ca-client register --caname ca-org2 --id.name user1 --id.secret user1pw --id.type client --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/org2/ca-cert.pem
+2026/06/29 16:57:57 [INFO] Configuration file location: /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/fabric-ca-client-config.yaml
+2026/06/29 16:57:57 [INFO] TLS Enabled
+2026/06/29 16:57:57 [INFO] TLS Enabled
+Password: user1pw
+Registering the org admin
++ fabric-ca-client register --caname ca-org2 --id.name org2admin --id.secret org2adminpw --id.type admin --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/org2/ca-cert.pem
+2026/06/29 16:57:57 [INFO] Configuration file location: /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/fabric-ca-client-config.yaml
+2026/06/29 16:57:57 [INFO] TLS Enabled
+2026/06/29 16:57:57 [INFO] TLS Enabled
+Password: org2adminpw
+Generating the peer0 msp
++ fabric-ca-client enroll -u https://peer0:peer0pw@localhost:8054 --caname ca-org2 -M /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/msp --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/org2/ca-cert.pem
+2026/06/29 16:57:57 [INFO] TLS Enabled
+2026/06/29 16:57:57 [INFO] generating key: &{A:ecdsa S:256}
+2026/06/29 16:57:57 [INFO] encoded CSR
+2026/06/29 16:57:57 [INFO] Stored client certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/msp/signcerts/cert.pem
+2026/06/29 16:57:57 [INFO] Stored root CA certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/msp/cacerts/localhost-8054-ca-org2.pem
+2026/06/29 16:57:57 [INFO] Stored Issuer public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/msp/IssuerPublicKey
+2026/06/29 16:57:57 [INFO] Stored Issuer revocation public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/msp/IssuerRevocationPublicKey
+Generating the peer0-tls certificates, use --csr.hosts to specify Subject Alternative Names
++ fabric-ca-client enroll -u https://peer0:peer0pw@localhost:8054 --caname ca-org2 -M /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls --enrollment.profile tls --csr.hosts peer0.org2.example.com --csr.hosts localhost --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/org2/ca-cert.pem
+2026/06/29 16:57:57 [INFO] TLS Enabled
+2026/06/29 16:57:57 [INFO] generating key: &{A:ecdsa S:256}
+2026/06/29 16:57:57 [INFO] encoded CSR
+2026/06/29 16:57:57 [INFO] Stored client certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/signcerts/cert.pem
+2026/06/29 16:57:57 [INFO] Stored TLS root CA certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/tlscacerts/tls-localhost-8054-ca-org2.pem
+2026/06/29 16:57:57 [INFO] Stored Issuer public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/IssuerPublicKey
+2026/06/29 16:57:57 [INFO] Stored Issuer revocation public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/IssuerRevocationPublicKey
+Generating the user msp
++ fabric-ca-client enroll -u https://user1:user1pw@localhost:8054 --caname ca-org2 -M /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/org2/ca-cert.pem
+2026/06/29 16:57:57 [INFO] TLS Enabled
+2026/06/29 16:57:57 [INFO] generating key: &{A:ecdsa S:256}
+2026/06/29 16:57:57 [INFO] encoded CSR
+2026/06/29 16:57:57 [INFO] Stored client certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp/signcerts/cert.pem
+2026/06/29 16:57:57 [INFO] Stored root CA certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp/cacerts/localhost-8054-ca-org2.pem
+2026/06/29 16:57:57 [INFO] Stored Issuer public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp/IssuerPublicKey
+2026/06/29 16:57:57 [INFO] Stored Issuer revocation public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp/IssuerRevocationPublicKey
+Generating the org admin msp
++ fabric-ca-client enroll -u https://org2admin:org2adminpw@localhost:8054 --caname ca-org2 -M /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/org2/ca-cert.pem
+2026/06/29 16:57:57 [INFO] TLS Enabled
+2026/06/29 16:57:57 [INFO] generating key: &{A:ecdsa S:256}
+2026/06/29 16:57:57 [INFO] encoded CSR
+2026/06/29 16:57:57 [INFO] Stored client certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp/signcerts/cert.pem
+2026/06/29 16:57:57 [INFO] Stored root CA certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp/cacerts/localhost-8054-ca-org2.pem
+2026/06/29 16:57:57 [INFO] Stored Issuer public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp/IssuerPublicKey
+2026/06/29 16:57:57 [INFO] Stored Issuer revocation public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp/IssuerRevocationPublicKey
+Creating Orderer Org Identities
+Enrolling the CA admin
++ fabric-ca-client enroll -u https://admin:adminpw@localhost:9054 --caname ca-orderer --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/ordererOrg/ca-cert.pem
+2026/06/29 16:57:57 [INFO] Created a default configuration file at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/fabric-ca-client-config.yaml
+2026/06/29 16:57:57 [INFO] TLS Enabled
+2026/06/29 16:57:57 [INFO] generating key: &{A:ecdsa S:256}
+2026/06/29 16:57:57 [INFO] encoded CSR
+2026/06/29 16:57:58 [INFO] Stored client certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/msp/signcerts/cert.pem
+2026/06/29 16:57:58 [INFO] Stored root CA certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/msp/cacerts/localhost-9054-ca-orderer.pem
+2026/06/29 16:57:58 [INFO] Stored Issuer public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/msp/IssuerPublicKey
+2026/06/29 16:57:58 [INFO] Stored Issuer revocation public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/msp/IssuerRevocationPublicKey
+Registering orderer
++ fabric-ca-client register --caname ca-orderer --id.name orderer --id.secret ordererpw --id.type orderer --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/ordererOrg/ca-cert.pem
+2026/06/29 16:57:58 [INFO] Configuration file location: /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/fabric-ca-client-config.yaml
+2026/06/29 16:57:58 [INFO] TLS Enabled
+2026/06/29 16:57:58 [INFO] TLS Enabled
+Password: ordererpw
+Generating the orderer MSP
++ fabric-ca-client enroll -u https://orderer:ordererpw@localhost:9054 --caname ca-orderer -M /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/ordererOrg/ca-cert.pem
+2026/06/29 16:57:58 [INFO] TLS Enabled
+2026/06/29 16:57:58 [INFO] generating key: &{A:ecdsa S:256}
+2026/06/29 16:57:58 [INFO] encoded CSR
+2026/06/29 16:57:58 [INFO] Stored client certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/signcerts/cert.pem
+2026/06/29 16:57:58 [INFO] Stored root CA certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/cacerts/localhost-9054-ca-orderer.pem
+2026/06/29 16:57:58 [INFO] Stored Issuer public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/IssuerPublicKey
+2026/06/29 16:57:58 [INFO] Stored Issuer revocation public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/msp/IssuerRevocationPublicKey
+Generating the orderer TLS certificates, use --csr.hosts to specify Subject Alternative Names
++ fabric-ca-client enroll -u https://orderer:ordererpw@localhost:9054 --caname ca-orderer -M /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls --enrollment.profile tls --csr.hosts orderer.example.com --csr.hosts localhost --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/ordererOrg/ca-cert.pem
+2026/06/29 16:57:58 [INFO] TLS Enabled
+2026/06/29 16:57:58 [INFO] generating key: &{A:ecdsa S:256}
+2026/06/29 16:57:58 [INFO] encoded CSR
+2026/06/29 16:57:58 [INFO] Stored client certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/signcerts/cert.pem
+2026/06/29 16:57:58 [INFO] Stored TLS root CA certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/tlscacerts/tls-localhost-9054-ca-orderer.pem
+2026/06/29 16:57:58 [INFO] Stored Issuer public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/IssuerPublicKey
+2026/06/29 16:57:58 [INFO] Stored Issuer revocation public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/IssuerRevocationPublicKey
+Registering orderer2
++ fabric-ca-client register --caname ca-orderer --id.name orderer2 --id.secret orderer2pw --id.type orderer --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/ordererOrg/ca-cert.pem
+2026/06/29 16:57:58 [INFO] Configuration file location: /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/fabric-ca-client-config.yaml
+2026/06/29 16:57:58 [INFO] TLS Enabled
+2026/06/29 16:57:58 [INFO] TLS Enabled
+Password: orderer2pw
+Generating the orderer2 MSP
++ fabric-ca-client enroll -u https://orderer2:orderer2pw@localhost:9054 --caname ca-orderer -M /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/msp --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/ordererOrg/ca-cert.pem
+2026/06/29 16:57:58 [INFO] TLS Enabled
+2026/06/29 16:57:58 [INFO] generating key: &{A:ecdsa S:256}
+2026/06/29 16:57:58 [INFO] encoded CSR
+2026/06/29 16:57:58 [INFO] Stored client certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/msp/signcerts/cert.pem
+2026/06/29 16:57:58 [INFO] Stored root CA certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/msp/cacerts/localhost-9054-ca-orderer.pem
+2026/06/29 16:57:58 [INFO] Stored Issuer public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/msp/IssuerPublicKey
+2026/06/29 16:57:58 [INFO] Stored Issuer revocation public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/msp/IssuerRevocationPublicKey
+Generating the orderer2 TLS certificates, use --csr.hosts to specify Subject Alternative Names
++ fabric-ca-client enroll -u https://orderer2:orderer2pw@localhost:9054 --caname ca-orderer -M /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/tls --enrollment.profile tls --csr.hosts orderer2.example.com --csr.hosts localhost --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/ordererOrg/ca-cert.pem
+2026/06/29 16:57:58 [INFO] TLS Enabled
+2026/06/29 16:57:58 [INFO] generating key: &{A:ecdsa S:256}
+2026/06/29 16:57:58 [INFO] encoded CSR
+2026/06/29 16:57:58 [INFO] Stored client certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/tls/signcerts/cert.pem
+2026/06/29 16:57:58 [INFO] Stored TLS root CA certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/tls/tlscacerts/tls-localhost-9054-ca-orderer.pem
+2026/06/29 16:57:58 [INFO] Stored Issuer public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/tls/IssuerPublicKey
+2026/06/29 16:57:58 [INFO] Stored Issuer revocation public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer2.example.com/tls/IssuerRevocationPublicKey
+Registering orderer3
++ fabric-ca-client register --caname ca-orderer --id.name orderer3 --id.secret orderer3pw --id.type orderer --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/ordererOrg/ca-cert.pem
+2026/06/29 16:57:59 [INFO] Configuration file location: /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/fabric-ca-client-config.yaml
+2026/06/29 16:57:59 [INFO] TLS Enabled
+2026/06/29 16:57:59 [INFO] TLS Enabled
+Password: orderer3pw
+Generating the orderer3 MSP
++ fabric-ca-client enroll -u https://orderer3:orderer3pw@localhost:9054 --caname ca-orderer -M /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/msp --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/ordererOrg/ca-cert.pem
+2026/06/29 16:57:59 [INFO] TLS Enabled
+2026/06/29 16:57:59 [INFO] generating key: &{A:ecdsa S:256}
+2026/06/29 16:57:59 [INFO] encoded CSR
+2026/06/29 16:57:59 [INFO] Stored client certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/msp/signcerts/cert.pem
+2026/06/29 16:57:59 [INFO] Stored root CA certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/msp/cacerts/localhost-9054-ca-orderer.pem
+2026/06/29 16:57:59 [INFO] Stored Issuer public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/msp/IssuerPublicKey
+2026/06/29 16:57:59 [INFO] Stored Issuer revocation public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/msp/IssuerRevocationPublicKey
+Generating the orderer3 TLS certificates, use --csr.hosts to specify Subject Alternative Names
++ fabric-ca-client enroll -u https://orderer3:orderer3pw@localhost:9054 --caname ca-orderer -M /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/tls --enrollment.profile tls --csr.hosts orderer3.example.com --csr.hosts localhost --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/ordererOrg/ca-cert.pem
+2026/06/29 16:57:59 [INFO] TLS Enabled
+2026/06/29 16:57:59 [INFO] generating key: &{A:ecdsa S:256}
+2026/06/29 16:57:59 [INFO] encoded CSR
+2026/06/29 16:57:59 [INFO] Stored client certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/tls/signcerts/cert.pem
+2026/06/29 16:57:59 [INFO] Stored TLS root CA certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/tls/tlscacerts/tls-localhost-9054-ca-orderer.pem
+2026/06/29 16:57:59 [INFO] Stored Issuer public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/tls/IssuerPublicKey
+2026/06/29 16:57:59 [INFO] Stored Issuer revocation public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer3.example.com/tls/IssuerRevocationPublicKey
+Registering orderer4
++ fabric-ca-client register --caname ca-orderer --id.name orderer4 --id.secret orderer4pw --id.type orderer --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/ordererOrg/ca-cert.pem
+2026/06/29 16:57:59 [INFO] Configuration file location: /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/fabric-ca-client-config.yaml
+2026/06/29 16:57:59 [INFO] TLS Enabled
+2026/06/29 16:57:59 [INFO] TLS Enabled
+Password: orderer4pw
+Generating the orderer4 MSP
++ fabric-ca-client enroll -u https://orderer4:orderer4pw@localhost:9054 --caname ca-orderer -M /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer4.example.com/msp --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/ordererOrg/ca-cert.pem
+2026/06/29 16:57:59 [INFO] TLS Enabled
+2026/06/29 16:57:59 [INFO] generating key: &{A:ecdsa S:256}
+2026/06/29 16:57:59 [INFO] encoded CSR
+2026/06/29 16:57:59 [INFO] Stored client certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer4.example.com/msp/signcerts/cert.pem
+2026/06/29 16:57:59 [INFO] Stored root CA certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer4.example.com/msp/cacerts/localhost-9054-ca-orderer.pem
+2026/06/29 16:57:59 [INFO] Stored Issuer public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer4.example.com/msp/IssuerPublicKey
+2026/06/29 16:57:59 [INFO] Stored Issuer revocation public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer4.example.com/msp/IssuerRevocationPublicKey
+Generating the orderer4 TLS certificates, use --csr.hosts to specify Subject Alternative Names
++ fabric-ca-client enroll -u https://orderer4:orderer4pw@localhost:9054 --caname ca-orderer -M /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer4.example.com/tls --enrollment.profile tls --csr.hosts orderer4.example.com --csr.hosts localhost --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/ordererOrg/ca-cert.pem
+2026/06/29 16:57:59 [INFO] TLS Enabled
+2026/06/29 16:57:59 [INFO] generating key: &{A:ecdsa S:256}
+2026/06/29 16:57:59 [INFO] encoded CSR
+2026/06/29 16:57:59 [INFO] Stored client certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer4.example.com/tls/signcerts/cert.pem
+2026/06/29 16:57:59 [INFO] Stored TLS root CA certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer4.example.com/tls/tlscacerts/tls-localhost-9054-ca-orderer.pem
+2026/06/29 16:57:59 [INFO] Stored Issuer public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer4.example.com/tls/IssuerPublicKey
+2026/06/29 16:57:59 [INFO] Stored Issuer revocation public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/orderers/orderer4.example.com/tls/IssuerRevocationPublicKey
+Registering the orderer admin
++ fabric-ca-client register --caname ca-orderer --id.name ordererAdmin --id.secret ordererAdminpw --id.type admin --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/ordererOrg/ca-cert.pem
+2026/06/29 16:57:59 [INFO] Configuration file location: /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/fabric-ca-client-config.yaml
+2026/06/29 16:57:59 [INFO] TLS Enabled
+2026/06/29 16:57:59 [INFO] TLS Enabled
+Password: ordererAdminpw
+Generating the admin msp
++ fabric-ca-client enroll -u https://ordererAdmin:ordererAdminpw@localhost:9054 --caname ca-orderer -M /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/users/Admin@example.com/msp --tls.certfiles /home/sofia/fabric-dev/fabric-samples/test-network/organizations/fabric-ca/ordererOrg/ca-cert.pem
+2026/06/29 16:57:59 [INFO] TLS Enabled
+2026/06/29 16:57:59 [INFO] generating key: &{A:ecdsa S:256}
+2026/06/29 16:57:59 [INFO] encoded CSR
+2026/06/29 16:57:59 [INFO] Stored client certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/users/Admin@example.com/msp/signcerts/cert.pem
+2026/06/29 16:57:59 [INFO] Stored root CA certificate at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/users/Admin@example.com/msp/cacerts/localhost-9054-ca-orderer.pem
+2026/06/29 16:57:59 [INFO] Stored Issuer public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/users/Admin@example.com/msp/IssuerPublicKey
+2026/06/29 16:57:59 [INFO] Stored Issuer revocation public key at /home/sofia/fabric-dev/fabric-samples/test-network/organizations/ordererOrganizations/example.com/users/Admin@example.com/msp/IssuerRevocationPublicKey
+Generating CCP files for Org1 and Org2
+WARNING: Found orphan containers (ca_orderer, ca_org1, ca_org2) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up.
+Pulling orderer.example.com (hyperledger/fabric-orderer:latest)...
+latest: Pulling from hyperledger/fabric-orderer
+83ec2ba392fd: Pull complete
+f5127ef2f802: Pull complete
+fd35d7cd4b35: Pull complete
+036e456fae21: Pull complete
+4a589204b65a: Download complete
+Digest: sha256:dcb4c042237993a6f537b2f54e701e749f8e108f25c0cbe0c6742c205fccc3d5
+Status: Downloaded newer image for hyperledger/fabric-orderer:latest
+Creating peer0.org1.example.com ... done
+Creating orderer.example.com    ... done
+Creating peer0.org2.example.com ... done
+CONTAINER ID   IMAGE                               COMMAND                  CREATED                  STATUS                  PORTS                                                                                                                                   NAMES
+5d88cc6fc104   hyperledger/fabric-orderer:latest   "orderer"                Less than a second ago   Up Less than a second   0.0.0.0:7050->7050/tcp, [::]:7050->7050/tcp, 0.0.0.0:7053->7053/tcp, [::]:7053->7053/tcp, 0.0.0.0:9443->9443/tcp, [::]:9443->9443/tcp   orderer.example.com
+3968508c7f51   hyperledger/fabric-peer:latest      "peer node start"        Less than a second ago   Up Less than a second   0.0.0.0:9051->9051/tcp, [::]:9051->9051/tcp, 7051/tcp, 0.0.0.0:9445->9445/tcp, [::]:9445->9445/tcp                                      peer0.org2.example.com
+c98ae55104c6   hyperledger/fabric-peer:latest      "peer node start"        Less than a second ago   Up Less than a second   0.0.0.0:7051->7051/tcp, [::]:7051->7051/tcp, 0.0.0.0:9444->9444/tcp, [::]:9444->9444/tcp                                                peer0.org1.example.com
+b0f44a061144   hyperledger/fabric-ca:latest        "sh -c 'fabric-ca-se…"   13 seconds ago           Up 13 seconds           0.0.0.0:8054->8054/tcp, [::]:8054->8054/tcp, 7054/tcp, 0.0.0.0:18054->18054/tcp, [::]:18054->18054/tcp                                  ca_org2
+0f726393b0e7   hyperledger/fabric-ca:latest        "sh -c 'fabric-ca-se…"   13 seconds ago           Up 13 seconds           0.0.0.0:9054->9054/tcp, [::]:9054->9054/tcp, 7054/tcp, 0.0.0.0:19054->19054/tcp, [::]:19054->19054/tcp                                  ca_orderer
+e8cac6da612d   hyperledger/fabric-ca:latest        "sh -c 'fabric-ca-se…"   13 seconds ago           Up 13 seconds           0.0.0.0:7054->7054/tcp, [::]:7054->7054/tcp, 0.0.0.0:17054->17054/tcp, [::]:17054->17054/tcp                                            ca_org1
+Using docker and docker-compose
+Generating channel genesis block 'mychannel.block'
+Using organization 1
+/home/sofia/fabric-dev/fabric-samples/test-network/../bin/configtxgen
++ '[' 0 -eq 1 ']'
++ configtxgen -profile ChannelUsingRaft -outputBlock ./channel-artifacts/mychannel.block -channelID mychannel
+2026-06-29 16:58:07.050 WEST 0001 INFO [common.tools.configtxgen] main -> Loading configuration
+2026-06-29 16:58:07.054 WEST 0002 INFO [common.tools.configtxgen.localconfig] completeInitialization -> orderer type: etcdraft
+2026-06-29 16:58:07.054 WEST 0003 INFO [common.tools.configtxgen.localconfig] completeInitialization -> Orderer.EtcdRaft.Options unset, setting to tick_interval:"500ms" election_tick:10 heartbeat_tick:1 max_inflight_blocks:5 snapshot_interval_size:16777216
+2026-06-29 16:58:07.054 WEST 0004 INFO [common.tools.configtxgen.localconfig] Load -> Loaded configuration: /home/sofia/fabric-dev/fabric-samples/test-network/configtx/configtx.yaml
+2026-06-29 16:58:07.057 WEST 0005 INFO [common.tools.configtxgen] doOutputBlock -> Generating genesis block
+2026-06-29 16:58:07.057 WEST 0006 INFO [common.tools.configtxgen] doOutputBlock -> Creating application channel genesis block
+2026-06-29 16:58:07.057 WEST 0007 INFO [common.tools.configtxgen] doOutputBlock -> Writing genesis block
++ res=0
+Creating channel mychannel
+Adding orderers
++ . scripts/orderer.sh mychannel
++ '[' 0 -eq 1 ']'
++ res=0
+Status: 405
+{
+        "error": "cannot join: channel already exists"
+}
+
+Channel 'mychannel' created
+Joining org1 peer to the channel...
+Using organization 1
++ peer channel join -b ./channel-artifacts/mychannel.block
++ res=1
++ peer channel join -b ./channel-artifacts/mychannel.block
++ res=1
++ peer channel join -b ./channel-artifacts/mychannel.block
++ res=1
++ peer channel join -b ./channel-artifacts/mychannel.block
++ res=1
+2026-06-29 16:58:22.678 WEST 0001 INFO [channelCmd] InitCmdFactory -> Endorser and orderer connections initialized
+Error: proposal failed (err: bad proposal response 500: cannot create ledger from genesis block: ledger [mychannel] already exists with state [ACTIVE])
+After 5 attempts, peer0.org1 has failed to join channel 'mychannel'
+sofia@RC-PT-1091:~/fabric-dev/fabric-samples/test-network$

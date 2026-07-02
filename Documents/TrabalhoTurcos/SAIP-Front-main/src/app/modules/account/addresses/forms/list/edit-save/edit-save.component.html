@@ -1,0 +1,225 @@
+<app-modal #modal [modalConfig]="modalConfig">
+    <form class="form w-100" [formGroup]="form" novalidate="novalidate">
+        <div class="row mb-8">
+            <div class="col-lg-6">
+                <label class="form-label fs-6 fw-bolder text-gray-900 required">
+                    {{'NAME' | translate}}
+                </label>
+                <input class="form-control bg-transparent" type="text" name="name" formControlName="name"
+                    autocomplete="off" [ngClass]="{
+                    'is-invalid': form.controls['name'].invalid,
+                    'is-valid': form.controls['name'].valid
+                }" />
+                <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                    validation: 'required',
+                    message: ('NAME' | translate) + ' ' + ('IS_REQUIRED' | translate),
+                    control: form.controls['name']
+                }"></ng-container>
+            </div>
+
+            <div class="col-lg-6">
+                <label class="form-label fs-6 fw-bolder text-gray-900 required">
+                    {{'SURNAME' | translate}}
+                </label>
+                <input class="form-control bg-transparent" type="text" name="surname" formControlName="surname"
+                    autocomplete="off" [ngClass]="{
+                    'is-invalid': form.controls['surname'].invalid,
+                    'is-valid': form.controls['surname'].valid
+                }" />
+                <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                    validation: 'required',
+                    message: ('SURNAME' | translate) + ' ' + ('IS_REQUIRED' | translate),
+                    control: form.controls['surname']
+                }"></ng-container>
+            </div>
+        </div>
+
+        <div class="row mb-8">
+            <div class="col-lg-6">
+                <label class="form-label fs-6 fw-bolder text-gray-900 required">
+                    {{'PHONE' | translate}}
+                </label>
+                <input class="form-control bg-transparent" type="text" name="phone" formControlName="phone"
+                    autocomplete="off" [ngClass]="{
+                    'is-invalid': form.controls['phone'].invalid,
+                    'is-valid': form.controls['phone'].valid
+                }" />
+                <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                    validation: 'required',
+                    message: ('PHONE' | translate) + ' ' + ('IS_REQUIRED' | translate),
+                    control: form.controls['phone']
+                }"></ng-container>
+            </div>
+
+            <div class="col-lg-6">
+                <label class="form-label fs-6 fw-bolder text-gray-900 required">
+                    {{'COUNTRY' | translate}}
+                </label>
+                <input class="form-control bg-transparent" type="text" name="country" formControlName="country"
+                    autocomplete="off" [ngClass]="{
+                    'is-invalid': form.controls['country'].invalid,
+                    'is-valid': form.controls['country'].valid
+                  }" />
+                <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                    validation: 'required',
+                    message: ('COUNTRY' | translate) + ' ' + ('IS_REQUIRED' | translate),
+                    control: form.controls['country']
+                  }"></ng-container>
+            </div>
+        </div>
+
+        <div class="row mb-8">
+            <div class="col-lg-6">
+                <label class="form-label fs-6 fw-bolder text-gray-900 required">
+                    {{'CITY' | translate}}
+                </label>
+                <input class="form-control bg-transparent" type="text" name="city" formControlName="city"
+                    autocomplete="off" [ngClass]="{
+                    'is-invalid': form.controls['city'].invalid,
+                    'is-valid': form.controls['city'].valid
+                }" />
+                <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                    validation: 'required',
+                    message: ('CITY' | translate) + ' ' + ('IS_REQUIRED' | translate),
+                    control: form.controls['city']
+                }"></ng-container>
+            </div>
+            <div class="col-lg-6">
+                <label class="form-label fs-6 fw-bolder text-gray-900 required">
+                    {{'DISTRICT' | translate}}
+                </label>
+                <input class="form-control bg-transparent" type="text" name="district" formControlName="district"
+                    autocomplete="off" [ngClass]="{
+                    'is-invalid': form.controls['district'].invalid,
+                    'is-valid': form.controls['district'].valid
+                  }" />
+                <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                    validation: 'required',
+                    message: ('DISTRICT' | translate) + ' ' + ('IS_REQUIRED' | translate),
+                    control: form.controls['district']
+                  }"></ng-container>
+            </div>
+        </div>
+
+        <div class="row mb-8">
+            <div class="col-lg-12">
+                <label class="form-label fs-6 fw-bolder text-gray-900 required">
+                    {{'ADDRESS' | translate}}
+                </label>
+                <textarea class="form-control bg-transparent" type="text" name="address" formControlName="address"
+                    autocomplete="off" [ngClass]="{
+                    'is-invalid': form.controls['address'].invalid,
+                    'is-valid': form.controls['address'].valid
+                }"></textarea>
+
+                <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                        validation: 'required',
+                        message: ('ADDRESS' | translate) + ' ' + ('IS_REQUIRED' | translate),
+                        control: form.controls['address']
+                    }"></ng-container>
+            </div>
+        </div>
+
+        <div class="row mb-8">
+            <div class="col-lg-12">
+                <label class="form-label fs-6 fw-bolder text-gray-900 required">
+                    {{'ADDRESS_HEADER' | translate}}
+                </label>
+                <input class="form-control bg-transparent" type="text" name="addressHeader"
+                    formControlName="addressHeader" autocomplete="off" [ngClass]="{
+                    'is-invalid': form.controls['addressHeader'].invalid,
+                    'is-valid': form.controls['addressHeader'].valid
+                }" />
+                <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                    validation: 'required',
+                    message: ('ADDRESS_HEADER' | translate) + ' ' + ('IS_REQUIRED' | translate),
+                    control: form.controls['addressHeader']
+                }"></ng-container>
+            </div>
+        </div>
+
+        <div class="row mb-8">
+            <div class="col-lg-12">
+                <label class="form-label fs-6 fw-bolder text-gray-900 required">
+                    {{'INVOICE_TYPE' | translate}}
+                </label>
+                <select name="invoiceType" formControlName="invoiceType" autocomplete="off"
+                    class="form-select form-select-solid form-select-lg fw-bold" [ngClass]="{
+                    'is-invalid': form.controls['invoiceType'].invalid,
+                    'is-valid': form.controls['invoiceType'].valid
+                }">
+                    <option value="">{{'SELECT_INVOICE_TYPE' | translate}}</option>
+                    <ng-container *ngFor="let item of invoiceTypes">
+                        <option value={{item.id}}>{{item.name}}</option>
+                    </ng-container>
+                </select>
+
+                <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                    validation: 'required',
+                    message: ('INVOICE_TYPE' | translate) + ' ' + ('IS_REQUIRED' | translate),
+                    control: form.controls['invoiceType']
+                }"></ng-container>
+            </div>
+        </div>
+
+        <div class="row mb-8" *ngIf="form.controls['invoiceType'].value == 2">
+            <div class="col-lg-6">
+                <label class="form-label fs-6 fw-bolder text-gray-900 required">
+                    {{'TAX_NO' | translate}}
+                </label>
+                <input class="form-control bg-transparent" type="text" name="vkn" formControlName="vkn"
+                    autocomplete="off" [ngClass]="{
+                    'is-invalid': form.controls['vkn'].invalid,
+                    'is-valid': form.controls['vkn'].valid
+                }" />
+                <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                    validation: 'required',
+                    message: ('TAX_NO' | translate) + ' ' + ('IS_REQUIRED' | translate),
+                    control: form.controls['vkn']
+                }"></ng-container>
+            </div>
+
+            <div class="col-lg-6">
+                <label class="form-label fs-6 fw-bolder text-gray-900 required">
+                    {{'TAX_OFFICE' | translate}}
+                </label>
+                <input class="form-control bg-transparent" type="text" name="vergiDairesi"
+                    formControlName="vergiDairesi" autocomplete="off" [ngClass]="{
+                    'is-invalid': form.controls['vergiDairesi'].invalid,
+                    'is-valid': form.controls['vergiDairesi'].valid
+                }" />
+                <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                    validation: 'required',
+                    message: ('TAX_OFFICE' | translate) + ' ' + ('IS_REQUIRED' | translate),
+                    control: form.controls['vergiDairesi']
+                }"></ng-container>
+            </div>
+
+            <div class="col-lg-6">
+                <label class="form-label fs-6 fw-bolder text-gray-900 required">
+                    {{'FIRM_NAME' | translate}}
+                </label>
+                <input class="form-control bg-transparent" type="text" name="firmaAdi" formControlName="firmaAdi"
+                    autocomplete="off" [ngClass]="{
+                    'is-invalid': form.controls['firmaAdi'].invalid,
+                    'is-valid': form.controls['firmaAdi'].valid
+                }" />
+                <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                    validation: 'required',
+                    message: ('FIRM_NAME' | translate) + ' ' + ('IS_REQUIRED' | translate),
+                    control: form.controls['firmaAdi']
+                }"></ng-container>
+            </div>
+        </div>
+    </form>
+
+    <ng-template #formError let-control="control" let-message="message" let-validation="validation">
+        <ng-container *ngIf="control.hasError(validation) && (control.dirty || control.touched)">
+            <div class="fv-plugins-message-container">
+                <span role="alert">
+                    {{ message }}
+                </span>
+            </div>
+        </ng-container>
+    </ng-template>
+</app-modal>

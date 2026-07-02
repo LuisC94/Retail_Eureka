@@ -1,0 +1,113 @@
+
+
+
+RETAILL
+
+REtail using Technology based on Artificial InteLLigence
+
+
+
+
+Deliverable 4.2 – Laboratory Prototype
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Work package leader: Federico Tomas
+Date: -- June 2026
+
+Table of Contents
+
+
+
+Introduction
+Contextualization of RETAILL Project and WP4 (Monitoring advanced system for sustainability and logistics) 
+The RETAILL project aims to digitally transform and optimize the fresh food supply chain. Within this broader context, WP4 focuses specifically on the development of a comprehensive system dedicated to collecting and monitoring critical sustainability and logistic indicators. A core component of this activity involves defining the profiles of the different services involved, alongside establishing the necessary protocols to seamlessly integrate these distinct services. Furthermore, recognizing the sensitivity of supply chain data, WP4 encompasses the strict definition and implementation of data security and privacy protocols. Once the infrastructure is established, the collected data will be processed and represented through dedicated interfaces. This enables the clear visualization of information essential for multiple operational facets, including decision-making, delivery optimization, diagnostics, condition monitoring, alarming, and user training.
+Objectives of Deliverable 4.2 and Scope of the Laboratory Prototype
+Deliverable 4.2 represents the culmination of the research and development activities within WP4 through the creation of a functional laboratory prototype. The primary scope of this deliverable is to aggregate all the knowledge, protocols, and mechanisms gained throughout the work package into a unified prototype. This system is then rigorously tested in a controlled laboratory environment to validate the developed solutions before real-world deployment.
+The main objectives addressed by this deliverable and the broader WP4 framework are:
+Integration of service profiles creation, visualization, and optimization.
+Implementation of data security and privacy specifications and their potential outcomes.
+Ensuring the lab prototype and its development framework are fully settled and operational.
+Ensuring the excellence and quality assurance of all deliveries, outputs, and activities.
+By fulfilling these objectives, the laboratory prototype aims to demonstrate several key expected results. These include proving service interoperability regarding the defined profiles, showcasing a robust data security and privacy management platform, establishing a clear lab prototype development framework, and validating the effectiveness of the visualization and monitoring mechanisms.
+Integration Services and Profiles Definition
+Definition of the service profiles involved 
+To ensure the system is both secure and highly relevant to its users, the RETAILL platform relies on a structured definition of service profiles. Rather than being restricted solely to sustainability and logistical monitoring, these profiles dictate how each actor interacts with the platform's full suite of services, spanning from marketplace transactions and order management to life-cycle tracking and environmental reporting.
+The ecosystem is categorized into five main actors across the supply chain, each with specific roles and distinct access requirements:
+Producers: Those responsible for fruit production. They use the platform comprehensively to list and sell products on the marketplace, manage incoming purchase orders, and track initial sustainability indicators such as resource consumption and harvesting efficiency.
+Processors: They transform raw materials into finished goods ready for distribution. This profile interacts with the platform's dual capabilities to purchase raw materials and sell processed goods, while simultaneously monitoring operational efficiency, energy consumption, and waste management within their facilities.
+Transporters: Manage the logistics and transport of products between the various parties in the supply chain. They utilize the platform to accept transport orders and optimize routes, while continuously feeding the system with real-time data on fleet performance, cargo environmental conditions, and carbon emissions.
+Retailers: Points of sale (physical or online). They access the platform to purchase fresh and processed goods, track the accumulated carbon footprint of their incoming inventory, monitor supply chain delays, and manage freshness indicators to minimize food waste at the store level.
+Consumers: Organisations that collect produce that does not meet market standards, or final buyers. They interact with the platform to access end-to-end transparency metrics, allowing them to verify the traceability, true freshness, sustainability footprint, and ethical sourcing of the products they acquire.
+Data and process integration protocols
+A core objective of WP4 is to establish a cohesive ecosystem where disparate services and hardware components can communicate seamlessly. To achieve this, robust data and process integration protocols have been defined and implemented.
+Since the RETAILL platform must interact with various external systems (such as legacy ERPs, external fleet management software, and disparate sensor networks), the architecture relies on standardized data exchange protocols and flexible ingestion mechanisms rather than rigid, single-point connections. This ensures broad interoperability across the network.
+Data Integration: Standardized formats are utilized to harmonize the incoming data streams across the entire ecosystem. By establishing a universal data schema that accommodates marketplace transactions, IoT sensor telemetry, inventory status, and sustainability metrics, the system can securely ingest, validate, and store information from multiple stakeholders without losing context or accuracy.
+Process Integration: The protocols ensure that physical and transactional events trigger the appropriate digital workflows across all platform modules. For example, if an IoT sensor detects a temperature anomaly during transit, the integration protocol automatically feeds this event into the sustainability module to log potential energy inefficiencies, while simultaneously triggering the LC Agent to recalculate the product's freshness index and alerting the Order Management system to potential contractual or logistical impacts.
+Bottom-up approach for integrating services based on IoT and sensor data streams 
+
+To guarantee that the platform's high-level functionalities are accurate and firmly grounded in reality, the laboratory prototype employs a strict bottom-up approach for service integration. This methodology builds the digital capabilities directly from the physical edge of the supply chain upwards to the decision-making modules and analytical dashboards.
+This bottom-up architecture is structured in three continuous stages:
+Edge Data Generation (The Physical and Transactional Layer): The process begins at the granular level with IoT devices and environmental sensors attached to transport vehicles and fresh food pallets, alongside operational inputs from stakeholders in the marketplace. These sources continuously generate raw data streams regarding physical cargo conditions, geographical location, energy consumption, and real-time transactional events.
+Data Ingestion and Filtering (The Integration Layer): The raw data is transmitted through secure gateways to the central platform. At this stage, the integration protocols filter out noise, validate the integrity of the data streams, and apply the necessary data security and privacy protocols required by the overarching RETAILL architecture to protect sensitive commercial and operational information.
+System-Wide Aggregation and Visualization (The Application Layer): Finally, the processed data streams are aggregated by the platform's advanced algorithms. The granular inputs are transformed into actionable, high-level outputs, such as translating telemetry into precise CO2 equivalent emissions, converting environmental exposure into dynamic Freshness Indexes, or updating inventory states for the RL models. These derived metrics are then pushed to the respective profile dashboards for visualization, diagnostics, alarming, and autonomous decision support across the entire network.
+Data Security and Privacy
+Access control mechanisms and stakeholder verification
+The RETAILL platform processes a vast amount of sensitive information, ranging from real-time logistical telemetry and environmental IoT data to confidential commercial agreements and sustainability footprints. To protect this ecosystem, the platform employs stringent access control mechanisms based on the Role-Based Access Control (RBAC) framework.
+Stakeholder verification is a mandatory first step before any entity can interact with the system. Once authenticated, users are strictly bound to the permissions associated with their specific profile (Producers, Processors, Transporters, Retailers, or Consumers). This ensures a "least privilege" approach:
+A Transporter, for instance, is granted access to route details, cargo conditions, and delivery schedules, but is cryptographically restricted from viewing the financial details of the transaction between the Producer and the Retailer.
+Conversely, Consumers are granted transparent access to traceability and sustainability metrics (e.g., carbon footprint and freshness indicators) without exposing the underlying intellectual property or proprietary operational data of the Processors.
+Implementation of technologies to ensure data integrity and traceability
+For the monitoring system to be trusted by all stakeholders, the data it aggregates and displays must be tamper-proof. To achieve this, the platform leverages DLTs/Blockchain-inspired architectures to ensure absolute data integrity and end-to-end traceability. Whenever a critical physical or digital event occurs, such as an IoT sensor recording a temperature spike, a Transporter accepting a route, or a sustainability metric being calculated, the event is securely timestamped and written to an immutable ledger. This technological approach guarantees that once data is recorded, it cannot be retroactively altered or deleted by any single party to hide inefficiencies, delays, or food spoilage. By decentralizing trust, the platform ensures that the derived sustainability KPIs, freshness indexes, and logistical audits are based on mathematically verifiable and unchangeable histories.
+Overall framework for security and privacy applied to data  
+The overarching security and privacy framework of the RETAILL prototype is designed to protect data at every stage of its lifecycle: at the edge (generation), in transit (communication), and at rest (storage and analysis).
+To ensure compliance with stringent data protection regulations (GDPR) and to protect commercial confidentiality, the framework applies several core strategies:
+Encryption protocols: All data streams, from the physical IoT sensors to the central processing modules and user dashboards, are encrypted in transit using secure communication protocols, preventing unauthorized interception.
+Data Anonymization and Aggregation: Before sensitive transactional or logistical data is utilized by the overarching machine learning models (such as the RL agents) or published in global sustainability reports, it undergoes anonymization processes. This strips away identifiable corporate markers while preserving the underlying patterns necessary for AI training and statistical analysis.
+Together, these mechanisms foster a secure and trusted digital environment where supply chain actors can confidently share the data required to optimize logistics and drive sustainability.
+Visualizations & Monitoring
+Virtual representation of fresh food product transportation and its control flows
+Analytics, diagnostics, condition monitoring, and alarming functionalities
+Data fusion for decision support and information sharing with experts and external entities
+
+Lab Prototype Development
+Overview of the aggregation of new knowledge and functionalities developed in previous activities
+The WP4 laboratory prototype serves as the central convergence point for all the theoretical frameworks, integration protocols, and security measures defined throughout the earlier tasks of the project. Rather than treating sustainability monitoring, logistics tracking, and data security as isolated components, this prototype aggregates these functionalities into a single, cohesive software environment. This aggregation successfully operationalizes the structured service profiles (ranging from Producers to Consumers), ensuring that each role interacts dynamically with the platform based on their specific needs and permissions. It brings to life the bottom-up integration approach, connecting simulated sensor edge-data with the central processing modules. Furthermore, the prototype embodies the strict security and privacy protocols established previously, utilizing the RBAC and DLT to guarantee data integrity. By combining these elements, the prototype validates the core WP4 objectives and establishes the foundational monitoring layer required to feed accurate, real-time indicators into the platform's broader AI and decision-making modules.
+Configuration and setup of the laboratory environment
+To accurately validate the platform's capabilities before real-world deployment, the laboratory environment was configured to simulate the complex, multi-tiered architecture of the fresh food supply chain within a strictly controlled setting. Given the project's data privacy constraints, the entire setup was deployed on a secure, dedicated local infrastructure, entirely avoiding public cloud dependencies.
+The physical and network configuration includes:
+Core Processing Servers: Local servers hosting the central databases, the integration middleware, and the analytical engines responsible for calculating sustainability and logistical KPIs.
+DLT Node Network: A localized implementation of the immutable ledger system, configured to securely timestamp and log critical events (e.g., transactions, temperature anomalies, and route completions) in real time.
+Simulated Edge Infrastructure: Local network gateways configured to mimic the behaviour of field IoT devices. These gateways bridge the gap between the simulated physical layer and the platform's data ingestion protocols.
+Frontend Terminals: Dedicated workstations running the profile-specific visualization dashboards, allowing researchers and developers to interact with the system from the perspective of different supply chain actors.
+This comprehensive setup allows the consortium to rigorously stress-test the system's responsiveness, integration workflows, and security mechanisms under safe, repeatable conditions.
+Identification and utilization of data sources representative of a real-context environment
+A critical factor in validating the laboratory prototype is the integration of robust, realistic data that accurately mirrors the volatility and complexity of the fresh food supply chain. Since live, physical data from the official pilots is reserved for the final phases of the project, the WP4 lab prototype utilizes meticulously curated representative data sources to simulate a real-context environment.
+The testing environment leverages three primary categories of representative data:
+Historical Logistical Datasets: Pre-recorded industry data detailing typical transit times, varied route distances, and vehicle fuel consumption. This data is essential for validating the algorithms that calculate the carbon footprint and operational efficiency of the Transporter profiles.
+Simulated IoT and Environmental Streams: Automated software scripts generate dynamic telemetry streams, mimicking temperature fluctuations, humidity changes, and simulated location tracking. This allows the platform to test its diagnostic alarming systems and integration with freshness calculation models without requiring physical cargo.
+Synthetic Transactional Data: Simulated marketplace activities representing a high volume of purchase orders, supplier interactions, and inventory changes, reflecting the realistic behaviours of Producers, Processors, and Retailers.
+By feeding these complex, multi-variable data streams into the prototype, the laboratory environment accurately tests the system's ability to ingest noise, filter anomalies, and reliably generate the high-level sustainability and logistics indicators expected in a live operational context.
+Conclusions
+Deliverable 4.2 successfully marks the culmination of the research and development activities within WP 4, transitioning theoretical concepts into a tangible, functional laboratory prototype. Throughout this phase, the consortium established a robust and secure monitoring framework dedicated to tracking sustainability and logistical indicators across the fresh food supply chain.
+Key technical achievements demonstrated within this deliverable include:
+Holistic Profile Integration: The successful definition and integration of service profiles (Producers, Processors, Transporters, Retailers, and Consumers), ensuring that each actor has tailored, secure access to the platform’s monitoring tools and dashboards.
+Bottom-Up Architecture: The validation of data and process integration protocols capable of securely ingesting granular, simulated edge-data (IoT telemetry and transactional events) and transforming it into high-level actionable KPIs, such as carbon footprints and logistical efficiency metrics.
+Decentralized Security: The implementation of a stringent security and privacy framework. By utilizing RBAC and DLTs within a dedicated local infrastructure, the prototype guarantees data integrity, immutability, and commercial confidentiality without relying on public cloud environments.
+The validation of this laboratory prototype confirms that WP4 is perfectly aligned with the overarching goals of the RETAILL project. By providing a secure, transparent, and accurate monitoring layer, WP4 acts as the foundational truth for the entire ecosystem. The indicators generated by this system do more than just provide historical reports; they are vital inputs that enable the broader platform to function. For instance, the secure logistical data and sustainability metrics tracked here will eventually feed the Reinforcement Learning algorithms and Multi-Criteria Decision Analysis modules developed in other work packages, ensuring that the platform’s autonomous decisions actively minimize food waste and optimize environmental efficiency.

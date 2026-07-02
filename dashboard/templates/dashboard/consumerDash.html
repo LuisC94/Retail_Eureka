@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eureka - Consumer Dashboard</title>
+    <title>RETAILL - Consumer Dashboard</title>
     <style>
         /* ==================== RESET & GLOBAL ==================== */
         * {
@@ -395,7 +395,7 @@
         <!-- SIDEBAR -->
         <div class="sidebar">
             <div class="sidebar-header">
-                <h1>🌿 Eureka</h1>
+                <h1>🌿 RETAILL</h1>
                 <p>Agricultural Management System</p>
             </div>
 
@@ -463,8 +463,7 @@
                         <div class="form-grid-2">
                             <div>
                                 <label style="display:block; margin-bottom:5px; font-weight:600;">Type:</label>
-                                <input type="text" value="Purchase Request (Compra)" readonly style="background-color: #f0f0f0; color: #555; cursor: not-allowed;">
-                                <input type="hidden" name="order_type" value="BUY">
+                                {{ market_order_form.order_type }}
                             </div>
                             <div>
                                  <label style="display:block; margin-bottom:5px; font-weight:600;">Culture:</label>
@@ -473,6 +472,10 @@
                              <div>
                                  <label style="display:block; margin-bottom:5px; font-weight:600;">Quantity (Kg):</label>
                                 {{ market_order_form.quantity_kg }}
+                            </div>
+                            <div>
+                                <label id="price_label" style="display:block; margin-bottom:5px; font-weight:600;">Preço Máx. Compra (€/Kg):</label>
+                                {{ market_order_form.price_per_kg }}
                             </div>
                              <div>
                                  <label style="display:block; margin-bottom:5px; font-weight:600;">Location:</label>
@@ -495,40 +498,154 @@
                                 </div>
                             </div>
                         </div>
-                        <button type="submit" class="submit-button">Submit Order</button>
+                        <button type="submit" class="submit-button">✓ Create Request</button>
                     </form>
+
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const typeSelect = document.getElementById('id_order_type');
+                            const priceLbl = document.getElementById('price_label');
+                            
+                            function updateFormState() {
+                                if (typeSelect.value === 'SELL') {
+                                    if (priceLbl) priceLbl.innerText = "Preço de Venda (€/Kg):";
+                                    const l1 = document.querySelector('label[for="id_min_caliber"]');
+                                    const l2 = document.querySelector('label[for="id_min_soluble_solids"]');
+                                    const l3 = document.querySelector('label[for="id_min_quality_score"]');
+                                    if (l1) l1.innerText = "Avg Caliber (mm):";
+                                    if (l2) l2.innerText = "Avg Brix:";
+                                    if (l3) l3.innerText = "Avg Score (1-10):";
+                                } else {
+                                    if (priceLbl) priceLbl.innerText = "Preço Máx. Compra (€/Kg):";
+                                    const l1 = document.querySelector('label[for="id_min_caliber"]');
+                                    const l2 = document.querySelector('label[for="id_min_soluble_solids"]');
+                                    const l3 = document.querySelector('label[for="id_min_quality_score"]');
+                                    if (l1) l1.innerText = "Min Caliber (> mm):";
+                                    if (l2) l2.innerText = "Min Brix (>):";
+                                    if (l3) l3.innerText = "Min Score (1-10):";
+                                }
+                            }
+                            
+                            if (typeSelect) {
+                                typeSelect.addEventListener('change', updateFormState);
+                                updateFormState();
+                            }
+                        });
+                    </script>
                 </div>
+            </div>
+
+    <!-- CALCULATE MODAL (DEMO) -->
+    <div id="calculateModal" class="modal"
+    style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(5px);">
+        <div class="modal-content"
+            style="background-color: #fefefe; margin: 10% auto; padding: 40px; border: 1px solid #888; width: 90%; max-width: 500px; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: slideDown 0.3s ease;">
+            <span class="close" onclick="closeCalculateModal()"
+                style="color: #999; float: right; font-size: 28px; font-weight: bold; cursor: pointer; transition:all 0.3s ease;">&times;</span>
+            <h3 style="color:#1565C0; margin-bottom:25px; font-size:1.6em; font-weight:700;">🧮 Simular Custos & Prazos</h3>
+
+            <!-- INPUT STEP -->
+            <div id="calcStep1">
+                <p style="margin-bottom:20px; color:#555; font-size:1.1em;">
+                    Simulação para: <b id="calcOrderProduct" style="color:#004d40;"></b> (<span id="calcOrderQty"></span> kg)
+                </p>
+
+                <div style="margin-bottom: 25px;">
+                    <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Local de Entrega:</label>
+                    <input type="text" placeholder="Ex: Lisboa, Av. da Liberdade..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;">
+                </div>
+
+                <div style="margin-bottom: 25px; display:none;" id="calc-spinner">
+                    <p style="text-align:center; color:#1565C0; font-weight:bold;">🔄 A calcular melhores rotas...</p>
+                </div>
+
+                <button type="button" class="submit-button" style="background:linear-gradient(135deg, #1976D2, #1565C0);" onclick="performCalculation()">
+                    🚀 Calcular Agora
+                </button>
+            </div>
+
+            <!-- RESULT STEP (Initially Hidden) -->
+            <div id="calcStep2" style="display:none; text-align:center;">
+                <div style="margin-bottom:20px;">
+                    <span style="font-size:3em;">📊</span>
+                    <h4 style="color:#2e7d32; margin-top:10px;">Resultados da Simulação</h4>
+                </div>
+
+                <div style="background:#e3f2fd; padding:15px; border-radius:10px; margin-bottom:10px; text-align:left;">
+                    <span style="display:block; font-size:0.85em; color:#1565C0;">⏱️ Prazo de Recolha</span>
+                    <strong style="font-size:1.1em;">~ 1 Hora</strong>
+                </div>
+
+                <div style="background:#e3f2fd; padding:15px; border-radius:10px; margin-bottom:10px; text-align:left;">
+                    <span style="display:block; font-size:0.85em; color:#1565C0;">📅 Prazo de Entrega</span>
+                    <strong style="font-size:1.1em;">Hoje, 19:30 PM</strong>
+                </div>
+
+                <div style="background:#fff3e0; padding:15px; border-radius:10px; margin-bottom:10px; text-align:left;">
+                    <span style="display:block; font-size:0.85em; color:#ef6c00;">🚚 Custo Estimado de Transporte</span>
+                    <strong style="font-size:1.1em;">€ 15.00</strong>
+                </div>
+
+                 <div style="background:#e8f5e9; padding:15px; border-radius:10px; margin-bottom:20px; text-align:left; border:1px solid #c8e6c9;">
+                    <span style="display:block; font-size:0.85em; color:#2e7d32;">🌱 Redução Pegada Carbónica (vs Standard)</span>
+                    <strong style="font-size:1.2em; color:#2e7d32;">12% ⬇️</strong>
+                </div>
+
+                <button type="button" class="btn-action" style="background:#757575; width:100%; padding:12px;" onclick="resetCalculateModal()">
+                    🔙 Voltar / Fechar
+                </button>
+            </div>
+
+        </div>
+    </div>
 
                 <!-- OPEN TRANSACTIONS -->
                 <div class="data-table-container">
                     <h3>🔓 Open Transactions</h3>
-                        {% if open_market_orders %}
-                        
-                        <!-- FILTERS -->
+                    {% if open_market_orders %}
+                          <!-- FILTERS -->
                         <div style="background: #f1f8e9; padding: 15px; border-radius: 8px; border: 1px solid #c5e1a5; margin-bottom: 15px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
                             <label style="font-weight:600; color:#33691e;">🔍 Filter By:</label>
                             
                             <div style="display: flex; align-items: center; gap: 5px;">
+                                <label for="filter-type" style="font-size: 0.9em; color:#555;">Type: </label>
+                                <select id="filter-type" style="width: 140px; padding: 5px; border: 1px solid #ccc; border-radius: 4px; height: 34px;">
+                                    <option value="">All</option>
+                                    <option value="BUY">Buy</option>
+                                    <option value="SELL">Sell</option>
+                                </select>
+                            </div>
+
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <label for="filter-culture" style="font-size: 0.9em; color:#555;">Culture: </label>
+                                <select id="filter-culture" style="width: 140px; padding: 5px; border: 1px solid #ccc; border-radius: 4px; height: 34px;">
+                                    <option value="">All </option>
+                                </select>
+                            </div>
+
+                            <div style="display: flex; align-items: center; gap: 5px;">
                                 <label for="filter-cal" style="font-size: 0.9em; color:#555;">Caliber > </label>
-                                <input type="number" id="filter-cal" step="1" style="width: 70px; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                                <input type="number" id="filter-cal" step="1" style="width: 70px; padding: 5px; border: 1px solid #ccc; border-radius: 4px; height: 34px;">
                             </div>
                             
                             <div style="display: flex; align-items: center; gap: 5px;">
                                 <label for="filter-brix" style="font-size: 0.9em; color:#555;">Brix > </label>
-                                <input type="number" id="filter-brix" step="0.1" style="width: 70px; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                                <input type="number" id="filter-brix" step="0.1" style="width: 70px; padding: 5px; border: 1px solid #ccc; border-radius: 4px; height: 34px;">
                             </div>
                             
                             <div style="display: flex; align-items: center; gap: 5px;">
                                 <label for="filter-score" style="font-size: 0.9em; color:#555;">Score > </label>
-                                <input type="number" id="filter-score" step="0.1" style="width: 70px; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                                <input type="number" id="filter-score" step="0.1" style="width: 70px; padding: 5px; border: 1px solid #ccc; border-radius: 4px; height: 34px;">
                             </div>
                             
-                            <button onclick="filterOpenTransactions()" style="background: #33691e; color: white; border: none; padding: 6px 15px; border-radius: 5px; cursor: pointer; font-weight: 600;">Apply</button>
-                            <button onclick="clearTransactionFilters()" style="background: #bdbdbd; color: white; border: none; padding: 6px 15px; border-radius: 5px; cursor: pointer;">Clear</button>
+                            <button onclick="filterOpenTransactions()" style="background: #33691e; color: white; border: none; padding: 6px 15px; border-radius: 5px; cursor: pointer; font-weight: 600; height: 34px;">Apply</button>
+                            <button onclick="clearTransactionFilters()" style="background: #bdbdbd; color: white; border: none; padding: 6px 15px; border-radius: 5px; cursor: pointer; height: 34px;">Clear</button>
                         </div>
 
                         <script>
                         function filterOpenTransactions() {
+                            const typeVal = document.getElementById('filter-type').value;
+                            const cultureVal = document.getElementById('filter-culture').value;
                             const calVal = parseFloat(document.getElementById('filter-cal').value) || 0;
                             const brixVal = parseFloat(document.getElementById('filter-brix').value) || 0;
                             const scoreVal = parseFloat(document.getElementById('filter-score').value) || 0;
@@ -537,6 +654,8 @@
                             
                             rows.forEach(row => {
                                 // Columns Indices (0-based): Date(0), Type(1), Req(2), Culture(3), Cal(4), Brix(5), Score(6)
+                                const typeCell = row.cells[1].innerText.toLowerCase();
+                                const cultureCell = row.cells[3].innerText.trim();
                                 const calCell = row.cells[4].innerText.trim();
                                 const brixCell = row.cells[5].innerText.trim();
                                 const scoreCell = row.cells[6].innerText.trim();
@@ -546,6 +665,17 @@
                                 const scoreNum = parseCellVal(scoreCell);
                                 
                                 let show = true;
+                                
+                                // Order Type filter
+                                if (typeVal === 'BUY') {
+                                    if (!typeCell.includes('purchase') && !typeCell.includes('compra')) show = false;
+                                } else if (typeVal === 'SELL') {
+                                    if (!typeCell.includes('export') && !typeCell.includes('venda')) show = false;
+                                }
+                                
+                                // Culture filter
+                                if (cultureVal && cultureCell !== cultureVal) show = false;
+                                
                                 if (calVal > 0 && calNum < calVal) show = false;
                                 if (brixVal > 0 && brixNum < brixVal) show = false;
                                 if (scoreVal > 0 && scoreNum < scoreVal) show = false;
@@ -561,11 +691,42 @@
                         }
                         
                         function clearTransactionFilters() {
+                            document.getElementById('filter-type').value = '';
+                            document.getElementById('filter-culture').value = '';
                             document.getElementById('filter-cal').value = '';
                             document.getElementById('filter-brix').value = '';
                             document.getElementById('filter-score').value = '';
                             filterOpenTransactions();
                         }
+                        
+                        function populateCultureFilter() {
+                            const table = document.getElementById('open-trans-table');
+                            if (!table) return;
+                            const rows = table.querySelectorAll('tbody tr');
+                            const cultures = new Set();
+                            
+                            rows.forEach(row => {
+                                if (row.cells[3]) {
+                                    const text = row.cells[3].innerText.trim();
+                                    if (text && text !== '-') {
+                                        cultures.add(text);
+                                    }
+                                }
+                            });
+                            
+                            const filterSelect = document.getElementById('filter-culture');
+                            if (!filterSelect) return;
+                            
+                            filterSelect.innerHTML = '<option value="">All </option>';
+                            Array.from(cultures).sort().forEach(c => {
+                                const opt = document.createElement('option');
+                                opt.value = c;
+                                opt.textContent = c;
+                                filterSelect.appendChild(opt);
+                            });
+                        }
+                        
+                        document.addEventListener('DOMContentLoaded', populateCultureFilter);
                         </script>
 
                     <table class="data-table" id="open-trans-table">
@@ -578,6 +739,7 @@
                                 <th>Calibre</th>
                                 <th>Brix</th>
                                 <th>Score</th>
+                                <th>Price/Kg</th>
                                 <th>Qty</th>
                                 <th>Action</th>
                             </tr>
@@ -625,14 +787,24 @@
                                     {% endif %}
                                 </td>
 
+                                <td>{{ order.price_per_kg|default_if_none:"-" }} €</td>
+
                                 <td>{{ order.quantity_kg }}</td>
                                 <td>
                                     {% if order.requester != user %}
-                                    <form method="POST" action="{% url 'market_accept_order' %}">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="order_id" value="{{ order.id }}">
-                                        <button type="submit" class="btn-action">Accept</button>
-                                    </form>
+                                    <div style="display:flex; gap:10px;">
+                                        <!-- 1. BUTTON: CALCULATE (DEMO) -->
+                                        <button type="button" class="btn-action" style="background:linear-gradient(135deg, #1976D2, #1565C0);"
+                                            onclick="openCalculateModal('{{ order.id }}', '{{ order.culture.name|escapejs }}', '{{ order.quantity_kg }}')">
+                                            🧮 Calcular
+                                        </button>
+
+                                        <form method="POST" action="{% url 'market_accept_order' %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="order_id" value="{{ order.id }}">
+                                            <button type="submit" class="btn-action">Accept</button>
+                                        </form>
+                                    </div>
                                     {% else %}
                                     <span style="color:gray;">Mine</span>
                                     {% endif %}
@@ -657,8 +829,10 @@
                                 <th>Type</th>
                                 <th>Requester</th>
                                 <th>Item</th>
+                                <th>Price/Kg</th>
                                 <th>Qty</th>
                                 <th>Fulfilled By</th>
+                                <th>History</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -666,10 +840,20 @@
                             <tr>
                                 <td>{{ order.fulfilled_at|date:"d/m H:i" }}</td>
                                 <td>{{ order.get_order_type_display }}</td>
-                                <td>{{ order.requester.username }}</td>
+                                <td>{{ order.requester.username }} ({{ order.role }})</td>
                                 <td>{{ order.culture.name }}</td>
+                                <td>{{ order.price_per_kg|default_if_none:"-" }} €</td>
                                 <td>{{ order.quantity_kg }}</td>
-                                <td>{{ order.fulfilled_by.username }}</td>
+                                <td>{{ order.fulfilled_by.username }} ({{ order.fulfilled_by.userprofile.role }})</td>
+                                <td>
+                                    {% if order.harvest_origin %}
+                                    <button onclick="openHistoryModal('{{ order.harvest_origin.pk }}')" class="btn-action" style="background: #00796b; text-decoration: none; padding: 5px 10px; font-size: 0.8em;">
+                                        📜 Ver Histórico
+                                    </button>
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
                             </tr>
                              {% endfor %}
                         </tbody>
@@ -828,10 +1012,255 @@
             document.getElementById('profileModal').style.display = "none";
         }
 
+        /* Calculate Modal Functions */
+        function openCalculateModal(orderId, productName, quantity) {
+             document.getElementById('calcOrderProduct').innerText = productName;
+             document.getElementById('calcOrderQty').innerText = quantity;
+             // Reset state
+             resetCalculateModal(); // Ensure we start fresh
+             document.getElementById('calculateModal').style.display = "block";
+        }
+
+        function closeCalculateModal() {
+            document.getElementById('calculateModal').style.display = "none";
+        }
+
+        function performCalculation() {
+             // 1. Show Spinner
+             document.getElementById('calc-spinner').style.display = 'block';
+             
+             // 2. Simulate Delay (1.5 seconds)
+             setTimeout(() => {
+                 document.getElementById('calc-spinner').style.display = 'none';
+                 
+                 // 3. Show Results
+                 document.getElementById('calcStep1').style.display = 'none';
+                 document.getElementById('calcStep2').style.display = 'block';
+             }, 1500);
+        }
+
+        function resetCalculateModal() {
+             document.getElementById('calcStep1').style.display = 'block';
+             document.getElementById('calcStep2').style.display = 'none';
+             document.getElementById('calc-spinner').style.display = 'none';
+        }
+
         window.onclick = function (event) {
             let modalProfile = document.getElementById('profileModal');
+            let modalSensor = document.getElementById('sensorModal');
             if (event.target === modalProfile) { closeProfileModal(); }
+            if (event.target === modalSensor) { closeSensorModal(); }
+            // Add click outside for calculate modal
+            if (event.target === document.getElementById('calculateModal')) {
+                closeCalculateModal();
+            }
         }
     </script>
+    
+    <script>
+        // =================================================================
+        // RELOAD-WITH-PERSISTENCE & LOADING INDICATOR
+        // =================================================================
+        document.addEventListener("DOMContentLoaded", function() {
+            
+            // 1. TAB PERSISTENCE (Save/Restore State)
+            
+            // Save sidebar selection
+            const sidebarLinks = document.querySelectorAll('.sidebar .menu-item');
+            sidebarLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    const onclickVal = this.getAttribute('onclick');
+                    if(onclickVal) {
+                         const match = onclickVal.match(/'([^']+)'/);
+                         if(match) localStorage.setItem('activeSidebarTab', match[1]);
+                    }
+                });
+            });
+            
+            // Save inner tab selection
+            const tabLinks = document.querySelectorAll('.tab-link');
+            tabLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    const onclickVal = this.getAttribute('onclick');
+                    if(onclickVal) {
+                         const match = onclickVal.match(/'([^']+)'/);
+                         if(match) localStorage.setItem('activeInnerTab', match[1]);
+                    }
+                });
+            });
+            
+            // Restore State on Load
+            const savedSidebar = localStorage.getItem('activeSidebarTab');
+            if(savedSidebar && typeof switchSidebarTab === 'function') {
+                switchSidebarTab(savedSidebar);
+            }
+            
+            const savedInner = localStorage.getItem('activeInnerTab');
+            if(savedInner) {
+                const btn = document.querySelector(`button[onclick*="'${savedInner}'"]`);
+                if(btn) btn.click();
+            }
+
+            // 2. LOADING INDICATOR ON SUBMIT
+            // We do NOT prevent default. We let the page reload.
+            // We just show visual feedback.
+            const forms = document.querySelectorAll('form');
+            forms.forEach(form => {
+                if(form.action.includes('logout')) return; // Don't show loading on logout
+
+                form.addEventListener('submit', function(e) {
+                    const submitBtn = this.querySelector('button[type="submit"]');
+                    if(submitBtn) {
+                        // Change text to show processing
+                        const originalText = submitBtn.innerHTML;
+                        submitBtn.innerHTML = '⏳ Processing...';
+                        submitBtn.style.opacity = '0.7';
+                        
+                        // Disable to prevent double click, BUT we must ensure the form still submits.
+                        // Standard form submission might not send the button value if disabled immediately.
+                        // A safer way is to disable AFTER a micro-timeout or just CSS pointer-events.
+                        submitBtn.style.pointerEvents = 'none'; 
+                    }
+                    // e.preventDefault() is NOT called. Page will reload.
+                });
+            });
+        });
+    </script>
+
+    <!-- ====================== HISTORY MODAL (AJAX) ====================== -->
+    <div id="historyModal" class="modal" style="display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6);">
+        <div class="modal-content" style="background-color: #fefefe; margin: 5% auto; padding: 0; border: 1px solid #888; width: 90%; max-width: 800px; border-radius: 10px; overflow: hidden;">
+            <div id="historyModalContent" style="padding: 20px; text-align: center;">
+                <p>⏳ A carregar dados da Blockchain...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openHistoryModal(harvestId) {
+            const modal = document.getElementById('historyModal');
+            const contentDiv = document.getElementById('historyModalContent');
+            
+            modal.style.display = "block";
+            contentDiv.innerHTML = '<p style="padding:20px; text-align:center;">⏳ A carregar dados da Blockchain...</p>';
+            
+            // Fetch Modal Content
+            fetch(`/api/harvest-history/${harvestId}/`)
+                .then(response => response.text())
+                .then(html => {
+                    contentDiv.innerHTML = html;
+                })
+                .catch(err => {
+                    contentDiv.innerHTML = `<div class="alert alert-danger" style="margin:20px;">Erro ao carregar: ${err}</div>`;
+                });
+        }
+        
+        // Add window onclick for History Modal (ensure it doesn't conflict with existing ones)
+        const oldOnclickConsumer = window.onclick;
+        window.onclick = function(event) {
+            if (oldOnclickConsumer) oldOnclickConsumer(event);
+            
+            const historyModal = document.getElementById('historyModal');
+            if (event.target == historyModal) {
+                historyModal.style.display = "none";
+            }
+        }
+    </script>
+
+    <!-- ====================== DISCRETE TRANSLATOR WIDGET ====================== -->
+    <div id="google_translate_element" style="display:none;"></div>
+    <div class="discrete-translator" style="position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.95); border: 1px solid #00796b; border-radius: 30px; padding: 6px 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); backdrop-filter: blur(5px); transition: all 0.3s ease;">
+        <span style="font-size: 1.1em; line-height: 1;">🌐</span>
+        <select id="lang-select" onchange="changeLanguage(this.value)" style="border: none; background: transparent; font-size: 0.85em; font-weight: 600; color: #004d40; cursor: pointer; outline: none; padding-right: 5px; font-family: inherit;">
+            <option value="pt">🇵🇹 PT</option>
+            <option value="en">🇬🇧 EN</option>
+            <option value="es">🇪🇸 ES</option>
+            <option value="tr">🇹🇷 TR</option>
+        </select>
+    </div>
+
+    <style>
+        /* Google Translate Overrides */
+        iframe.goog-te-banner-frame { display: none !important; }
+        .goog-te-banner-frame { display: none !important; }
+        .goog-te-banner { display: none !important; }
+        .skiptranslate { top: 0px !important; }
+        #goog-gt-tt { display: none !important; }
+        .goog-logo-link { display: none !important; }
+        .goog-te-gadget { color: transparent !important; }
+        .goog-te-balloon-frame { display: none !important; }
+        .goog-tooltip { display: none !important; }
+        .goog-tooltip:hover { display: none !important; }
+        .goog-text-highlight { background-color: transparent !important; border: none !important; box-shadow: none !important; }
+        
+        body { top: 0px !important; }
+        html { top: 0px !important; }
+    </style>
+
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({
+                pageLanguage: 'pt',
+                includedLanguages: 'pt,en,es,tr',
+                layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+                autoDisplay: false
+            }, 'google_translate_element');
+        }
+        
+        function getGoogtransLanguage() {
+            const match = document.cookie.match(/googtrans=\/[^/]+\/([^;]+)/);
+            return match ? match[1] : 'pt';
+        }
+
+        function changeLanguage(langCode) {
+            localStorage.setItem('selectedLanguage', langCode);
+            
+            const cookieVal = langCode === 'pt' ? '' : '/pt/' + langCode;
+            const expires = langCode === 'pt' ? 'expires=Thu, 01 Jan 1970 00:00:00 UTC; ' : '';
+            
+            // Set cookie on host-only (no domain parameter)
+            document.cookie = `googtrans=${cookieVal}; path=/; ${expires}`;
+            
+            // Set/clear on hostname variations
+            const host = location.hostname;
+            if (host) {
+                if (host !== 'localhost' && !/^[0-9.]+$/.test(host)) {
+                    document.cookie = `googtrans=${cookieVal}; path=/; domain=${host}; ${expires}`;
+                    document.cookie = `googtrans=${cookieVal}; path=/; domain=.${host}; ${expires}`;
+                    
+                    const parts = host.split('.');
+                    if (parts.length > 2) {
+                        const parentDomain = parts.slice(-2).join('.');
+                        document.cookie = `googtrans=${cookieVal}; path=/; domain=${parentDomain}; ${expires}`;
+                        document.cookie = `googtrans=${cookieVal}; path=/; domain=.${parentDomain}; ${expires}`;
+                    }
+                } else {
+                    document.cookie = `googtrans=${cookieVal}; path=/; domain=.${host}; ${expires}`;
+                }
+            }
+            
+            location.reload();
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            let savedLang = localStorage.getItem('selectedLanguage') || 'pt';
+            const cookieLang = getGoogtransLanguage();
+            
+            if (savedLang !== cookieLang) {
+                if (['pt', 'en', 'es', 'tr'].includes(cookieLang)) {
+                    savedLang = cookieLang;
+                    localStorage.setItem('selectedLanguage', savedLang);
+                } else {
+                    changeLanguage(savedLang);
+                    return;
+                }
+            }
+            
+            const selectWidget = document.getElementById('lang-select');
+            if (selectWidget) selectWidget.value = savedLang;
+        });
+    </script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </body>
 </html>
+

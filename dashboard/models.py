@@ -5,7 +5,14 @@ from django.contrib.auth.models import User
 # 1. CONSTANTES E CHOICES (CONSOLIDADOS)
 # ----------------------------------------------------------------------
 
-PRODUCTION_TYPE_CHOICES = [('Modern', 'Moderna'), ('Traditional', 'Tradicional')]
+PRODUCTION_TYPE_CHOICES = [
+    ('conventional', 'Convencional'),
+    ('integrated', 'Produção Integrada'),
+    ('organic', 'Biológica'),
+    ('regenerative', 'Regenerativa'),
+    ('precision', 'Precisão'),
+    ('agroforestry', 'Agroflorestal'),
+]
 CHEMICAL_USE_CHOICES = [('Yes', 'Sim'), ('No', 'Não')]
 QUALITY_SCORE_CHOICES = [(i, str(i)) for i in range(1, 11)]
 
@@ -58,6 +65,7 @@ class ProductSubFamily(models.Model):
     subfamily_id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100, verbose_name="Subfamília")
     fruit_type = models.CharField(max_length=50, choices=FRUIT_TYPE_CHOICES, verbose_name="Tipo de Fruta")
+    lifecycle_presets = models.JSONField(default=dict, blank=True, null=True, verbose_name="Lifecycle Presets (Biological Coefficients)")
 
     class Meta: db_table = 'product_subfamilies'
     def __str__(self): return f"{self.name} ({self.fruit_type})"
@@ -86,7 +94,7 @@ class Warehouse(models.Model):
     capacity = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Capacidade (m² ou Kg)")
     sensors = models.ManyToManyField(Sensor, blank=True, verbose_name="Sensores Instalados")
     class Meta: db_table = 'warehouses'
-    def __str__(self): return f"Armazém {self.warehouse_id} - {self.location}"
+    def __str__(self): return f"Armazém {self.warehouse_id} - {self.location} - {self.get_control_type_display()}"
 
 # --- NOVOS MODELOS DE DETALHE DE EVENTO (Devem vir antes de PlantationEvent) ---
 class FertilizerSyntheticData(models.Model):
@@ -183,7 +191,7 @@ class PlantationPlan(models.Model):
     # --- Campos Existentes ---
     plantation_name = models.CharField(max_length=100, verbose_name="Nome da Plantação", blank=True, null=True)
     quantity_of_trees = models.IntegerField(verbose_name="Quantidade de Árvores")
-    production_type = models.CharField(max_length=20, choices=PRODUCTION_TYPE_CHOICES, verbose_name="Tipo de Produção")
+    production_type = models.CharField(max_length=20, choices=PRODUCTION_TYPE_CHOICES, verbose_name="Tipo de Agricultura")
     chemical_use = models.CharField(max_length=5, choices=CHEMICAL_USE_CHOICES, verbose_name="Uso de Químicos")
     area = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Área (m²)")
     location = models.CharField(max_length=100)
@@ -340,6 +348,7 @@ class MarketplaceOrder(models.Model):
     harvest_origin = models.ForeignKey(Harvest, on_delete=models.SET_NULL, null=True, blank=True, related_name='market_orders', verbose_name="Origem (Colheita)")
     
     quantity_kg = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Quantidade (Kg)")
+    price_per_kg = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Price / Kg (€)")
     
     # Detalhes Logísticos
     warehouse_location = models.CharField(max_length=255, verbose_name="Localização do Armazém")
@@ -410,3 +419,130 @@ class MarketplaceOrder(models.Model):
 
     def __str__(self):
         return f"{self.order_type} - {self.culture.name} ({self.quantity_kg}kg) by {self.requester.username}"
+
+class WarehouseSensorReading(models.Model):
+    warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE, related_name='sensor_readings')
+    date = models.DateField(verbose_name="Data da Leitura")
+    temperature = models.DecimalField(max_digits=5, decimal_places=2, verbose_name="Temperatura (°C)")
+    humidity = models.DecimalField(max_digits=5, decimal_places=2, verbose_name="Humidade (%)")
+    ethylene = models.DecimalField(max_digits=6, decimal_places=3, verbose_name="Etileno (ppm)")
+
+    class Meta:
+        db_table = 'warehouse_sensor_readings'
+        unique_together = ('warehouse', 'date')
+        ordering = ['-date']
+
+    def __str__(self):
+        return f"Leitura {self.date} - Armazém {self.warehouse.warehouse_id}"
+
+
+class ConsolidatedStock(models.Model):
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='consolidated_stocks')
+    culture = models.ForeignKey(ProductSubFamily, on_delete=models.CASCADE)
+    warehouse_location = models.CharField(max_length=255, verbose_name="Localização do Armazém")
+    quantity = models.DecimalField(max_digits=12, decimal_places=2, default=0.0, verbose_name="Quantidade em Stock (Kg)")
+    
+    # Average Quality Metrics
+    avg_caliber = models.DecimalField(max_digits=5, decimal_places=2, default=0.0, verbose_name="Calibre Médio (mm)")
+    avg_soluble_solids = models.DecimalField(max_digits=5, decimal_places=2, default=0.0, verbose_name="Sólidos Solúveis Médios (Brix)")
+    avg_quality_score = models.DecimalField(max_digits=4, decimal_places=1, default=0.0, verbose_name="Score de Qualidade Médio")
+
+    class Meta:
+        db_table = 'consolidated_stock'
+        unique_together = ('owner', 'culture', 'warehouse_location')
+
+    def __str__(self):
+        return f"Stock de {self.owner.username} - {self.culture.name} ({self.quantity}kg) em {self.warehouse_location}"
+
+
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
+from itertools import chain
+
+def update_consolidated_stock(user, culture, warehouse_location):
+    is_processor = user.groups.filter(name='Processor').exists()
+    
+    incoming_qs = MarketplaceOrder.objects.filter(
+        status='APPROVED',
+        warehouse_location=warehouse_location,
+        culture=culture
+    )
+    
+    if is_processor:
+        purchases_in = incoming_qs.filter(requester=user, order_type='BUY', transport_status='DELIVERED', is_processed=True)
+        sales_in = incoming_qs.filter(fulfilled_by=user, order_type='SELL', transport_status='DELIVERED', is_processed=True)
+    else:
+        purchases_in = incoming_qs.filter(requester=user, order_type='BUY', transport_status='DELIVERED')
+        sales_in = incoming_qs.filter(fulfilled_by=user, order_type='SELL', transport_status='DELIVERED')
+        
+    total_qty = 0.0
+    mass_cal = 0.0
+    mass_brix = 0.0
+    mass_score = 0.0
+    
+    for p in chain(purchases_in, sales_in):
+        qty = float(p.quantity_kg)
+        total_qty += qty
+        
+        if p.order_type == 'SELL':
+            cal = float(p.caliber) if p.caliber else 0.0
+            brix = float(p.soluble_solids) if p.soluble_solids else 0.0
+            score = float(p.quality_score) if p.quality_score else 0.0
+        else:
+            cal = float(p.min_caliber) if p.min_caliber else 0.0
+            brix = float(p.min_soluble_solids) if p.min_soluble_solids else 0.0
+            score = float(p.min_quality_score) if p.min_quality_score else 0.0
+            
+        mass_cal += (cal * qty)
+        mass_brix += (brix * qty)
+        mass_score += (score * qty)
+        
+    outgoing_qs = MarketplaceOrder.objects.filter(
+        warehouse_location=warehouse_location,
+        culture=culture
+    )
+    
+    sales_out = outgoing_qs.filter(requester=user, order_type='SELL').exclude(status='CANCELLED')
+    purchases_out = outgoing_qs.filter(fulfilled_by=user, order_type='BUY', status='APPROVED')
+    
+    total_out = 0.0
+    for s in chain(sales_out, purchases_out):
+        total_out += float(s.quantity_kg)
+        
+    net_qty = max(0.0, total_qty - total_out)
+    
+    avg_cal = (mass_cal / total_qty) if total_qty > 0 else 0.0
+    avg_brix = (mass_brix / total_qty) if total_qty > 0 else 0.0
+    avg_score = (mass_score / total_qty) if total_qty > 0 else 0.0
+    
+    if net_qty > 0.001:
+        obj, created = ConsolidatedStock.objects.get_or_create(
+            owner=user,
+            culture=culture,
+            warehouse_location=warehouse_location
+        )
+        obj.quantity = net_qty
+        obj.avg_caliber = avg_cal
+        obj.avg_soluble_solids = avg_brix
+        obj.avg_quality_score = avg_score
+        obj.save()
+    else:
+        ConsolidatedStock.objects.filter(
+            owner=user,
+            culture=culture,
+            warehouse_location=warehouse_location
+        ).delete()
+
+@receiver(post_save, sender=MarketplaceOrder)
+def order_post_save(sender, instance, **kwargs):
+    if instance.requester:
+        update_consolidated_stock(instance.requester, instance.culture, instance.warehouse_location)
+    if instance.fulfilled_by:
+        update_consolidated_stock(instance.fulfilled_by, instance.culture, instance.warehouse_location)
+        
+@receiver(post_delete, sender=MarketplaceOrder)
+def order_post_delete(sender, instance, **kwargs):
+    if instance.requester:
+        update_consolidated_stock(instance.requester, instance.culture, instance.warehouse_location)
+    if instance.fulfilled_by:
+        update_consolidated_stock(instance.fulfilled_by, instance.culture, instance.warehouse_location)

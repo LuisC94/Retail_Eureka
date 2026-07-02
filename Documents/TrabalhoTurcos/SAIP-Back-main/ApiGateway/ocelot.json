@@ -1,0 +1,140 @@
+{
+  "Routes": [
+    {
+      "DownstreamPathTemplate": "/api/Organization/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 5222
+        }
+      ],
+      "UpstreamPathTemplate": "/api/Organization/{everything}",
+      "UpstreamHttpMethod": [ "Post", "Options", "Get", "Put", "Delete" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/Permission/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 5222
+        }
+      ],
+      "UpstreamPathTemplate": "/api/Permission/{everything}",
+      "UpstreamHttpMethod": [ "Post", "Options", "Get", "Put", "Delete" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/Role/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 5222
+        }
+      ],
+      "UpstreamPathTemplate": "/api/Role/{everything}",
+      "UpstreamHttpMethod": [ "Post", "Options", "Get", "Put", "Delete" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/User/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 5222
+        }
+      ],
+      "UpstreamPathTemplate": "/api/User/{everything}",
+      "UpstreamHttpMethod": [ "Post", "Options", "Get", "Put", "Delete" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/Auth/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 5222
+        }
+      ],
+      "UpstreamPathTemplate": "/api/Auth/{everything}",
+      "UpstreamHttpMethod": [ "Post", "Options", "Get", "Put", "Delete" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/Notification/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 5029
+        }
+      ],
+      "UpstreamPathTemplate": "/api/Notification/{everything}",
+      "UpstreamHttpMethod": [ "Post", "Options", "Get", "Put", "Delete" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/Menu/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 5062
+        }
+      ],
+      "UpstreamPathTemplate": "/api/Menu/{everything}",
+      "UpstreamHttpMethod": [ "Post", "Options", "Get", "Put", "Delete" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/Product/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 5093
+        }
+      ],
+      "UpstreamPathTemplate": "/api/Product/{everything}",
+      "UpstreamHttpMethod": [ "Post", "Options", "Get", "Put", "Delete" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/File/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 5008
+        }
+      ],
+      "UpstreamPathTemplate": "/api/File/{everything}",
+      "UpstreamHttpMethod": [ "Post", "Options", "Get", "Put", "Delete" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/Basket/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 5161
+        }
+      ],
+      "UpstreamPathTemplate": "/api/Basket/{everything}",
+      "UpstreamHttpMethod": [ "Post", "Options", "Get", "Put", "Delete" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/Order/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 5161
+        }
+      ],
+      "UpstreamPathTemplate": "/api/Order/{everything}",
+      "UpstreamHttpMethod": [ "Post", "Options", "Get", "Put", "Delete" ]
+    }
+  ],
+  "GlobalConfiguration": {
+    "BaseUrl": "http://localhost:5055"
+
+  }
+}

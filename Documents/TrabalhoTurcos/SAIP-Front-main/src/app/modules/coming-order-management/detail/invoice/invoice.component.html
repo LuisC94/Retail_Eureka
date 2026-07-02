@@ -1,0 +1,58 @@
+<app-confirmation #deleteConfirmationComponent (dismissButtonClick)="delete($event)">
+</app-confirmation>
+
+<app-modal #modal [modalConfig]="modalConfig">
+    <div class="row mb-8">
+        <div class="col-xxl-4">
+            <div class="card card-xl-stretch mb-xl-8">
+                <!-- <div class="card-header border-1 pt-0">
+                    <div class="card-toolbar" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-trigger="hover">
+                        <button type="button" (click)="openDeleteModal()"
+                            class="btn btn-sm btn-icon btn-color-danger btn-active-light-danger me-4" title="Delete">
+                            <span [inlineSVG]="'./assets/media/icons/duotune/general/gen027.svg'"
+                                class="svg-icon svg-icon-2"></span>
+                        </button>
+                    </div>
+                </div> -->
+                <div class="card-body py-3">
+                    <div class="mb-2" style="height: 200px;border: 1px solid #F1F1F4; border-radius: 5px;">
+                        <div style="padding-top: 45%;padding-left: 45%;">
+                            <span [inlineSVG]="'./assets/media/svg/files/pdf.svg'" class="svg-icon svg-icon-1"
+                            ></span>
+                        </div>
+                        <br />
+                        <div style="text-align: center;">
+                            <span class="fw-normal text-gray-900">
+                                {{fileName}}
+                            </span>
+                        </div>
+                    </div>
+                    <div style="text-align: center;">
+                        <input type="file" style="display:none" accept="application/pdf" (change)="onFileChange($event)"
+                            #fileUpload />
+                        <a style="width: 80%;" title="Click to Add" class="btn btn-sm btn-light-primary"
+                            (click)="fileUpload.click()">
+                            <span [inlineSVG]="'./assets/media/icons/duotune/arrows/arr075.svg'"
+                                class="svg-icon svg-icon-3"></span>
+                            {{fileName == undefined ? ('UPLOAD' | translate) : ('CHANGE' | translate)}}
+                        </a>
+ 
+                        <button type="button" (click)="openDeleteModal()" style="width: 20%;"
+                            class="btn btn-sm btn-icon btn-color-danger btn-active-light-danger" title="Delete">
+                            <span [inlineSVG]="'./assets/media/icons/duotune/general/gen027.svg'"
+                                class="svg-icon svg-icon-2"></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xxl-8" *ngIf="pdfSrc">
+            <pdf-viewer [src]="pdfSrc"
+              [render-text]="true"
+              [original-size]="true"
+              [show-all]="true"
+              style="border: 1px solid #F1F1F4; border-radius: 5px;width: 100%; height: 500px"
+  ></pdf-viewer>
+        </div>
+    </div>
+</app-modal>

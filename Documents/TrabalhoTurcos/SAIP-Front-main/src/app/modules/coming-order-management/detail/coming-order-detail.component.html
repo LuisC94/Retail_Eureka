@@ -1,0 +1,101 @@
+<app-orderstatus-edit #statusComponent (isSuccess)="isSuccess($event)">
+</app-orderstatus-edit>
+
+
+<app-orderinvoice-edit #invoiceComponent (isSuccess)="isSuccess($event)">
+</app-orderinvoice-edit>
+
+<div class="row">
+    <div class="col-xxl-12">
+        <div class="card card-xxl-stretch mb-5 mb-xl-8">
+            <div class="card-header border-0 pt-5">
+                <h3 class="card-title align-items-start flex-column">
+                    <span class="card-label fw-bolder fs-3 mb-1">{{header}}</span>
+                </h3>
+            </div>
+            <div class="card-body py-3">
+                <div class="row mb-8" *ngIf="orderProduct">
+                    <div class="col-xxl-4" style="text-align: center">
+                        <span class="text-muted fw-bold fs-7">{{'ORDER_NUMBER' | translate}}</span>
+                        <br />
+                        <span class="fw-bolder text-gray-800 ps-3">{{orderProduct.order?.orderNo}}</span>
+                    </div>
+                    <div class="col-xxl-4" style="text-align: center">
+                        <span class="text-muted fw-bold fs-7">{{'STATUS' | translate}}
+                            <span *ngIf="orderProduct.orderStatus != 0" class="text-muted fw-bold fs-7">
+                               /  {{'PROCESS_DATE' | translate}}
+                            </span>
+                            <span *ngIf="orderProduct.orderStatus == 3" class="text-muted fw-bold fs-7"> 
+                                /  {{'SHIPMENT_TRACKING_NUMBER' | translate}}
+                            </span>
+                        </span>
+                        <br />
+                        <span class="fw-bolder text-gray-800 ps-3">{{orderProduct.orderStatusStr}}</span>
+                        <br />
+                        <span *ngIf="orderProduct.orderStatus != 0"
+                            class="text-primary fw-bolder fs-7">{{orderProduct.proccessDate}}</span>
+                            <br />
+                        <span *ngIf="orderProduct.orderStatus == 3" class="text-primary fw-bold fs-7">{{orderProduct.trackingNo}}</span>
+                    </div>
+                    <div class="col-xxl-4" style="text-align: center">
+                        <span class="text-muted fw-bold fs-7">{{'ORDER_DATE' | translate}}  /  {{'AMOUNT_TL' | translate}}</span>
+                        <br />
+                        <span class="fw-bolder text-gray-800 ps-3">{{orderProduct.orderDate}}</span>
+                        <br />
+                        <span class="fw-bolder fs-5 text-primary ps-3">{{orderProduct.product?.price?.toFixed(2)}}
+                            ₺</span>
+                    </div>
+                </div>
+                <div class="row mb-8" *ngIf="orderProduct">
+                    <div class="col-xxl-4" style="text-align: center">
+                        <span class="text-muted fw-bold fs-7">{{'DELIVERY_ADDRESS' | translate}}</span>
+                        <br />
+                        <span class="fw-bolder text-gray-800 ps-3">{{orderProduct.order?.deliveryAddress?.address}}</span>
+                        <br />
+                        <span class="fw-bolder text-gray-800 ps-3">{{orderProduct.order?.deliveryAddress?.district}}/{{orderProduct.order?.deliveryAddress?.city}}</span>
+                    </div>
+                    <div class="col-xxl-4"></div>
+                    <div class="col-xxl-4" style="text-align: center">
+                        <span class="text-muted fw-bold fs-7">{{'INVOICE_ADDRESS' | translate}}</span>
+                        <br />
+                        <span class="fw-bolder text-gray-800 ps-3">{{orderProduct.order?.invoiceAddress?.address}}</span>
+                        <br />
+                        <span class="fw-bolder text-gray-800 ps-3">{{orderProduct.order?.invoiceAddress?.district}}/{{orderProduct.order?.deliveryAddress?.city}}</span>
+                    </div>
+                </div>
+                <div class="row mb-8" *ngIf="orderProduct">
+                    <div class="col-xxl-12">
+                        <div class="card card-xxl-stretch mb-5 mb-xl-8">
+                            <div class="card-body py-3">
+                                <div class="row">
+                                    <div class="col-xxl-4" style="text-align: center;">
+                                        <a>
+                                            <img [src]="orderProduct.product?.fileResult.fileContents"
+                                                style="height: 8.75rem; width: auto;">
+                                        </a>
+                                    </div>
+                                    <div class="col-xxl-4 mt-9" style="text-align: center;">
+                                        <span class="fw-bolder text-gray-900 fs-6 ps-3">
+                                            {{orderProduct.product?.name}}
+                                        </span>
+                                        <br />
+                                        <span
+                                            class="fw-bolder fs-4 text-primary ps-3">{{orderProduct.product?.price?.toFixed(2)}}
+                                            ₺</span>
+                                        <br />
+                                    </div>
+                                    <div class="col-xxl-4 mt-8" style="text-align: center;">
+                                        <button *ngIf="orderProduct.orderStatus != 4" type="button" (click)="openEditModal()"
+                                            class="btn btn-light-primary mt-2">{{'UPDATE_STATUS' | translate}}</button>
+                                        <button *ngIf="orderProduct.orderStatus == 4" type="button" (click)="openInvoiceModal()"
+                                            class="btn btn-light-primary mt-2">{{'UPLOAD_INVOICE' | translate}}</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

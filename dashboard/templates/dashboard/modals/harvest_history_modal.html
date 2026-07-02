@@ -1,0 +1,204 @@
+{% load i18n %}
+
+<div class="modal-header" style="border-bottom: 2px solid #e0f2f1; padding-bottom: 15px; margin-bottom: 20px;">
+    <h3 class="modal-title" id="historyModalLabel" style="color: #00796b; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 10px;">
+        📜 {% trans "Rastreabilidade Blockchain" %} <span style="font-weight: 400; color: #555; font-size: 0.8em;">#{{ harvest_id }}</span>
+    </h3>
+    <button type="button" class="close-btn" onclick="document.getElementById('historyModal').style.display='none'" aria-label="Close">&times;</button>
+</div>
+
+<div class="modal-body" style="max-height: 60vh; overflow-y: auto; padding-right: 10px;">
+    {% if error %}
+        <div class="alert alert-danger" style="background: #ffebee; color: #c62828; padding: 15px; border-radius: 8px; border: 1px solid #ffcdd2;">
+            <strong>⚠️ Erro:</strong> {{ error }}
+        </div>
+    {% else %}
+        <div class="timeline">
+            {% for event in history %}
+            <div class="timeline-item">
+                <div class="timeline-marker {% if forloop.first %}bg-success{% else %}bg-secondary{% endif %}"></div>
+                <div class="timeline-content">
+                    <h4 class="timeline-title">
+                        {% if forloop.last %} 
+                            🌱 {% trans "Criação do Lote (Origem)" %}
+                        {% else %} 
+                            🔄 {% trans "Atualização de Estado" %}
+                        {% endif %}
+                    </h4>
+                    
+                    <span class="timeline-date">
+                        🕒 {{ event.timestamp }}
+                    </span>
+                    
+                    <div class="tx-info">
+                        <strong>TX ID:</strong> <code style="color: #e65100;">{{ event.txId|slice:":15" }}...</code>
+                    </div>
+
+                    <div class="json-box">
+                        <strong>📝 Dados do Bloco:</strong>
+                        <pre>{{ event.value }}</pre>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+                <div class="alert alert-warning" style="text-align: center; color: #f57f17; background: #fff3e0; padding: 20px; border-radius: 10px;">
+                    🚫 {% trans "Ainda não existem registos na blockchain para este lote." %}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+
+<div class="modal-footer" style="border-top: 1px solid #eee; padding-top: 20px; text-align: right;">
+    <button type="button" class="btn-close-modal" onclick="document.getElementById('historyModal').style.display='none'">
+        🔒 {% trans "Fechar" %}
+    </button>
+</div>
+
+<style>
+    /* ==================== TIMELINE STYLES ==================== */
+    .timeline {
+        position: relative;
+        padding-left: 30px;
+        border-left: 3px solid #e0e0e0;
+        margin-left: 10px;
+    }
+
+    .timeline-item {
+        margin-bottom: 40px;
+        position: relative;
+    }
+
+    .timeline-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .timeline-marker {
+        position: absolute;
+        left: -38px; /* Ajuste fino para centrar na linha */
+        top: 0;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 3px solid white;
+        box-shadow: 0 0 0 3px #e0e0e0;
+        background-color: #bdbdbd; /* Default gray */
+    }
+
+    .timeline-marker.bg-success {
+        background-color: #2e7d32; /* Green for Start */
+        box-shadow: 0 0 0 3px #c8e6c9;
+    }
+    
+    .timeline-marker.bg-secondary {
+        background-color: #0277bd; /* Blue for updates */
+        box-shadow: 0 0 0 3px #b3e5fc;
+    }
+
+    .timeline-content {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #eee;
+    }
+
+    .timeline-title {
+        margin: 0 0 10px 0;
+        color: #2c3e50;
+        font-size: 1.2em;
+        font-weight: 700;
+    }
+
+    .timeline-date {
+        display: block;
+        color: #666;
+        font-size: 0.9em;
+        margin-bottom: 15px;
+        font-weight: 500;
+        background: #e0f2f1;
+        padding: 4px 10px;
+        border-radius: 20px;
+        width: fit-content;
+    }
+
+    .tx-info {
+        font-size: 0.95em;
+        margin-bottom: 10px;
+        color: #444;
+    }
+
+    .json-box {
+        margin-top: 15px;
+    }
+
+    .json-box strong {
+        display: block;
+        margin-bottom: 5px;
+        color: #00796b;
+    }
+
+    pre {
+        background: #263238;
+        color: #eceff1;
+        padding: 15px;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-family: 'Consolas', 'Monaco', monospace;
+        font-size: 0.9em;
+        white-space: pre-wrap; /* Wrap text */
+        border: 1px solid #37474f;
+    }
+
+    /* ==================== BUTTONS ==================== */
+    .close-btn {
+        background: none;
+        border: none;
+        font-size: 28px;
+        color: #aaa;
+        cursor: pointer;
+        transition: color 0.3s;
+        margin-left: auto;
+    }
+    .close-btn:hover {
+        color: #e53935;
+    }
+
+    .btn-close-modal {
+        background: linear-gradient(135deg, #e53935 0%, #c62828 100%);
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 8px;
+        font-size: 1em;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+        box-shadow: 0 4px 15px rgba(229, 57, 53, 0.3);
+    }
+
+    .btn-close-modal:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(229, 57, 53, 0.4);
+    }
+    
+    .btn-close-modal:active {
+        transform: translateY(0);
+    }
+
+    /* Scrollbar Styling for Modal Body */
+    .modal-body::-webkit-scrollbar {
+        width: 8px;
+    }
+    .modal-body::-webkit-scrollbar-track {
+        background: #f1f1f1; 
+        border-radius: 4px;
+    }
+    .modal-body::-webkit-scrollbar-thumb {
+        background: #cfd8dc; 
+        border-radius: 4px;
+    }
+    .modal-body::-webkit-scrollbar-thumb:hover {
+        background: #b0bec5; 
+    }
+</style>

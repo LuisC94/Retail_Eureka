@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eureka - Transporter Dashboard</title>
+    <title>RETAILL - Transporter Dashboard</title>
     <style>
         /* ==================== RESET & GLOBAL ==================== */
         * {
@@ -396,7 +396,7 @@
         <!-- SIDEBAR -->
         <div class="sidebar">
             <div class="sidebar-header">
-                <h1>🌿 Eureka</h1>
+                <h1>🌿 RETAILL</h1>
                 <p>Agricultural Management System</p>
             </div>
 
@@ -543,13 +543,9 @@
                                 <td>{{ order.planned_pickup_date|date:"d/m H:i" }}</td>
                                 <td>{{ order.warehouse_location }}</td>
                                 <td>
-                                    <form method="POST" action="{% url 'transporter_validate_pickup' %}">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="order_id" value="{{ order.pk }}">
-                                        <button type="submit" class="btn-action" style="background: #1976D2;">
-                                            ⏱️ Validate Pickup (Start Trip)
-                                        </button>
-                                    </form>
+                                    <button class="btn-action" style="background: #1976D2;" onclick="openPickupModal('{{ order.pk }}')">
+                                        ⏱️ Validate Pickup (Start Trip)
+                                    </button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -583,9 +579,6 @@
                                     <button class="btn-action" style="background: #388E3C;" onclick="openDeliveryModal('{{ order.pk }}')">
                                         🏁 Register Delivery
                                     </button>
-                                    <a href="{% url 'view_batch_chain' batch_id='ORDER-'|add:order.pk_str %}" class="btn-action" style="background: #546E7A; text-decoration: none; display: inline-block; text-align: center; margin-left: 5px;">
-                                        📜 Chain
-                                    </a>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -607,7 +600,7 @@
                                 <th>Order #</th>
                                 <th>Item</th>
                                 <th>Travel Time</th>
-                                <th>Proof</th>
+                                <th>History</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -618,9 +611,14 @@
                                 <td>{{ order.culture.name }}</td>
                                 <td>-</td>
                                 <td>
-                                    <a href="{% url 'view_batch_chain' batch_id='ORDER-'|add:order.pk_str %}" class="btn-action" style="background: #546E7A; text-decoration: none; padding: 5px 10px; font-size: 0.8em;">
-                                        📜 View Chain
-                                    </a>
+                                    <!-- Use origin harvest ID for history -->
+                                    {% if order.harvest_origin %}
+                                    <button onclick="openHistoryModal('{{ order.harvest_origin.pk }}')" class="btn-action" style="background: #546E7A; text-decoration: none; padding: 5px 10px; font-size: 0.8em;">
+                                        📜 View History
+                                    </button>
+                                    {% else %}
+                                    -
+                                    {% endif %}
                                 </td>
                             </tr>
                              {% endfor %}
@@ -714,6 +712,26 @@
                 </div>
                 
                 <button type="submit" class="submit-button" style="background: #ffa000; color: #333;">Confirm Plan</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: PICKUP & LICENSE PLATE -->
+    <div id="pickupModal" class="modal" style="display:none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6);">
+        <div class="modal-content" style="background: white; margin: 10% auto; padding: 30px; border-radius: 15px; width: 50%; max-width: 500px;">
+            <span onclick="document.getElementById('pickupModal').style.display='none'" style="float:right; cursor:pointer; font-size:1.5em;">&times;</span>
+            <h3 style="color:#1976D2;">🚚 Iniciar Transporte</h3>
+            <p>Por favor, insira a matrícula do veículo.</p>
+            <form method="POST" action="{% url 'transporter_validate_pickup' %}">
+                {% csrf_token %}
+                <input type="hidden" name="order_id" id="pickup_order_id">
+                
+                <div style="margin-top:15px; margin-bottom:20px;">
+                    <label style="display:block; margin-bottom:5px; font-weight:600;">Matrícula (Ex: AA-11-BB):</label>
+                    <input type="text" name="license_plate" required placeholder="Inserir matrícula..." style="padding: 10px; width: 100%; border: 1px solid #ccc; border-radius: 8px;">
+                </div>
+                
+                <button type="submit" class="submit-button" style="background: #1976D2;">Iniciar Viagem</button>
             </form>
         </div>
     </div>
@@ -834,15 +852,230 @@
             document.getElementById('deliveryModal').style.display = "block";
         }
 
+        function openPickupModal(orderId) {
+            document.getElementById('pickup_order_id').value = orderId;
+            document.getElementById('pickupModal').style.display = "block";
+        }
+
         window.onclick = function (event) {
             let modalProfile = document.getElementById('profileModal');
             let modalPlan = document.getElementById('planModal');
             let modalDelivery = document.getElementById('deliveryModal');
+            let modalPickup = document.getElementById('pickupModal');
             
             if (event.target === modalProfile) { closeProfileModal(); }
             if (event.target === modalPlan) { modalPlan.style.display = "none"; }
             if (event.target === modalDelivery) { modalDelivery.style.display = "none"; }
+            if (event.target === modalPickup) { modalPickup.style.display = "none"; }
         }
     </script>
+    
+
+    <script>
+        // =================================================================
+        // RELOAD-WITH-PERSISTENCE & LOADING INDICATOR
+        // =================================================================
+        document.addEventListener("DOMContentLoaded", function() {
+            
+            // 1. TAB PERSISTENCE (Save/Restore State)
+            
+            // Save sidebar selection
+            const sidebarLinks = document.querySelectorAll('.sidebar .menu-item');
+            sidebarLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    const onclickVal = this.getAttribute('onclick');
+                    if(onclickVal) {
+                         const match = onclickVal.match(/'([^']+)'/);
+                         if(match) localStorage.setItem('activeSidebarTab', match[1]);
+                    }
+                });
+            });
+            
+            // Save inner tab selection
+            const tabLinks = document.querySelectorAll('.tab-link');
+            tabLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    const onclickVal = this.getAttribute('onclick');
+                    if(onclickVal) {
+                         const match = onclickVal.match(/'([^']+)'/);
+                         if(match) localStorage.setItem('activeInnerTab', match[1]);
+                    }
+                });
+            });
+            
+            // Restore State on Load
+            const savedSidebar = localStorage.getItem('activeSidebarTab');
+            if(savedSidebar && typeof switchSidebarTab === 'function') {
+                switchSidebarTab(savedSidebar);
+            }
+            
+            const savedInner = localStorage.getItem('activeInnerTab');
+            if(savedInner) {
+                const btn = document.querySelector(`button[onclick*="'${savedInner}'"]`);
+                if(btn) btn.click();
+            }
+
+            // 2. LOADING INDICATOR ON SUBMIT
+            // We do NOT prevent default. We let the page reload.
+            // We just show visual feedback.
+            const forms = document.querySelectorAll('form');
+            forms.forEach(form => {
+                if(form.action.includes('logout')) return; // Don't show loading on logout
+
+                form.addEventListener('submit', function(e) {
+                    const submitBtn = this.querySelector('button[type="submit"]');
+                    if(submitBtn) {
+                        // Change text to show processing
+                        const originalText = submitBtn.innerHTML;
+                        submitBtn.innerHTML = '⏳ Processing...';
+                        submitBtn.style.opacity = '0.7';
+                        
+                        // Disable to prevent double click, BUT we must ensure the form still submits.
+                        // Standard form submission might not send the button value if disabled immediately.
+                        // A safer way is to disable AFTER a micro-timeout or just CSS pointer-events.
+                        submitBtn.style.pointerEvents = 'none'; 
+                    }
+                    // e.preventDefault() is NOT called. Page will reload.
+                });
+            });
+        });
+    </script>
+
+    <!-- ====================== HISTORY MODAL (AJAX) ====================== -->
+    <div id="historyModal" class="modal" style="display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6);">
+        <div class="modal-content" style="background-color: #fefefe; margin: 5% auto; padding: 0; border: 1px solid #888; width: 90%; max-width: 800px; border-radius: 10px; overflow: hidden;">
+            <div id="historyModalContent" style="padding: 20px; text-align: center;">
+                <p>⏳ A carregar dados da Blockchain...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openHistoryModal(harvestId) {
+            const modal = document.getElementById('historyModal');
+            const contentDiv = document.getElementById('historyModalContent');
+            
+            modal.style.display = "block";
+            contentDiv.innerHTML = '<p style="padding:20px; text-align:center;">⏳ A carregar dados da Blockchain...</p>';
+            
+            // Fetch Modal Content
+            fetch(`/api/harvest-history/${harvestId}/`)
+                .then(response => response.text())
+                .then(html => {
+                    contentDiv.innerHTML = html;
+                })
+                .catch(err => {
+                    contentDiv.innerHTML = `<div class="alert alert-danger" style="margin:20px;">Erro ao carregar: ${err}</div>`;
+                });
+        }
+        
+        // Add window onclick for History Modal (ensure it doesn't conflict with existing ones)
+        const oldOnclick = window.onclick;
+        window.onclick = function(event) {
+            if (oldOnclick) oldOnclick(event);
+            
+            const historyModal = document.getElementById('historyModal');
+            if (event.target == historyModal) {
+                historyModal.style.display = "none";
+            }
+        }
+    </script>
+
+    <!-- ====================== DISCRETE TRANSLATOR WIDGET ====================== -->
+    <div id="google_translate_element" style="display:none;"></div>
+    <div class="discrete-translator" style="position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.95); border: 1px solid #00796b; border-radius: 30px; padding: 6px 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); backdrop-filter: blur(5px); transition: all 0.3s ease;">
+        <span style="font-size: 1.1em; line-height: 1;">🌐</span>
+        <select id="lang-select" onchange="changeLanguage(this.value)" style="border: none; background: transparent; font-size: 0.85em; font-weight: 600; color: #004d40; cursor: pointer; outline: none; padding-right: 5px; font-family: inherit;">
+            <option value="pt">🇵🇹 PT</option>
+            <option value="en">🇬🇧 EN</option>
+            <option value="es">🇪🇸 ES</option>
+            <option value="tr">🇹🇷 TR</option>
+        </select>
+    </div>
+
+    <style>
+        /* Google Translate Overrides */
+        iframe.goog-te-banner-frame { display: none !important; }
+        .goog-te-banner-frame { display: none !important; }
+        .goog-te-banner { display: none !important; }
+        .skiptranslate { top: 0px !important; }
+        #goog-gt-tt { display: none !important; }
+        .goog-logo-link { display: none !important; }
+        .goog-te-gadget { color: transparent !important; }
+        .goog-te-balloon-frame { display: none !important; }
+        .goog-tooltip { display: none !important; }
+        .goog-tooltip:hover { display: none !important; }
+        .goog-text-highlight { background-color: transparent !important; border: none !important; box-shadow: none !important; }
+        
+        body { top: 0px !important; }
+        html { top: 0px !important; }
+    </style>
+
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({
+                pageLanguage: 'pt',
+                includedLanguages: 'pt,en,es,tr',
+                layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+                autoDisplay: false
+            }, 'google_translate_element');
+        }
+        
+        function getGoogtransLanguage() {
+            const match = document.cookie.match(/googtrans=\/[^/]+\/([^;]+)/);
+            return match ? match[1] : 'pt';
+        }
+
+        function changeLanguage(langCode) {
+            localStorage.setItem('selectedLanguage', langCode);
+            
+            const cookieVal = langCode === 'pt' ? '' : '/pt/' + langCode;
+            const expires = langCode === 'pt' ? 'expires=Thu, 01 Jan 1970 00:00:00 UTC; ' : '';
+            
+            // Set cookie on host-only (no domain parameter)
+            document.cookie = `googtrans=${cookieVal}; path=/; ${expires}`;
+            
+            // Set/clear on hostname variations
+            const host = location.hostname;
+            if (host) {
+                if (host !== 'localhost' && !/^[0-9.]+$/.test(host)) {
+                    document.cookie = `googtrans=${cookieVal}; path=/; domain=${host}; ${expires}`;
+                    document.cookie = `googtrans=${cookieVal}; path=/; domain=.${host}; ${expires}`;
+                    
+                    const parts = host.split('.');
+                    if (parts.length > 2) {
+                        const parentDomain = parts.slice(-2).join('.');
+                        document.cookie = `googtrans=${cookieVal}; path=/; domain=${parentDomain}; ${expires}`;
+                        document.cookie = `googtrans=${cookieVal}; path=/; domain=.${parentDomain}; ${expires}`;
+                    }
+                } else {
+                    document.cookie = `googtrans=${cookieVal}; path=/; domain=.${host}; ${expires}`;
+                }
+            }
+            
+            location.reload();
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            let savedLang = localStorage.getItem('selectedLanguage') || 'pt';
+            const cookieLang = getGoogtransLanguage();
+            
+            if (savedLang !== cookieLang) {
+                if (['pt', 'en', 'es', 'tr'].includes(cookieLang)) {
+                    savedLang = cookieLang;
+                    localStorage.setItem('selectedLanguage', savedLang);
+                } else {
+                    changeLanguage(savedLang);
+                    return;
+                }
+            }
+            
+            const selectWidget = document.getElementById('lang-select');
+            if (selectWidget) selectWidget.value = savedLang;
+        });
+    </script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </body>
 </html>
+
+

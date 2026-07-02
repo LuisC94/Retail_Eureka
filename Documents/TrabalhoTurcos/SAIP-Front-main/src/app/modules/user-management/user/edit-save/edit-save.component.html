@@ -1,0 +1,192 @@
+<app-modal #modal [modalConfig]="modalConfig">
+    <form class="form w-100" [formGroup]="form" novalidate="novalidate">
+
+        <div class="fv-row mb-8">
+            <label class="form-label fs-6 fw-bolder text-gray-900">{{'NAME' | translate}}</label>
+            <input class="form-control bg-transparent" type="text" name="name" formControlName="name" autocomplete="off"
+                [ngClass]="{
+                'is-invalid': form.controls['name'].invalid,
+                'is-valid': form.controls['name'].valid
+              }" />
+            <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                validation: 'required',
+                message: 'REQUIRED_NAME' | translate,
+                control: form.controls['name']
+              }"></ng-container>
+        </div>
+
+        <div class="fv-row mb-8">
+            <label class="form-label fs-6 fw-bolder text-gray-900">{{'SURNAME' | translate}}</label>
+            <input class="form-control bg-transparent" type="text" name="surname" formControlName="surname" autocomplete="off"
+                [ngClass]="{
+                'is-invalid': form.controls['surname'].invalid,
+                'is-valid': form.controls['surname'].valid
+              }" />
+            <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                validation: 'required',
+                message: 'REQUIRED_SURNAME' | translate,
+                control: form.controls['surname']
+              }"></ng-container>
+        </div>
+
+        <div class="fv-row mb-8">
+            <label class="form-label fs-6 fw-bolder text-gray-900">{{'EMAIL' | translate}}</label>
+            <input class="form-control bg-transparent" type="email" name="email" formControlName="email" autocomplete="off"
+                [ngClass]="{
+                'is-invalid': form.controls['email'].invalid,
+                'is-valid': form.controls['email'].valid
+              }" />
+
+              <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                validation: 'required',
+                message: 'REQUIRED_EMAIL' | translate,
+                control: form.controls['email']
+              }"></ng-container>
+            <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                validation: 'email',
+                message: ('EMAIL_IS_INVALID' | translate),
+                control: form.controls['email']
+              }"></ng-container>
+            <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                validation: 'minLength',
+                message: ('EMAIL_SHOULD_HAVE_AT_LEAST_3_SYMBOLS' | translate),
+                control: form.controls['email']
+              }"></ng-container>
+            <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                validation: 'maxLength',
+                message: ('EMAIL_SHOULD_HAVE_MAXIMUM_360_SYMBOLS' | translate),
+                control: form.controls['email']
+              }"></ng-container>
+        </div>
+
+        <div class="fv-row mb-8" *ngIf="form.controls['id'].value == 0">
+            <label class="form-label fw-bolder text-gray-900 fs-6">{{'PASSWORD' | translate}}</label>
+            <input class="form-control bg-transparent" type="password" name="password"
+              formControlName="password" autocomplete="off" [ngClass]="{
+                'is-invalid': form.controls['password'].invalid,
+                'is-valid': form.controls['password'].valid
+              }" />
+            <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                validation: 'required',
+                message: 'PASSWORD_REQUIRED' | translate,
+                control: form.controls['password']
+              }"></ng-container>
+            <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                validation: 'minlength',
+                message: ('PASSWORD_SHOULD_HAVE_AT_LEAST_3_SYMBOLS' | translate),
+                control: form.controls['password']
+              }"></ng-container>
+            <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                validation: 'maxLength',
+                message: ('PASSWORD_SHOULD_HAVE_MAXIMUM_100_SYMBOLS'),
+                control: form.controls['password']
+              }"></ng-container>
+          </div>
+
+          <div class="fv-row mb-8" *ngIf="form.controls['id'].value == 0">
+            <label class="form-label fw-bolder text-gray-900 fs-6">{{'CONFIRM_PASSWORD' | translate}}</label>
+            <input class="form-control bg-transparent" type="password" name="cPassword"
+              autocomplete="off" formControlName="cPassword" [ngClass]="{
+                'is-invalid': form.controls['cPassword'].invalid,
+                'is-valid': form.controls['cPassword'].valid
+              }" />
+            <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                validation: 'required',
+                message: ('CONFIRM_PASSWORD' | translate) + ' ' + ('IS_REQUIRED' | translate),
+                control: form.controls['cPassword']
+              }"></ng-container>
+            <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                validation: 'minlength',
+                message: ('CONFIRM_PASSWORD_SHOULD_HAVE_AT_LEAST_3_SYMBOLS' | translate),
+                control: form.controls['cPassword']
+              }"></ng-container>
+            <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                validation: 'maxLength',
+                message: ('CONFIRM_PASSWORD_SHOULD_HAVE_MAXIMUM_100_SYMBOLS' | translate),
+                control: form.controls['cPassword']
+              }"></ng-container>
+            <ng-container *ngIf="
+            form.controls['cPassword'].errors &&
+                form.controls['cPassword'].errors.ConfirmPassword
+              ">
+              <div class="fv-plugins-message-container">
+                <div class="fv-help-block">
+                  {{'NOMATCH_PASSWORD' | translate}}
+                </div>
+              </div>
+            </ng-container>
+          </div>
+
+          <div class="fv-row mb-8">
+            <label class="form-label fs-6 fw-bolder text-gray-900">{{'USERNAME' | translate}}</label>
+            <input class="form-control bg-transparent" type="text" name="username" formControlName="username" autocomplete="off"
+                [ngClass]="{
+                'is-invalid': form.controls['username'].invalid,
+                'is-valid': form.controls['username'].valid
+              }" />
+            <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                validation: 'required',
+                message: 'REQUIRED_USERNAME' | translate,
+                control: form.controls['username']
+              }"></ng-container>
+        </div>
+
+        <div class="fv-row mb-8">
+            <label class="form-label fs-6 fw-bolder text-gray-900">{{'PHONE' | translate}}</label>
+            <input class="form-control bg-transparent" type="tel" name="phone" formControlName="phone" autocomplete="off"
+                [ngClass]="{
+                'is-invalid': form.controls['phone'].invalid,
+                'is-valid': form.controls['phone'].valid
+              }" />
+            <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                validation: 'required',
+                message: 'REQUIRED_PHONE' | translate,
+                control: form.controls['phone']
+              }"></ng-container>
+        </div>
+
+        <div class="fv-row mb-8">
+            <label class="form-label fs-6 fw-bolder text-gray-900">{{'ROLE' | translate}}</label>
+            <select name="roles" formControlName="roles" autocomplete="off"
+              class="form-select form-select-solid form-select-lg fw-bold"
+              [ngClass]="{
+                'is-invalid': form.controls['roles'].invalid,
+                'is-valid': form.controls['roles'].valid
+              }"
+            >
+                <option value="">{{'SELECT_ROLE' | translate}}</option>
+                <ng-container *ngFor="let item of roleList">
+                    <option value="{{item.id}}">{{item.name}}</option>
+                </ng-container>
+            </select>
+
+            <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                validation: 'required',
+                message: 'REQUIRED_ROLE' | translate,
+                control: form.controls['roles']
+              }"></ng-container>
+        </div>
+
+        <div class="fv-row mb-8">
+            <label class="form-label fs-6 fw-bolder text-gray-900">{{'ORGANIZATION' | translate}}</label>
+            <select name="organizations" formControlName="organizations" autocomplete="off"
+              class="form-select form-select-solid form-select-lg fw-bold"
+            >   
+                <option value="">{{'SELECT_ORGANIZATION' | translate}}</option>
+                <ng-container *ngFor="let item of organizationList">
+                    <option value="{{item.id}}">{{item.name}}</option>
+                </ng-container>
+            </select>
+        </div>
+    </form>
+
+    <ng-template #formError let-control="control" let-message="message" let-validation="validation">
+        <ng-container *ngIf="control.hasError(validation) && (control.dirty || control.touched)">
+            <div class="fv-plugins-message-container">
+                <span role="alert">
+                    {{ message }}
+                </span>
+            </div>
+        </ng-container>
+    </ng-template>
+</app-modal>

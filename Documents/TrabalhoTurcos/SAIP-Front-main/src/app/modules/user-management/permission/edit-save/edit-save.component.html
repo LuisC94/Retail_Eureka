@@ -1,0 +1,42 @@
+<app-modal #modal [modalConfig]="modalConfig">
+    <form class="form w-100" [formGroup]="form" novalidate="novalidate">
+
+        <div class="fv-row mb-8">
+            <label class="form-label fs-6 fw-bolder text-gray-900">{{'NAME' | translate}}</label>
+            <input class="form-control bg-transparent" type="text" name="name" formControlName="name" autocomplete="off"
+                [ngClass]="{
+                'is-invalid': form.controls['name'].invalid,
+                'is-valid': form.controls['name'].valid
+              }" />
+            <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                validation: 'required',
+                message: 'REQUIRED_NAME' | translate,
+                control: form.controls['name']
+              }"></ng-container>
+        </div>
+
+        <div class="fv-row mb-8">
+            <label class="form-label fs-6 fw-bolder text-gray-900">{{'CODE' | translate}}</label>
+            <input class="form-control bg-transparent" type="text" name="code" formControlName="code" autocomplete="off"
+              [ngClass]="{
+                'is-invalid': form.controls['code'].invalid,
+                'is-valid': form.controls['code'].valid
+              }" />
+            <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                validation: 'required',
+                message: 'REQUIRED_CODE' | translate,
+                control: form.controls['code']
+              }"></ng-container>
+          </div>
+    </form>
+
+    <ng-template #formError let-control="control" let-message="message" let-validation="validation">
+        <ng-container *ngIf="control.hasError(validation) && (control.dirty || control.touched)">
+            <div class="fv-plugins-message-container">
+                <span role="alert">
+                    {{ message }}
+                </span>
+            </div>
+        </ng-container>
+    </ng-template>
+</app-modal>

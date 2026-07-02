@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="pt">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Fluxo de Dados - A Viagem de uma Maçã</title>
+    <style>
+        body {
+            font-family: Calibri, Arial, sans-serif;
+            line-height: 1.6;
+        }
+
+        h1 {
+            color: #548235;
+            border-bottom: 2px solid #548235;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            color: #375623;
+            margin-top: 25px;
+        }
+
+        h3 {
+            color: #548235;
+            margin-top: 20px;
+        }
+
+        code {
+            background-color: #f0f0f0;
+            padding: 2px 5px;
+            font-family: Consolas, monospace;
+            border-radius: 3px;
+        }
+
+        pre {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-left: 5px solid #548235;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+            color: #333;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>A Viagem de uma Maçã: Fluxo Completo dos Dados</h1>
+
+    <p>Este documento explica passo-a-passo como o teu software funciona, desde o clique no botão "Encomendar" até à
+        gravação imutável na Blockchain.</p>
+
+    <hr>
+
+    <h2>O Cenário</h2>
+    <p>O <strong>Produtor João</strong> faz login no site e regista uma nova colheita de maçãs (ou aceita uma
+        encomenda).<br>
+        O que acontece "debaixo do capô" em 6 segundos?</p>
+
+    <h3>Passo 1: O Clique no Frontend (Angular)</h3>
+    <p><strong>Ficheiro:</strong> <code>SAIP-Front-main/.../order-management.service.ts</code></p>
+
+    <p>Quando o João clica em "Salvar", o site prepara um pacote de dados (JSON) e envia para o teu servidor backend.
+    </p>
+    <ul>
+        <li><strong>Ação:</strong> O browser faz um pedido <code>HTTP POST</code>.</li>
+        <li><strong>Destino:</strong> <code>https://teu-backend-api/api/Order/Save</code></li>
+    </ul>
+
+    <pre><code>// O site diz: "Toma lá estes dados e guarda-os!"
+save(data: OrderModel) {
+    return this.http.post(`${API_ORDER_URL}/Save`, data);
+}</code></pre>
+
+    <hr>
+
+    <h3>Passo 2: O Backend Recebe e Guarda na BD Clássica (.NET)</h3>
+    <p><strong>Ficheiro:</strong> <code>SAIP-Back-main/.../Services/OrderService.cs</code></p>
+
+    <p>O teu servidor .NET recebe o pedido. Antes de ir para a Blockchain, ele guarda tudo na base de dados normal
+        (PostgreSQL) para o site ser rápido e ter histórico local.</p>
+
+    <ol>
+        <li><strong>Guarda no PostgreSQL:</strong>
+            <pre><code>_dbContext.Add(order);
+await _dbContext.SaveChangesAsync(); // Gravado na tabela 'Orders'</code></pre>
+        </li>
+        <li><strong>Prepara para a Blockchain:</strong>
+            O código converte a encomenda para o formato que a Blockchain gosta (<code>Model.Fabric.Order</code>).
+        </li>
+        <li><strong>Chama a Blockchain:</strong>
+            <pre><code>await _fabricService.InvokeCreateOrder(fabricOrder);</code></pre>
+        </li>
+    </ol>
+
+    <hr>
+
+    <h3>Passo 3: A Ponte para a Blockchain (.NET -> Go)</h3>
+    <p><strong>Ficheiro:</strong> <code>SAIP-Back-main/.../Services/FabricService.cs</code></p>
+
+    <p>Aqui acontece a magia da integração. O .NET não sabe falar a linguagem da Blockchain (gRPC), então ele chama o
+        teu "Tradutor" (a API em Go).</p>
+
+    <ul>
+        <li><strong>Ação:</strong> Envia um pedido <code>HTTP POST</code> interno.</li>
+        <li><strong>Destino:</strong> <code>http://localhost:3000/invoke</code> (Onde o Go está a ouvir).</li>
+        <li><strong>Dados:</strong> Diz "Executa a função <code>CreateOrder</code> com estes dados...".</li>
+    </ul>
+
+    <hr>
+
+    <h3>Passo 4: O Tradutor Assina a Transação (Go)</h3>
+    <p><strong>Ficheiros:</strong> <code>SAIP-ChaincodeRestApi-main/web/app.go</code> & <code>invoke.go</code></p>
+
+    <p>O servidor Go recebe o pedido. Ele tem a "Chave Mestra" (<code>User1@org1.example.com</code>).</p>
+
+    <ol>
+        <li><strong>Autenticação:</strong> Usa o certificado digital do 'User1' para provar que tem permissão.</li>
+        <li><strong>Proposta:</strong> Cria uma transação oficial e assina-a criptograficamente.</li>
+        <li><strong>Envio:</strong> Envia a transação assinada para a rede Hyperledger Fabric (para os Peers).</li>
+    </ol>
+
+    <pre><code>// O Go diz à rede: "Eu, User1, em nome desta app, quero executar CreateOrder"
+contract.SubmitTransaction("CreateOrder", args...)</code></pre>
+
+    <hr>
+
+    <h3>Passo 5: A Blockchain Valida e Grava (Smart Contract)</h3>
+    <p><strong>Ficheiro:</strong> <code>SAIP-Chaincode-main/lib/chaincode.js</code></p>
+
+    <p>Dentro da rede Docker, o código inteligente (Smart Contract) acorda.</p>
+
+    <ol>
+        <li><strong>Validação:</strong> Verifica se a encomenda já existe (para evitar duplicados).</li>
+        <li><strong>Gravação:</strong> Escreve no "Livro de Registos" (World State).</li>
+    </ol>
+
+    <pre><code>// O Regra final:
+async CreateOrder(ctx, orderJSON) {
+    // ... validações ...
+    await ctx.stub.putState(order.id, ...); // GRAVADO PARA SEMPRE!
+}</code></pre>
+
+    <hr>
+
+    <h2>Resumo Visual</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Camada</th>
+                <th>Tecnologia</th>
+                <th>O que faz?</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>1</strong></td>
+                <td><strong>Frontend</strong></td>
+                <td>Angular</td>
+                <td>Coleta os dados do utilizador.</td>
+            </tr>
+            <tr>
+                <td><strong>2</strong></td>
+                <td><strong>Backend</strong></td>
+                <td>.NET (C#)</td>
+                <td>Guarda na BD SQL e gere a lógica de negócio.</td>
+            </tr>
+            <tr>
+                <td><strong>3</strong></td>
+                <td><strong>Bridge</strong></td>
+                <td>.NET Service</td>
+                <td>Envia os dados para a API de Blockchain.</td>
+            </tr>
+            <tr>
+                <td><strong>4</strong></td>
+                <td><strong>Middleware</strong></td>
+                <td>Go (Golang)</td>
+                <td>Assina a transação com certificados digitais.</td>
+            </tr>
+            <tr>
+                <td><strong>5</strong></td>
+                <td><strong>Ledger</strong></td>
+                <td>Hyperledger</td>
+                <td>Valida e torna o dado imutável e distribuído.</td>
+            </tr>
+        </tbody>
+    </table>
+
+</body>
+
+</html>

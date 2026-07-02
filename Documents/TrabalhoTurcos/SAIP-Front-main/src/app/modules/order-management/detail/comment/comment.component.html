@@ -1,0 +1,61 @@
+<app-modal #modal [modalConfig]="modalConfig">
+    <div class="row mb-2">
+        <div class="col-xxl-4">    </div>
+        <div class="col-xxl-4" style="text-align: center;">
+            <span class="fw-bolder text-gray-900 ps-3">{{'PRODUCT_QUALITY' | translate}}</span>
+        </div>
+        <div class="col-xxl-4"></div>
+    </div>
+    <div class="row mb-8">
+        <div class="col-xxl-4"></div>
+        <div class="col-xxl-4" style="text-align: center;">
+            <i class="fa fa-star fs-5 ps-3" [ngClass]="qualityStar1 ? 'checked' : ''" (click)="checked('qualityStar1')"></i>
+            <i class="fa fa-star fs-5 ps-3" [ngClass]="qualityStar2 ? 'checked' : ''" (click)="checked('qualityStar2')"></i>
+            <i class="fa fa-star fs-5 ps-3" [ngClass]="qualityStar3 ? 'checked' : ''" (click)="checked('qualityStar3')"></i>
+            <i class="fa fa-star fs-5 ps-3" [ngClass]="qualityStar4 ? 'checked' : ''" (click)="checked('qualityStar4')"></i>
+            <i class="fa fa-star fs-5 ps-3" [ngClass]="qualityStar5 ? 'checked' : ''" (click)="checked('qualityStar5')"></i>
+        </div>
+        <div class="col-xxl-4"></div>
+    </div>
+    <div class="row mb-2">
+        <div class="col-xxl-4">    </div>
+        <div class="col-xxl-4" style="text-align: center;">
+            <span class="fw-bolder text-gray-900 ps-3">{{'VENDOR' | translate}}</span>
+        </div>
+        <div class="col-xxl-4"></div>
+    </div>
+    <div class="row mb-8">
+        <div class="col-xxl-4"></div>
+        <div class="col-xxl-4" style="text-align: center;">
+            <i class="fa fa-star fs-5 ps-3" [ngClass]="vendorStar1 ? 'checked' : ''" (click)="checked('vendorStar1')"></i>
+            <i class="fa fa-star fs-5 ps-3" [ngClass]="vendorStar2 ? 'checked' : ''" (click)="checked('vendorStar2')"></i>
+            <i class="fa fa-star fs-5 ps-3" [ngClass]="vendorStar3 ? 'checked' : ''" (click)="checked('vendorStar3')"></i>
+            <i class="fa fa-star fs-5 ps-3" [ngClass]="vendorStar4 ? 'checked' : ''" (click)="checked('vendorStar4')"></i>
+            <i class="fa fa-star fs-5 ps-3" [ngClass]="vendorStar5 ? 'checked' : ''" (click)="checked('vendorStar5')"></i>
+        </div>
+        <div class="col-xxl-4"></div>
+    </div>
+    <div class="row mb-2">
+        <div class="col-xxl-4">    </div>
+        <div class="col-xxl-4" style="text-align: center;">
+            <span class="fw-bolder text-gray-900 ps-3">{{'DELIVERY' | translate}}</span>
+        </div>
+        <div class="col-xxl-4"></div>
+    </div>
+    <div class="row mb-8">
+        <div class="col-xxl-4"></div>
+        <div class="col-xxl-4" style="text-align: center;">
+            <i class="fa fa-star fs-5 ps-3" [ngClass]="deliveryStar1 ? 'checked' : ''" (click)="checked('deliveryStar1')"></i>
+            <i class="fa fa-star fs-5 ps-3" [ngClass]="deliveryStar2 ? 'checked' : ''" (click)="checked('deliveryStar2')"></i>
+            <i class="fa fa-star fs-5 ps-3" [ngClass]="deliveryStar3 ? 'checked' : ''" (click)="checked('deliveryStar3')"></i>
+            <i class="fa fa-star fs-5 ps-3" [ngClass]="deliveryStar4 ? 'checked' : ''" (click)="checked('deliveryStar4')"></i>
+            <i class="fa fa-star fs-5 ps-3" [ngClass]="deliveryStar5 ? 'checked' : ''" (click)="checked('deliveryStar5')"></i>
+        </div>
+        <div class="col-xxl-4"></div>
+    </div>
+    <div class="row mb-8">
+        <textarea #commentInput
+        class="form-control mb-3"
+        rows="3" placeholder="{{'TYPE_A_COMMENT' | translate}}"></textarea>
+    </div>
+</app-modal>

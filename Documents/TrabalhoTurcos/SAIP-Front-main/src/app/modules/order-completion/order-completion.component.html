@@ -1,0 +1,254 @@
+<app-address-editsave #editSaveComponent (isSuccess)="isSuccess($event)"></app-address-editsave>
+
+<div class="row">
+    <div class="col-xxl-9">
+        <div class="row">
+            <div class="card card-xxl-stretch mb-5 mb-xl-8">
+                <div class="row">
+                    <div class="col-lg-6 px-0 py-0">
+                        <div (click)="setActiveTabId('address')"
+                            [ngClass]="activeTabId == 'address' ? 'selected-proccess-tab' : 'proccess-tab'">
+                            <div class="row mb-1 mx-0 my-0 px-5 py-5 fw-bolder fs-3">
+                                {{'ADDRESS_INFOS' | translate}}
+                            </div>
+                            <div class="row mb-3 mx-0 my-0 px-5 fw-bolder text-gray-900" *ngIf="selectedDeliveryAddress">
+                                {{selectedDeliveryAddress.addressHeader}}
+                            </div>
+                            <div class="row mb-1 mx-0 my-0 px-5 fw-bolder text-gray-900" *ngIf="selectedDeliveryAddress">
+                                {{selectedDeliveryAddress.address}}
+                            </div>
+                            <div class="row mb-1 mx-0 my-0 px-5 fw-bolder text-gray-900" *ngIf="selectedDeliveryAddress">
+                                {{selectedDeliveryAddress.district}}/{{selectedDeliveryAddress.city}}
+                            </div>
+                            <div class="row mb-1 mx-0 my-0 px-5 fw-bolder text-gray-900" *ngIf="selectedDeliveryAddress">
+                                {{selectedDeliveryAddress.country}}
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="col-lg-6 px-0 py-0">
+                        <div (click)="setActiveTabId('payment')"
+                            [ngClass]="activeTabId == 'payment' ? 'selected-proccess-tab' : 'proccess-tab'">
+                            <div class="row mb-5 mx-0 my-0 px-5 py-5 fw-bolder fs-3">
+                                {{'PAYMENT_INFOS' | translate}}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row" *ngIf="activeTabId == 'address'">
+            <div class="col-lg-6 px-0 py-0">
+                <div class="card card-xxl-stretch mb-5 mb-xl-8">
+                    <div class="card-header border-0 pt-5">
+                        <h3 class="card-title align-items-start flex-column">
+                            <span class="card-label fw-bolder fs-3 mb-1">{{'DELIVERY_ADDRESS' |
+                                translate}}</span>
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row gy-5 g-xl-8">
+                            <div class="col-xxl-12">
+                                <a (click)="openSaveModal()" title="Click to Add" class="btn btn-sm btn-light-primary"
+                                    style="width: 100%;">
+                                    <span [inlineSVG]="'./assets/media/icons/duotune/arrows/arr075.svg'"
+                                        class="svg-icon svg-icon-3"></span>
+                                    {{'MENU.NEW' | translate}}
+                                </a>
+                            </div>
+                            <ng-container *ngFor="let item of deliveryAddresses">
+                                <div class="col-xxl-12">
+                                    <div class="card card-xl-stretch mb-xl-1" title="Click to Select"
+                                        style="cursor: pointer;" [ngClass]="item.selected ? 'selected' : ''"
+                                        (click)="selectDeliveryAddress(item.id)">
+                                        <div class="card-header border-1 pt-0">
+                                            <div class="card-title m-0">
+                                                <h3 class="fw-bolder m-0"> {{item.addressHeader}}
+                                                </h3>
+                                            </div>
+                                            <div class="card-toolbar" data-bs-toggle="tooltip" data-bs-placement="top"
+                                                data-bs-trigger="hover">
+                                                <button (click)="openEditModal(item.id)" type="button"
+                                                    class="btn btn-sm btn-icon btn-color-primary btn-active-light-primary"
+                                                    title="Edit">
+                                                    <span [inlineSVG]="'./assets/media/icons/duotune/art/art005.svg'"
+                                                        class="svg-icon svg-icon-2"></span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row mb-2">
+                                                <span class="fw-bold text-gray-800">{{item.name}}
+                                                    {{item.surname}}</span>
+                                            </div>
+                                            <div class="row mb-1">
+                                                <span class="text-muted fw-bolder fs-7 ps-3">{{item.address}}</span>
+                                            </div>
+                                            <div class="row mb-1">
+                                                <span
+                                                    class="text-muted fw-bolder fs-7 ps-3">{{item.district}}/{{item.city}}</span>
+                                            </div>
+                                            <div class="row mb-1">
+                                                <span class="text-muted fw-bolder fs-7 ps-3">{{item.country}}</span>
+                                            </div>
+                                            <div class="row mb-1">
+                                                <span class="fw-bolder fs-7 ps-3">{{item.phone}}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </ng-container>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 px-0 py-0">
+                <div class="card card-xxl-stretch mb-5 mb-xl-8">
+                    <div class="card-header border-0 pt-5">
+                        <h3 class="card-title align-items-start flex-column">
+                            <span class="card-label fw-bolder fs-3 mb-1">{{'INVOICE_ADDRESS' |
+                                translate}}</span>
+                        </h3>
+
+                        <div class="card-toolbar" data-bs-toggle="tooltip" data-bs-placement="top"
+                            data-bs-trigger="hover">
+
+                            <input class="form-check-input" type="checkbox" id="googleswitch"
+                                [checked]="selectedDeliveryAddressId == selectedInvoiceAddressId"
+                                (click)="onCheckboxClicked()" />
+                            <label class="form-check-label" htmlFor="googleswitch">&nbsp;{{'SAME_ADDRESS' |
+                                translate}}</label>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row gy-5 g-xl-8">
+                            <div class="col-xxl-12">
+                                <a (click)="openSaveModal()" title="Click to Add" class="btn btn-sm btn-light-primary"
+                                    style="width: 100%;">
+                                    <span [inlineSVG]="'./assets/media/icons/duotune/arrows/arr075.svg'"
+                                        class="svg-icon svg-icon-3"></span>
+                                    {{'MENU.NEW' | translate}}
+                                </a>
+                            </div>
+                            <ng-container *ngFor="let item of invoiceAddresses">
+                                <div class="col-xxl-12">
+                                    <div class="card card-xl-stretch mb-xl-1" title="Click to Select"
+                                        style="cursor: pointer;" [ngClass]="item.selected ? 'selected' : ''"
+                                        (click)="selectInvoiceAddress(item.id)">
+
+                                        <div class="card-header border-1 pt-0">
+                                            <div class="card-title m-0">
+                                                <h3 class="fw-bolder m-0"> {{item.addressHeader}}
+                                                </h3>
+                                            </div>
+                                            <div class="card-toolbar" data-bs-toggle="tooltip" data-bs-placement="top"
+                                                data-bs-trigger="hover">
+                                                <button (click)="openEditModal(item.id)" type="button"
+                                                    class="btn btn-sm btn-icon btn-color-primary btn-active-light-primary"
+                                                    title="Edit">
+                                                    <span [inlineSVG]="'./assets/media/icons/duotune/art/art005.svg'"
+                                                        class="svg-icon svg-icon-2"></span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row mb-2">
+                                                <span class="fw-bold text-gray-800">{{item.name}}
+                                                    {{item.surname}}</span>
+                                            </div>
+                                            <div class="row mb-1">
+                                                <span class="text-muted fw-bolder fs-7 ps-3">{{item.address}}</span>
+                                            </div>
+                                            <div class="row mb-1">
+                                                <span
+                                                    class="text-muted fw-bolder fs-7 ps-3">{{item.district}}/{{item.city}}</span>
+                                            </div>
+                                            <div class="row mb-1">
+                                                <span class="text-muted fw-bolder fs-7 ps-3">{{item.country}}</span>
+                                            </div>
+                                            <div class="row mb-1">
+                                                <span class="fw-bolder fs-7 ps-3">{{item.phone}}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </ng-container>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xxl-3">
+        <div class="card card-xxl-stretch mb-5 mb-xl-8">
+            <div class="card-header border-0 pt-5">
+                <h3 class="card-title align-items-start flex-column">
+                    <span class="card-label fw-bolder fs-3 mb-1">{{'ORDER_SUMMARY' | translate}}</span>
+                </h3>
+            </div>
+            <div class="card-body py-3">
+                <table class="table">
+                    <tr>
+                        <td style="width: 150px;">
+                            <div class="d-flex justify-content-start flex-column">
+                                <a class="text-gray-900 text-hover-primary fs-6">
+                                    {{'TOTAL_OF_THE_PRODUCTS' | translate}}
+                                </a>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex justify-content-start flex-column">
+                                <a class="text-gray-900 fw-bolder text-hover-primary fs-6">
+                                    {{totalPrice.toFixed(2)}} ₺
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr class="table-row-dashed">
+                        <td style="width: 150px;">
+                            <div class="d-flex justify-content-start flex-column">
+                                <a class="text-gray-900 text-hover-primary fs-6">
+                                    {{'SHIPPING_TOTAL' | translate}}
+                                </a>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex justify-content-start flex-column">
+                                <a class="text-gray-900 fw-bolder text-hover-primary fs-6">
+                                    0.00 ₺
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">
+                            <div class="separator border-gray-200"></div>
+                        </td>
+                    </tr>
+                    <tr class="table-row-dashed">
+                        <td style="width: 150px;">
+                            <div class="d-flex justify-content-start flex-column">
+                                <a class="text-gray-900 text-hover-primary fs-6">
+                                    {{'TOTAL' | translate}}
+                                </a>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex justify-content-start flex-column">
+                                <a class="text-gray-900 fw-bolder text-hover-primary fs-6">
+                                    {{totalPrice.toFixed(2)}} ₺
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+                <button type="button" (click)="confirmOrder()" class="btn btn-light-primary btn-lg"
+                    style="width: 100%;">
+                    <ng-container>
+                        <span class="indicator-label">{{'ORDER' | translate}}</span>
+                    </ng-container>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

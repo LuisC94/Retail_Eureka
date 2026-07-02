@@ -1,0 +1,42 @@
+@login_required
+def get_harvest_history(request, harvest_id):
+    """
+    View AJAX para buscar o histórico de um Lote na Blockchain.
+    Retorna o HTML do modal preenchido.
+    """
+    try:
+        # 1. Construir o ID usado na Blockchain (Ex: "HARVEST-123")
+        # Nota: O harvest_id que vem no URL é o PK da BD (Ex: 123)
+        asset_id = f"HARVEST-{harvest_id}"
+        
+        # 2. Buscar Histórico ao Go Middleware
+        history_data = fabric_service.get_asset_history(asset_id)
+        
+        # 3. Processar dados para o Template (Parsing de JSON dentro do value, timestamps, etc.)
+        # O Go retorna algo como: [{"txId": "...", "value": "{...}", "timestamp": "...", "isDelete": false}]
+        formatted_history = []
+        for entry in history_data:
+            try:
+                # Tentar formatar o JSON do value para ficar bonito
+                import json
+                value_obj = json.loads(entry.get('value', '{}'))
+                entry['value'] = json.dumps(value_obj, indent=2)
+            except:
+                pass # Se não for JSON, mantém string original
+                
+            formatted_history.append(entry)
+            
+        context = {
+            'harvest_id': harvest_id,
+            'history': formatted_history,
+            'error': None
+        }
+        
+    except Exception as e:
+        context = {
+            'harvest_id': harvest_id,
+            'history': [],
+            'error': f"Erro ao buscar histórico: {str(e)}"
+        }
+
+    return render(request, 'dashboard/modals/harvest_history_modal.html', context)

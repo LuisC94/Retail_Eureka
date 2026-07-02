@@ -213,5 +213,99 @@
     </div>
 </div>
 
+    <!-- ====================== DISCRETE TRANSLATOR WIDGET ====================== -->
+    <div id="google_translate_element" style="display:none;"></div>
+    <div class="discrete-translator" style="position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.95); border: 1px solid #00796b; border-radius: 30px; padding: 6px 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); backdrop-filter: blur(5px); transition: all 0.3s ease;">
+        <span style="font-size: 1.1em; line-height: 1;">🌐</span>
+        <select id="lang-select" onchange="changeLanguage(this.value)" style="border: none; background: transparent; font-size: 0.85em; font-weight: 600; color: #004d40; cursor: pointer; outline: none; padding-right: 5px; font-family: inherit;">
+            <option value="pt">🇵🇹 PT</option>
+            <option value="en">🇬🇧 EN</option>
+            <option value="es">🇪🇸 ES</option>
+            <option value="tr">🇹🇷 TR</option>
+        </select>
+    </div>
+
+    <style>
+        /* Google Translate Overrides */
+        iframe.goog-te-banner-frame { display: none !important; }
+        .goog-te-banner-frame { display: none !important; }
+        .goog-te-banner { display: none !important; }
+        .skiptranslate { top: 0px !important; }
+        #goog-gt-tt { display: none !important; }
+        .goog-logo-link { display: none !important; }
+        .goog-te-gadget { color: transparent !important; }
+        .goog-te-balloon-frame { display: none !important; }
+        .goog-tooltip { display: none !important; }
+        .goog-tooltip:hover { display: none !important; }
+        .goog-text-highlight { background-color: transparent !important; border: none !important; box-shadow: none !important; }
+        
+        body { top: 0px !important; }
+        html { top: 0px !important; }
+    </style>
+
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({
+                pageLanguage: 'pt',
+                includedLanguages: 'pt,en,es,tr',
+                layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+                autoDisplay: false
+            }, 'google_translate_element');
+        }
+        
+        function getGoogtransLanguage() {
+            const match = document.cookie.match(/googtrans=\/[^/]+\/([^;]+)/);
+            return match ? match[1] : 'pt';
+        }
+
+        function changeLanguage(langCode) {
+            localStorage.setItem('selectedLanguage', langCode);
+            
+            const cookieVal = langCode === 'pt' ? '' : '/pt/' + langCode;
+            const expires = langCode === 'pt' ? 'expires=Thu, 01 Jan 1970 00:00:00 UTC; ' : '';
+            
+            // Set cookie on host-only (no domain parameter)
+            document.cookie = `googtrans=${cookieVal}; path=/; ${expires}`;
+            
+            // Set/clear on hostname variations
+            const host = location.hostname;
+            if (host) {
+                if (host !== 'localhost' && !/^[0-9.]+$/.test(host)) {
+                    document.cookie = `googtrans=${cookieVal}; path=/; domain=${host}; ${expires}`;
+                    document.cookie = `googtrans=${cookieVal}; path=/; domain=.${host}; ${expires}`;
+                    
+                    const parts = host.split('.');
+                    if (parts.length > 2) {
+                        const parentDomain = parts.slice(-2).join('.');
+                        document.cookie = `googtrans=${cookieVal}; path=/; domain=${parentDomain}; ${expires}`;
+                        document.cookie = `googtrans=${cookieVal}; path=/; domain=.${parentDomain}; ${expires}`;
+                    }
+                } else {
+                    document.cookie = `googtrans=${cookieVal}; path=/; domain=.${host}; ${expires}`;
+                }
+            }
+            
+            location.reload();
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            let savedLang = localStorage.getItem('selectedLanguage') || 'pt';
+            const cookieLang = getGoogtransLanguage();
+            
+            if (savedLang !== cookieLang) {
+                if (['pt', 'en', 'es', 'tr'].includes(cookieLang)) {
+                    savedLang = cookieLang;
+                    localStorage.setItem('selectedLanguage', savedLang);
+                } else {
+                    changeLanguage(savedLang);
+                    return;
+                }
+            }
+            
+            const selectWidget = document.getElementById('lang-select');
+            if (selectWidget) selectWidget.value = savedLang;
+        });
+    </script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </body>
 </html>

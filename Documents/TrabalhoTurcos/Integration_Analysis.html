@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<title>Análise de Integração</title>
+<style>
+    body { font-family: Calibri, Arial, sans-serif; line-height: 1.6; }
+    h1 { color: #2E74B5; border-bottom: 2px solid #2E74B5; padding-bottom: 10px; }
+    h2 { color: #1F4D78; margin-top: 25px; }
+    h3 { color: #2E74B5; margin-top: 20px; }
+    code { background-color: #f0f0f0; padding: 2px 5px; font-family: Consolas, monospace; border-radius: 3px; }
+    pre { background-color: #f5f5f5; padding: 15px; border-left: 5px solid #2E74B5; overflow-x: auto; }
+    ul { margin-bottom: 15px; }
+    li { margin-bottom: 5px; }
+</style>
+</head>
+<body>
+
+<h1>Análise de Integração Blockchain <-> Plataforma SAIP</h1>
+
+<p>Este documento explica tecnicamente como a tua plataforma (.NET) fala com a Blockchain e o que é necessário para tudo funcionar em conjunto.</p>
+
+<h2>1. O Fluxo de Dados (The Bridge)</h2>
+
+<p>A tua arquitetura usa um modelo de <strong>3 Camadas</strong>:</p>
+
+<p><code>Frontend (Angular)</code> -> <code>Backend (.NET)</code> -> <code>Middleware (Go API)</code> -> <code>Blockchain (Fabric)</code></p>
+
+<h3>Passo A: O Backend Envia o Pedido (<code>FabricService.cs</code>)</h3>
+<p>No ficheiro <code>OrderManagement/Services/FabricService.cs</code>, o teu backend atua como um cliente HTTP. Ele não fala diretamente com a Blockchain (o que é bom, pois simplifica o .NET).</p>
+
+<ul>
+    <li><strong>O que ele faz:</strong> Cria um JSON com os dados da encomenda e envia para uma URL.</li>
+    <li><strong>Código Chave:</strong>
+        <pre><code>// FabricService.cs
+HttpResponseMessage response = await client.PostAsync(_configuration["AppSettings:FabricApiUrl"] + "/invoke", content);</code></pre>
+    </li>
+    <li><strong>Configuração:</strong> O IP de destino está em <code>appsettings.json</code>:
+        <pre><code>"FabricApiUrl": "http://192.168.126.14:3000" // ATENÇÃO: Isto terá de ser mudado para localhost ou IP do WSL</code></pre>
+    </li>
+</ul>
+
+<h3>Passo B: O Middleware Recebe e Traduz (<code>app.go</code> + <code>invoke.go</code>)</h3>
+<p>A API em Go (que corre no porto 3000) serve de tradutor. Ela tem as bibliotecas oficiais do Hyperledger Fabric (SDK).</p>
+
+<ul>
+    <li><strong>O que ele faz:</strong>
+        <ol>
+            <li>Recebe o pedido HTTP do .NET.</li>
+            <li>Usa a "Chave Mestra" (User1) para se autenticar na rede.</li>
+            <li>Envia a transação para o <code>peer0.org1</code> via gRPC.</li>
+        </ol>
+    </li>
+    <li><strong>Código Chave:</strong>
+        <pre><code>// invoke.go
+contract := network.GetContract(chainCodeName)
+txn_proposal, err := contract.NewProposal(function, client.WithArguments(args...))</code></pre>
+    </li>
+</ul>
+
+<h3>Passo C: O Smart Contract Executa (<code>chaincode.js</code>)</h3>
+<p>Finalmente, o código que está <em>dentro</em> da rede Blockchain executa a lógica de negócio.</p>
+
+<ul>
+    <li><strong>O que ele faz:</strong> Verifica se a encomenda já existe e grava no "Livro de Registos" imutável.</li>
+    <li><strong>Código Chave:</strong>
+        <pre><code>// chaincode.js
+async CreateOrder(ctx, orderJSON) {
+    ...
+    await ctx.stub.putState(order.id, ...); // Grava no Ledger
+}</code></pre>
+    </li>
+</ul>
+
+<hr>
+
+<h2>2. O que é preciso para criar o Blockchain?</h2>
+
+<p>Para que este ecossistema funcione, "criar o blockchain" significa levantar a infraestrutura onde o <strong>Passo C</strong> vive.</p>
+
+<h3>Os Ingredientes (Docker Containers)</h3>
+<p>Tu não crias o blockchain "do zero" em código C# ou Go. Tu <strong>configuras</strong> uma rede de servidores. Os scripts que corremos (<code>network.sh up ...</code>) levantam estes 3 pilares:</p>
+
+<ol>
+    <li><strong>Peer (O Guarda-Livros):</strong> O servidor que guarda a cópia da blockchain. É aqui que o <code>chaincode.js</code> é instalado.</li>
+    <li><strong>Orderer (O Notário):</strong> O servidor que recebe as transações de toda a gente, ordena-as por cronologia e cria os blocos.</li>
+    <li><strong>CA (O Cartório):</strong> O servidor que emite os certificados digitais para que o <strong>Passo B</strong> (Go API) consiga provar que tem permissão para falar com o Peer.</li>
+</ol>
+
+<h2>3. Como integrar com a tua plataforma?</h2>
+
+<p>Para a tua plataforma "falar" com o Blockchain, tens de garantir 3 coisas:</p>
+
+<ol>
+    <li><strong>Conectividade de Rede:</strong>
+        <ul>
+            <li>O Backend .NET tem de conseguir chegar ao IP do Middleware Go (Porta 3000).</li>
+            <li>O Middleware Go tem de conseguir chegar aos Containers Docker (Portas 7051 e 9051). <em>Isto já está configurado no <code>main.go</code></em>.</li>
+        </ul>
+    </li>
+    <li><strong>Alinhamento de Dados:</strong>
+        <ul>
+            <li>O JSON que o .NET envia (<code>Order</code> object) tem de ter <strong>exatamente</strong> os campos que o <code>chaincode.js</code> espera ler. Se o .NET enviar <code>ProductId</code> e o Chaincode esperar <code>product_id</code>, vai dar erro.</li>
+        </ul>
+    </li>
+    <li><strong>Configuração de IPs:</strong>
+        <ul>
+            <li>No teu <code>appsettings.json</code>, o <code>FabricApiUrl</code> está com um IP fixo (<code>192.168...</code>).</li>
+            <li>Como estás a rodar tudo localmente (WSL), deves mudar para <code>http://localhost:3000</code>.</li>
+        </ul>
+    </li>
+</ol>
+
+<h3>Resumo para o teu Trabalho</h3>
+<ul>
+    <li><strong>Ficheiros a Manter:</strong> Não precisas de mudar o código do Chaincode nem do Go (já estão feitos para funcionar um com o outro).</li>
+    <li><strong>Ficheiros a Ajustar:</strong> Apenas o <code>appsettings.json</code> do .NET para apontar para o sítio certo.</li>
+    <li><strong>Onde está a "Magia":</strong> Está no <code>FabricService.cs</code>. É ele o único ponto de contacto entre o teu mundo clássico (.NET) e o mundo Blockchain.</li>
+</ul>
+
+</body>
+</html>

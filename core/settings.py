@@ -45,6 +45,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -77,17 +78,18 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 # core/settings.py
+import os
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql', 
-        'NAME': 'retail_eureka',     
-        'USER': 'aisupply',
-        'PASSWORD': r'H6.yLBweMW1w\$P&ub60',
-        'HOST': 'aisupply.rc',                      
-        'PORT': '5432',
+        'NAME': os.environ.get('DB_NAME', 'retail_eureka'),     
+        'USER': os.environ.get('DB_USER', 'aisupply'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', r'H6.yLBweMW1w\$P&ub60'),
+        'HOST': os.environ.get('DB_HOST', 'aisupply.rc'),                      
+        'PORT': os.environ.get('DB_PORT', '5432'),
         'OPTIONS': {
-            'options': '-c search_path="retail_eureka"', 
+            'options': f'-c search_path="{os.environ.get("DB_NAME", "retail_eureka")}"', 
         }                           
     }
 }

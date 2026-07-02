@@ -1,25 +1,32 @@
-# Use an official Python runtime as a parent image
-FROM python:3.11-slim
+# Dockerfile for Django Web Application
+FROM python:3.10-slim
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
-# Set work directory
+# Set working directory
 WORKDIR /app
 
-# Install dependencies
-COPY requirements.txt /app/
-RUN pip install --upgrade pip && pip install -r requirements.txt
+# Copy requirements file first
+COPY requirements.txt .
 
-# Copy project
-COPY . /app/
+# Install CPU-only PyTorch first to optimize build size, then install other dependencies
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu && \
+    pip install --no-cache-dir -r requirements.txt
 
-# Collect static files
+# Copy the rest of the application files
+COPY . .
+
+# Collect static files for production delivery with WhiteNoise
 RUN python manage.py collectstatic --noinput
 
-# Expose port 8700
-EXPOSE 8700
+# Expose Django port
+EXPOSE 8000
 
-# Run gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8700", "core.wsgi:application"]
+# Start Django Web App using Gunicorn
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "core.wsgi:application"]

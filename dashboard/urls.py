@@ -51,9 +51,24 @@ urlpatterns = [
     path('retailer/submit-warehouse/', views.retailer_submit_warehouse, name='retailer_submit_warehouse'),
     path('retailer/submit-sensor/', views.retailer_submit_sensor, name='retailer_submit_sensor'),
     path('retailer/accept-order/', views.retailer_accept_order, name='retailer_accept_order'),
+    path('warehouse/<int:warehouse_id>/import-readings/', views.import_sensor_readings, name='import_sensor_readings'),
 
     # 4. APIs e Autenticação
     path('api/soil-characteristics/', api_views.get_soil_characteristics, name='api_soil_characteristics'),
+    path('api/harvest-history/<int:harvest_id>/', views.get_harvest_history, name='get_harvest_history'), # [NEW]
+    path('api/agent-simulation/', views.agent_simulation, name='api_agent_simulation'),
+    path('api/agent-recommendations/', views.get_agent_recommendations, name='api_agent_recommendations'),
+    path('api/stock-recommendations/', views.get_stock_recommendations, name='api_stock_recommendations'),
+    path('api/producer-agent-simulation/', views.producer_agent_simulation, name='api_producer_agent_simulation'),
+    path('api/sensor-data/', views.get_sensor_data_from_sheet, name='get_sensor_data_from_sheet'),
+    
+    # NOVAS ROTAS DE TREINO DE MODELOS E AJUSTE DE STOCK
+    path('api/train-buyer/', views.submit_buyer_training, name='submit_buyer_training'),
+    path('api/train-stock/', views.submit_stock_training, name='submit_stock_training'),
+    path('api/training-status/', views.get_training_status, name='get_training_status'),
+    path('api/adjust-stock/', views.adjust_stock_manually, name='adjust_stock_manually'),
+    path('api/download-template/', views.download_training_template, name='download_training_template'),
+    
     path('accounts/register/', views.RegisterView.as_view(), name='register'),
     path('accounts/logout/', auth_views.LogoutView.as_view(), name='logout'),
 ]

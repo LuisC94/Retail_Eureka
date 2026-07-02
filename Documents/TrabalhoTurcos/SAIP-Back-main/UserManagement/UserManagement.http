@@ -1,0 +1,6 @@
+@UserManagement_HostAddress = http://localhost:5222
+
+GET {{UserManagement_HostAddress}}/Permission
+Accept: application/json
+
+###

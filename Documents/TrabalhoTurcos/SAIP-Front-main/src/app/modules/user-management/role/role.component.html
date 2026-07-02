@@ -1,0 +1,38 @@
+<app-role-editsave #editSaveComponent (isSuccess)="isSuccess($event)">
+</app-role-editsave>
+
+<app-confirmation #confirmationComponent (dismissButtonClick)="delete($event)">
+</app-confirmation>
+
+<!-- begin::Search bar -->
+<div class="row mb-7 mt-2">
+    <div class="col-lg-2"></div>
+    <div class="col-lg-8">
+        <form class="form-inline" (ngSubmit)="onSearch()">
+            <div class="input-group mb-3">
+                <input class="form-control" type="search"
+                    placeholder="{{'SEARCH_BAR' | translate}}" aria-label="Ara" [(ngModel)]="searchTerm"
+                    name="searchTerm">
+                <div class="input-group-append">
+
+                    <button type="submit" class="btn btn-light-primary"
+                        style="border-top-left-radius: 0px; border-bottom-left-radius: 0px;">
+                        <ng-container>
+                            <span class="indicator-label">
+                                {{'SEARCH_BAR' | translate}}
+                            </span>
+                        </ng-container>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="col-lg-2"></div>
+</div>
+<!-- end::Search bar -->
+
+<app-datatable [header]="tableName" [paginationModel]="paginationModel" [dataSource]="dataSource"
+    [totalCount]="totalCount" [columnList]="columnList" (paginationModelChange)="paginationModelChange($event)"
+    (newButtonClick)="openSaveModal($event)" (deleteButtonClick)="openDeleteModal($event)"
+    (editButtonClick)="openEditModal($event)" class="card card-xxl-stretch mb-5 mb-xl-8"
+    [hasEditPermission]="hasEditPermission" [hasDeletePermission]="hasDeletePermission" [hasNewRecordPermission]="hasNewRecordPermission"></app-datatable>

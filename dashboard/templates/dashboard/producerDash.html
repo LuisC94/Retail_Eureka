@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eureka - Producer Dashboard</title>
+    <title>RETAILL - Producer Dashboard</title>
     <style>
         /* ==================== RESET & GLOBAL ==================== */
         * {
@@ -407,6 +407,8 @@
             border-radius: 20px;
             margin-bottom: 30px;
             box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            overflow-x: auto;
+            padding-bottom: 60px;
         }
 
         .data-table-container h3 {
@@ -748,6 +750,100 @@
             background: linear-gradient(135deg, #00796b 0%, #004d40 100%);
             color: white;
         }
+
+        /* ==================== AI RECOMMENDATIONS ==================== */
+        #ai-recommendations-container {
+            background: rgba(224, 242, 241, 0.4);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(0, 121, 107, 0.25);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        .ai-recommendation-card {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 121, 107, 0.15);
+            border-left: 5px solid #00796b;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 4px 15px rgba(0, 121, 107, 0.05);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+        }
+        .ai-recommendation-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 121, 107, 0.12);
+            border-color: rgba(0, 121, 107, 0.3);
+        }
+        .ai-rec-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .ai-rec-title {
+            font-weight: 700;
+            color: #004d40;
+            font-size: 1.1em;
+        }
+        .ai-rec-sku {
+            font-size: 0.8em;
+            color: #666;
+            background: #e0f2f1;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .ai-rec-details {
+            margin-bottom: 15px;
+            font-size: 0.95em;
+            color: #2c3e50;
+        }
+        .ai-rec-details p {
+            margin: 5px 0;
+        }
+        .ai-rec-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .btn-rec-accept {
+            flex: 1;
+            background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-weight: 600;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            box-shadow: 0 2px 6px rgba(16, 185, 129, 0.2);
+        }
+        .btn-rec-accept:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
+        }
+        .btn-rec-refuse {
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-weight: 600;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            box-shadow: 0 2px 6px rgba(239, 68, 68, 0.2);
+        }
+        .btn-rec-refuse:hover {
+            background: #dc2626;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
+        }
     </style>
 </head>
 
@@ -756,7 +852,7 @@
         <!-- SIDEBAR -->
         <div class="sidebar">
             <div class="sidebar-header">
-                <h1>🌿 Eureka</h1>
+                <h1>🌿 RETAILL</h1>
                 <p>Agricultural Management System</p>
             </div>
 
@@ -780,6 +876,12 @@
                 </a>
                 <a href="#" class="menu-item" onclick="switchSidebarTab('statistics-view')">
                     📊 Statistics
+                </a>
+                <a href="#" class="menu-item" onclick="switchSidebarTab('ai-agent-performance')">
+                    🤖 Desempenho da IA
+                </a>
+                <a href="#" class="menu-item" onclick="switchSidebarTab('ai-model-training')">
+                    ⚙️ AI Model Training
                 </a>
             </nav>
         </div>
@@ -829,6 +931,8 @@
                     </form>
                 </div>
             </div>
+
+
 
             <!-- DASHBOARD PRINCIPAL -->
             <div id="main-dashboard" class="dashboard-tab" style="display:block;">
@@ -928,74 +1032,9 @@
                         </form>
                     </div>
 
-                    <!-- COLHEITA -->
                     <div class="form-section">
                         <h3>
                             <span class="step-badge">3</span>
-                            🌾 Register Harvest
-                        </h3>
-                        <form method="POST" action="{% url 'producer_submit_harvest' %}">
-                            {% csrf_token %}
-                            {{ harvest_form.as_p }}
-                
-                            <button type="submit" class="submit-button">✓ Register Harvest</button>
-                        </form>
-                    </div>
-
-                    <!-- SCRIPTS FOR HARVEST DYNAMIC FILTERING -->
-                    {{ plantation_subfamilies_map|json_script:"plantation-subs-map" }}
-                    <script>
-                        document.addEventListener('DOMContentLoaded', function() {
-                            // Parse the JSON map
-                            const subsMap = JSON.parse(document.getElementById('plantation-subs-map').textContent);
-                            
-                            function setupDynamicFiltering(plantationSelectId, subfamilySelectId) {
-                                const plantationSelect = document.getElementById(plantationSelectId);
-                                const subfamilySelect = document.getElementById(subfamilySelectId);
-                                
-                                if (!plantationSelect || !subfamilySelect) return;
-
-                                function updateSubfamilies() {
-                                    const plantationId = plantationSelect.value;
-                                    const availableSubs = subsMap[plantationId] || [];
-                                    
-                                    // Clear current options, keeping the first "Select" option
-                                    const placeholder = subfamilySelect.options[0];
-                                    subfamilySelect.innerHTML = '';
-                                    if (placeholder) {
-                                        subfamilySelect.appendChild(placeholder);
-                                    }
-                                    
-                                    if (availableSubs.length > 0) {
-                                        availableSubs.forEach(sub => {
-                                            const option = document.createElement('option');
-                                            option.value = sub.id;
-                                            option.textContent = sub.name;
-                                            subfamilySelect.appendChild(option);
-                                        });
-                                        subfamilySelect.disabled = false;
-                                    } else {
-                                        const option = document.createElement('option');
-                                        option.text = "(No crops available)";
-                                        subfamilySelect.appendChild(option);
-                                        subfamilySelect.disabled = true;
-                                    }
-                                }
-
-                                plantationSelect.addEventListener('change', updateSubfamilies);
-                            }
-
-                            // Initialize for Harvest Form
-                            setupDynamicFiltering('harvest_plantation_select', 'harvest_subfamily_select');
-                            
-                            // Initialize for Event Form
-                            setupDynamicFiltering('event_plantation_select', 'event_subfamily_select');
-                        });
-                    </script>
-
-                    <div class="form-section">
-                        <h3>
-                            <span class="step-badge">4</span>
                             🗓️ Register Cultures Events</h3>
 
                         <form method="POST" action="{% url 'producer_submit_event' %}" id="baseEventForm">
@@ -1110,6 +1149,71 @@
                         </div>
                     </div>
 
+                    <!-- SCRIPTS FOR HARVEST DYNAMIC FILTERING -->
+                    {{ plantation_subfamilies_map|json_script:"plantation-subs-map" }}
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            // Parse the JSON map
+                            const subsMap = JSON.parse(document.getElementById('plantation-subs-map').textContent);
+                            
+                            function setupDynamicFiltering(plantationSelectId, subfamilySelectId) {
+                                const plantationSelect = document.getElementById(plantationSelectId);
+                                const subfamilySelect = document.getElementById(subfamilySelectId);
+                                
+                                if (!plantationSelect || !subfamilySelect) return;
+
+                                function updateSubfamilies() {
+                                    const plantationId = plantationSelect.value;
+                                    const availableSubs = subsMap[plantationId] || [];
+                                    
+                                    // Clear current options, keeping the first "Select" option
+                                    const placeholder = subfamilySelect.options[0];
+                                    subfamilySelect.innerHTML = '';
+                                    if (placeholder) {
+                                        subfamilySelect.appendChild(placeholder);
+                                    }
+                                    
+                                    if (availableSubs.length > 0) {
+                                        availableSubs.forEach(sub => {
+                                            const option = document.createElement('option');
+                                            option.value = sub.id;
+                                            option.textContent = sub.name;
+                                            subfamilySelect.appendChild(option);
+                                        });
+                                        subfamilySelect.disabled = false;
+                                    } else {
+                                        const option = document.createElement('option');
+                                        option.text = "(No crops available)";
+                                        subfamilySelect.appendChild(option);
+                                        subfamilySelect.disabled = true;
+                                    }
+                                }
+
+                                plantationSelect.addEventListener('change', updateSubfamilies);
+                            }
+
+                            // Initialize for Harvest Form
+                            setupDynamicFiltering('harvest_plantation_select', 'harvest_subfamily_select');
+                            
+                            // Initialize for Event Form
+                            setupDynamicFiltering('event_plantation_select', 'event_subfamily_select');
+                        });
+                    </script>
+
+                    <!-- COLHEITA -->
+                    <div class="form-section">
+                        <h3>
+                            <span class="step-badge">4</span>
+                            🌾 Register Harvest
+                        </h3>
+                        <form method="POST" action="{% url 'producer_submit_harvest' %}">
+                            {% csrf_token %}
+                            {{ harvest_form.as_p }}
+                
+                            <button type="submit" class="submit-button">✓ Register Harvest</button>
+                        </form>
+                    </div>
+
                 </div>
 
                 <!-- TAB 2: VISUALIZAR INFORMAÇÕES -->
@@ -1122,11 +1226,12 @@
                             <thead>
                                 <tr>
                                     <th>Name</th>
+                                    <th>Cultures</th>
                                     <th>Trees</th>
                                     <th>Area (m²)</th>
                                     <th>Location</th>
                                     <th class="col-date">Date</th>
-                                    <th>Prod. Type</th>
+                                    <th>Tipo de Agricultura</th>
                                     <th>Chemical</th>
                                     
                                     <!-- Details -->
@@ -1141,6 +1246,13 @@
                                 {% for plan in plantation_plans %}
                                 <tr>
                                     <td>{{ plan.plantation_name|default:"-" }}</td>
+                                    <td>
+                                        {% for crop in plan.crops.all %}
+                                            <div>{{ crop.subfamily.name }}</div>
+                                        {% empty %}
+                                            <span style="color:#999">-</span>
+                                        {% endfor %}
+                                    </td>
                                     <td>{{ plan.quantity_of_trees }}</td>
                                     <td>{{ plan.area }}</td>
                                     <td>{{ plan.location }}</td>
@@ -1159,52 +1271,6 @@
                             </tbody>
                         </table>
                         {% else %}<p>No plans registered.</p>{% endif %}
-                    </div>
-
-                    <div class="data-table-container">
-                        <h3>📋 Harvest History</h3>
-                        {% if harvest_records %}
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Plantation</th>
-                                    <th>Culture</th>
-                                    <th>Qt (Kg)</th>
-                                    <th>Waste (Kg)</th>
-                                    <th>Quality</th>
-                                    <th>Caliber (mm)</th>
-                                    <th>Brix</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for record in harvest_records %}
-                                <tr>
-                                    <td>{{ record.harvest_date |date:"d-m-Y" }}</td>
-                                    <td>
-                                        {% if record.plantation %}
-                                        {{ record.plantation.plantation_name }}
-                                        {% else %}
-                                        -
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if record.subfamily %}
-                                        {{ record.subfamily.name }}
-                                        {% else %}
-                                        -
-                                        {% endif %}
-                                    </td>
-                                    <td>{{ record.harvest_quantity_kg }}</td>
-                                    <td>{{ record.utilized_quantity_kg }}</td>
-                                    <td>{{ record.avg_quality_score }}</td>
-                                    <td>{{ record.caliber|default:"-" }}</td>
-                                    <td>{{ record.soluble_solids|default:"-" }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                        {% else %}<p>No completed harvests yet.</p>{% endif %}
                     </div>
 
                     <div class="data-table-container">
@@ -1264,6 +1330,52 @@
                         <p>No events registered.</p>
                         {% endif %}
                     </div>
+
+                    <div class="data-table-container">
+                        <h3>📋 Harvest History</h3>
+                        {% if harvest_records %}
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Plantation</th>
+                                    <th>Culture</th>
+                                    <th>Qt (Kg)</th>
+                                    <th>Waste (Kg)</th>
+                                    <th>Quality</th>
+                                    <th>Caliber (mm)</th>
+                                    <th>Brix</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in harvest_records %}
+                                <tr>
+                                    <td>{{ record.harvest_date |date:"d-m-Y" }}</td>
+                                    <td>
+                                        {% if record.plantation %}
+                                        {{ record.plantation.plantation_name }}
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if record.subfamily %}
+                                        {{ record.subfamily.name }}
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ record.harvest_quantity_kg }}</td>
+                                    <td>{{ record.utilized_quantity_kg }}</td>
+                                    <td>{{ record.avg_quality_score }}</td>
+                                    <td>{{ record.caliber|default:"-" }}</td>
+                                    <td>{{ record.soluble_solids|default:"-" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% else %}<p>No completed harvests yet.</p>{% endif %}
+                    </div>
                 </div>
             </div>
 
@@ -1303,6 +1415,11 @@
                                 </button>
                             </div>
                             {{ warehouse_form.sensors }}
+                             {% if warehouse_form.sensors.errors %}
+                                <div style="color: #d32f2f; font-size: 0.9em; margin-top: 5px; font-weight: 500;">
+                                    ⚠️ {{ warehouse_form.sensors.errors.0 }}
+                                </div>
+                            {% endif %}
                         </div>
 
                         <button type="submit" class="submit-button">✓ Register Warehouse</button>
@@ -1320,6 +1437,7 @@
                                 <th>Type</th>
                                 <th>Capacity</th>
                                 <th>Sensors</th>
+                                <th>Sensor Readings (Excel/CSV)</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1331,10 +1449,19 @@
                                 <td>{{ warehouse.capacity }}</td>
                                 <td>
                                     {% for sensor in warehouse.sensors.all %}
-                                    <span class="sensor-badge">{{ sensor.sensor_id }} ({{ sensor.get_sensor_type_display}})</span>
+                                    <span class="sensor-badge">{{ sensor.sensor_id }} ({{ sensor.get_sensor_type_display }})</span>
                                     {% empty %}
                                     <span style="color:#999;font-style:italic;">None</span>
                                     {% endfor %}
+                                </td>
+                                <td>
+                                    <form method="post" action="{% url 'import_sensor_readings' warehouse.warehouse_id %}" enctype="multipart/form-data" style="display:flex; align-items:center; gap:8px; margin:0;">
+                                        {% csrf_token %}
+                                        <input type="file" name="sensor_file" accept=".xlsx,.xls,.csv" required style="font-size:0.8em; max-width:180px;">
+                                        <button type="submit" class="btn-action" style="padding: 6px 12px; font-size:0.8em; background:linear-gradient(135deg, #2e7d32, #1b5e20); color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600;">
+                                            📥 Importar
+                                        </button>
+                                    </form>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -1344,12 +1471,63 @@
                     <p style="text-align:center;color:#666;padding:20px;">No warehouses registered.</p>
                     {% endif %}
                 </div>
+
+                {% if username == 'ProducerBraga' %}
+                <style>
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                </style>
+                <div class="data-table-container" style="margin-top: 40px;">
+                    <h3>📡 RuuviTag Real-time Sensor Feed</h3>
+                    
+                    <div id="sensor-sheet-loading" style="text-align: center; padding: 30px; color: #00796b; font-weight: 600;">
+                        <span class="spinner" style="display: inline-block; width: 24px; height: 24px; border: 3px solid #b2dfdb; border-top-color: #00796b; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 12px; vertical-align: middle;"></span>
+                        A carregar leituras dos sensores em tempo real...
+                    </div>
+                    
+                    <div id="sensor-sheet-error" style="display: none; padding: 15px; background: #ffebee; border-left: 4px solid #e53935; border-radius: 8px; color: #c62828; margin-bottom: 20px; font-weight: 500;">
+                        ⚠️ Erro ao carregar dados dos sensores.
+                    </div>
+                    
+                    <div id="sensor-sheet-table-wrapper" style="display: none; max-height: 450px; overflow-y: auto; border: 1px solid #e0f2f1; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 121, 107, 0.05);">
+                        <table class="data-table" id="sensor-sheet-table">
+                            <thead>
+                                <tr>
+                                    <th class="col-date">Data/Hora</th>
+                                    <th>Sensor</th>
+                                    <th>Temperatura</th>
+                                    <th>Humidade</th>
+                                    <th>Humidade Absoluta</th>
+                                    <th>Ponto de Orvalho</th>
+                                    <th>Bateria</th>
+                                    <th>Sinal (RSSI)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Dinamicamente preenchido -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
             </div>
 
             <!-- MARKETPLACE TAB -->
             <div id="marketplace-dashboard" class="dashboard-tab" style="display:none;">
                 <div class="data-table-container">
                     <h3>🤝 Marketplace</h3>
+
+                    <!-- AI Recommendations Container -->
+                    <div id="ai-recommendations-container" style="display: none;">
+                        <h3 style="color: #00796b; font-size: 1.4em; font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; border-bottom: none; padding-bottom: 0;">
+                            <span>🤖</span> AI Stock Pricing Recommendations
+                        </h3>
+                        <div id="ai-recommendations-list" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-bottom: 25px;">
+                            <!-- Cards populate here dynamically -->
+                        </div>
+                    </div>
                     
                     <!-- CREATE ORDER FORM -->
                     <div class="form-section">
@@ -1386,6 +1564,11 @@
                                     {{ sell_order_form.quality_score.label_tag }}
                                     {{ sell_order_form.quality_score }}
                                 </div>
+                            </div>
+                            
+                            <div class="form-group" style="margin-top: 15px;">
+                                {{ sell_order_form.price_per_kg.label_tag }}
+                                {{ sell_order_form.price_per_kg }}
                             </div>
 
                             <button type="submit" class="submit-button" style="margin-top:20px;">Publicar Oferta de Venda</button>
@@ -1451,40 +1634,54 @@
                             <label style="font-weight:600; color:#33691e;">🔍 Filter By:</label>
                             
                             <div style="display: flex; align-items: center; gap: 5px;">
+                                <label for="filter-type" style="font-size: 0.9em; color:#555;">Type: </label>
+                                <select id="filter-type" style="width: 140px; padding: 5px; border: 1px solid #ccc; border-radius: 4px; height: 34px;">
+                                    <option value="">All</option>
+                                    <option value="BUY">Buy</option>
+                                    <option value="SELL">Sell</option>
+                                </select>
+                            </div>
+
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <label for="filter-culture" style="font-size: 0.9em; color:#555;">Culture: </label>
+                                <select id="filter-culture" style="width: 140px; padding: 5px; border: 1px solid #ccc; border-radius: 4px; height: 34px;">
+                                    <option value="">All </option>
+                                </select>
+                            </div>
+
+                            <div style="display: flex; align-items: center; gap: 5px;">
                                 <label for="filter-cal" style="font-size: 0.9em; color:#555;">Caliber > </label>
-                                <input type="number" id="filter-cal" step="1" style="width: 70px; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                                <input type="number" id="filter-cal" step="1" style="width: 70px; padding: 5px; border: 1px solid #ccc; border-radius: 4px; height: 34px;">
                             </div>
                             
                             <div style="display: flex; align-items: center; gap: 5px;">
                                 <label for="filter-brix" style="font-size: 0.9em; color:#555;">Brix > </label>
-                                <input type="number" id="filter-brix" step="0.1" style="width: 70px; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                                <input type="number" id="filter-brix" step="0.1" style="width: 70px; padding: 5px; border: 1px solid #ccc; border-radius: 4px; height: 34px;">
                             </div>
                             
                             <div style="display: flex; align-items: center; gap: 5px;">
                                 <label for="filter-score" style="font-size: 0.9em; color:#555;">Score > </label>
-                                <input type="number" id="filter-score" step="0.1" style="width: 70px; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                                <input type="number" id="filter-score" step="0.1" style="width: 70px; padding: 5px; border: 1px solid #ccc; border-radius: 4px; height: 34px;">
                             </div>
                             
-                            <button onclick="filterOpenTransactions()" style="background: #33691e; color: white; border: none; padding: 6px 15px; border-radius: 5px; cursor: pointer; font-weight: 600;">Apply</button>
-                            <button onclick="clearTransactionFilters()" style="background: #bdbdbd; color: white; border: none; padding: 6px 15px; border-radius: 5px; cursor: pointer;">Clear</button>
+                            <button onclick="filterOpenTransactions()" style="background: #33691e; color: white; border: none; padding: 6px 15px; border-radius: 5px; cursor: pointer; font-weight: 600; height: 34px;">Apply</button>
+                            <button onclick="clearTransactionFilters()" style="background: #bdbdbd; color: white; border: none; padding: 6px 15px; border-radius: 5px; cursor: pointer; height: 34px;">Clear</button>
                         </div>
 
                         <script>
                         function filterOpenTransactions() {
+                            const typeVal = document.getElementById('filter-type').value;
+                            const cultureVal = document.getElementById('filter-culture').value;
                             const calVal = parseFloat(document.getElementById('filter-cal').value) || 0;
                             const brixVal = parseFloat(document.getElementById('filter-brix').value) || 0;
                             const scoreVal = parseFloat(document.getElementById('filter-score').value) || 0;
-                            
-                            const table = document.querySelector('.data-table'); // Helper: Ensure this targets the correct table if multiple exist.
-                            // Better selector: find table inside the "Open Transactions" container or add ID to table.
-                            // Assuming first .data-table in this context or adding ID 'open-trans-table' would be safer.
-                            // Let's rely on adding ID to table in next step or assuming standard order. 
-                            // *Wait*, I should add ID 'open-trans-table' to the table in lines below.
                             
                             const rows = document.querySelectorAll('#open-trans-table tbody tr');
                             
                             rows.forEach(row => {
                                 // Columns Indices (0-based): Date(0), Type(1), Req(2), Role(3), Culture(4), Cal(5), Brix(6), Score(7)
+                                const typeCell = row.cells[1].innerText.toLowerCase();
+                                const cultureCell = row.cells[4].innerText.trim();
                                 const calCell = row.cells[5].innerText.trim();
                                 const brixCell = row.cells[6].innerText.trim();
                                 const scoreCell = row.cells[7].innerText.trim();
@@ -1494,6 +1691,17 @@
                                 const scoreNum = parseCellVal(scoreCell);
                                 
                                 let show = true;
+                                
+                                // Order Type filter
+                                if (typeVal === 'BUY') {
+                                    if (!typeCell.includes('purchase') && !typeCell.includes('compra')) show = false;
+                                } else if (typeVal === 'SELL') {
+                                    if (!typeCell.includes('export') && !typeCell.includes('venda')) show = false;
+                                }
+                                
+                                // Culture filter
+                                if (cultureVal && cultureCell !== cultureVal) show = false;
+                                
                                 if (calVal > 0 && calNum < calVal) show = false;
                                 if (brixVal > 0 && brixNum < brixVal) show = false;
                                 if (scoreVal > 0 && scoreNum < scoreVal) show = false;
@@ -1503,21 +1711,48 @@
                         }
                         
                         function parseCellVal(text) {
-                            // Handle "> 50"
-                            if (text.includes('>')) {
-                                text = text.replace('>', '').trim();
-                            }
-                            // Handle "-"
+                            if (text.includes('>')) text = text.replace('>', '').trim();
                             if (text === '-') return 0;
                             return parseFloat(text) || 0;
                         }
                         
                         function clearTransactionFilters() {
+                            document.getElementById('filter-type').value = '';
+                            document.getElementById('filter-culture').value = '';
                             document.getElementById('filter-cal').value = '';
                             document.getElementById('filter-brix').value = '';
                             document.getElementById('filter-score').value = '';
                             filterOpenTransactions();
                         }
+                        
+                        function populateCultureFilter() {
+                            const table = document.getElementById('open-trans-table');
+                            if (!table) return;
+                            const rows = table.querySelectorAll('tbody tr');
+                            const cultures = new Set();
+                            
+                            rows.forEach(row => {
+                                if (row.cells[4]) {
+                                    const text = row.cells[4].innerText.trim();
+                                    if (text && text !== '-') {
+                                        cultures.add(text);
+                                    }
+                                }
+                            });
+                            
+                            const filterSelect = document.getElementById('filter-culture');
+                            if (!filterSelect) return;
+                            
+                            filterSelect.innerHTML = '<option value="">All </option>';
+                            Array.from(cultures).sort().forEach(c => {
+                                const opt = document.createElement('option');
+                                opt.value = c;
+                                opt.textContent = c;
+                                filterSelect.appendChild(opt);
+                            });
+                        }
+                        
+                        document.addEventListener('DOMContentLoaded', populateCultureFilter);
                         </script>
 
                         <table class="data-table" id="open-trans-table">
@@ -1531,6 +1766,7 @@
                                     <th>Calibre</th>
                                     <th>Brix</th>
                                     <th>Score</th>
+                                    <th>Price/Kg</th>
                                     <th>Qty (Kg)</th>
                                     <th>Location</th>
                                     <th>Action</th>
@@ -1586,6 +1822,9 @@
                                         {% endif %}
                                     </td>
 
+                                    <!-- Price/Kg -->
+                                    <td>{{ order.price_per_kg|default_if_none:"-" }} €</td>
+
                                     <td>{{ order.quantity_kg }}</td>
                                     <td>{{ order.warehouse_location }}</td>
                                     <td>
@@ -1628,6 +1867,7 @@
                                     <th>Type</th>
                                     <th>Requester</th>
                                     <th>Item</th>
+                                    <th>Price/Kg</th>
                                     <th>Qty</th>
                                     <th>Fulfilled By</th>
                                 </tr>
@@ -1639,6 +1879,7 @@
                                     <td>{{ order.get_order_type_display }}</td>
                                     <td>{{ order.requester.username }}</td>
                                     <td>{{ order.culture.name }}</td>
+                                    <td>{{ order.price_per_kg|default_if_none:"-" }} €</td>
                                     <td>{{ order.quantity_kg }}</td>
                                     <td>{{ order.fulfilled_by.username }}</td>
                                 </tr>
@@ -1809,9 +2050,9 @@
                                 <td>{{ record.harvest_quantity_kg }}</td>
                                 <td>{{ record.delivered_quantity_kg|default:"0" }}</td>
                                 <td>
-                                    <a href="{% url 'view_batch_chain' 'LOTE-'|add:record.pk_str %}" class="submit-button" style="padding: 5px 10px; font-size: 0.8em; text-decoration: none; background: linear-gradient(135deg, #00796b 0%, #004d40 100%); width: 100%; text-align: center; display: block;">
-                                        🔗 Rastrear
-                                    </a>
+                                    <button onclick="openHistoryModal('{{ record.pk }}')" class="submit-button" style="padding: 5px 10px; font-size: 0.8em; text-decoration: none; background: linear-gradient(135deg, #00796b 0%, #004d40 100%); width: 100%; text-align: center; display: block; border: none; color: white;">
+                                        📜 Ver Histórico
+                                    </button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -1820,6 +2061,63 @@
                     {% else %}
                     <p>No harvest records found.</p>
                     {% endif %}
+                </div>
+
+                <!-- FORMULÁRIO DE AJUSTE MANUAL DE STOCK -->
+                <div class="form-section" style="margin-top: 30px;">
+                    <h3>
+                        <span style="display:inline-block; width:40px; height:40px; background:linear-gradient(135deg, #00796b, #004d40); color:white; border-radius:50%; text-align:center; line-height:40px; margin-right:15px; font-size:1.1em; box-shadow:0 3px 10px rgba(0,121,107,0.4);">⚙️</span>
+                        Ajuste Manual de Stock (Direct Database Insertion)
+                    </h3>
+                    <div class="info-box" style="background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%); padding: 18px 24px; border-radius: 12px; margin-bottom: 25px; color: #004d40; font-size: 0.95em; border-left: 5px solid #00796b; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 8px rgba(0,121,107,0.1);">
+                        <span>ℹ️</span>
+                        Permite ajustar ou introduzir stock diretamente na base de dados para um produto e armazém específicos.
+                    </div>
+                    
+                    <form id="adjust-stock-form" onsubmit="submitStockAdjustment(event)">
+                        {% csrf_token %}
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 20px;">
+                            <div class="form-group" style="margin-bottom: 20px;">
+                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Cultura / Produto</label>
+                                <select name="culture_id" id="adj-culture-id" required style="padding: 14px; border: 2px solid #e0e0e0; border-radius: 10px; width: 100%;">
+                                    <option value="">-- Selecione a Cultura --</option>
+                                    {% for item in product_subfamilies %}
+                                        <option value="{{ item.pk }}">{{ item.name }} ({{ item.fruit_type }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 20px;">
+                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Armazém / Localização</label>
+                                <select name="warehouse_location" id="adj-warehouse-location" required style="padding: 14px; border: 2px solid #e0e0e0; border-radius: 10px; width: 100%;">
+                                    <option value="">-- Selecione o Armazém --</option>
+                                    {% for w in producer_warehouses %}
+                                        <option value="{{ w.location }}">{{ w.location }}</option>
+                                    {% endfor %}
+                                    {% for w in retailer_warehouses %}
+                                        <option value="{{ w.location }}">{{ w.location }}</option>
+                                    {% endfor %}
+                                    {% for w in processor_warehouses %}
+                                        <option value="{{ w.location }}">{{ w.location }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 20px;">
+                            <div class="form-group" style="margin-bottom: 20px;">
+                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Quantidade (Kg)</label>
+                                <input type="number" step="0.01" name="quantity" id="adj-quantity" placeholder="Ex: 500.00" required style="padding: 14px; border: 2px solid #e0e0e0; border-radius: 10px; width: 100%;">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 20px;">
+                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Tipo de Ajuste</label>
+                                <select name="adjustment_type" id="adj-adjustment-type" required style="padding: 14px; border: 2px solid #e0e0e0; border-radius: 10px; width: 100%;">
+                                    <option value="set" selected>⚙️ Definir Valor Fixo (Substituir)</option>
+                                    <option value="add">➕ Adicionar Quantidade (Somar)</option>
+                                    <option value="subtract">➖ Retirar Quantidade (Subtrair)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="submit-button" style="margin-top: 10px;">✓ Gravar Stock na Base de Dados</button>
+                    </form>
                 </div>
             </div>
 
@@ -1926,6 +2224,250 @@
                     {% else %}
                     <p>No open orders available.</p>
                     {% endif %}
+                </div>
+            </div>
+
+            <!-- AI AGENT PERFORMANCE TAB -->
+            <div id="ai-agent-performance" class="dashboard-tab" style="display: none;">
+                <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+                
+                <h3 style="color: #00796b; margin-bottom: 25px; font-weight: 700; border-bottom: 3px solid #00796b; padding-bottom: 10px; display: flex; align-items: center; gap: 10px;">
+                    <span>🤖</span> Desempenho do Agente
+                </h3>
+                
+                <div style="display: flex; gap: 30px; margin-bottom: 30px; align-items: stretch; flex-wrap: wrap;">
+                    
+                    <!-- CONFIGURATION COLUMN -->
+                    <div style="width: 320px; background: white; border: 2px solid #e0f2f1; border-radius: 20px; padding: 25px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between; flex-shrink: 0;">
+                        <div>
+                            <!-- SKU Selection -->
+                            <div style="margin-bottom: 20px;">
+                                <label style="display: block; font-weight: 600; color: #2c3e50; margin-bottom: 8px; font-size: 0.9em;">Cultura SKU:</label>
+                                <select id="sim-pricing-sku" style="width: 100%; padding: 10px 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 0.95em;">
+                                    <option value="3_080" selected>Maçã Gala - SKU 3_080</option>
+                                    <option value="3_090">Maçã Fuji - SKU 3_090</option>
+                                    <option value="3_252">Kiwi Hayward - SKU 3_252</option>
+                                    <option value="3_586">Maçã Golden - SKU 3_586</option>
+                                    <option value="911753">Maçã Reineta - SKU 911753</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Capacity Slider -->
+                            <div style="margin-bottom: 20px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                    <label style="font-weight: 600; color: #2c3e50; font-size: 0.9em;">Capacidade Máxima:</label>
+                                    <span id="sim-pricing-capacity-val" style="color: #00796b; font-weight: bold;">500 kg</span>
+                                </div>
+                                <input type="range" id="sim-pricing-capacity" min="100" max="2000" step="50" value="500" style="accent-color: #00796b; width: 100%; cursor: pointer;" oninput="document.getElementById('sim-pricing-capacity-val').innerText = this.value + ' kg'">
+                            </div>
+
+                            <!-- Update Interval Slider -->
+                            <div style="margin-bottom: 25px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                    <label style="font-weight: 600; color: #2c3e50; font-size: 0.9em;">Intervalo Fine-Tuning:</label>
+                                    <span id="sim-pricing-interval-val" style="color: #00796b; font-weight: bold;">15 dias</span>
+                                </div>
+                                <input type="range" id="sim-pricing-interval" min="5" max="30" step="1" value="15" style="accent-color: #00796b; width: 100%; cursor: pointer;" oninput="document.getElementById('sim-pricing-interval-val').innerText = this.value + ' dias'">
+                            </div>
+                        </div>
+                        
+                        <!-- Run Button -->
+                        <button type="button" id="btn-run-pricing-sim" onclick="startProducerAgentSimulation()" style="background: linear-gradient(135deg, #10b981 0%, #047857 100%); color: white; border: none; border-radius: 12px; padding: 15px; font-size: 1.1em; font-weight: bold; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); display: flex; align-items: center; justify-content: center; gap: 10px;">
+                            <span>▶️</span> Correr Simulação
+                        </button>
+                    </div>
+                    
+                    <!-- CARD 2: STATE VARIABLES -->
+                    <div style="width: 320px; background: white; border: 2px solid #e0f2f1; border-radius: 20px; padding: 25px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); display: flex; flex-direction: column; flex-shrink: 0;">
+                        <h4 style="color: #00796b; font-weight: 700; margin-bottom: 15px; font-size: 1.1em; display: flex; align-items: center; gap: 8px;">
+                            <span>🧠</span> Estado do Armazém (Observação)
+                        </h4>
+                        <ul style="font-size: 0.85em; color: #4a5568; padding-left: 18px; margin: 0; line-height: 1.7; list-style-type: square;">
+                            <li style="margin-bottom: 6px;"><strong>Perfil RSL (G0-G3):</strong> Stock agrupado por dias restantes de vida útil</li>
+                            <li style="margin-bottom: 6px;"><strong>Procura Esperada:</strong> Previsão para hoje ($T$) e amanhã ($T+1$)</li>
+                            <li style="margin-bottom: 6px;"><strong>Preço Base:</strong> Preço de referência de mercado de hoje</li>
+                            <li style="margin-bottom: 6px;"><strong>Preço Relativo:</strong> Z-score do preço de mercado (últimos 15 dias)</li>
+                            <li style="margin-bottom: 6px;"><strong>Sinais Cíclicos:</strong> Posição senoidal/cosseno do dia/mês</li>
+                            <li style="margin-bottom: 6px;"><strong>Métricas Críticas:</strong> Taxa de cobertura de stock e rácio de urgência</li>
+                        </ul>
+                    </div>
+
+                    <!-- CARD 3: REWARD CRITERIA -->
+                    <div style="width: 320px; background: white; border: 2px solid #e0f2f1; border-radius: 20px; padding: 25px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); display: flex; flex-direction: column; flex-shrink: 0;">
+                        <h4 style="color: #00796b; font-weight: 700; margin-bottom: 12px; font-size: 1.1em; display: flex; align-items: center; gap: 8px;">
+                            <span>💰</span> Equação do Retorno (Recompensa)
+                        </h4>
+                        <div style="background: #edf2f7; padding: 8px 12px; border-radius: 8px; font-family: monospace; font-size: 0.75em; color: #2d3748; margin-bottom: 12px; border: 1px solid #e2e8f0; text-align: center; font-weight: bold;">
+                            Reward = Lucro / 100 - Penalizações
+                        </div>
+                        <ul style="font-size: 0.85em; color: #4a5568; padding-left: 18px; margin: 0; line-height: 1.6; list-style-type: square;">
+                            <li style="margin-bottom: 6px;"><strong>Faturamento:</strong> Vendas diárias baseadas no preço dinâmico e elasticidade</li>
+                            <li style="margin-bottom: 6px;"><strong>Custos de Armazenamento:</strong> Despesa diária por volume ocupado ($0.70€/\text{m}^3$)</li>
+                            <li style="margin-bottom: 6px;"><strong>Custos de Quebra:</strong> Custo de aquisição ($60\%$ do preço base) por quilo de descarte biológico</li>
+                            <li style="margin-bottom: 6px;"><strong>Regularização Preço:</strong> Penaliza desvios extremos do preço base de mercado</li>
+                            <li style="margin-bottom: 6px;"><strong>Regularização Exposição:</strong> Penaliza o agente se o stock for guardado no armazém sem ser exposto no linear</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- RIGHT PANELS (KPIs and Charts) -->
+                    <div style="flex-grow: 1; min-width: 500px; display: flex; flex-direction: column; gap: 20px; position: relative;" id="sim-pricing-viewport">
+                        
+                        <!-- INITIAL PLACEHOLDER BLOCK -->
+                        <div id="sim-pricing-welcome" style="flex-grow: 1; min-height: 450px; background: white; border: 2px dashed #e0f2f1; border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; text-align: center; box-shadow: 0 5px 20px rgba(0,0,0,0.03);">
+                            <span style="font-size: 4em; animation: pulse 2s infinite; margin-bottom: 20px;">🤖</span>
+                            <h3 style="color: #00796b; margin-bottom: 10px; font-weight: 700;">Pronto para Simular o Pricing</h3>
+                            <p style="color: #666; max-width: 320px; font-size: 0.9em; line-height: 1.4;">Clique em "Correr Simulação" para projetar os lucros e decisões do agente PPO contra as baselines no split de teste de 40%.</p>
+                        </div>
+                        
+                        <!-- SIMULATION LOADER OVERLAY (Initially Hidden) -->
+                        <div id="sim-pricing-loader" style="display: none; position: absolute; z-index: 10; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); border-radius: 20px; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px; animation: fadeIn 0.3s ease;">
+                            <div style="border: 6px solid #e0f2f1; border-top: 6px solid #00796b; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(0, 121, 107, 0.15);"></div>
+                            <h3 style="color: #00796b; font-weight: 700; margin-bottom: 10px;" id="sim-pricing-loader-title">Carregando Cérebro PPO...</h3>
+                            <p style="color: #555; max-width: 400px; font-size: 0.95em; line-height: 1.5; font-style: italic;" id="sim-pricing-loader-status">
+                                A obter ficheiros do modelo PyTorch e registos do dataset...
+                            </p>
+                        </div>
+                        
+                        <!-- REAL RESULTS DATA (Initially Hidden) -->
+                        <div id="sim-pricing-results" style="display: none; flex-direction: column; gap: 20px;">
+                            
+                            <!-- KPI SCOREBOARD -->
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px;">
+                                
+                                <div style="background: white; border: 2px solid #e2e8f0; border-left: 5px solid #10b981; border-radius: 15px; padding: 15px 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
+                                    <span style="display: block; color: #64748b; font-size: 0.8em; font-weight: bold; text-transform: uppercase;">Lucro do Agente</span>
+                                    <strong id="kpi-pricing-profit" style="display: block; font-size: 1.5em; color: #047857; margin-top: 5px;">€ 0.00</strong>
+                                </div>
+                                
+                                <div style="background: white; border: 2px solid #e2e8f0; border-left: 5px solid #3b82f6; border-radius: 15px; padding: 15px 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
+                                    <span style="display: block; color: #64748b; font-size: 0.8em; font-weight: bold; text-transform: uppercase;">Ganho vs Baseline</span>
+                                    <strong id="kpi-pricing-gain" style="display: block; font-size: 1.5em; color: #1d4ed8; margin-top: 5px;">0.0%</strong>
+                                </div>
+                                
+                                <div style="background: white; border: 2px solid #e2e8f0; border-left: 5px solid #f59e0b; border-radius: 15px; padding: 15px 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
+                                    <span style="display: block; color: #64748b; font-size: 0.8em; font-weight: bold; text-transform: uppercase;">Fruta Descartada (Quebra)</span>
+                                    <strong id="kpi-pricing-waste" style="display: block; font-size: 1.25em; color: #b45309; margin-top: 5px; white-space: nowrap;">0 kg vs 0 kg</strong>
+                                    <span id="kpi-pricing-waste-detail" style="display: block; font-size: 0.8em; color: #64748b; margin-top: 5px;">Agente: 0% vs Estática: 0% do total da procura</span>
+                                </div>
+                                
+                                <div style="background: white; border: 2px solid #e2e8f0; border-left: 5px solid #8b5cf6; border-radius: 15px; padding: 15px 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
+                                    <span style="display: block; color: #64748b; font-size: 0.8em; font-weight: bold; text-transform: uppercase;">Ciclos Otimização Online</span>
+                                    <strong id="kpi-pricing-updates" style="display: block; font-size: 1.5em; color: #6d28d9; margin-top: 5px;">0</strong>
+                                </div>
+                            </div>
+                            
+                            <!-- CHART CARD 1: Lucros Acumulados -->
+                            <div style="background: white; border: 2px solid #e0f2f1; border-radius: 20px; padding: 25px; box-shadow: 0 5px 20px rgba(0,0,0,0.05);">
+                                <h4 style="color: #00796b; font-weight: 700; margin-bottom: 15px; font-size: 1.1em;">
+                                    <span>📈 Lucro Acumulado: Agente PPO vs Baselines</span>
+                                </h4>
+                                <div style="height: 320px; position: relative;">
+                                    <canvas id="lucro-pricing-chart"></canvas>
+                                </div>
+                            </div>
+                            
+                            <!-- CHART CARD 2: Ações Diárias do Agente -->
+                            <div style="background: white; border: 2px solid #e0f2f1; border-radius: 20px; padding: 25px; box-shadow: 0 5px 20px rgba(0,0,0,0.05);">
+                                <h4 style="color: #00796b; font-weight: 700; margin-bottom: 15px; font-size: 1.1em; display: flex; align-items: center; justify-content: space-between;">
+                                    <span>🏷️ Decisões Diárias (Preço, Exposição, Stock e Quebra)</span>
+                                    <span style="font-size: 0.8em; font-weight: normal; color: #666;">(Passe com o cursor para detalhar dados diários)</span>
+                                </h4>
+                                <div style="height: 320px; position: relative;">
+                                    <canvas id="decisoes-pricing-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI MODEL TRAINING TAB -->
+            <div id="ai-model-training" class="dashboard-tab" style="display: none;">
+                <h3 style="color: #00796b; margin-bottom: 25px; font-weight: 700; border-bottom: 3px solid #00796b; padding-bottom: 10px; display: flex; align-items: center; gap: 10px;">
+                    <span>⚙️</span> AI Model Training Panel
+                </h3>
+
+                <div class="form-section">
+                    <h3>
+                        <span style="display:inline-block; width:40px; height:40px; background:linear-gradient(135deg, #00796b, #004d40); color:white; border-radius:50%; text-align:center; line-height:40px; margin-right:15px; font-size:1.1em; box-shadow:0 3px 10px rgba(0,121,107,0.4);">📈</span>
+                        1. Treinar Modelo de Agente de Stock (Stock Agent)
+                    </h3>
+                    <div class="info-box" style="background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%); padding: 18px 24px; border-radius: 12px; margin-bottom: 25px; color: #004d40; font-size: 0.95em; border-left: 5px solid #00796b; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 8px rgba(0,121,107,0.1);">
+                        <span>📊</span>
+                        Carregue o histórico de vendas/inventário (Excel/CSV) para otimizar a política de pricing dinâmico e gestão de stock do Stock Agent.
+                    </div>
+
+                    <!-- Template download -->
+                    <div style="margin-bottom: 25px; padding: 15px; background: #f8f9fa; border-radius: 10px; border: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong style="color: #004d40; display: block;">Descarregar Template de Inventário</strong>
+                            <span style="font-size: 0.85em; color: #666;">Utilize este formato Excel estruturado para carregar as suas vendas passadas.</span>
+                        </div>
+                        <a href="{% url 'download_training_template' %}?type=stock" id="download-template-btn" data-base-url="{% url 'download_training_template' %}?type=stock" style="background: #00796b; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.9em; box-shadow: 0 2px 5px rgba(0,121,107,0.2);">
+                            📥 Download Template
+                        </a>
+                    </div>
+
+                    <form id="stock-training-form" onsubmit="startAsyncTraining(event, 'stock')" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 20px;">
+                            <div class="form-group">
+                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Cultura / Lote em Stock</label>
+                                <select name="sku" id="train-sku" required style="padding: 14px; border: 2px solid #e0e0e0; border-radius: 10px; width: 100%;">
+                                    <option value="" disabled selected>-- Selecione uma cultura / lote em stock --</option>
+                                    {% for record in harvest_records %}
+                                        {% if record.current_stock_kg > 0 %}
+                                            <option value="{{ record.subfamily.subfamily_id }}|{{ record.pk }}">{{ record.subfamily.name }} - Lote #{{ record.pk }} ({{ record.current_stock_kg }} kg em stock)</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Ficheiro de Histórico (Excel ou CSV)</label>
+                                <input type="file" name="history_file" accept=".xlsx,.xls,.csv" required style="padding: 10px; border: 2px solid #e0e0e0; border-radius: 10px; width: 100%;">
+                            </div>
+                        </div>
+                        <button type="submit" class="submit-button" id="btn-start-training">🚀 Iniciar Treino do Stock Agent (PPO Optimization)</button>
+                    </form>
+                    
+                    <script>
+                        document.addEventListener("DOMContentLoaded", function() {
+                            const selectSku = document.getElementById('train-sku');
+                            const downloadBtn = document.getElementById('download-template-btn');
+                            if (selectSku && downloadBtn) {
+                                selectSku.addEventListener('change', function() {
+                                    const skuVal = this.value;
+                                    const baseUrl = downloadBtn.getAttribute('data-base-url');
+                                    downloadBtn.href = `${baseUrl}&sku=${encodeURIComponent(skuVal)}`;
+                                });
+                            }
+                        });
+                    </script>
+                </div>
+
+                <!-- Painel de Progresso do Treino -->
+                <div class="form-section" id="training-progress-card" style="display: none; border-color: #00796b;">
+                    <h3>
+                        <span style="display:inline-block; width:40px; height:40px; background:linear-gradient(135deg, #00796b, #004d40); color:white; border-radius:50%; text-align:center; line-height:40px; margin-right:15px; font-size:1.1em;">🔄</span>
+                        Estado do Treino em Background
+                    </h3>
+                    <div style="margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 8px;">
+                            <span id="train-status-msg">Preparando motores PyTorch...</span>
+                            <span id="train-pct">0%</span>
+                        </div>
+                        <div style="width: 100%; background: #e0e0e0; height: 12px; border-radius: 6px; overflow: hidden;">
+                            <div id="train-progress-bar" style="width: 0%; background: linear-gradient(90deg, #10b981, #059669); height: 100%; transition: width 0.4s ease;"></div>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; font-size: 0.9em; color: #4a5568; background: #f8f9fa; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
+                        <div>
+                            <strong>Épocas Completadas:</strong> <span id="train-epoch">0</span>
+                        </div>
+                        <div>
+                            <strong>Erro Médio (Loss):</strong> <span id="train-loss">0.0000</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -2203,13 +2745,104 @@
             evt.currentTarget.classList.add("active");
         }
 
+        {% if username == 'ProducerBraga' %}
+        function loadSensorSheetData() {
+            const loadingDiv = document.getElementById('sensor-sheet-loading');
+            const errorDiv = document.getElementById('sensor-sheet-error');
+            const wrapperDiv = document.getElementById('sensor-sheet-table-wrapper');
+            const tbody = document.querySelector('#sensor-sheet-table tbody');
+
+            loadingDiv.style.display = 'block';
+            errorDiv.style.display = 'none';
+            wrapperDiv.style.display = 'none';
+
+            fetch('/api/sensor-data/')
+                .then(response => {
+                    if (!response.ok) throw new Error('Falha ao obter dados do servidor (' + response.status + ')');
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === 'error') {
+                        throw new Error(data.message);
+                    }
+                    tbody.innerHTML = '';
+                    if (data.data && data.data.length > 0) {
+                        data.data.forEach(row => {
+                            const tr = document.createElement('tr');
+                            
+                            // Colunas: Data, Sensor, Temperatura, Humidade, Humidade Absoluta, Ponto de Orvalho, Bateria, RSSI
+                            const tdDate = document.createElement('td');
+                            tdDate.textContent = row['Date'] || '-';
+                            tdDate.className = 'col-date';
+                            tr.appendChild(tdDate);
+
+                            const tdSensor = document.createElement('td');
+                            tdSensor.textContent = row['Sensor Name'] || '-';
+                            tr.appendChild(tdSensor);
+
+                            const tdTemp = document.createElement('td');
+                            tdTemp.textContent = row['Temperature'] ? row['Temperature'] + ' °C' : '-';
+                            tr.appendChild(tdTemp);
+
+                            const tdHum = document.createElement('td');
+                            tdHum.textContent = row['Humidity'] ? row['Humidity'] + ' %' : '-';
+                            tr.appendChild(tdHum);
+
+                            const tdAbsHum = document.createElement('td');
+                            tdAbsHum.textContent = row['Abs. Humidity'] ? row['Abs. Humidity'] + ' g/m³' : '-';
+                            tr.appendChild(tdAbsHum);
+
+                            const tdDewPoint = document.createElement('td');
+                            tdDewPoint.textContent = row['Dew Point'] ? row['Dew Point'] + ' °C' : '-';
+                            tr.appendChild(tdDewPoint);
+
+                            const tdBattery = document.createElement('td');
+                            tdBattery.textContent = row['Battery'] ? row['Battery'] + ' V' : '-';
+                            tr.appendChild(tdBattery);
+
+                            const tdRSSI = document.createElement('td');
+                            tdRSSI.textContent = row['RSSI Signal'] ? row['RSSI Signal'] + ' dBm' : '-';
+                            tr.appendChild(tdRSSI);
+
+                            tbody.appendChild(tr);
+                        });
+                        loadingDiv.style.display = 'none';
+                        wrapperDiv.style.display = 'block';
+                    } else {
+                        loadingDiv.innerHTML = 'Sem leituras de sensores disponíveis.';
+                    }
+                })
+                .catch(err => {
+                    console.error('Erro de sensores:', err);
+                    loadingDiv.style.display = 'none';
+                    errorDiv.style.display = 'block';
+                    errorDiv.textContent = '⚠️ Erro ao carregar dados dos sensores: ' + err.message;
+                });
+        }
+        {% endif %}
+
         function switchSidebarTab(tabId) {
             document.querySelectorAll('.dashboard-tab').forEach(tab => tab.style.display = 'none');
-            document.getElementById(tabId).style.display = 'block';
+            
+            const selectedTab = document.getElementById(tabId);
+            if (selectedTab) {
+                selectedTab.style.display = 'block';
+            }
 
-            // Atualizar menu ativo
-            document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
-            event.target.classList.add('active');
+            // Atualizar menu ativo de forma robusta
+            document.querySelectorAll('.menu-item').forEach(item => {
+                item.classList.remove('active');
+                const onclickVal = item.getAttribute('onclick');
+                if (onclickVal && onclickVal.includes(tabId)) {
+                    item.classList.add('active');
+                }
+            });
+
+            {% if username == 'ProducerBraga' %}
+            if (tabId === 'warehouse-management') {
+                loadSensorSheetData();
+            }
+            {% endif %}
         }
 
         function openSensorModal() {
@@ -2454,8 +3087,6 @@
             cultureSelect.addEventListener('change', applyFilters);
         });
     </script>
-
-    </script>
     
     <script>
         // === PRODUCT QUANTITY SUMMARY FILTERING LOGIC ===
@@ -2531,7 +3162,6 @@
             cultureSelect.addEventListener('change', applyQtyFilters);
         });
     </script>
-    </script>
     
     <script>
         // NEW: Accept Order Modal Logic
@@ -2557,5 +3187,719 @@
             }
         }
     </script>
+    
+    <script>
+        // =================================================================
+        // RELOAD-WITH-PERSISTENCE & LOADING INDICATOR
+        // =================================================================
+        document.addEventListener("DOMContentLoaded", function() {
+            
+            // 1. TAB PERSISTENCE (Save/Restore State)
+            
+            // Save sidebar selection
+            const sidebarLinks = document.querySelectorAll('.sidebar .menu-item');
+            sidebarLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    const onclickVal = this.getAttribute('onclick');
+                    if(onclickVal) {
+                         const match = onclickVal.match(/'([^']+)'/);
+                         if(match) localStorage.setItem('activeSidebarTab', match[1]);
+                    }
+                });
+            });
+            
+            // Save inner tab selection
+            const tabLinks = document.querySelectorAll('.tab-link');
+            tabLinks.forEach(link => {
+                link.addEventListener('click', function() {
+                    const onclickVal = this.getAttribute('onclick');
+                    if(onclickVal) {
+                         const match = onclickVal.match(/'([^']+)'/);
+                         if(match) localStorage.setItem('activeInnerTab', match[1]);
+                    }
+                });
+            });
+            
+            // Restore State on Load
+            const savedSidebar = localStorage.getItem('activeSidebarTab');
+            if(savedSidebar && typeof switchSidebarTab === 'function') {
+                switchSidebarTab(savedSidebar);
+            }
+            
+            const savedInner = localStorage.getItem('activeInnerTab');
+            if(savedInner) {
+                const btn = document.querySelector(`button[onclick*="'${savedInner}'"]`);
+                if(btn) btn.click();
+            }
+
+            // 2. LOADING INDICATOR ON SUBMIT
+            // We do NOT prevent default. We let the page reload.
+            // We just show visual feedback.
+            const forms = document.querySelectorAll('form');
+            forms.forEach(form => {
+                if(form.action.includes('logout')) return; // Don't show loading on logout
+
+                form.addEventListener('submit', function(e) {
+                    const submitBtn = this.querySelector('button[type="submit"]');
+                    if(submitBtn) {
+                        // Change text to show processing
+                        const originalText = submitBtn.innerHTML;
+                        submitBtn.innerHTML = '⏳ Processing...';
+                        submitBtn.style.opacity = '0.7';
+                        
+                        // Disable to prevent double click, BUT we must ensure the form still submits.
+                        // Standard form submission might not send the button value if disabled immediately.
+                        // A safer way is to disable AFTER a micro-timeout or just CSS pointer-events.
+                        submitBtn.style.pointerEvents = 'none'; 
+                    }
+                    // e.preventDefault() is NOT called. Page will reload.
+                });
+            });
+        });
+    </script>
+
+    <!-- ====================== HISTORY MODAL (AJAX) ====================== -->
+    <div id="historyModal" class="modal" style="display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6);">
+        <div class="modal-content" style="background-color: #fefefe; margin: 5% auto; padding: 0; border: 1px solid #888; width: 90%; max-width: 800px; border-radius: 10px; overflow: hidden;">
+            <!-- Content loaded via AJAX -->
+            <div id="historyModalContent" style="padding: 20px; text-align: center;">
+                <p>⏳ A carregar dados da Blockchain...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openHistoryModal(harvestId) {
+            const modal = document.getElementById('historyModal');
+            const contentDiv = document.getElementById('historyModalContent');
+            
+            modal.style.display = "block";
+            contentDiv.innerHTML = '<p style="padding:20px; text-align:center;">⏳ A carregar dados da Blockchain...</p>';
+            
+            // Fetch Modal Content
+            fetch(`/api/harvest-history/${harvestId}/`)
+                .then(response => response.text())
+                .then(html => {
+                    contentDiv.innerHTML = html;
+                })
+                .catch(err => {
+                    contentDiv.innerHTML = `<div class="alert alert-danger" style="margin:20px;">Erro ao carregar: ${err}</div>`;
+                });
+        }
+        
+        // Close when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('historyModal');
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+    </script>
+    <!-- AI Recommendations Script -->
+    <script>
+        function loadAgentRecommendations() {
+            const container = document.getElementById('ai-recommendations-container');
+            const list = document.getElementById('ai-recommendations-list');
+            if (!container || !list) return;
+
+            fetch('/api/stock-recommendations/')
+                .then(response => {
+                    if (!response.ok) throw new Error('Failed to fetch recommendations');
+                    return response.json();
+                })
+                .then(json => {
+                    if (json.status === 'success' && json.data && json.data.length > 0) {
+                        list.innerHTML = '';
+                        let hasCards = false;
+                        
+                        json.data.forEach(rec => {
+                            hasCards = true;
+                            const card = document.createElement('div');
+                            card.className = 'ai-recommendation-card';
+                            card.id = `ai-rec-card-${rec.item_id}`;
+                            
+                            const diffPct = Math.round((rec.price_multiplier - 1.0) * 100);
+                            let strategyText = '';
+                            if (diffPct < 0) {
+                                strategyText = `Aplicar desconto de ${Math.abs(diffPct)}%`;
+                            } else if (diffPct > 0) {
+                                strategyText = `Aplicar acréscimo de ${diffPct}%`;
+                            } else {
+                                strategyText = 'Manter preço base de mercado';
+                            }
+                            
+                            // Pegada de carbono baseada em fatores LCA
+                            const sku = String(rec.item_id).trim();
+                            let co2Factor = 0.22;
+                            if (sku === '3_080') {
+                                co2Factor = 0.18;
+                            } else if (sku === '3_090') {
+                                co2Factor = 0.19;
+                            } else if (sku === '911753') {
+                                co2Factor = 0.20;
+                            } else if (sku === '3_252') {
+                                co2Factor = 0.28;
+                            } else if (sku === '3_586' || sku === '2_586') {
+                                co2Factor = 0.32;
+                            }
+                            const totalCO2 = rec.current_stock_kg * co2Factor;
+                            
+                            // Ações
+                            let actionButtonsHtml = '';
+                            if (rec.current_stock_kg > 0.0 && rec.harvest_id) {
+                                actionButtonsHtml = `
+                                    <button type="button" class="btn-rec-accept" style="flex: 1;" onclick="acceptRecommendation('${rec.item_id}', '${rec.harvest_id}', ${rec.recommended_qty_to_sell}, ${rec.recommended_price})">✅ Aplicar</button>
+                                    <button type="button" class="btn-rec-refuse" onclick="refuseRecommendation('${rec.item_id}')">❌ Omitir</button>
+                                `;
+                            } else {
+                                actionButtonsHtml = `
+                                    <div style="flex: 1; text-align: center; background: #ffebee; color: #c62828; padding: 6px; border-radius: 4px; font-weight: bold; font-size: 0.85em; border: 1px solid #ffcdd2;">
+                                        ⚠️ Sem Lote Ativo / Sem Stock
+                                    </div>
+                                `;
+                            }
+                            
+                            card.innerHTML = `
+                                <div class="ai-rec-header">
+                                    <span class="ai-rec-title">${rec.culture_name}</span>
+                                    <span class="ai-rec-sku">${rec.item_id}</span>
+                                </div>
+                                <div class="ai-rec-details">
+                                    <p><strong>Stock Atual:</strong> ${rec.current_stock_kg} kg</p>
+                                    <p><strong>Preço Recomendado:</strong> ${rec.current_stock_kg > 0 ? rec.recommended_price.toFixed(2) + ' €/kg' : '---'}</p>
+                                    <p><strong>Estratégia de Preço Recomendada:</strong> ${strategyText}</p>
+                                    <p><strong>LCA:</strong> ${totalCO2.toFixed(1)} kg CO₂</p>
+                                    <p style="margin-top: 8px; font-size: 0.85em; color: #00796b; font-weight: 600; display: flex; align-items: center; gap: 4px;">
+                                        <span>💡</span> Sugestão: Vender ${rec.quantity_percent}% (${rec.recommended_qty_to_sell.toFixed(1)} kg)
+                                    </p>
+                                </div>
+                                <div class="ai-rec-actions" style="margin-top: auto; display: flex; gap: 10px; align-items: center; justify-content: center; width: 100%;">
+                                    ${actionButtonsHtml}
+                                </div>
+                            `;
+                            list.appendChild(card);
+                        });
+                        
+                        if (hasCards) {
+                            container.style.display = 'block';
+                        } else {
+                            container.style.display = 'none';
+                        }
+                    } else {
+                        container.style.display = 'none';
+                    }
+                })
+                .catch(err => {
+                    console.error('Error fetching stock recommendations:', err);
+                    container.style.display = 'none';
+                });
+        }
+
+        function acceptRecommendation(itemId, harvestId, quantity, price) {
+            const harvestSelect = document.getElementById('id_sell_harvest_origin');
+            const qtyInput = document.getElementById('id_sell_quantity_kg');
+            const priceInput = document.getElementById('id_sell_price_per_kg');
+
+            if (harvestSelect && harvestId) {
+                harvestSelect.value = harvestId;
+                harvestSelect.dispatchEvent(new Event('change'));
+            }
+            
+            setTimeout(() => {
+                if (qtyInput) qtyInput.value = quantity.toFixed(1);
+                if (priceInput) priceInput.value = price.toFixed(2);
+
+                // Smooth scroll to the form
+                const formSection = document.querySelector('#marketplace-dashboard .form-section');
+                if (formSection) {
+                    formSection.scrollIntoView({ behavior: 'smooth' });
+                }
+                
+                // Fade out card
+                refuseRecommendation(itemId);
+            }, 150);
+        }
+
+        function refuseRecommendation(itemId) {
+            const card = document.getElementById(`ai-rec-card-${itemId}`);
+            if (card) {
+                card.style.opacity = '0';
+                card.style.transform = 'scale(0.9)';
+                card.style.transition = 'all 0.3s ease';
+                setTimeout(() => {
+                    card.remove();
+                    // Hide container if all cards are gone
+                    const list = document.getElementById('ai-recommendations-list');
+                    if (list && list.children.length === 0) {
+                        document.getElementById('ai-recommendations-container').style.display = 'none';
+                    }
+                }, 300);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadAgentRecommendations);
+
+        // Store active Chart objects to destroy before drawing new ones
+        let lucroPricingChartObj = null;
+        let decisoesPricingChartObj = null;
+        let simPricingStatusTimer = null;
+
+        function startProducerAgentSimulation() {
+            const sku = document.getElementById('sim-pricing-sku').value;
+            const capacity = document.getElementById('sim-pricing-capacity').value;
+            const interval = document.getElementById('sim-pricing-interval').value;
+            
+            // Show Loading Overlay
+            document.getElementById('sim-pricing-welcome').style.display = 'none';
+            document.getElementById('sim-pricing-results').style.display = 'none';
+            
+            const loader = document.getElementById('sim-pricing-loader');
+            loader.style.display = 'flex';
+            
+            const loaderTitle = document.getElementById('sim-pricing-loader-title');
+            const loaderStatus = document.getElementById('sim-pricing-loader-status');
+            
+            const aiSentences = [
+                { t: "A Inicializar Cérebro PPO", s: "A carregar pesos PyTorch Actor/Critic e a normalizar dados do estado..." },
+                { t: "A Correr Loops Diários", s: "A simular decisões diárias de preço dinâmico e exposição com decay biológico..." },
+                { t: "A Finalizar Simulação...", s: "A compilar telemetria diária, lucros acumulados e eventos de quebra..." }
+            ];
+            
+            loaderTitle.innerText = aiSentences[0].t;
+            loaderStatus.innerText = aiSentences[0].s;
+            
+            let sentenceIdx = 1;
+            if (simPricingStatusTimer) clearInterval(simPricingStatusTimer);
+            simPricingStatusTimer = setInterval(() => {
+                if (sentenceIdx < aiSentences.length) {
+                    loaderTitle.innerText = aiSentences[sentenceIdx].t;
+                    loaderStatus.innerText = aiSentences[sentenceIdx].s;
+                    sentenceIdx++;
+                }
+            }, 1400);
+
+            // Form Data
+            const formData = new FormData();
+            formData.append('product_sku', sku);
+            formData.append('max_capacity', capacity);
+            formData.append('update_interval', interval);
+            
+            // Fetch API
+            fetch('/api/producer-agent-simulation/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(json => { throw new Error(json.message || 'Erro na simulação.'); });
+                }
+                return response.json();
+            })
+            .then(json => {
+                clearInterval(simPricingStatusTimer);
+                loader.style.display = 'none';
+                document.getElementById('sim-pricing-results').style.display = 'flex';
+                
+                const res = json.data;
+                
+                // Populate KPIs
+                document.getElementById('kpi-pricing-profit').innerText = '€ ' + res.kpis.lucro_final_agente.toLocaleString('pt-PT', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                
+                const gainEl = document.getElementById('kpi-pricing-gain');
+                gainEl.innerText = (res.kpis.ganho_versus_baseline >= 0 ? '+' : '') + res.kpis.ganho_versus_baseline.toFixed(1) + '%';
+                gainEl.style.color = res.kpis.ganho_versus_baseline >= 0 ? '#047857' : '#b91c1c';
+                
+                // Spoilage (Agent vs Baseline)
+                document.getElementById('kpi-pricing-waste').innerText = res.kpis.total_descarte_kg.toFixed(0) + ' kg vs ' + res.kpis.total_descarte_baseline.toFixed(0) + ' kg';
+                const wastePctAgent = ((res.kpis.total_descarte_kg / res.kpis.total_procura_un) * 100).toFixed(1);
+                const wastePctBase = ((res.kpis.total_descarte_baseline / res.kpis.total_procura_un) * 100).toFixed(1);
+                document.getElementById('kpi-pricing-waste-detail').innerText = 'Agente: ' + wastePctAgent + '% vs Estática: ' + wastePctBase + '% da procura total';
+
+                // Updates
+                document.getElementById('kpi-pricing-updates').innerText = res.kpis.ciclos_treino_run;
+
+                // Draw Charts
+                drawPricingProfitChart(res);
+                drawPricingDecisionsChart(res);
+            })
+            .catch(err => {
+                clearInterval(simPricingStatusTimer);
+                loader.style.display = 'none';
+                document.getElementById('sim-pricing-welcome').style.display = 'flex';
+                alert('Erro ao executar simulação: ' + err.message);
+            });
+        }
+
+        function drawPricingProfitChart(res) {
+            if (lucroPricingChartObj) lucroPricingChartObj.destroy();
+            
+            const ctx = document.getElementById('lucro-pricing-chart').getContext('2d');
+            lucroPricingChartObj = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: res.dias,
+                    datasets: [
+                        {
+                            label: 'Agente PPO (Modelo Inteligente)',
+                            data: res.lucros_agente,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.05)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.15,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'Baseline Estática [1.0, 1.0]',
+                            data: res.lucros_baseline,
+                            borderColor: '#64748b',
+                            borderWidth: 1.5,
+                            borderDash: [5, 5],
+                            fill: false,
+                            tension: 0.1,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'Oráculo Perfeito (God Mode)',
+                            data: res.lucros_oracle,
+                            borderColor: '#fbbf24',
+                            borderWidth: 2,
+                            borderDash: [4, 4],
+                            fill: false,
+                            tension: 0.1,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: {
+                        x: { title: { display: true, text: 'Dias de Operação Simulação' } },
+                        y: { title: { display: true, text: 'Lucro Acumulado (€)' } }
+                    }
+                }
+            });
+        }
+
+        function drawPricingDecisionsChart(res) {
+            if (decisoesPricingChartObj) decisoesPricingChartObj.destroy();
+            
+            const ctx = document.getElementById('decisoes-pricing-chart').getContext('2d');
+            
+            decisoesPricingChartObj = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: res.dias,
+                    datasets: [
+                        {
+                            label: 'Multiplicador de Preço (x)',
+                            type: 'line',
+                            data: res.acoes_agente_preco,
+                            borderColor: '#10b981',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            yAxisID: 'yPrice',
+                            pointRadius: 0,
+                            tension: 0.15,
+                            order: 1
+                        },
+                        {
+                            label: 'Taxa de Exposição (%)',
+                            type: 'line',
+                            data: res.acoes_agente_exposicao.map(v => v * 100),
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            yAxisID: 'yExposure',
+                            pointRadius: 0,
+                            tension: 0.15,
+                            order: 2
+                        },
+                        {
+                            label: 'Stock Final (Kg)',
+                            type: 'bar',
+                            data: res.stock_final,
+                            backgroundColor: 'rgba(148, 163, 184, 0.25)',
+                            borderColor: '#94a3b8',
+                            borderWidth: 1,
+                            yAxisID: 'yQty',
+                            order: 3
+                        },
+                        {
+                            label: 'Descarte / Apodrecimento (Kg)',
+                            type: 'bar',
+                            data: res.apodrecimento,
+                            backgroundColor: 'rgba(239, 68, 68, 0.75)',
+                            borderColor: '#ef4444',
+                            borderWidth: 1,
+                            yAxisID: 'yQty',
+                            order: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                footer: function(items) {
+                                    const day = items[0].dataIndex;
+                                    let text = '';
+                                    if (res.update_days.includes(day)) {
+                                        text += '\n🧠 Fine-Tuning executado neste dia!';
+                                    }
+                                    return text;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Dias de Operação Simulação' }
+                        },
+                        yPrice: {
+                            type: 'linear',
+                            position: 'left',
+                            min: 0.4,
+                            max: 1.6,
+                            title: { display: true, text: 'Multiplicador de Preço (x)' }
+                        },
+                        yExposure: {
+                            type: 'linear',
+                            position: 'right',
+                            min: 0,
+                            max: 100,
+                            grid: { drawOnChartArea: false },
+                            title: { display: true, text: 'Taxa de Exposição (%)' }
+                        },
+                        yQty: {
+                            type: 'linear',
+                            position: 'right',
+                            grid: { drawOnChartArea: false },
+                            title: { display: true, text: 'Stock / Descarte (Kg)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // AJUSTE MANUAL DE STOCK VIA AJAX
+        function submitStockAdjustment(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            
+            fetch('/api/adjust-stock/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: formData
+            })
+            .then(res => res.json())
+            .then(json => {
+                if (json.status === 'success') {
+                    alert(json.message);
+                    location.reload();
+                } else {
+                    alert('Erro: ' + json.message);
+                }
+            })
+            .catch(err => {
+                alert('Erro na comunicação com o servidor: ' + err);
+            });
+        }
+
+        // TREINO ASSÍNCRONO DE MODELOS
+        let trainingPollInterval = null;
+
+        function startAsyncTraining(event, type) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            
+            const btn = document.getElementById('btn-start-training');
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Preparando Treino...';
+            
+            const progressCard = document.getElementById('training-progress-card');
+            progressCard.style.display = 'block';
+            
+            const url = type === 'buyer' ? '/api/train-buyer/' : '/api/train-stock/';
+            
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: formData
+            })
+            .then(res => res.json())
+            .then(json => {
+                if (json.status === 'success') {
+                    if (trainingPollInterval) clearInterval(trainingPollInterval);
+                    trainingPollInterval = setInterval(pollTrainingStatus, 1000);
+                } else {
+                    alert('Erro ao iniciar treino: ' + json.message);
+                    btn.disabled = false;
+                    btn.innerHTML = '🚀 Iniciar Treino dos Modelos';
+                    progressCard.style.display = 'none';
+                }
+            })
+            .catch(err => {
+                alert('Erro de rede: ' + err);
+                btn.disabled = false;
+                btn.innerHTML = '🚀 Iniciar Treino dos Modelos';
+                progressCard.style.display = 'none';
+            });
+        }
+
+        function pollTrainingStatus() {
+            fetch('/api/training-status/')
+            .then(res => res.json())
+            .then(json => {
+                const statusMsg = document.getElementById('train-status-msg');
+                const pct = document.getElementById('train-pct');
+                const progressBar = document.getElementById('train-progress-bar');
+                const epochEl = document.getElementById('train-epoch');
+                const lossEl = document.getElementById('train-loss');
+                
+                if (statusMsg) statusMsg.innerText = json.message;
+                if (pct) pct.innerText = json.progress + '%';
+                if (progressBar) progressBar.style.width = json.progress + '%';
+                if (epochEl) epochEl.innerText = json.epoch;
+                if (lossEl) lossEl.innerText = json.loss;
+                
+                if (json.status === 'completed') {
+                    clearInterval(trainingPollInterval);
+                    const btn = document.getElementById('btn-start-training');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '🚀 Iniciar Novo Treino';
+                    }
+                    alert('Treino concluído com sucesso!');
+                } else if (json.status === 'failed') {
+                    clearInterval(trainingPollInterval);
+                    const btn = document.getElementById('btn-start-training');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '🚀 Tentar Novamente';
+                    }
+                    alert('O treino falhou: ' + json.message);
+                }
+            })
+            .catch(err => {
+                console.error('Erro ao consultar progresso:', err);
+            });
+        }
+    </script>
+
+    <!-- ====================== DISCRETE TRANSLATOR WIDGET ====================== -->
+    <div id="google_translate_element" style="display:none;"></div>
+    <div class="discrete-translator" style="position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.95); border: 1px solid #00796b; border-radius: 30px; padding: 6px 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); backdrop-filter: blur(5px); transition: all 0.3s ease;">
+        <span style="font-size: 1.1em; line-height: 1;">🌐</span>
+        <select id="lang-select" onchange="changeLanguage(this.value)" style="border: none; background: transparent; font-size: 0.85em; font-weight: 600; color: #004d40; cursor: pointer; outline: none; padding-right: 5px; font-family: inherit;">
+            <option value="pt">🇵🇹 PT</option>
+            <option value="en">🇬🇧 EN</option>
+            <option value="es">🇪🇸 ES</option>
+            <option value="tr">🇹🇷 TR</option>
+        </select>
+    </div>
+
+    <style>
+        /* Google Translate Overrides */
+        iframe.goog-te-banner-frame { display: none !important; }
+        .goog-te-banner-frame { display: none !important; }
+        .goog-te-banner { display: none !important; }
+        .skiptranslate { top: 0px !important; }
+        #goog-gt-tt { display: none !important; }
+        .goog-logo-link { display: none !important; }
+        .goog-te-gadget { color: transparent !important; }
+        .goog-te-balloon-frame { display: none !important; }
+        .goog-tooltip { display: none !important; }
+        .goog-tooltip:hover { display: none !important; }
+        .goog-text-highlight { background-color: transparent !important; border: none !important; box-shadow: none !important; }
+        
+        body { top: 0px !important; }
+        html { top: 0px !important; }
+    </style>
+
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({
+                pageLanguage: 'pt',
+                includedLanguages: 'pt,en,es,tr',
+                layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+                autoDisplay: false
+            }, 'google_translate_element');
+        }
+        
+        function getGoogtransLanguage() {
+            const match = document.cookie.match(/googtrans=\/[^/]+\/([^;]+)/);
+            return match ? match[1] : 'pt';
+        }
+
+        function changeLanguage(langCode) {
+            localStorage.setItem('selectedLanguage', langCode);
+            
+            const cookieVal = langCode === 'pt' ? '' : '/pt/' + langCode;
+            const expires = langCode === 'pt' ? 'expires=Thu, 01 Jan 1970 00:00:00 UTC; ' : '';
+            
+            // Set cookie on host-only (no domain parameter)
+            document.cookie = `googtrans=${cookieVal}; path=/; ${expires}`;
+            
+            // Set/clear on hostname variations
+            const host = location.hostname;
+            if (host) {
+                if (host !== 'localhost' && !/^[0-9.]+$/.test(host)) {
+                    document.cookie = `googtrans=${cookieVal}; path=/; domain=${host}; ${expires}`;
+                    document.cookie = `googtrans=${cookieVal}; path=/; domain=.${host}; ${expires}`;
+                    
+                    const parts = host.split('.');
+                    if (parts.length > 2) {
+                        const parentDomain = parts.slice(-2).join('.');
+                        document.cookie = `googtrans=${cookieVal}; path=/; domain=${parentDomain}; ${expires}`;
+                        document.cookie = `googtrans=${cookieVal}; path=/; domain=.${parentDomain}; ${expires}`;
+                    }
+                } else {
+                    document.cookie = `googtrans=${cookieVal}; path=/; domain=.${host}; ${expires}`;
+                }
+            }
+            
+            location.reload();
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            let savedLang = localStorage.getItem('selectedLanguage') || 'pt';
+            const cookieLang = getGoogtransLanguage();
+            
+            if (savedLang !== cookieLang) {
+                if (['pt', 'en', 'es', 'tr'].includes(cookieLang)) {
+                    savedLang = cookieLang;
+                    localStorage.setItem('selectedLanguage', savedLang);
+                } else {
+                    changeLanguage(savedLang);
+                    return;
+                }
+            }
+            
+            const selectWidget = document.getElementById('lang-select');
+            if (selectWidget) selectWidget.value = savedLang;
+        });
+    </script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </body>
 </html>
+

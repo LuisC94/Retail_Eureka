@@ -1,0 +1,234 @@
+<div class="card mb-5 mb-xl-10">
+  <div class="card-header border-0 cursor-pointer" role="button" data-bs-toggle="collapse"
+    data-bs-target="#kt_account_signin_method">
+    <div class="card-title m-0">
+      <h3 class="fw-bolder m-0">{{'SIGN_IN_METHOD' | translate}}</h3>
+    </div>
+  </div>
+  <div id="kt_account_signin_method" class="collapse show">
+    <div class="card-body border-top p-9">
+      <ng-container *ngIf="!showChangeEmailForm">
+        <div class="d-flex flex-wrap align-items-center">
+          <div id="kt_signin_email" class="false">
+            <div class="fs-6 fw-bolder mb-1">{{'EMAIL_ADDRESS' | translate}}</div>
+            <div class="fw-bold text-gray-600">{{user?.email}}</div>
+          </div>
+          <div id="kt_signin_email_edit" class="flex-row-fluid d-none">
+            <form id="kt_signin_change_email" class="form" novalidate="">
+              <div class="row mb-6">
+                <div class="col-lg-6 mb-4 mb-lg-0">
+                  <div class="fv-row mb-0">
+                    <label for="emailaddress" class="form-label fs-6 fw-bolder mb-3">
+                      {{'ENTER_NEW_EMAIL_ADDRESS' | translate}}
+                    </label><input type="email" class="form-control form-control-lg form-control-solid"
+                      id="emailaddress" placeholder="{{'EMAIL_ADDRESS' | translate}}" name="newEmail" value="support@keenthemes.com" />
+                  </div>
+                </div>
+                <div class="col-lg-6">
+                  <div class="fv-row mb-0">
+                    <label for="confirmemailpassword" class="form-label fs-6 fw-bolder mb-3">
+                      {{'CONFIRM_PASSWORD' | translate}}
+                    </label><input type="password" class="form-control form-control-lg form-control-solid"
+                      id="confirmemailpassword" name="confirmPassword" value="" />
+                    <div class="fv-plugins-message-container">
+                      <div class="fv-help-block">{{'PASSWORD' | translate}} &nbsp; {{'IS_REQUIRED' | translate}}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="d-flex">
+                <button id="kt_signin_submit" type="submit" class="btn btn-primary me-2 px-6">
+                  {{'UPDATE_EMAIL' | translate}}</button><button id="kt_signin_cancel" type="button"
+                  class="btn btn-color-gray-500 btn-active-light-primary px-6">
+                  {{'CANCEL' | translate}}
+                </button>
+              </div>
+            </form>
+          </div>
+          <div id="kt_signin_email_button" class="ms-auto false">
+            <button class="btn btn-light btn-active-light-primary" (click)="toggleEmailForm(true)">
+              {{'CHANGE_EMAIL' | translate}}
+            </button>
+          </div>
+        </div>
+      </ng-container>
+
+      <ng-container *ngIf="showChangeEmailForm">
+        <div class="d-flex flex-wrap align-items-center" [formGroup]="changeEmailForm">
+          <div id="kt_signin_email_edit" class="flex-row-fluid false">
+            <form id="kt_signin_change_email" class="form" novalidate="">
+              <div class="row mb-6">
+                <div class="col-lg-6 mb-4 mb-lg-0">
+                  <div class="fv-row mb-0">
+                    <label for="emailaddress" class="form-label fs-6 fw-bolder mb-3">{{'ENTER_NEW_EMAIL_ADDRESS' | translate}}
+                      </label><input type="email" class="form-control form-control-lg form-control-solid"
+                      id="emailaddress" placeholder="{{'EMAIL_ADDRESS' | translate}}" name="email" formControlName="email" [ngClass]="{
+                        'is-invalid': changeEmailForm.controls['email'].invalid,
+                        'is-valid': changeEmailForm.controls['email'].valid
+                      }" />
+                    <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                        validation: 'required',
+                        message: ('MENU.NEW' | translate) + ' ' + ('EMAIL' | translate) + ' '+ ('IS_REQUIRED' | translate),
+                        control: changeEmailForm.controls['email']
+                      }"></ng-container>
+                  </div>
+                </div>
+              </div>
+              <div class="d-flex mt-2" style="float: right;">
+                <button id="kt_signin_submit" type="button" class="btn btn-primary me-2 px-6" (click)="saveEmail()">
+                  <ng-container> {{'UPDATE_EMAIL' | translate}} </ng-container>
+                </button><button id="kt_signin_cancel" type="button"
+                  class="btn btn-color-gray-500 btn-active-light-primary px-6" (click)="toggleEmailForm(false)">
+                  {{'CANCEL' | translate}}
+                </button>
+              </div>
+            </form>
+            <ng-template #formError let-control="control" let-message="message" let-validation="validation">
+              <ng-container *ngIf="control.hasError(validation) && (control.dirty || control.touched)">
+                <div class="fv-plugins-message-container">
+                  <span role="alert">
+                    {{ message }}
+                  </span>
+                </div>
+              </ng-container>
+            </ng-template>
+          </div>
+        </div>
+      </ng-container>
+
+      <div class="separator separator-dashed my-6"></div>
+
+      <ng-container *ngIf="!showChangePasswordForm">
+        <div class="d-flex flex-wrap align-items-center mb-10">
+          <div id="kt_signin_password" class="false">
+            <div class="fs-6 fw-bolder mb-1">{{'PASSWORD' |translate}}</div>
+            <div class="fw-bold text-gray-600">************</div>
+          </div>
+          <div id="kt_signin_password_button" class="ms-auto false">
+            <button class="btn btn-light btn-active-light-primary" (click)="togglePasswordForm(true)">
+              {{'RESET_PASSWORD' | translate}}
+            </button>
+          </div>
+        </div>
+      </ng-container>
+
+      <ng-container *ngIf="showChangePasswordForm">
+        <div class="d-flex flex-wrap align-items-center mb-10">
+          <div id="kt_signin_password_edit" class="flex-row-fluid false">
+            <form id="kt_signin_change_password" class="form" novalidate="" [formGroup]="changePasswordForm">
+              <div class="row mb-1">
+                <div class="col-lg-4">
+                  <div class="fv-row mb-0">
+                    <label for="currentpassword" class="form-label fs-6 fw-bolder mb-3">
+                      {{'CURRENT_PASSWORD' | translate}}
+                    </label><input
+                      type="password" class="form-control form-control-lg form-control-solid" id="currentpassword"
+                      name="currentPassword" formControlName="currentPassword" [ngClass]="{
+                        'is-invalid': changePasswordForm.controls['currentPassword'].invalid,
+                        'is-valid': changePasswordForm.controls['currentPassword'].valid
+                      }" />
+
+                    <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                        validation: 'required',
+                        message: ('CURRENT_PASSWORD' | translate) + ' ' + ('IS_REQUIRED' | translate),
+                        control: changePasswordForm.controls['currentPassword']
+                      }"></ng-container>
+                  </div>
+                </div>
+                <div class="col-lg-4">
+                  <div class="fv-row mb-0">
+                    <label for="password" class="form-label fs-6 fw-bolder mb-3">{{'NEW_PASSWORD' | translate}}</label><input
+                      type="password" class="form-control form-control-lg form-control-solid" id="password"
+                      name="password" formControlName="password" [ngClass]="{
+                        'is-invalid': changePasswordForm.controls['password'].invalid,
+                        'is-valid': changePasswordForm.controls['password'].valid
+                      }" />
+                    <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                        validation: 'required',
+                        message: ('NEW_PASSWORD' | translate) + ' ' + ('IS_REQUIRED' | translate),
+                        control: changePasswordForm.controls['password']
+                      }"></ng-container>
+                    <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                        validation: 'minlength',
+                        message: ('NEW_PASSWORD_RULE_1' | translate),
+                        control: changePasswordForm.controls['password']
+                      }"></ng-container>
+                    <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                        validation: 'maxLength',
+                        message: ('NEW_PASSWORD_RULE_2' | translate),
+                        control: changePasswordForm.controls['password']
+                      }"></ng-container>
+                  </div>
+                </div>
+                <div class="col-lg-4">
+                  <div class="fv-row mb-0">
+                    <label for="cPassword" class="form-label fs-6 fw-bolder mb-3">
+                      {{'CONFIRM_NEW_PASSWORD' | translate}}
+                    </label><input
+                      type="password" class="form-control form-control-lg form-control-solid" id="cPassword"
+                      name="cPassword" formControlName="cPassword" [ngClass]="{
+                        'is-invalid': changePasswordForm.controls['cPassword'].invalid,
+                        'is-valid': changePasswordForm.controls['cPassword'].valid
+                      }" />
+                    <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                        validation: 'required',
+                        message: ('CONFIRM_NEW_PASSWORD' | translate) + ' ' + ('IS_REQUIRED' | translate),
+                        control: changePasswordForm.controls['cPassword']
+                      }"></ng-container>
+                    <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                        validation: 'minlength',
+                        message: ('CONFIRM_NEW_PASSWORD_RULE_1' | translate),
+                        control: changePasswordForm.controls['cPassword']
+                      }"></ng-container>
+                    <ng-container [ngTemplateOutlet]="formError" [ngTemplateOutletContext]="{
+                        validation: 'maxLength',
+                        message: ('CONFIRM_NEW_PASSWORD_RULE_2' | translate),
+                        control: changePasswordForm.controls['cPassword']
+                      }"></ng-container>
+                    <ng-container *ngIf="
+                    changePasswordForm.controls['cPassword'].errors &&
+                        changePasswordForm.controls['cPassword'].errors.ConfirmPassword
+                      ">
+                      <div class="fv-plugins-message-container">
+                        <div class="fv-help-block">
+                          {{'PASSWORD_MISMATCH' | translate}}
+                        </div>
+                      </div>
+                    </ng-container>
+                  </div>
+                </div>
+              </div>
+              <!-- <div class="form-text mb-5">
+                Password must be at least 8 character and contain symbols
+              </div> -->
+              <div class="d-flex mt-2" style="float: right;">
+                <button id="kt_password_submit" type="button" class="btn btn-primary me-2 px-6"
+                  (click)="savePassword()">
+                  <ng-container>{{'UPDATE_PASSWORD' | translate}}</ng-container>
+                </button><button id="kt_password_cancel" type="button"
+                  class="btn btn-color-gray-500 btn-active-light-primary px-6" (click)="togglePasswordForm(false)">
+                  {{'CANCEL' | translate}}
+                </button>
+              </div>
+            </form>
+
+            <ng-template #formError let-control="control" let-message="message" let-validation="validation">
+              <ng-container *ngIf="control.hasError(validation) && (control.dirty || control.touched)">
+                <div class="fv-plugins-message-container">
+                  <span role="alert">
+                    {{ message }}
+                  </span>
+                </div>
+              </ng-container>
+            </ng-template>
+          </div>
+          <div id="kt_signin_password_button" class="ms-auto d-none">
+            <button class="btn btn-light btn-active-light-primary">
+             {{'RESET_PASSWORD' | translate}}
+            </button>
+          </div>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+</div>

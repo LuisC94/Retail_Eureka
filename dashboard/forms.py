@@ -326,6 +326,16 @@ class WarehouseRegistrationForm(forms.ModelForm):
             'sensors': forms.CheckboxSelectMultiple(), # Renderiza checkboxes em vez de um seletor simples
         }
 
+    def clean(self):
+        cleaned_data = super().clean()
+        control_type = cleaned_data.get('control_type')
+        sensors = cleaned_data.get('sensors')
+
+        if control_type == 'Controlled' and not sensors:
+            self.add_error('sensors', "Armazéns controlados devem ter pelo menos um sensor associado.")
+        
+        return cleaned_data
+
 # ----------------------------------------------------------------------
 # 6. FORMULÁRIO DE MARKETPLACE
 # ----------------------------------------------------------------------
@@ -334,11 +344,12 @@ class MarketplaceOrderForm(forms.ModelForm):
     class Meta:
         model = MarketplaceOrder
         fields = ['order_type', 'culture', 'quantity_kg', 'warehouse_location', 
-                  'min_caliber', 'min_soluble_solids', 'min_quality_score']
+                  'min_caliber', 'min_soluble_solids', 'min_quality_score', 'price_per_kg']
         widgets = {
             'order_type': forms.Select(attrs={'class': 'form-control'}),
             'culture': forms.Select(attrs={'class': 'form-control'}),
             'quantity_kg': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'price_per_kg': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'id': 'id_price_per_kg_dynamic'}),
             'warehouse_location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Armazém Norte / Sede'}),
             
             # Quality Filters (Buy)
@@ -351,7 +362,18 @@ class MarketplaceOrderForm(forms.ModelForm):
             'min_caliber': 'Calibre Mínimo (> mm)',
             'min_soluble_solids': 'Brix Mínimo (> Brix)',
             'min_quality_score': 'Qualidade Mínima (> 0-10)',
+            'price_per_kg': 'Preço (€/kg)',
         }
+
+
+
+class RetailerMarketplaceOrderForm(MarketplaceOrderForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Make quality fields mandatory for Retailers
+        self.fields['min_caliber'].required = True
+        self.fields['min_soluble_solids'].required = True
+        self.fields['min_quality_score'].required = True
 
 class MarketSellOrderForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
@@ -366,11 +388,12 @@ class MarketSellOrderForm(forms.ModelForm):
 
     class Meta:
         model = MarketplaceOrder
-        fields = ['harvest_origin', 'quantity_kg', 'warehouse_location',
+        fields = ['harvest_origin', 'quantity_kg', 'price_per_kg', 'warehouse_location',
                   'caliber', 'soluble_solids', 'quality_score']
         widgets = {
             'harvest_origin': forms.Select(attrs={'class': 'form-control', 'id': 'id_sell_harvest_origin'}),
             'quantity_kg': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'id': 'id_sell_quantity_kg'}),
+            'price_per_kg': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'id': 'id_sell_price_per_kg'}),
             'warehouse_location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Armazém Central', 'id': 'id_sell_warehouse_location'}),
             
             # Read-only Auto-filled Quality Data
@@ -381,6 +404,7 @@ class MarketSellOrderForm(forms.ModelForm):
         labels = {
             'harvest_origin': 'Lote de Origem (Stock Disponível)',
             'quantity_kg': 'Quantidade a Vender (Kg)',
+            'price_per_kg': 'Preço de Venda (€/kg)',
             'warehouse_location': 'Local de Recolha',
             'caliber': 'Calibre (mm)',
             'soluble_solids': 'Brix',

@@ -1,0 +1,59 @@
+
+<app-basket *ngIf="hasShoppingPermission && !isAdminPanel" class="d-flex align-items-center me-3"></app-basket>
+
+<div *ngIf="!isCurrentUserExist" class="d-flex align-items-center me-3">
+  <button type="button" (click)="routeToLogin()" class="btn btn-light-primary">
+    <ng-container>
+      <span class="indicator-label">
+        {{'LOG_IN' | translate}}
+      </span>
+    </ng-container>
+  </button>
+</div>
+
+<div *ngIf="hasShoppingPermission && isAdmin && isAdminPanel" class="d-flex align-items-center me-3">
+  <button type="button" (click)="routeToShopping()" class="btn btn-light-primary">
+    <ng-container>
+      <span class="indicator-label">{{ 'CONTINUE_SHOPPING' | translate}}</span>
+    </ng-container>
+  </button>
+</div>
+
+<div *ngIf="isAdmin && !isAdminPanel" class="d-flex align-items-center me-3">
+  <button type="button" (click)="routeToAdminPanel()" class="btn btn-light-primary">
+    <ng-container>
+      <span class="indicator-label">{{'ADMIN_PANEL' | translate}}</span>
+    </ng-container>
+  </button>
+</div>
+
+<div *ngIf="isCurrentUserExist" class="d-flex align-items-center me-3" id="kt_header_user_menu_toggle">
+  <!--begin::Menu wrapper-->
+  <div class="cursor-pointer symbol symbol-40px" data-kt-menu-trigger="{default: 'click', lg: 'hover'}"
+    data-kt-menu-placement="bottom-end" title="{{'USER_PROFILE' | translate}}"  >
+    <img *ngIf="user?.fileId == undefined" src="./assets/media/avatars/blank.png" />
+    <img *ngIf="user?.fileId != undefined" [src]="user?.fileResult?.fileContents" alt="image" />
+  </div>
+  <!--end::Menu wrapper-->
+  <app-user-inner [isAdminPanel]="isAdminPanel"></app-user-inner>
+</div>
+
+<div *ngIf="isCurrentUserExist" class="d-flex align-items-center me-4 mt-1">
+  <!--begin::Menu wrapper-->
+  <div class="btn btn-icon btn-active-color-primary btn-color-gray-500 btn-active-light position-relative" (mouseenter)="getNotifications()"
+    data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-overflow="true" data-kt-menu-placement="top-start"
+    title="Notifications">
+    <i [inlineSVG]="'./assets/media/icons/duotune/communication/com004.svg'" class="svg-icon svg-icon-2 svg-icon-lg-1"></i>
+
+    <span *ngIf="unreadedNotificationCount > 0"
+            class="position-absolute top-0 start-100 translate-middle badge badge-circle badge-danger">{{unreadedNotificationCount}}</span>
+  </div>
+  <!--end::Menu wrapper-->
+  <app-notifications-inner [notifications]="notifications" [totalNotificationCount]="totalNotificationCount" [unreadedNotificationCount]=unreadedNotificationCount></app-notifications-inner>
+</div>
+
+<!-- begin::Theme mode -->
+<app-theme-mode-switcher class="d-flex align-items-center me-3"
+  toggleBtnClass="btn btn-icon btn-primary w-40px h-40px pulse pulse-white">
+</app-theme-mode-switcher>
+<!-- end::Theme mode -->

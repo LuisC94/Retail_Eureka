@@ -1,0 +1,336 @@
+// USA
+export const locale = {
+    lang: 'tr',
+    data: {
+        LANG: 'tr',
+        TRANSLATOR: {
+            SELECT: 'Dilinizi Seçin',
+        },
+        MENU: {
+            NEW: 'Yeni',
+            ACTIONS: 'İşlemler',
+            CREATE_POST: 'Yeni Gönderi Oluştur',
+            PAGES: 'Sayfalar',
+            FEATURES: 'Özellikler',
+            APPS: 'Uygulamalar',
+            DASHBOARD: 'Panel',
+        },
+        AUTH: {
+            GENERAL: {
+                OR: 'Ya da',
+                SUBMIT_BUTTON: 'Gönder',
+                NO_ACCOUNT: 'Hesabınız yok mu?',
+                SIGNUP_BUTTON: 'Üye Ol',
+                SIGNOUT_BUTTON: 'Çıkış Yap',
+                FORGOT_BUTTON: 'Şifrenizi mi Unuttunuz',
+                BACK_BUTTON: 'Geri',
+                PRIVACY: 'Gizlilik',
+                LEGAL: 'Yasal',
+                CONTACT: 'İletişim',
+            },
+            LOGIN: {
+                TITLE: 'Hesaba Giriş',
+                BUTTON: 'Giriş Yap',
+            },
+            FORGOT: {
+                TITLE: 'Şifrenizi mi Unuttunuz?',
+                DESC: 'Şifrenizi sıfırlamak için e-postanızı girin',
+                SUCCESS: 'Hesabınız başarıyla sıfırlandı.'
+            },
+            REGISTER: {
+                TITLE: 'Üye Ol',
+                DESC: 'Hesabınızı oluşturmak için bilgilerinizi girin',
+                SUCCESS: 'Hesabınız başarıyla kaydedildi.'
+            },
+            INPUT: {
+                EMAIL: 'E-posta',
+                FULLNAME: 'Adınız Soyadınız',
+                PASSWORD: 'Şifre',
+                CONFIRM_PASSWORD: 'Şifreyi Onayla',
+                USERNAME: 'Kullanıcı Adı'
+            },
+            VALIDATION: {
+                INVALID: '{{isim}} geçerli değil',
+                REQUIRED: '{{isim}} zorunludur',
+                MIN_LENGTH: '{{isim}} minimum uzunluk {{min}}',
+                AGREEMENT_REQUIRED: 'Şartlar ve koşulları kabul etmek zorunludur',
+                NOT_FOUND: 'İstenen {{isim}} bulunamadı',
+                INVALID_LOGIN: 'Giriş bilgisi yanlış',
+                REQUIRED_FIELD: 'Zorunlu alan',
+                MIN_LENGTH_FIELD: 'Minimum alan uzunluğu:',
+                MAX_LENGTH_FIELD: 'Maksimum alan uzunluğu:',
+                INVALID_FIELD: 'Geçersiz alan',
+            }
+        },
+        ECOMMERCE: {
+            COMMON: {
+                SELECTED_RECORDS_COUNT: 'Seçilen kayıt sayısı: ',
+                ALL: 'Tümü',
+                SUSPENDED: 'Askıya alınmış',
+                ACTIVE: 'Aktif',
+                FILTER: 'Filtre',
+                BY_STATUS: 'Duruma göre',
+                BY_TYPE: 'Türe göre',
+                BUSINESS: 'İşletme',
+                INDIVIDUAL: 'Bireysel',
+                SEARCH: 'Arama',
+                IN_ALL_FIELDS: 'Tüm alanlarda'
+            },
+            ECOMMERCE: 'E-Ticaret',
+            CUSTOMERS: {
+                CUSTOMERS: 'Müşteriler',
+                CUSTOMERS_LIST: 'Müşteri listesi',
+                NEW_CUSTOMER: 'Yeni Müşteri',
+                DELETE_CUSTOMER_SIMPLE: {
+                    TITLE: 'Müşteri Sil',
+                    DESCRIPTION: 'Bu müşteriyi kalıcı olarak silmek istediğinizden emin misiniz?',
+                    WAIT_DESCRIPTION: 'Müşteri siliniyor...',
+                    MESSAGE: 'Müşteri başarıyla silindi'
+                },
+                DELETE_CUSTOMER_MULTY: {
+                    TITLE: 'Müşterileri Sil',
+                    DESCRIPTION: 'Seçili müşterileri kalıcı olarak silmek istediğinizden emin misiniz?',
+                    WAIT_DESCRIPTION: 'Müşteriler siliniyor...',
+                    MESSAGE: 'Seçili müşteriler başarıyla silindi'
+                },
+                UPDATE_STATUS: {
+                    TITLE: 'Seçili müşterilerin durumu güncellendi',
+                    MESSAGE: 'Seçili müşterilerin durumu başarıyla güncellendi'
+                },
+                EDIT: {
+                    UPDATE_MESSAGE: 'Müşteri güncellendi',
+                    ADD_MESSAGE: 'Müşteri oluşturuldu'
+                }
+            }
+        },
+
+        ROLE: 'Rol',
+        ROLES: 'Roller',
+        USERS: 'Kullanıcılar',
+        PERMISSION: 'Yetki',
+        PERMISSIONS: 'Yetkiler',
+        ORGANIZATION: 'Organizasyon',
+        ORGANIZATIONS: 'Organizasyonlar',
+        PARENT_ORGANIZATION: 'Üst Organizasyon',
+
+        PASSWORD_REQUIRED: "Şifre zorunludur!",
+        REQUIRED_NAME: "İsim zorunludur!",
+        REQUIRED_SURNAME: "Soyisim zorunludur!",
+        REQUIRED_EMAIL: "E-posta zorunludur!",
+        REQUIRED_USERNAME: "Kullanıcı adı zorunludur!",
+        REQUIRED_PHONE: "Telefon zorunludur!",
+        REQUIRED_ROLE: "Rol zorunludur!",
+        REQUIRED_ENGLISH_NAME: "İngilizce İsim zorunludur!",
+        REQUIRED_CODE: "Kod zorunludur!",
+
+        NOMATCH_PASSWORD: "'Şifre' ve 'Şifre Onayla' eşleşmiyor!'",
+
+        SELECT_ROLE: "Rol Seçiniz...",
+        SELECT_ORGANIZATION: "Organizasyon Seçiniz...",
+        SELECT_PERMISSION: "Yetki Seçiniz...",
+
+        NAME_ENGLISH: "İngilizce Adı",
+
+        SURNAME: "Soyisim",
+        CODE: "Kod",
+        PHONE: 'Telefon',
+        ADDRESS: 'Adres',
+        ICON: 'Simge',
+        PARENT_MENU: 'Üst Menü',
+
+        ERR_LOGIN: 'Giriş bilgileri hatalı.',
+        FORGOT_PASSWORD: 'Şifremi Unuttum ?',
+
+        LOGIN_CONTINUE: 'Giriş Yap',
+        PLEASEWAIT: 'Lütfen Bekleyiniz...',
+        NOTMEMBERYET: '',
+        SIGNUP: 'Hesap Aç',
+
+        RESETPASSWORDMAIL: 'Şifrenizi yenilemek için mail adresinizi giriniz.',
+
+
+        // START (TR-EN-LANGUAGE-BRANCH)
+        LOG_IN: "Giriş Yap",
+        SIGN_UP: "Üye Ol",
+        INDIVIDUAL: "Bireysel",
+        CORPORATE: "Kurumsal",
+        REGISTRATION_DETAILS_INCORRECT: "Kayıt detayları yanlış veya hatalı.",
+        REGISTRATION_SUCCESSFULLY_COMPLETED: "Kayıt başarıyla tamamlandı.",
+        ARE_YOU_PRODUCER: "Siz yapımcı mısınız?",
+        ALREADY_HAVE_AN_ACCOUNT: "Zaten bir hesabınız var mı?",
+        SAVE_CHANGES: "Değişiklikleri Kaydet",
+        IS_REQUIRED: "zorunludur!",
+        CANCEL: "İptal Et",
+        CLOSE: 'Kapat',
+        DOWNLOAD: 'İndir',
+        UPLOAD: "Yükle",
+        CHANGE: "Değiştir",
+        DESCRIPTION: "Açıklama",
+        NEW_RECORD: "Yeni Kayıt",
+        SUBMIT: "Gönder",
+        EDIT: "Düzenle",
+        EDIT_STATUS: 'Durum Düzenle',
+        SELECT_A_STATUS: 'Bir Durum Seçin...',
+        DELETE: "Sil",
+        YES: "Evet",
+        NO: "Hayır",
+        ARE_YOU_SURE: "Emin misin?",
+        PLEASE_WAIT:"Lütfen bekleyin...",
+        ACTIVE:"Aktif",
+        PASSIVE:"Pasif",
+        DAY: 'Gün',
+        HOUR: 'Saat',
+        MINUTE: 'Dakika',
+        MONTH: 'Ay',
+        YEAR: 'Yıl',
+        SEARCH_BAR:'Ara',
+
+
+        // Shopping Page
+        LANGUAGE: "Dil",
+        PRODUCT: "Ürün",
+        PRODUCTS: "Ürünler",
+        VEGETABLE: "Sebze",
+        FRUIT: "Meyve",
+        DRIED_FRUIT: "Kuru Meyve",
+        HIGH_SCORERS: "Yüksek Puanlılar",
+        ADVANTAGEOUS_PRODUCTS: "Avantajlı Ürünler",
+        BEST_VENDORS: "En İyi Satıcılar",
+        RECOMMENDED_PRODUCTS: "Önerilen Ürünler",
+        QUICK_DELIVERY: "Hızlı Teslimat",
+
+        // Mode
+        LIGHT: "Aydınlık",
+        DARK: "Karanlık",
+        SYSTEM: "Sistem",
+
+        ADMIN_PANEL: "Yönetici Paneli",
+        CONTINUE_SHOPPING: "Alışverişe Devam",
+
+        //Basket
+        MY_BASKET: "Sepetim",
+        TO_COMPLETE_YOUR_SHOPPING_FASTER: "Alışverişini daha hızlı tamamlamak için",
+        OPERATION_COMPLETED: "İşlem, başarı ile gerçekleştirildi.",
+        UPLOAD_IMAGE_330x330: "Lütfen, 330x330 boyutlarında bir resim dosyası yükleyiniz!",
+        YOUR_BASKET_EMPTY: "Sepetinizde ürün bulunmamaktadır.",
+        ORDER_SUMMARY: "Sipariş Özeti",
+        ORDER_DETAIL: 'Sipariş Detay',
+        TOTAL_OF_THE_PRODUCTS: "Ürünlerin toplamı",
+        SHIPPING_TOTAL: "Kargo Toplamı",
+        SHIPPING_DATE: 'Kargolanma Tarihi',
+        TOTAL: "Toplam",
+        CONFIRM_BASKET: "Sepeti Onayla",
+        HIGHEST_RATED_PRODUCT: "En Yüksek Puanlı Ürün",
+        RATING_AND_COMMENT: 'Puanlama ve Yorum',
+        EVALUATION: "Değerlendirme",
+        ADD_TO_BASKET: "Sepete Ekle",
+        OUT_OF_STOCK: "Stok bulunmamaktadır!",
+        DELIVERY: "Teslimat",
+        DELIVERY_DATE: 'Teslim Tarihi',
+        QUALITY: "Kalite",
+        VENDOR: "Satıcı",
+        PENDING_APPROVAL: 'Onay Bekliyor',
+        APPROVED: 'Onaylandı',
+        PREPARING: 'Hazırlanıyor',
+        SHIPPED: 'Kargolandı',
+        DELIVERED: 'Teslim Edildi',
+        TYPE_A_COMMENT: 'Bir yorum yazın...',
+        INVOICE: 'Fatura',
+
+
+
+        // Profil
+        PROFILE: "Profil",
+        USER_PROFILE: "Kullanıcı Profili",
+        MY_PROFILE: "Profilim",
+        MY_ORDERS: "Siparişlerim",
+        MY_PLACED_ORDERS: "Verdiğim Siparişler",
+         INCOMING_ORDERS: 'Gelen Siparişler',
+        ORDER_NOT_YET_COMPLETED: 'Sipariş Henüz Tamamlanmadı',
+        ORDER_COMPLETED: 'Sipariş Tamamlandı',
+        NO_DATA_AVAILABLE: "Gösterilecek veri bulunmamaktadır.",
+        ORDER_NUMBER: 'Sipariş Numarası',
+        STATUS: 'Durum',
+        PROCESS_DATE: 'İşlem Tarihi',
+        SHIPMENT_TRACKING_NUMBER: 'Kargo Takip No',
+        ORDER_DATE: 'Sipariş Tarihi',
+        AMOUNT_TL: 'Tutar (₺)',
+        UPDATE_STATUS: 'Durum Güncelle',
+        UPLOAD_INVOICE: 'Fatura Yükle',
+        RATE_PRODUCT: 'Ürünü Değerlendir',
+        PRODUCT_QUALITY: 'Ürün Kalitesi',
+        SHIPMENT_TRACKING: 'Kargo Takibi',
+        VIEW_INVOICE: 'Fatura Görüntüle',
+        TRACKING_NO: 'Takip Numarası',
+        MYADDRESSES: "Adresler",
+
+        PROFILE_DETAILS: "Profil Detayları",
+        NAME: "Adınız",
+        FULL_NAME: "Adınız Soyadınız",
+        FIRST_NAME: "Adınız",
+        LAST_NAME: "Soyadınız",
+        USERNAME: "Kullanıcı Adınız",
+        CONTRACT_PHONE: "İletişim Telefonu",
+        COUNTRY: "Ülke",
+        CITY: "Şehir",
+        DISTRICT: "İlçe",
+        FULL_ADDRESS: "Tam Adres",
+
+        SIGN_IN_METHOD: "Giriş Yöntemi",
+        EMAIL: "E-posta",
+        EMAIL_ADDRESS: "E-posta Adresi",
+        UPDATE_EMAIL: "E-posta Adresini Güncelle",
+        CHANGE_EMAIL: "E-posta Adresini Değiştir",
+        ENTER_NEW_EMAIL_ADDRESS: "Yeni E-posta Adresini Girin",
+        EMAIL_IS_INVALID: "E-posta geçersiz!",
+        EMAIL_SHOULD_HAVE_AT_LEAST_3_SYMBOLS: "E-posta en az 3 karakter içermelidir!",
+        EMAIL_SHOULD_HAVE_MAXIMUM_360_SYMBOLS: "E-posta en fazla 360 karakter içermelidir!",
+
+        // Password
+        PASSWORD: "Şifre",
+        PASSWORD_SHOULD_HAVE_AT_LEAST_3_SYMBOLS: "Şifre en az 3 karakter içermelidir!",
+        PASSWORD_SHOULD_HAVE_MAXIMUM_100_SYMBOLS: "Şifre en fazla 100 karakter içermelidir!",
+        UPDATE_PASSWORD: "Şifreyi Güncelle",
+        RESET_PASSWORD: "Şifreyi Sıfırla",
+        CURRENT_PASSWORD: "Mevcut Şifre",
+        NEW_PASSWORD: "Yeni Şifre",
+        NEW_PASSWORD_RULE_1: "Yeni Şifre en az 3 karakter içermelidir",
+        NEW_PASSWORD_RULE_2: "Yeni Şifre en fazla 100 karakter içermelidir",
+        CONFIRM_NEW_PASSWORD: "Yeni Şifreyi Onayla",
+        CONFIRM_NEW_PASSWORD_RULE_1: "Yeni Şifre Onayla en az 3 karakter içermelidir",
+        CONFIRM_NEW_PASSWORD_RULE_2: "Yeni Şifre Onayla en fazla 100 karakter içermelidir",
+        CONFIRM_PASSWORD: "Şifreyi Onayla",
+        CONFIRM_PASSWORD_SHOULD_HAVE_AT_LEAST_3_SYMBOLS: "Şifreyi doğrulama en az 3 karakter içermelidir!",
+        CONFIRM_PASSWORD_SHOULD_HAVE_MAXIMUM_100_SYMBOLS: "Şifreyi doğrulama en fazla 100 karakter içermelidir!",
+        PASSWORD_MISMATCH: "'Yeni Şifre' ve 'Şifreyi Onayla' eşleşmiyor.",
+
+        CATEGORY: "Kategori",
+        SELECT_CATEGORY: "Bir Kategori Seçin...",
+        BRAND: "Marka",
+        PRICE: "Fiyat",
+        DISCOUNT: "İndirim",
+        DISCOUNT_PERCENTAGE: "İndirim (%)",
+        DISCOUNTED_PRICE: "İndirimli Fiyat",
+        STOCK: "Stok",
+
+        NOTIFICATION: "Bildirim",
+        NOTIFICATIONS: "Bildirimler",
+
+        ALL_PRODUCTS: "Tüm Ürünler",
+        SHOPPING: 'Alışveriş',
+        INVOICE_TYPE:"Fatura Tipi",
+        SELECT_INVOICE_TYPE:"Bir Fatura Tipi Seçiniz...",
+        ADDRESS_HEADER: "Adres Başlığı",
+        TAX_NO: "VKN",
+        TAX_OFFICE: "Vergi Dairesi",
+        FIRM_NAME: "Firma Adı",
+
+        ADDRESS_INFOS: 'Adres Bilgileri',
+        PAYMENT_INFOS: 'Ödeme Bilgileri',
+        DELIVERY_ADDRESS: 'Teslimat Adresi',
+        INVOICE_ADDRESS: 'Fatura Adresi',
+        SAME_ADDRESS: 'Faturamı Aynı Adrese Gönder',
+        ORDER: 'Siparişi Tamamla'
+        // END (TR-EN-LANGUAGE-BRANCH)
+    }
+};

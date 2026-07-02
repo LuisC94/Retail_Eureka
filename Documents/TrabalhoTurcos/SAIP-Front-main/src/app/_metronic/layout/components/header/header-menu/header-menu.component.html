@@ -1,0 +1,36 @@
+<div *ngIf="isAdminPanel"
+  class="menu menu-lg-rounded menu-column menu-lg-row menu-state-bg menu-title-gray-600 menu-state-title-primary menu-state-icon-primary menu-state-bullet-primary menu-arrow-gray-500 fw-bold fs-6 my-5 mx-10 my-lg-0 align-items-stretch"
+  id="#kt_header_menu" data-kt-menu="true">
+
+  <ng-container *ngFor="let menu of menuList">
+    <div class="menu-item me-lg-1" *ngIf="menu.childMenus?.length == 0 && !menu.isForbid">
+      <a class="menu-link py-3" routerLinkActive="active" routerLink="{{menu.url}}"><span
+          class="menu-title">{{("LANG" | translate) === 'tr' ? menu.name : menu.nameEn }}</span></a>
+    </div>
+
+
+    <div class="menu-item menu-lg-down-accordion me-lg-1 menu-dropdown" data-kt-menu-trigger="click"
+      data-kt-menu-placement="bottom-start" *ngIf="menu.childMenus && menu.childMenus.length > 0 && !menu.isForbid">
+      <span class="menu-link py-3" [ngClass]="calculateMenuItemCssClass('{{menu.url}}')">
+        <span class="menu-title">{{("LANG" | translate) === 'tr' ? menu.name : menu.nameEn }}</span>
+        <span class="menu-arrow d-lg-none"></span>
+      </span>
+
+      <div class="
+              menu-sub
+              menu-sub-lg-down-accordion
+              menu-sub-lg-dropdown
+              menu-rounded-0
+              py-lg-4
+              w-lg-225px
+            " data-kt-menu-dismiss="true">
+        <div *ngFor="let child of menu.childMenus" class="menu-item me-lg-1">
+          <a *ngIf="!child.isForbid" class="menu-link py-3" routerLinkActive="active" routerLink="{{child.url}}"><span class="menu-bullet"><span
+                class="bullet bullet-dot"></span></span>
+            <span class="menu-title">{{("LANG" | translate) === 'tr' ? child.name : child.nameEn }}</span></a>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+</div>

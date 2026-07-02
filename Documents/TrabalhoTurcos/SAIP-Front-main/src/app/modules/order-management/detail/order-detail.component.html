@@ -1,0 +1,115 @@
+<app-orderinvoice-edit #invoiceComponent>
+</app-orderinvoice-edit>
+
+<app-product-comment #commentComponent (isSuccess)="isSuccess($event)">
+</app-product-comment>
+
+<div class="row">
+    <div class="col-xxl-12">
+        <div class="card card-xxl-stretch mb-5 mb-xl-8">
+            <div class="card-header border-0 pt-5">
+                <h3 class="card-title align-items-start flex-column">
+                    <span class="card-label fw-bolder fs-3 mb-1">{{header}}</span>
+                </h3>
+            </div>
+            <div class="card-body py-3">
+                <div class="row mb-8" *ngIf="order">
+                    <div class="col-xxl-4" style="text-align: center">
+                        <span class="text-muted fw-bold fs-7">{{'ORDER_NUMBER' | translate}}</span>
+                        <br />
+                        <span class="fw-bolder text-gray-800 ps-3">{{order.orderNo}}</span>
+                    </div>
+                    <div class="col-xxl-4" style="text-align: center">
+                        <span class="text-muted fw-bold fs-7">{{'STATUS' | translate}}</span>
+                        <br />
+                        <span class="ki-outline ki-check-circle" [ngStyle]="{'color': order.orderStatus == 5 ? 'var(--bs-primary)' : 'var(--bs-danger)'}"></span>
+                        <span class="fw-bolder text-gray-800 ps-3">{{order.orderStatusStr}}</span>
+                    </div>
+                    <div class="col-xxl-4" style="text-align: center">
+                        <span class="text-muted fw-bold fs-7">{{'ORDER_DATE' | translate}} / {{'AMOUNT_TL' | translate}}</span>
+                        <br />
+                        <span class="fw-bolder text-gray-800 ps-3">{{order.orderDate}}</span>
+                        <br />
+                        <span class="fw-bolder fs-5 text-primary ps-3">{{order.price.toFixed(2)}} ₺</span>
+                    </div>
+                </div>
+                <div class="row" *ngIf="order">
+                    <ng-container *ngFor="let item of order.orderProducts">
+                        <div class="col-xxl-12">
+                            <div class="card card-xxl-stretch mb-5 mb-xl-8">
+                                <div class="card-body py-3">
+                                    <div class="row">
+                                        <div class="col-xxl-6">
+                                            <div class="row">
+                                                <div class="col-xxl-2">
+                                                    <a>
+                                                        <img [src]="item.product?.fileResult.fileContents" style="height: 6.75rem; width: auto;">
+                                                    </a>
+                                                </div>
+                                                <div class="col-xxl-6 mt-5" style="text-align: center;">
+                                                    <span class="fw-bolder text-gray-900 fs-6 ps-3">
+                                                        {{item.product?.name}}
+                                                    </span>
+                                                    <br />
+                                                    <span class="fw-bolder fs-4 text-primary ps-3">{{item.product?.price?.toFixed(2)}} ₺</span>
+                                                    <br />
+
+                                                </div>
+                                                <div class="col-xxl-4 mt-4">
+                                                    <button *ngIf="item.orderStatus == 4 && item.canEvaluate" type="button" class="btn btn-light-primary mt-2"
+                                                    (click)="openCommentModal(item.id)">{{'RATE_PRODUCT' | translate}}</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-xxl-6">
+                                            <div class="card card-xxl-stretch mb-5 mb-xl-8 bg-light-primary">
+                                                <div class="card-header border-1 pt-5">
+                                                    <div class="card-title flex-column">
+                                                        <h5>{{item.orderStatusStr}}</h5>
+                                                    </div>
+                                                    <div class="card-title flex-column" *ngIf="item.orderStatus != 0">
+                                                        <span class="text-primary fw-normal fs-7">{{'PROCESS_DATE' | translate}}</span>
+                                                        <span class="text-primary fw-bolder fs-7">{{item.proccessDate}}</span>
+                                                    </div>
+                                                </div>
+                                                <div class="card-body py-3" *ngIf="item.orderStatus == 4 || item.orderStatus == 3">
+                                                    <div class="row">
+                                                        <div class="col-xxl-6">
+                                                            <div class="d-flex justify-content-start flex-shrink-0">
+                                                                <a class="
+                                                                    btn btn-icon btn-bg-ghost btn-active-color-primary btn-sm
+                                                                    me-1
+                                                                  " style="width: 100%;">
+                                                                  <span class="text-muted fw-bold fs-7">
+                                                                    {{'SHIPMENT_TRACKING' | translate}}
+                                                                  </span>
+                                                                </a>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-xxl-6">
+                                                            <div class="d-flex justify-content-start flex-shrink-0" *ngIf="item.orderStatus == 4
+                                                                && item.fileId! > 0">
+                                                                <a class="
+                                                                    btn btn-icon btn-bg-ghost btn-active-color-primary btn-sm
+                                                                    me-1
+                                                                  " style="width: 100%;" (click)="openInvoiceModal(item.id)">
+                                                                  <span class="text-muted fw-bolder fs-7">
+                                                                    {{'VIEW_INVOICE' | translate}}
+                                                                  </span>
+                                                                </a>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </ng-container>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
