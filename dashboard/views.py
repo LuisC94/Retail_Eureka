@@ -1590,9 +1590,9 @@ def get_harvest_history(request, harvest_id):
     Retorna o HTML do modal preenchido.
     """
     try:
-        # 1. Construir o ID usado na Blockchain (Ex: "HARVEST-123")
+        # 1. Construir o ID usado na Blockchain (Ex: "LOTE-123")
         # Nota: O harvest_id que vem no URL é o PK da BD (Ex: 123)
-        asset_id = f"HARVEST-{harvest_id}"
+        asset_id = f"LOTE-{harvest_id}"
         
         # 2. Buscar Histórico ao Go Middleware
         history_data = fabric_service.get_asset_history(asset_id)
