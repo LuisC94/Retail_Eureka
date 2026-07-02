@@ -635,7 +635,7 @@ def producer_submit_harvest(request):
                             order_id=dossier['batch_id'],
                             producer_id=harvest_record.producer.username,
                             culture_type=harvest_record.plantation.production_type,
-                            quantity=float(harvest_record.quantity_kg),
+                            quantity=float(harvest_record.harvest_quantity_kg),
                             harvest_date=harvest_record.harvest_date.strftime("%Y-%m-%d"),
                             additional_data=dossier
                         )
