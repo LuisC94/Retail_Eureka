@@ -619,6 +619,7 @@ def producer_submit_harvest(request):
                     dossier = create_genesis_dossier(harvest_record)
                     data_hash = blockchain_service.generate_dossier_hash(dossier)
                     
+                    # 1. Simulação Local na BD (PostgreSQL)
                     result = blockchain_service.sign_and_submit_block(
                         user_role='Producer',
                         batch_id=dossier['batch_id'],
@@ -626,7 +627,21 @@ def producer_submit_harvest(request):
                         event_type='GENESIS',
                         data_payload=dossier  # Pass full dossier content
                     )
-                    messages.success(request, f"Colheita registada e Bloco Genesis minado! Hash: {result['tx_hash'][:10]}...")
+                    
+                    # 2. Blockchain Real (Hyperledger Fabric)
+                    try:
+                        from dashboard.services.fabric_service import fabric_service
+                        fabric_service.create_order(
+                            order_id=dossier['batch_id'],
+                            producer_id=harvest_record.producer.username,
+                            culture_type=harvest_record.plantation.production_type,
+                            quantity=float(harvest_record.quantity_kg),
+                            harvest_date=harvest_record.harvest_date.strftime("%Y-%m-%d"),
+                            additional_data=dossier
+                        )
+                        messages.success(request, f"Colheita registada e submetida na Blockchain Real! Hash: {result['tx_hash'][:10]}...")
+                    except Exception as fe:
+                        messages.warning(request, f"Colheita registada localmente, mas erro ao gravar na Blockchain Real: {fe}")
                 except Exception as e:
                     # Se falhar a blockchain, não invalida a colheita, mas avisa
                     messages.warning(request, f"Colheita salva, mas erro ao gerar Bloco Blockchain: {e}")
@@ -800,6 +815,18 @@ def processor_submit_processing(request):
                     inputs=inputs, # <--- AQUI ESTÁ A AGREGAÇÃO
                     data_payload=data_dict  # Pass full business data
                 )
+                
+                # 6. Blockchain Real (Hyperledger Fabric)
+                try:
+                    if order.harvest_origin:
+                        from dashboard.services.fabric_service import fabric_service
+                        fabric_service.update_order(
+                            order_id=f"HARVEST-{order.harvest_origin.pk}",
+                            new_status="PROCESSED",
+                            additional_data=data_dict
+                        )
+                except Exception as fe:
+                    print(f"Erro ao atualizar na Blockchain Real: {fe}")
                 
                 messages.success(request, f"Processamento registado e Bloco '{new_batch_id}' minado!")
                 
@@ -1460,6 +1487,18 @@ def transporter_validate_pickup(request):
             data_payload=dossier  # Pass full dossier content
         )
         
+        # Real Blockchain Call (Hyperledger Fabric)
+        try:
+            if order.harvest_origin:
+                from dashboard.services.fabric_service import fabric_service
+                fabric_service.update_order(
+                    order_id=f"HARVEST-{order.harvest_origin.pk}",
+                    new_status="IN_TRANSIT",
+                    additional_data=dossier
+                )
+        except Exception as fe:
+            print(f"Erro ao atualizar na Blockchain Real: {fe}")
+        
         messages.success(request, f"Carga validada! Bloco de Custódia gerado para Encomenda #{order.pk}.")
         
     return redirect('transporter_dashboard')
@@ -1520,6 +1559,19 @@ def transporter_submit_delivery(request):
                     event_type='TRANSPORT_DELIVERY',
                     data_payload=dossier  # Pass full dossier content
                 )
+                
+                # Real Blockchain Call (Hyperledger Fabric)
+                try:
+                    if order.harvest_origin:
+                        from dashboard.services.fabric_service import fabric_service
+                        fabric_service.update_order(
+                            order_id=f"HARVEST-{order.harvest_origin.pk}",
+                            new_status="DELIVERED",
+                            additional_data=dossier
+                        )
+                except Exception as fe:
+                    print(f"Erro ao atualizar na Blockchain Real: {fe}")
+                    
                 messages.success(request, f"Entrega registada com sucesso! Bloco Final gerado. Hash: {result['tx_hash'][:10]}...")
             except Exception as e:
                 messages.error(request, f"Erro Blockchain: {e}")
