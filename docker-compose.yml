@@ -17,4 +17,6 @@ services:
       - DB_PASSWORD=H6.yLBweMW1w\$$P&ub60
       - DB_HOST=aisupply.rc
       - DB_PORT=5432
-      - FABRIC_API_URL=http://localhost:3000
+      - FABRIC_API_URL=http://host.docker.internal:3000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
