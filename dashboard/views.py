@@ -1492,7 +1492,7 @@ def transporter_validate_pickup(request):
             if order.harvest_origin:
                 from dashboard.services.fabric_service import fabric_service
                 fabric_service.update_order(
-                    order_id=f"HARVEST-{order.harvest_origin.pk}",
+                    order_id=f"LOTE-{order.harvest_origin.pk}",
                     new_status="IN_TRANSIT",
                     additional_data=dossier
                 )
@@ -1565,7 +1565,7 @@ def transporter_submit_delivery(request):
                     if order.harvest_origin:
                         from dashboard.services.fabric_service import fabric_service
                         fabric_service.update_order(
-                            order_id=f"HARVEST-{order.harvest_origin.pk}",
+                            order_id=f"LOTE-{order.harvest_origin.pk}",
                             new_status="DELIVERED",
                             additional_data=dossier
                         )
