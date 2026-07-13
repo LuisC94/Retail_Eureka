@@ -1,3 +1,4 @@
+import os
 from django.db import IntegrityError, transaction
 from django.db.models import Sum, Q
 from django import forms
@@ -16,7 +17,7 @@ from .models import (
     SoilCharacteristic, PlantationSoilValue, ProductSubFamily, PlantationCrop,
     FertilizerSyntheticData, FertilizerOrganicData, SoilCorrectiveData, PestControlData,
     MachineryData, FuelData, ElectricEnergyData, IrrigationWaterData, MarketplaceOrder,
-    ConsolidatedStock
+    ConsolidatedStock, TrainedModel
 )
 from blockchain.services import blockchain_service
 from blockchain.utils import create_genesis_dossier
@@ -176,8 +177,28 @@ class ConsumerDashboardView(View):
 class ProcessorDashboardView(View):
     def get(self, request):
         user = request.user
+        
+        # Processar contratos pendentes automáticos do Dia X
+        from dashboard.services.contract_service import process_pending_contracts
+        process_pending_contracts()
+        
+        # Produtores Virtuais e Contratos de Fornecimento
+        from dashboard.models import SupplyContract
+        from django.contrib.auth.models import User
+        instant_producers = User.objects.filter(groups__name='Producer', userprofile__producer_type='instant').order_by('username')
+        contract_producers = User.objects.filter(groups__name='Producer', userprofile__producer_type='contract').order_by('username')
+        contracts = SupplyContract.objects.filter(buyer=user).select_related('producer', 'subfamily').order_by('-created_at')
+        
         open_orders = MarketplaceOrder.objects.filter(status='OPEN').select_related('requester', 'culture').order_by('-created_at')
         closed_orders = MarketplaceOrder.objects.filter(Q(requester=user) | Q(fulfilled_by=user), status='APPROVED').select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')
+        
+        # Filtrar encomendas aprovadas e entregues ao processador que ainda não foram processadas
+        unprocessed_orders = MarketplaceOrder.objects.filter(
+            fulfilled_by=user, 
+            status='APPROVED', 
+            transport_status='DELIVERED', 
+            is_processed=False
+        ).select_related('requester', 'culture').order_by('-fulfilled_at')
 
         try:
             user_profile = UserProfile.objects.get(user=user)
@@ -188,7 +209,20 @@ class ProcessorDashboardView(View):
         processor_stock = []
         for stock_obj in ConsolidatedStock.objects.filter(owner=user).select_related('culture'):
             clean_wh = stock_obj.warehouse_location.split(' (WH:')[0] if stock_obj.warehouse_location and ' (WH:' in stock_obj.warehouse_location else stock_obj.warehouse_location
+            has_sales_model = TrainedModel.objects.filter(
+                owner=user,
+                culture=stock_obj.culture,
+                model_type='sales_mlp',
+                file_name='sales_mlp.joblib'
+            ).exists()
+            has_agent_model = TrainedModel.objects.filter(
+                owner=user,
+                culture=stock_obj.culture,
+                model_type='buyer_agent',
+                file_name='buyer_agent_actor.pth'
+            ).exists()
             processor_stock.append({
+                'pk': stock_obj.pk,
                 'culture_id': stock_obj.culture.pk,
                 'culture': str(stock_obj.culture),
                 'warehouse': clean_wh,
@@ -197,6 +231,8 @@ class ProcessorDashboardView(View):
                 'avg_caliber': round(float(stock_obj.avg_caliber), 2),
                 'avg_brix': round(float(stock_obj.avg_soluble_solids), 2),
                 'avg_score': round(float(stock_obj.avg_quality_score), 1),
+                'has_sales_model': has_sales_model,
+                'has_agent_model': has_agent_model,
             })
 
         context = { 
@@ -213,6 +249,9 @@ class ProcessorDashboardView(View):
             'unprocessed_orders': unprocessed_orders,
             'processing_form': ProcessorProcessingForm(),
             'product_subfamilies': ProductSubFamily.objects.all().order_by('fruit_type', 'name'),
+            'instant_producers': instant_producers,
+            'contract_producers': contract_producers,
+            'contracts': contracts,
         }
         return render(request, 'dashboard/processorDash.html', context)
 
@@ -221,6 +260,18 @@ class ProcessorDashboardView(View):
 class RetailerDashboardView(View):
     def get(self, request):
         user = request.user
+        
+        # Processar contratos pendentes automáticos do Dia X
+        from dashboard.services.contract_service import process_pending_contracts
+        process_pending_contracts()
+        
+        # Produtores Virtuais e Contratos de Fornecimento
+        from dashboard.models import SupplyContract
+        from django.contrib.auth.models import User
+        instant_producers = User.objects.filter(groups__name='Producer', userprofile__producer_type='instant').order_by('username')
+        contract_producers = User.objects.filter(groups__name='Producer', userprofile__producer_type='contract').order_by('username')
+        contracts = SupplyContract.objects.filter(buyer=user).select_related('producer', 'subfamily').order_by('-created_at')
+
         open_orders = MarketplaceOrder.objects.filter(status='OPEN').select_related('requester', 'culture').order_by('-created_at')[:50]
         closed_orders = MarketplaceOrder.objects.filter(Q(requester=user) | Q(fulfilled_by=user), status='APPROVED').select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')[:50]
 
@@ -233,7 +284,20 @@ class RetailerDashboardView(View):
         retailer_stock = []
         for stock_obj in ConsolidatedStock.objects.filter(owner=user).select_related('culture'):
             clean_wh = stock_obj.warehouse_location.split(' (WH:')[0] if stock_obj.warehouse_location and ' (WH:' in stock_obj.warehouse_location else stock_obj.warehouse_location
+            has_sales_model = TrainedModel.objects.filter(
+                owner=user,
+                culture=stock_obj.culture,
+                model_type='sales_mlp',
+                file_name='sales_mlp.joblib'
+            ).exists()
+            has_agent_model = TrainedModel.objects.filter(
+                owner=user,
+                culture=stock_obj.culture,
+                model_type='buyer_agent',
+                file_name='buyer_agent_actor.pth'
+            ).exists()
             retailer_stock.append({
+                'pk': stock_obj.pk,
                 'culture_id': stock_obj.culture.pk,
                 'culture': str(stock_obj.culture),
                 'warehouse': clean_wh,
@@ -242,6 +306,8 @@ class RetailerDashboardView(View):
                 'avg_caliber': round(float(stock_obj.avg_caliber), 2),
                 'avg_brix': round(float(stock_obj.avg_soluble_solids), 2),
                 'avg_score': round(float(stock_obj.avg_quality_score), 1),
+                'has_sales_model': has_sales_model,
+                'has_agent_model': has_agent_model,
             })
 
         # Prepare Market Order Form with Warehouse Dropdown
@@ -269,6 +335,9 @@ class RetailerDashboardView(View):
             'retailer_warehouses': retailer_warehouses,
             'retailer_stock': retailer_stock,
             'product_subfamilies': ProductSubFamily.objects.all().order_by('fruit_type', 'name'),
+            'instant_producers': instant_producers,
+            'contract_producers': contract_producers,
+            'contracts': contracts,
         }
         return render(request, 'dashboard/retailerDash.html', context)
 
@@ -1632,31 +1701,27 @@ def get_agent_recommendations(request):
     import os
     import sys
     import torch
-    import pandas as pd
+    import io
     from django.http import JsonResponse
     from django.conf import settings
-    from .models import ProductSubFamily
+    from django.db.models import Avg
+    from .models import TrainedModel, ProductSubFamily, ConsolidatedStock, WarehouseSensorReading, Warehouse, HistoricalSalesData
+    import datetime
 
     try:
-        buyer_agent_path = os.path.join(settings.BASE_DIR, 'BuyerAgent')
-        novos_dias_path = os.path.join(buyer_agent_path, 'datasets', 'NovosDias.xlsx')
+        # Obter os modelos de Buyer Agent treinados por este utilizador
+        trained_models = TrainedModel.objects.filter(
+            owner=request.user,
+            model_type='buyer_agent',
+            file_name='buyer_agent_actor.pth'
+        ).select_related('culture')
         
-        if not os.path.exists(novos_dias_path):
-            return JsonResponse({'status': 'error', 'message': f'Ficheiro {novos_dias_path} não encontrado.'}, status=404)
+        # Se não houver nenhum modelo treinado, não mostramos recomendações ainda
+        if not trained_models.exists():
+            return JsonResponse({'status': 'success', 'data': []})
             
-        df_novos = pd.read_excel(novos_dias_path)
-        
-        # Mapeamento robusto de SKU para nome da cultura no BD
-        sku_culture_map = {
-            "3_080": "Gala",
-            "3_090": "Fuji",
-            "3_252": "Hayward",
-            "3_586": "Gold",
-            "2_586": "Gold",
-            "911753": "Reineta",
-        }
-        
         # Adicionar o path do BuyerAgent com prioridade máxima e limpar cache do sys.modules
+        buyer_agent_path = os.path.join(settings.BASE_DIR, 'BuyerAgent')
         if buyer_agent_path in sys.path:
             sys.path.remove(buyer_agent_path)
         sys.path.insert(0, buyer_agent_path)
@@ -1668,90 +1733,63 @@ def get_agent_recommendations(request):
                 
         from environment_constrained import StockEnvironment
         from agent.ppo_agent import ParallelPPOAgent
+        from dashboard.services.agent_service import compute_daily_agent_decision
+        from dashboard.services.lc_service import calculate_quality_decay_curve
 
         recommendations = []
         
-        for idx, row in df_novos.iterrows():
-            item_id = str(row['item_id']).strip()
-            prediction = int(row['prediction'])
-            price = float(row['price'])
+        for model_obj in trained_models:
+            subfamily = model_obj.culture
             
-            # Mapeamento do SKU para carregamento do modelo correto
-            model_sku = item_id
-            if model_sku == "2_586":
-                model_sku = "3_586"
-            elif model_sku == "911753":
-                model_sku = "3_080" # fallback
+            try:
+                # Calcular a recomendação real usando o modelo treinado da BD!
+                recommended_qty = compute_daily_agent_decision(request.user, subfamily)
                 
-            # Determinar caminhos de datasets para obter o ambiente correto
-            excel_name = f"m5_foods_{model_sku}.xlsx"
-            if model_sku == "911753":
-                excel_name = "911753_151dias_com_real.xlsx"
+                # Preço médio histórico ou fallback
+                price_agg = HistoricalSalesData.objects.filter(
+                    owner=request.user,
+                    culture=subfamily
+                ).aggregate(Avg('price_per_kg'))['price_per_kg__avg']
+                price = float(price_agg) if price_agg and price_agg > 0 else 1.50
                 
-            excel_path = os.path.join(buyer_agent_path, 'datasets', excel_name)
-            if not os.path.exists(excel_path):
-                # Fallback seguro para 3_080 se não encontrar
-                excel_path = os.path.join(buyer_agent_path, 'datasets', "m5_foods_3_080.xlsx")
+                # Calcular o Stock RSL com o LC Agent
+                stock_item = ConsolidatedStock.objects.filter(owner=request.user, culture=subfamily).first()
+                rsl_days = 15
+                if stock_item:
+                    clean_loc = stock_item.warehouse_location.split(' (WH:')[0].strip() if stock_item.warehouse_location and ' (WH:' in stock_item.warehouse_location else stock_item.warehouse_location
+                    warehouse = Warehouse.objects.filter(owner=request.user, location=clean_loc).first()
+                    sensor_readings = []
+                    if warehouse:
+                        today_date = datetime.date.today()
+                        future_readings = WarehouseSensorReading.objects.filter(warehouse=warehouse, date__gte=today_date).order_by('date')
+                        if future_readings.exists():
+                            sensor_readings = list(future_readings[:120])
+                        else:
+                            past_readings = WarehouseSensorReading.objects.filter(warehouse=warehouse).order_by('-date')[:30]
+                            sensor_readings = sorted(list(past_readings), key=lambda r: r.date)
+                            
+                    _, rsl_days = calculate_quality_decay_curve(
+                        culture_name=f"{subfamily.name} ({subfamily.fruit_type})",
+                        initial_score=stock_item.avg_quality_score or 10.0,
+                        sensor_readings=sensor_readings
+                    )
                 
-            # Inicializar o ambiente
-            env = StockEnvironment(excel_path=excel_path, is_training=False, train_split=0.6, max_capacity=500)
-            state = env.reset()
-            
-            # Configurar o agente PPO
-            state_dim = 17
-            action_dim = 1
-            max_order_limit = env.max_order_limit
-            
-            agent = ParallelPPOAgent(state_dim=state_dim, action_dim=action_dim, max_action=max_order_limit)
-            agent.device = torch.device('cpu')
-            
-            # Carregar o checkpoint correspondente
-            checkpoint_dir = os.path.join(buyer_agent_path, 'modelos_producao_constrained', model_sku)
-            if not os.path.exists(checkpoint_dir):
-                checkpoint_dir = os.path.join(buyer_agent_path, 'modelos_producao_constrained', '3_080')
-            checkpoint_path = os.path.join(checkpoint_dir, 'ppo_constrained_iter313')
-            
-            agent.load(checkpoint_path)
-            agent.policy_old_actor.to('cpu')
-            agent.policy_old_actor.eval()
-            
-            # Injetar os valores do "Novo Dia" diretamente no primeiro passo (dia a seguir ao fim do treino, index 0 do split de teste)
-            env.data.loc[0, 'prediction'] = prediction
-            if 'price' in env.data.columns:
-                env.data.loc[0, 'price'] = price
+                # Determinar o mínimo requerido de shelf life de forma robusta
+                min_required_shelf_life = 5 if recommended_qty > 0 else 0
                 
-            # Obter estado do novo dia (sem simulação de malha fechada dos 40% restantes)
-            state = env._get_state()
-            
-            # Inferencia final
-            state_tensor = torch.FloatTensor(state).unsqueeze(0).to('cpu')
-            with torch.no_grad():
-                action_mean, log_std = agent.policy_old_actor(state_tensor)
-                dist = torch.distributions.Normal(action_mean, torch.exp(torch.clamp(log_std, -2.3, 1.5)))
-                action_percent = dist.sample()
-                physical_action = torch.round(torch.clamp(action_percent * max_order_limit, 0, max_order_limit)).cpu().numpy().flatten()[0]
+                recommendations.append({
+                    'item_id': str(subfamily.subfamily_id),
+                    'sku': subfamily.name,
+                    'quantity': int(max(0, recommended_qty)),
+                    'price': round(price, 2),
+                    'culture_id': subfamily.pk,
+                    'culture_name': f"{subfamily.name} ({subfamily.fruit_type})",
+                    'min_required_shelf_life': int(min_required_shelf_life),
+                    'stock_remaining_shelf_life': int(rsl_days)
+                })
+            except Exception as e:
+                print(f"Erro ao computar recomendação para {subfamily.name}: {str(e)}")
                 
-            # Calcular shelf life
-            stock_remaining_shelf_life = env.get_stock_remaining_shelf_life()
-            min_required_shelf_life = env.get_min_required_order_shelf_life(int(physical_action))
-            
-            # Obter o ID da cultura na Base de Dados
-            culture_name = sku_culture_map.get(item_id, "Gala")
-            culture = ProductSubFamily.objects.filter(name=culture_name).first()
-            culture_id = culture.pk if culture else None
-            culture_fullname = str(culture) if culture else item_id
-            
-            recommendations.append({
-                'item_id': item_id,
-                'sku': model_sku,
-                'quantity': int(max(0, physical_action)),
-                'price': price,
-                'culture_id': culture_id,
-                'culture_name': culture_fullname,
-                'min_required_shelf_life': int(min_required_shelf_life),
-                'stock_remaining_shelf_life': int(stock_remaining_shelf_life)
-            })
-            
         return JsonResponse({'status': 'success', 'data': recommendations})
         
     except Exception as e:
@@ -2510,19 +2548,16 @@ def download_training_template(request):
             'Data', 
             'Cultura_Produto', 
             'Vendas_Kg', 
-            'Preco_Venda_Euro', 
-            'Stock_Fim_Dia_Kg', 
-            'Dia_Semana', 
-            'Feriado'
+            'Preco_Venda_Euro'
         ]
         data = [
-            ['2026-06-01', culture_name, 250.0, 1.80, 500.0, 1, 0],
-            ['2026-06-02', culture_name, 270.0, 1.85, 450.0, 2, 0],
-            ['2026-06-03', culture_name, 310.0, 1.80, 600.0, 3, 0],
-            ['2026-06-04', culture_name, 150.0, 1.90, 480.0, 4, 0],
-            ['2026-06-05', culture_name, 400.0, 1.75, 380.0, 5, 0],
+            ['2026-06-01', culture_name, 250.0, 1.80],
+            ['2026-06-02', culture_name, 270.0, 1.85],
+            ['2026-06-03', culture_name, 310.0, 1.80],
+            ['2026-06-04', culture_name, 150.0, 1.90],
+            ['2026-06-05', culture_name, 400.0, 1.75],
         ]
-        filename = f"template_treino_buyer_{clean_culture_name.lower().replace(' ', '_')}.xlsx"
+        filename = f"template_previsao_vendas_{clean_culture_name.lower().replace(' ', '_')}.xlsx"
 
     df = pd.DataFrame(data, columns=columns)
     
@@ -2538,3 +2573,402 @@ def download_training_template(request):
     )
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
+
+
+@login_required
+@role_required(['Retailer', 'Processor'])
+def buy_direct_makro(request):
+    if request.method == "POST":
+        producer_name = request.POST.get('producer_name')
+        culture_id = request.POST.get('culture_id')
+        quantity_kg = request.POST.get('quantity_kg')
+        warehouse_id = request.POST.get('warehouse_id')
+        
+        try:
+            from django.contrib.auth.models import User, Group
+            from dashboard.models import ProductSubFamily, UserProfile, Warehouse
+            from dashboard.services.contract_service import process_instant_purchase
+            
+            if not producer_name or not producer_name.strip():
+                messages.error(request, "O nome do fornecedor não pode estar vazio.")
+                return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
+                
+            producer_name = producer_name.strip()
+            subfamily = get_object_or_404(ProductSubFamily, pk=culture_id)
+            qty = float(quantity_kg)
+            
+            if qty <= 0:
+                messages.error(request, "A quantidade deve ser superior a 0.")
+                return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
+                
+            warehouse_loc = None
+            if warehouse_id:
+                w_obj = get_object_or_404(Warehouse, pk=warehouse_id, owner=request.user)
+                warehouse_loc = f"{w_obj.location} (WH: {w_obj.warehouse_id})"
+                
+            # Obter ou criar dinamicamente o fornecedor instantâneo
+            producer_user = User.objects.filter(username__iexact=producer_name).first()
+            if not producer_user:
+                producer_user = User(username=producer_name)
+                producer_user.set_unusable_password()
+                producer_user.save()
+                
+                p_group, _ = Group.objects.get_or_create(name='Producer')
+                producer_user.groups.add(p_group)
+                
+                UserProfile.objects.create(user=producer_user, producer_type='instant')
+                
+            # Processar a compra instantânea
+            order = process_instant_purchase(
+                buyer=request.user,
+                producer=producer_user,
+                subfamily=subfamily,
+                quantity_kg=qty,
+                warehouse_location=warehouse_loc
+            )
+            
+            # Obter o tempo de vida calculado para mostrar na mensagem
+            from dashboard.services.contract_service import get_culture_shelf_life
+            days = get_culture_shelf_life(subfamily)
+            
+            messages.success(request, f"Compra rápida efetuada com sucesso! Lote {order.harvest_origin.pk} adicionado ao stock. Fornecedor: {producer_user.username}. Validade: {days} dias.")
+        except Exception as e:
+            messages.error(request, f"Erro ao processar compra rápida: {e}")
+            
+    return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
+
+
+@login_required
+@role_required(['Retailer', 'Processor'])
+def create_supply_contract(request):
+    if request.method == "POST":
+        producer_name = request.POST.get('producer_name')
+        culture_id = request.POST.get('culture_id')
+        quantity_kg = request.POST.get('quantity_kg')
+        delivery_date_str = request.POST.get('delivery_date')
+        warehouse_id = request.POST.get('warehouse_id')
+        
+        try:
+            from django.contrib.auth.models import User, Group
+            from dashboard.models import ProductSubFamily, SupplyContract, UserProfile, Warehouse
+            import datetime
+            
+            if not producer_name or not producer_name.strip():
+                messages.error(request, "O nome do fornecedor não pode estar vazio.")
+                return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
+                
+            producer_name = producer_name.strip()
+            subfamily = get_object_or_404(ProductSubFamily, pk=culture_id)
+            qty = float(quantity_kg)
+            delivery_date = datetime.datetime.strptime(delivery_date_str, "%Y-%m-%d").date()
+            
+            if qty <= 0:
+                messages.error(request, "A quantidade deve ser superior a 0.")
+                return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
+                
+            if delivery_date < timezone.now().date():
+                messages.error(request, "A data de entrega não pode ser no passado.")
+                return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
+                
+            warehouse_loc = None
+            if warehouse_id:
+                w_obj = get_object_or_404(Warehouse, pk=warehouse_id, owner=request.user)
+                warehouse_loc = f"{w_obj.location} (WH: {w_obj.warehouse_id})"
+                
+            # Obter ou criar dinamicamente o fornecedor do contrato (com sufixo -Contract automática)
+            expected_username = producer_name if producer_name.endswith('-Contract') else f"{producer_name}-Contract"
+            producer_user = User.objects.filter(username__iexact=expected_username).first()
+            
+            if not producer_user:
+                # Criar diretamente com o nome esperado (sufixado) para evitar colisões com o nome base
+                producer_user = User(username=expected_username)
+                producer_user.set_unusable_password()
+                producer_user.save()
+                
+                p_group, _ = Group.objects.get_or_create(name='Producer')
+                producer_user.groups.add(p_group)
+                
+                UserProfile.objects.create(user=producer_user, producer_type='contract')
+                
+            # Criar o contrato
+            SupplyContract.objects.create(
+                buyer=request.user,
+                producer=producer_user,
+                subfamily=subfamily,
+                quantity_kg=qty,
+                delivery_date=delivery_date,
+                warehouse_location=warehouse_loc,
+                status='pending'
+            )
+            
+            messages.success(request, f"Contrato de fornecimento celebrado com sucesso com {producer_user.username} para o dia {delivery_date_str}!")
+        except Exception as e:
+            messages.error(request, f"Erro ao criar contrato: {e}")
+            
+    return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
+
+
+from django.http import JsonResponse
+
+@login_required
+@role_required(['Retailer', 'Processor'])
+def upload_sales_history(request):
+    if request.method == "POST" and request.FILES.get('sales_file'):
+        culture_id = request.POST.get('culture_id')
+        sales_file = request.FILES['sales_file']
+        subfamily = get_object_or_404(ProductSubFamily, pk=culture_id)
+        
+        try:
+            import pandas as pd
+            if sales_file.name.endswith('.xlsx'):
+                df = pd.read_excel(sales_file)
+            else:
+                df = pd.read_csv(sales_file)
+                
+            # Normalizar nomes de colunas (Inglês, Português e variantes)
+            col_mapping = {
+                'day': 'date',
+                'date': 'date',
+                'data': 'date',
+                'Data': 'date',
+                'real_value': 'sales_quantity_kg',
+                'sales_quantity_kg': 'sales_quantity_kg',
+                'vendas_kg': 'sales_quantity_kg',
+                'Vendas_Kg': 'sales_quantity_kg',
+                'price': 'price_per_kg',
+                'price_per_kg': 'price_per_kg',
+                'preco_venda_euro': 'price_per_kg',
+                'Preco_Venda_Euro': 'price_per_kg'
+            }
+            df = df.rename(columns=col_mapping)
+            
+            if 'date' not in df.columns or 'sales_quantity_kg' not in df.columns:
+                messages.error(request, "O ficheiro deve conter as colunas de data ('Data' ou 'date') e de quantidade de vendas ('Vendas_Kg' ou 'sales_quantity_kg').")
+                return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
+                
+            df['date'] = pd.to_datetime(df['date']).dt.date
+            if 'price_per_kg' not in df.columns:
+                df['price_per_kg'] = 2.0  # Preço médio padrão
+                
+            # Ler apenas as colunas necessárias e descartar todas as outras colunas adicionais
+            df = df[['date', 'sales_quantity_kg', 'price_per_kg']].dropna(subset=['date', 'sales_quantity_kg'])
+                
+            # Treinar MLP preditivo de vendas
+            from dashboard.services.agent_service import train_sales_forecaster
+            count = train_sales_forecaster(request.user, subfamily, df)
+            
+            messages.success(request, f"Histórico de vendas e modelo preditivo de vendas (MLP) treinado com sucesso! {count} dias registados.")
+        except Exception as e:
+            messages.error(request, f"Erro ao processar ficheiro de histórico: {e}")
+            
+    return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
+
+
+@login_required
+@role_required(['Retailer', 'Processor'])
+def infer_sales_forecast(request):
+    if request.method == "POST":
+        culture_id = request.POST.get('culture_id')
+        horizon_days = int(request.POST.get('horizon_days', 30))
+        subfamily = get_object_or_404(ProductSubFamily, pk=culture_id)
+        
+        try:
+            from dashboard.services.agent_service import run_sales_inference
+            predictions = run_sales_inference(request.user, subfamily, horizon_days)
+            
+            # Devolver formato JSON com as datas formatadas
+            data = [{
+                'date': d.strftime('%Y-%m-%d'),
+                'value': round(v, 2)
+            } for d, v in predictions]
+            
+            return JsonResponse({'status': 'success', 'predictions': data})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+            
+    return JsonResponse({'status': 'error', 'message': 'Método não permitido.'}, status=405)
+
+
+@login_required
+@role_required(['Retailer', 'Processor'])
+def train_buyer_agent(request):
+    if request.method == "POST":
+        culture_id = request.POST.get('culture_id')
+        subfamily = get_object_or_404(ProductSubFamily, pk=culture_id)
+        market_file = request.FILES.get('market_file')
+        max_episodes = request.POST.get('max_episodes', '640')
+        if not max_episodes or not max_episodes.strip():
+            max_episodes = '640'
+        
+        try:
+            import pandas as pd
+            if market_file:
+                if market_file.name.endswith('.xlsx'):
+                    df = pd.read_excel(market_file)
+                else:
+                    df = pd.read_csv(market_file)
+                
+                col_mapping = {
+                    'day': 'date', 'date': 'date',
+                    'real_value': 'sales_quantity_kg', 'sales_quantity_kg': 'sales_quantity_kg',
+                    'price': 'price_per_kg', 'price_per_kg': 'price_per_kg'
+                }
+                df = df.rename(columns=col_mapping)
+                df['date'] = pd.to_datetime(df['date']).dt.date
+            else:
+                # Usar histórico já carregado
+                sales_qs = HistoricalSalesData.objects.filter(owner=request.user, culture=subfamily)
+                if not sales_qs.exists():
+                    messages.error(request, "Precisa primeiro de carregar o histórico de vendas para esta cultura.")
+                    return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
+                
+                df = pd.DataFrame(list(sales_qs.values('date', 'sales_quantity_kg', 'price_per_kg')))
+                
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.accepts('application/json'):
+                from django.http import StreamingHttpResponse
+                from dashboard.services.agent_service import train_buyer_agent_optimizer_generator
+                response = StreamingHttpResponse(
+                    train_buyer_agent_optimizer_generator(request.user, subfamily, df, max_episodes=max_episodes),
+                    content_type='text/plain'
+                )
+                response['Cache-Control'] = 'no-cache'
+                response['X-Accel-Buffering'] = 'no'
+                return response
+                
+            from dashboard.services.agent_service import train_buyer_agent_optimizer
+            train_buyer_agent_optimizer(request.user, subfamily, df, max_episodes=max_episodes)
+            messages.success(request, f"O Buyer Agent para {subfamily.name} foi treinado com sucesso!")
+        except Exception as e:
+            messages.error(request, f"Erro ao treinar Buyer Agent: {e}")
+            
+    return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
+
+
+@login_required
+@role_required(['Retailer', 'Processor'])
+def toggle_buyer_agent_status(request):
+    if request.method == "POST":
+        profile = request.user.userprofile
+        profile.buyer_agent_active = not profile.buyer_agent_active
+        profile.save()
+        
+        status_str = "ATIVADO" if profile.buyer_agent_active else "DESATIVADO"
+        messages.success(request, f"Buyer Agent {status_str} com sucesso!")
+        
+    return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
+
+
+@login_required
+@role_required(['Retailer', 'Processor'])
+def run_buyer_agent_action(request):
+    """
+    Executa a inferência diária do Buyer Agent e retorna a quantidade recomendada para compra.
+    """
+    if request.method == "POST":
+        culture_id = request.POST.get('culture_id')
+        subfamily = get_object_or_404(ProductSubFamily, pk=culture_id)
+        
+        try:
+            from dashboard.services.agent_service import compute_daily_agent_decision
+            recommended_qty = compute_daily_agent_decision(request.user, subfamily)
+            
+            return JsonResponse({
+                'status': 'success',
+                'recommended_qty_kg': recommended_qty,
+                'culture_name': subfamily.name
+            })
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+            
+    return JsonResponse({'status': 'error', 'message': 'Método não permitido.'}, status=405)
+
+
+@login_required
+@role_required(['Producer', 'Processor', 'Retailer'])
+def get_lc_decay_data(request):
+    """
+    Endpoint AJAX que retorna a curva de degradação da qualidade prevista pelo LC Agent.
+    """
+    if request.method != "GET":
+        return JsonResponse({'status': 'error', 'message': 'Método não permitido.'}, status=405)
+        
+    stock_id = request.GET.get('stock_id')
+    if not stock_id:
+        return JsonResponse({'status': 'error', 'message': 'Parâmetro stock_id em falta.'}, status=400)
+        
+    import datetime
+    from django.http import JsonResponse
+    from django.shortcuts import get_object_or_404
+    from .models import ConsolidatedStock, WarehouseSensorReading, Warehouse, Harvest
+    from .services.lc_service import calculate_quality_decay_curve
+    
+    # Verificar se o utilizador é Produtor ou outro perfil
+    is_producer = request.user.groups.filter(name='Producer').exists()
+    
+    if is_producer:
+        harvest_item = get_object_or_404(Harvest, pk=stock_id)
+        culture_name = f"{harvest_item.subfamily.name} ({harvest_item.subfamily.fruit_type})"
+        initial_score = harvest_item.avg_quality_score or 10.0
+        brix = harvest_item.soluble_solids or 10.0
+        caliber = harvest_item.caliber or 65.0
+        quantity = harvest_item.current_stock_kg
+        warehouse = harvest_item.warehouse
+        warehouse_location = warehouse.location if warehouse else ""
+        owner = harvest_item.producer
+    else:
+        stock_item = get_object_or_404(ConsolidatedStock, pk=stock_id)
+        culture_name = f"{stock_item.culture.name} ({stock_item.culture.fruit_type})"
+        initial_score = stock_item.avg_quality_score or 10.0
+        brix = stock_item.avg_soluble_solids or 10.0
+        caliber = stock_item.avg_caliber or 65.0
+        quantity = stock_item.quantity
+        warehouse_location = stock_item.warehouse_location
+        owner = stock_item.owner
+        # Localizar o armazém com sufixo limpo se necessário
+        clean_location = warehouse_location.split(' (WH:')[0].strip() if warehouse_location and ' (WH:' in warehouse_location else warehouse_location
+        warehouse = Warehouse.objects.filter(owner=owner, location=clean_location).first()
+    
+    # Obter leituras de sensores para este armazém
+    sensor_readings = []
+    if warehouse:
+        today_date = datetime.date.today()
+        future_readings = WarehouseSensorReading.objects.filter(warehouse=warehouse, date__gte=today_date).order_by('date')
+        if future_readings.exists():
+            sensor_readings = list(future_readings[:120])
+        else:
+            # Pegar as mais recentes do passado
+            past_readings = WarehouseSensorReading.objects.filter(warehouse=warehouse).order_by('-date')[:30]
+            sensor_readings = sorted(list(past_readings), key=lambda r: r.date)
+        
+    # Calcular curva de degradação com o LC Agent
+    decay_curve, rsl_days = calculate_quality_decay_curve(
+        culture_name=culture_name,
+        initial_score=initial_score,
+        sensor_readings=sensor_readings
+    )
+    
+    # Obter dados climáticos de hoje
+    temp_today = 4.0
+    hum_today = 90.0
+    eth_today = 0.01
+    
+    if sensor_readings:
+        latest = sensor_readings[len(sensor_readings) - 1]
+        temp_today = float(latest.temperature)
+        hum_today = float(latest.humidity)
+        eth_today = float(latest.ethylene)
+        
+    return JsonResponse({
+        'status': 'success',
+        'culture_name': culture_name,
+        'rsl_days': rsl_days,
+        'initial_score': float(initial_score),
+        'brix': float(brix),
+        'caliber': float(caliber),
+        'quantity': float(quantity),
+        'warehouse_location': warehouse_location,
+        'temp_today': temp_today,
+        'hum_today': hum_today,
+        'eth_today': eth_today,
+        'decay_curve': decay_curve
+    })

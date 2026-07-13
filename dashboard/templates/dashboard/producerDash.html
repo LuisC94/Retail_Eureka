@@ -883,6 +883,9 @@
                 <a href="#" class="menu-item" onclick="switchSidebarTab('ai-model-training')">
                     ⚙️ AI Model Training
                 </a>
+                <a href="#" class="menu-item" onclick="switchSidebarTab('lc-analysis')">
+                    ⏳ Ciclo de Vida (LC)
+                </a>
             </nav>
         </div>
 
@@ -2471,6 +2474,66 @@
                 </div>
             </div>
 
+            <!-- LIFE CYCLE ANALYSIS TAB -->
+            <div id="lc-analysis" class="dashboard-tab" style="display: none;">
+                <h3 style="color: #00796b; margin-bottom: 25px; font-weight: 700; border-bottom: 3px solid #00796b; padding-bottom: 10px; display: flex; align-items: center; gap: 10px;">
+                    <span>⏳</span> Ciclo de Vida do Lote (LC Agent)
+                </h3>
+                
+                <div style="background: white; border: 2px solid #e0f2f1; border-radius: 20px; padding: 25px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); margin-bottom: 25px;">
+                    <label style="display:block; font-weight:700; font-size:1em; margin-bottom:12px; color:#00796b;">Selecione o Lote de Stock Consolidado:</label>
+                    <select id="lc-stock-select" onchange="loadLcDecayData()" style="width: 100%; max-width: 500px; padding: 12px; border-radius: 10px; border: 2px solid #e0f2f1; font-weight: 600;">
+                        <option value="" disabled selected>--- Selecionar Lote ---</option>
+                        {% for h in harvest_records %}
+                            {% if h.current_stock_kg > 0 %}
+                            <option value="{{ h.pk }}">{{ h.subfamily.name }} (Lote em {{ h.warehouse.location }}) - {{ h.current_stock_kg }} kg</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div id="lc-details-container" style="display: none;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 25px;">
+                        <!-- RSL CARD -->
+                        <div style="background: #e0f2f1; border-radius: 15px; padding: 20px; border: 2px solid #b2dfdb; text-align: center;">
+                            <h4 style="margin: 0 0 10px 0; color: #00796b; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.5px;">Validade Prevista (RSL)</h4>
+                            <div style="font-size: 2.2em; font-weight: 800; color: #004d40;" id="lc-rsl-value">-</div>
+                            <span style="font-size: 0.85em; color: #00796b; font-weight: 600;">dias restantes de qualidade</span>
+                        </div>
+                        <!-- INITIAL QUALITY CARD -->
+                        <div style="background: #fff8e1; border-radius: 15px; padding: 20px; border: 2px solid #ffe082; text-align: center;">
+                            <h4 style="margin: 0 0 10px 0; color: #ff8f00; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.5px;">Qualidade Inicial</h4>
+                            <div style="font-size: 1.1em; font-weight: 700; color: #ff6f00; line-height: 1.6;">
+                                Score: <span id="lc-score-value">-</span>/10<br>
+                                Brix: <span id="lc-brix-value">-</span>º | Calibre: <span id="lc-caliber-value">-</span>mm
+                            </div>
+                        </div>
+                        <!-- SENSORS TODAY CARD -->
+                        <div style="background: #e3f2fd; border-radius: 15px; padding: 20px; border: 2px solid #bbdefb; text-align: center;">
+                            <h4 style="margin: 0 0 10px 0; color: #1565c0; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.5px;">Sensores Hoje</h4>
+                            <div style="font-size: 1.1em; font-weight: 700; color: #0d47a1; line-height: 1.6;">
+                                Temp: <span id="lc-temp-value">-</span> ºC<br>
+                                Humidade: <span id="lc-hum-value">-</span> % | Etileno: <span id="lc-eth-value">-</span> ppm
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background: white; border: 2px solid #e0f2f1; border-radius: 20px; padding: 25px; box-shadow: 0 5px 20px rgba(0,0,0,0.05);">
+                        <h4 style="color: #00796b; font-weight: 700; margin-bottom: 20px; font-size: 1.1em; display: flex; align-items: center; justify-content: space-between;">
+                            <span>📈 Projeção da Curva de Qualidade</span>
+                            <span style="font-size: 0.85em; font-weight: normal; color: #666;">(Calculada pelo LC Agent baseado nas condições do armazém)</span>
+                        </h4>
+                        <div style="height: 380px; position: relative;">
+                            <canvas id="lc-decay-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="lc-empty-state" style="background: #f8f9fa; border: 2px dashed #cbd5e1; border-radius: 20px; padding: 40px; text-align: center; color: #64748b; font-weight: 600; font-size: 1.1em;">
+                    👋 Por favor, selecione um lote em stock acima para analisar o seu ciclo de vida.
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -3881,6 +3944,108 @@
             location.reload();
         }
         
+        let lcDecayChartObj = null;
+
+        function loadLcDecayData() {
+            const select = document.getElementById('lc-stock-select');
+            const stockId = select.value;
+            if (!stockId) return;
+
+            // Mostrar container e esconder empty state
+            document.getElementById('lc-details-container').style.display = 'block';
+            document.getElementById('lc-empty-state').style.display = 'none';
+
+            fetch(`/api/lc-decay-data/?stock_id=${stockId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Atualizar textos
+                        document.getElementById('lc-rsl-value').textContent = data.rsl_days;
+                        document.getElementById('lc-score-value').textContent = data.initial_score.toFixed(1);
+                        document.getElementById('lc-brix-value').textContent = data.brix.toFixed(1);
+                        document.getElementById('lc-caliber-value').textContent = data.caliber.toFixed(1);
+                        document.getElementById('lc-temp-value').textContent = data.temp_today.toFixed(1);
+                        document.getElementById('lc-hum-value').textContent = data.hum_today.toFixed(1);
+                        document.getElementById('lc-eth-value').textContent = data.eth_today.toFixed(3);
+
+                        // Desenhar gráfico
+                        drawLcDecayChart(data.decay_curve);
+                    } else {
+                        alert('Erro ao carregar dados do ciclo de vida: ' + data.message);
+                    }
+                })
+                .catch(err => {
+                    console.error('Erro no LC Agent:', err);
+                    alert('Erro de comunicação com o LC Agent.');
+                });
+        }
+
+        function drawLcDecayChart(curve) {
+            const ctx = document.getElementById('lc-decay-chart').getContext('2d');
+            
+            const labels = curve.map(point => point.date);
+            const qualityData = curve.map(point => point.quality);
+            
+            if (lcDecayChartObj) {
+                lcDecayChartObj.destroy();
+            }
+
+            lcDecayChartObj = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Qualidade Prevista (%)',
+                        data: qualityData,
+                        borderColor: '#00796b',
+                        backgroundColor: 'rgba(0, 121, 107, 0.1)',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#004d40',
+                        pointRadius: 4,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            min: 0,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Qualidade (%)',
+                                font: { weight: 'bold' }
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Data',
+                                font: { weight: 'bold' }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const point = curve[context.dataIndex];
+                                    return [
+                                        `Qualidade: ${point.quality}%`,
+                                        `Temp: ${point.temperature.toFixed(1)} ºC`,
+                                        `Humidade: ${point.humidity.toFixed(1)}%`,
+                                        `Etileno: ${point.ethylene.toFixed(3)} ppm`
+                                    ];
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             let savedLang = localStorage.getItem('selectedLanguage') || 'pt';
             const cookieLang = getGoogtransLanguage();
