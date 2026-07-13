@@ -51,6 +51,8 @@ urlpatterns = [
     path('retailer/submit-warehouse/', views.retailer_submit_warehouse, name='retailer_submit_warehouse'),
     path('retailer/submit-sensor/', views.retailer_submit_sensor, name='retailer_submit_sensor'),
     path('retailer/accept-order/', views.retailer_accept_order, name='retailer_accept_order'),
+    path('buy-direct-makro/', views.buy_direct_makro, name='buy_direct_makro'),
+    path('create-supply-contract/', views.create_supply_contract, name='create_supply_contract'),
     path('warehouse/<int:warehouse_id>/import-readings/', views.import_sensor_readings, name='import_sensor_readings'),
 
     # 4. APIs e Autenticação
@@ -68,6 +70,14 @@ urlpatterns = [
     path('api/training-status/', views.get_training_status, name='get_training_status'),
     path('api/adjust-stock/', views.adjust_stock_manually, name='adjust_stock_manually'),
     path('api/download-template/', views.download_training_template, name='download_training_template'),
+    
+    # NOVAS ROTAS DE INTELIGÊNCIA ARTIFICIAL (MLP & PPO AGENT)
+    path('ai/upload-sales/', views.upload_sales_history, name='upload_sales_history'),
+    path('ai/infer-sales/', views.infer_sales_forecast, name='infer_sales_forecast'),
+    path('ai/train-buyer-agent/', views.train_buyer_agent, name='train_buyer_agent'),
+    path('ai/toggle-buyer-agent/', views.toggle_buyer_agent_status, name='toggle_buyer_agent_status'),
+    path('ai/run-buyer-agent/', views.run_buyer_agent_action, name='run_buyer_agent_action'),
+    path('api/lc-decay-data/', views.get_lc_decay_data, name='get_lc_decay_data'),
     
     path('accounts/register/', views.RegisterView.as_view(), name='register'),
     path('accounts/logout/', auth_views.LogoutView.as_view(), name='logout'),

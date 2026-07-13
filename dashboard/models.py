@@ -44,11 +44,34 @@ CONTROL_TYPE_CHOICES = [('Controlled', 'Controlado'), ('Non-Controlled', 'Não C
 # ----------------------------------------------------------------------
 
 class UserProfile(models.Model):
+    PRODUCER_TYPE_CHOICES = [
+        ('manual', 'Manual/Tradicional'),
+        ('instant', 'Compra Direta (Makro)'),
+        ('contract', 'Contrato Futuro'),
+    ]
+    
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     phone_number = models.CharField(max_length=20, blank=True, null=True, verbose_name="Telemóvel")
     address = models.CharField(max_length=255, blank=True, null=True, verbose_name="Morada Completa")
+    producer_type = models.CharField(
+        max_length=20, 
+        choices=PRODUCER_TYPE_CHOICES, 
+        default='manual', 
+        verbose_name="Tipo de Produtor"
+    )
+    buyer_agent_active = models.BooleanField(default=False, verbose_name="Agente de Compras Ativo")
+    
     class Meta: db_table = 'user_profile'
-    def __str__(self): return f"Perfil de {self.user.username}"
+    def __str__(self): return f"Perfil de {self.user.username} ({self.get_producer_type_display()})"
+    
+    def save(self, *args, **kwargs):
+        # Se for um produtor do tipo Contrato, acrescentamos automaticamente o sufixo -Contract
+        if self.producer_type == 'contract':
+            user_obj = self.user
+            if user_obj and not user_obj.username.endswith('-Contract'):
+                user_obj.username = f"{user_obj.username}-Contract"
+                user_obj.save()
+        super().save(*args, **kwargs)
 
 class Product(models.Model):
     product_id = models.AutoField(primary_key=True) 
@@ -69,6 +92,41 @@ class ProductSubFamily(models.Model):
 
     class Meta: db_table = 'product_subfamilies'
     def __str__(self): return f"{self.name} ({self.fruit_type})"
+
+class CultureShelfLife(models.Model):
+    subfamily = models.OneToOneField(ProductSubFamily, on_delete=models.CASCADE, related_name='shelf_life', verbose_name="Cultura (Subfamília)")
+    default_shelf_life_days = models.IntegerField(default=10, verbose_name="Tempo de Vida Padrão (Dias)")
+
+    class Meta:
+        db_table = 'culture_shelf_life'
+        verbose_name = "Validade de Cultura"
+        verbose_name_plural = "Validades de Culturas"
+
+    def __str__(self):
+        return f"{self.subfamily.name} - {self.default_shelf_life_days} dias"
+
+class SupplyContract(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pendente'),
+        ('fulfilled', 'Concluído'),
+        ('cancelled', 'Cancelado'),
+    ]
+    buyer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='buyer_contracts', verbose_name="Comprador (Retailer/Processor)")
+    producer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='producer_contracts', verbose_name="Produtor Virtual (Tipo 3)")
+    subfamily = models.ForeignKey(ProductSubFamily, on_delete=models.CASCADE, verbose_name="Cultura (Subfamília)")
+    quantity_kg = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Quantidade Contratada (Kg)")
+    delivery_date = models.DateField(verbose_name="Data de Entrega Planeada (Dia X)")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name="Estado do Contrato")
+    warehouse_location = models.CharField(max_length=255, blank=True, null=True, verbose_name="Local de Entrega (Armazém)")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'supply_contract'
+        verbose_name = "Contrato de Fornecimento"
+        verbose_name_plural = "Contratos de Fornecimento"
+
+    def __str__(self):
+        return f"Contrato #{self.pk} ({self.subfamily.name}) - {self.buyer.username} & {self.producer.username}"
     
 class SoilCharacteristic(models.Model):
     category = models.CharField(max_length=100, verbose_name="Categoria")
@@ -298,6 +356,7 @@ class Harvest(models.Model):
     producer = models.ForeignKey(User, on_delete=models.CASCADE) 
     subfamily = models.ForeignKey(ProductSubFamily, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Cultura (Subfamília)") 
     harvest_date = models.DateField(verbose_name="Harvest Date")
+    expiration_date = models.DateField(null=True, blank=True, verbose_name="Expiration Date (Validade)")
     harvest_quantity_kg = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Harvest Quantity (Kg)")
     delivered_quantity_kg = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Delivered Quantity (Kg)")
     avg_quality_score = models.IntegerField(choices=QUALITY_SCORE_CHOICES, verbose_name="Average Quality Score (1-10)")
@@ -546,3 +605,55 @@ def order_post_delete(sender, instance, **kwargs):
         update_consolidated_stock(instance.requester, instance.culture, instance.warehouse_location)
     if instance.fulfilled_by:
         update_consolidated_stock(instance.fulfilled_by, instance.culture, instance.warehouse_location)
+
+
+class HistoricalSalesData(models.Model):
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='historical_sales', verbose_name="Utilizador")
+    culture = models.ForeignKey(ProductSubFamily, on_delete=models.CASCADE, verbose_name="Cultura")
+    date = models.DateField(verbose_name="Data da Venda")
+    sales_quantity_kg = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Vendas em Kg")
+    price_per_kg = models.DecimalField(max_digits=8, decimal_places=2, verbose_name="Preço de Venda (€/Kg)")
+
+    class Meta:
+        db_table = 'historical_sales_data'
+        unique_together = ('owner', 'culture', 'date')
+        verbose_name = "Histórico de Vendas"
+        verbose_name_plural = "Históricos de Vendas"
+
+    def __str__(self):
+        return f"{self.owner.username} - {self.culture.name} ({self.date}): {self.sales_quantity_kg}kg"
+
+
+class DemandForecast(models.Model):
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='demand_forecasts', verbose_name="Utilizador")
+    culture = models.ForeignKey(ProductSubFamily, on_delete=models.CASCADE, verbose_name="Cultura")
+    date = models.DateField(verbose_name="Data da Previsão")
+    predicted_quantity_kg = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Quantidade Prevista (Kg)")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criado Em")
+
+    class Meta:
+        db_table = 'demand_forecast'
+        unique_together = ('owner', 'culture', 'date')
+        verbose_name = "Previsão de Procura"
+        verbose_name_plural = "Previsões de Procura"
+
+    def __str__(self):
+        return f"Previsão {self.owner.username} - {self.culture.name} ({self.date}): {self.predicted_quantity_kg}kg"
+
+
+class TrainedModel(models.Model):
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='trained_models', verbose_name="Utilizador")
+    culture = models.ForeignKey(ProductSubFamily, on_delete=models.CASCADE, verbose_name="Cultura")
+    model_type = models.CharField(max_length=50, verbose_name="Tipo de Modelo") # 'sales_mlp' ou 'buyer_agent'
+    file_name = models.CharField(max_length=255, verbose_name="Nome do Ficheiro") # ex: 'sales_mlp.joblib', 'buyer_agent_actor.pth'
+    file_data = models.BinaryField(verbose_name="Dados do Ficheiro (Binário)")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Atualizado Em")
+
+    class Meta:
+        db_table = 'trained_model'
+        unique_together = ('owner', 'culture', 'model_type', 'file_name')
+        verbose_name = "Modelo de IA Treinado"
+        verbose_name_plural = "Modelos de IA Treinados"
+
+    def __str__(self):
+        return f"{self.owner.username} - {self.culture.name} ({self.model_type} - {self.file_name})"
