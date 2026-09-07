@@ -1755,6 +1755,44 @@
                         </div>
 
                         <div style="margin-bottom: 25px;">
+                            <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">{{ warehouse_form.region.label }}</label>
+                            {{ warehouse_form.region }}
+                            <div style="margin-top: 10px;">
+                                <button type="button" onclick="toggleCityGuide(this)" style="background: none; border: none; color: #00796b; font-size: 0.85em; cursor: pointer; text-decoration: underline; font-weight: 600; padding: 0; display: flex; align-items: center; gap: 5px;">
+                                    💡 Guia de Cidades por Região
+                                </button>
+                                <div class="city-guide-box" style="display: none; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px; margin-top: 10px; font-size: 0.8em; color: #166534; max-height: 200px; overflow-y: auto; line-height: 1.5;">
+                                    <p style="margin-top: 0; font-weight: 700; margin-bottom: 8px;">Correspondência de Regiões:</p>
+                                    <ul style="padding-left: 15px; margin: 0; list-style-type: disc;">
+                                        <li style="margin-bottom: 4px;"><strong>Norte Litoral (PT-NL):</strong> Porto, Viana do Castelo, Vila Nova de Gaia, Braga (Litoral), Matosinhos.</li>
+                                        <li style="margin-bottom: 4px;"><strong>Norte Interior (PT-NI):</strong> Vila Real, Bragança, Chaves, Mirandela.</li>
+                                        <li style="margin-bottom: 4px;"><strong>Centro Litoral (PT-CL):</strong> Coimbra, Aveiro, Leiria, Figueira da Foz, Peniche.</li>
+                                        <li style="margin-bottom: 4px;"><strong>Centro Interior (PT-CI):</strong> Viseu, Guarda, Castelo Branco, Covilhã.</li>
+                                        <li style="margin-bottom: 4px;"><strong>Lisboa e Vale do Tejo (PT-LVT):</strong> Lisboa, Sintra, Cascais, Loures, Almada, Santarém, Setúbal.</li>
+                                        <li style="margin-bottom: 4px;"><strong>Alentejo (PT-AL):</strong> Évora, Beja, Portalegre, Elvas, Sines, Odemira.</li>
+                                        <li style="margin-bottom: 4px;"><strong>Algarve (PT-ALG):</strong> Faro, Portimão, Albufeira, Lagos, Tavira.</li>
+                                        <li style="margin-bottom: 4px;"><strong>Serra / Montanha (PT-SM):</strong> Covilhã (Serra), Manteigas, Seia, Gouveia.</li>
+                                        <li style="margin-bottom: 4px;"><strong>Madeira (PT-MAD):</strong> Funchal, Câmara de Lobos, Machico, Porto Santo.</li>
+                                        <li style="margin-bottom: 4px;"><strong>Açores (PT-ACO):</strong> Ponta Delgada, Angra do Heroísmo, Horta.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <script>
+                            function toggleCityGuide(btn) {
+                                const box = btn.nextElementSibling;
+                                if (box.style.display === "none" || box.style.display === "") {
+                                    box.style.display = "block";
+                                    btn.innerHTML = "💡 Ocultar Guia de Cidades";
+                                } else {
+                                    box.style.display = "none";
+                                    btn.innerHTML = "💡 Guia de Cidades por Região";
+                                }
+                            }
+                        </script>
+
+                        <div style="margin-bottom: 25px;">
                             <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">{{ warehouse_form.control_type.label }}</label>
                             {{ warehouse_form.control_type }}
                         </div>

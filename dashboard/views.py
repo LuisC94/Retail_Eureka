@@ -887,7 +887,11 @@ def producer_submit_warehouse(request):
                 
             except IntegrityError as e:
                 db_error = f"Erro ao salvar Armazém na DB: Detalhe: {e}"
-                # Pode usar request.session['db_error'] = db_error para mostrar o erro
+                print(f"[ERRO PRODUCER WAREHOUSE DB]: {e}")
+                request.session['db_error'] = db_error
+
+        else:
+            print(f"[ERRO FORMULARIO PRODUCER WAREHOUSE]: {form.errors}")
 
         # Se houver erro de validação ou DB, redireciona de volta
         return redirect('producer_dashboard')
@@ -942,7 +946,10 @@ def processor_submit_warehouse(request):
                 return redirect('processor_dashboard')
             except IntegrityError as e:
                 db_error = f"Erro ao salvar Armazém na DB: {e}"
+                print(f"[ERRO PROCESSOR WAREHOUSE DB]: {e}")
                 request.session['db_error'] = db_error
+        else:
+            print(f"[ERRO FORMULARIO PROCESSOR WAREHOUSE]: {form.errors}")
 
         return redirect('processor_dashboard')
         
@@ -1102,7 +1109,10 @@ def retailer_submit_warehouse(request):
                 return redirect('retailer_dashboard')
             except IntegrityError as e:
                 db_error = f"Erro ao salvar Armazém na DB: {e}"
+                print(f"[ERRO RETAILER WAREHOUSE DB]: {e}")
                 request.session['db_error'] = db_error
+        else:
+            print(f"[ERRO FORMULARIO RETAILER WAREHOUSE]: {form.errors}")
 
         return redirect('retailer_dashboard')
     return redirect('retailer_dashboard')
