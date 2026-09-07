@@ -74,6 +74,13 @@ def get_user_stock_profile(user, subfamily):
                 warehouse = Warehouse.objects.filter(owner=user, location=clean_location).first()
                 sensor_readings = []
                 if warehouse:
+                    # Self-healing check
+                    if WarehouseSensorReading.objects.filter(warehouse=warehouse).count() < 30:
+                        try:
+                            from dashboard.services.lc_service import generate_fallback_sensor_readings
+                            generate_fallback_sensor_readings(warehouse)
+                        except Exception:
+                            pass
                     today_date = datetime.date.today()
                     future_readings = WarehouseSensorReading.objects.filter(warehouse=warehouse, date__gte=today_date).order_by('date')
                     if future_readings.exists():
@@ -120,6 +127,18 @@ def get_buyer_agent_state(user, subfamily, max_capacity=500):
     Reconstrói o vetor de estado de 17 variáveis requisitado pelo Buyer Agent (PPO).
     """
     today = timezone.now().date()
+    
+    # Re-inferência automática de previsões se faltarem dados para os próximos 25 dias
+    try:
+        from dashboard.models import DemandForecast, TrainedModel
+        future_forecast_count = DemandForecast.objects.filter(owner=user, culture=subfamily, date__gte=today).count()
+        if future_forecast_count < 25:
+            has_model = TrainedModel.objects.filter(owner=user, culture=subfamily, model_type__in=['sales_mlp', 'sales_autoformer']).exists()
+            if has_model:
+                run_sales_inference(user, subfamily, horizon_days=30)
+    except Exception as e:
+        print(f"[Auto-Refresh Forecast] Erro ao re-inferir: {str(e)}")
+
     stock_profile = get_user_stock_profile(user, subfamily)
     
     # Encomendas em trânsito
@@ -223,9 +242,9 @@ def get_buyer_agent_state(user, subfamily, max_capacity=500):
     final_state = np.concatenate([scaled_via1, via2_bypass])
     return final_state
 
-def train_sales_forecaster(user, subfamily, df_data):
+def train_sales_forecaster(user, subfamily, df_data, model_type='mlp'):
     """
-    Treina a rede neuronal MLP de 3 camadas com base no DataFrame e guarda o modelo.
+    Treina a rede neuronal (MLP ou Autoformer) com base no DataFrame e guarda o modelo.
     """
     # 1. Ordenar por data
     df_data = df_data.sort_values(by='date').reset_index(drop=True)
@@ -233,38 +252,59 @@ def train_sales_forecaster(user, subfamily, df_data):
     if len(df_data) < 10:
         raise ValueError("São necessários pelo menos 10 dias de histórico para treinar o modelo de vendas.")
         
-    # 2. Criar Lags e Variáveis Cíclicas
-    df_data['day_of_week'] = df_data['date'].apply(lambda x: x.weekday() + 1)
-    df_data['month'] = df_data['date'].apply(lambda x: x.month)
-    
-    df_data['real_value_lag1'] = df_data['sales_quantity_kg'].shift(1)
-    df_data['real_value_lag7'] = df_data['sales_quantity_kg'].shift(7)
-    
-    # Limpar NaNs
-    df_data = df_data.dropna().reset_index(drop=True)
-    
-    if len(df_data) < 3:
-        raise ValueError("Histórico insuficiente após aplicação de lags temporais (mínimo 8 dias no total).")
+    if model_type == 'autoformer':
+        # Importar a função de treino padrão do módulo Autoformer
+        from BuyerAgent.autoformer_forecaster import train_model as train_autoformer_model
         
-    X = df_data[['real_value_lag1', 'real_value_lag7', 'price_per_kg', 'day_of_week', 'month']].values
-    y = df_data['sales_quantity_kg'].values
-    
-    # 3. Treinar MLP com 3 camadas ocultas
-    mlp = MLPRegressor(hidden_layer_sizes=(64, 32, 16), max_iter=10000, random_state=42)
-    mlp.fit(X, y)
-    
-    # 4. Guardar na Base de Dados (BLOB)
-    buffer = io.BytesIO()
-    joblib.dump(mlp, buffer)
-    binary_data = buffer.getvalue()
-    
-    TrainedModel.objects.update_or_create(
-        owner=user,
-        culture=subfamily,
-        model_type='sales_mlp',
-        file_name='sales_mlp.joblib',
-        defaults={'file_data': binary_data}
-    )
+        # Treinar o Autoformer (retorna bytes)
+        binary_data = train_autoformer_model(df_data)
+        
+        # Guardar na BD como sales_autoformer
+        TrainedModel.objects.update_or_create(
+            owner=user,
+            culture=subfamily,
+            model_type='sales_autoformer',
+            file_name='autoformer.pt',
+            defaults={'file_data': binary_data}
+        )
+        # Limpar modelo concorrente MLP anterior para evitar conflito
+        TrainedModel.objects.filter(owner=user, culture=subfamily, model_type='sales_mlp').delete()
+        
+    else:
+        # 2. Criar Lags e Variáveis Cíclicas para a MLP
+        df_data['day_of_week'] = df_data['date'].apply(lambda x: x.weekday() + 1)
+        df_data['month'] = df_data['date'].apply(lambda x: x.month)
+        
+        df_data['real_value_lag1'] = df_data['sales_quantity_kg'].shift(1)
+        df_data['real_value_lag7'] = df_data['sales_quantity_kg'].shift(7)
+        
+        # Limpar NaNs
+        df_data_mlp = df_data.dropna().reset_index(drop=True)
+        
+        if len(df_data_mlp) < 3:
+            raise ValueError("Histórico insuficiente após aplicação de lags temporais (mínimo 8 dias no total).")
+            
+        X = df_data_mlp[['real_value_lag1', 'real_value_lag7', 'price_per_kg', 'day_of_week', 'month']].values
+        y = df_data_mlp['sales_quantity_kg'].values
+        
+        # 3. Treinar MLP com 3 camadas ocultas
+        mlp = MLPRegressor(hidden_layer_sizes=(64, 32, 16), max_iter=10000, random_state=42)
+        mlp.fit(X, y)
+        
+        # 4. Guardar na Base de Dados (BLOB) como sales_mlp
+        buffer = io.BytesIO()
+        joblib.dump(mlp, buffer)
+        binary_data = buffer.getvalue()
+        
+        TrainedModel.objects.update_or_create(
+            owner=user,
+            culture=subfamily,
+            model_type='sales_mlp',
+            file_name='sales_mlp.joblib',
+            defaults={'file_data': binary_data}
+        )
+        # Limpar modelo concorrente Autoformer anterior para evitar conflito
+        TrainedModel.objects.filter(owner=user, culture=subfamily, model_type='sales_autoformer').delete()
     
     # Persistir também os dados no histórico de vendas da BD
     with transaction.atomic():
@@ -286,46 +326,81 @@ def train_sales_forecaster(user, subfamily, df_data):
 
 def run_sales_inference(user, subfamily, horizon_days=30):
     """
-    Executa a inferência autoregressiva multi-step e grava previsões na BD.
+    Executa a inferência autoregressiva (MLP ou Autoformer) e grava previsões na BD.
     """
+    # 1. Verificar se existe o modelo do Autoformer
     model_record = TrainedModel.objects.filter(
         owner=user,
         culture=subfamily,
-        model_type='sales_mlp',
-        file_name='sales_mlp.joblib'
+        model_type='sales_autoformer',
+        file_name='autoformer.pt'
     ).first()
-    
-    if not model_record:
-        raise FileNotFoundError("O modelo preditivo de vendas ainda não foi treinado para esta cultura.")
-        
-    mlp = joblib.load(io.BytesIO(model_record.file_data))
-    
-    # Obter os últimos 7 dias reais para alimentar a autoregressão inicial
-    last_sales = list(HistoricalSalesData.objects.filter(owner=user, culture=subfamily).order_by('-date')[:7])
-    if len(last_sales) < 7:
-        raise ValueError("É necessário ter pelo menos 7 dias de histórico real guardado para iniciar as previsões.")
-        
-    # Inverter para ordem cronológica (mais antigo para mais recente)
-    running_history = [float(x.sales_quantity_kg) for x in reversed(last_sales)]
-    avg_price = float(HistoricalSalesData.objects.filter(owner=user, culture=subfamily).aggregate(avg=Avg('price_per_kg'))['avg'] or 2.0)
     
     predictions = []
     start_date = timezone.now().date()
     
-    for step in range(horizon_days):
-        current_date = start_date + datetime.timedelta(days=step)
-        day_of_week = current_date.weekday() + 1
-        month = current_date.month
+    if model_record:
+        # --- INFERÊNCIA DO AUTOFORMER ---
+        from BuyerAgent.autoformer_forecaster import predict_horizon
         
-        lag1 = running_history[-1]
-        lag7 = running_history[-7]
+        # Obter os últimos 30 dias reais para lags (o Autoformer usa lags até 30)
+        last_sales = list(HistoricalSalesData.objects.filter(owner=user, culture=subfamily).order_by('-date')[:30])
+        running_history = [float(x.sales_quantity_kg) for x in reversed(last_sales)]
         
-        X_pred = np.array([[lag1, lag7, avg_price, day_of_week, month]])
-        y_pred = float(mlp.predict(X_pred)[0])
-        y_pred = max(0.0, y_pred) # Evitar previsões negativas
+        # Garantir tamanho mínimo de 30 com preenchimento (padding)
+        if len(running_history) < 30:
+            pad_size = 30 - len(running_history)
+            if len(running_history) == 0:
+                running_history = [10.0] * 30
+            else:
+                running_history = [running_history[0]] * pad_size + running_history
+                
+        avg_price = float(HistoricalSalesData.objects.filter(owner=user, culture=subfamily).aggregate(avg=Avg('price_per_kg'))['avg'] or 2.0)
         
-        predictions.append((current_date, y_pred))
-        running_history.append(y_pred)
+        # Executar previsão do Autoformer
+        preds_list = predict_horizon(model_record.file_data, running_history, avg_price, horizon_days)
+        
+        for step in range(horizon_days):
+            current_date = start_date + datetime.timedelta(days=step)
+            val = max(0.0, float(preds_list[step]))
+            predictions.append((current_date, val))
+            
+    else:
+        # --- INFERÊNCIA DA MLP ---
+        model_record = TrainedModel.objects.filter(
+            owner=user,
+            culture=subfamily,
+            model_type='sales_mlp',
+            file_name='sales_mlp.joblib'
+        ).first()
+        
+        if not model_record:
+            raise FileNotFoundError("Nenhum modelo preditivo de vendas (MLP ou Autoformer) foi treinado para esta cultura.")
+            
+        mlp = joblib.load(io.BytesIO(model_record.file_data))
+        
+        # Obter os últimos 7 dias reais para lags
+        last_sales = list(HistoricalSalesData.objects.filter(owner=user, culture=subfamily).order_by('-date')[:7])
+        if len(last_sales) < 7:
+            raise ValueError("É necessário ter pelo menos 7 dias de histórico real guardado para iniciar as previsões.")
+            
+        running_history = [float(x.sales_quantity_kg) for x in reversed(last_sales)]
+        avg_price = float(HistoricalSalesData.objects.filter(owner=user, culture=subfamily).aggregate(avg=Avg('price_per_kg'))['avg'] or 2.0)
+        
+        for step in range(horizon_days):
+            current_date = start_date + datetime.timedelta(days=step)
+            day_of_week = current_date.weekday() + 1
+            month = current_date.month
+            
+            lag1 = running_history[-1]
+            lag7 = running_history[-7]
+            
+            X_pred = np.array([[lag1, lag7, avg_price, day_of_week, month]])
+            y_pred = float(mlp.predict(X_pred)[0])
+            y_pred = max(0.0, y_pred) # Evitar previsões negativas
+            
+            predictions.append((current_date, y_pred))
+            running_history.append(y_pred)
         
     # Gravar as previsões na base de dados
     with transaction.atomic():
@@ -375,6 +450,58 @@ def train_buyer_agent_optimizer_generator(user, subfamily, df_market_data, max_e
         df_save['price'] = 2.0
     if 'volume' not in df_save.columns:
         df_save['volume'] = 0.002
+    if 'prediction' not in df_save.columns:
+        df_save['prediction'] = df_save['real_value'] # Fallback default
+        
+        # Tentar carregar o modelo MLP treinado para o utilizador e cultura
+        model_record = TrainedModel.objects.filter(
+            owner=user,
+            culture=subfamily,
+            model_type='sales_mlp',
+            file_name='sales_mlp.joblib'
+        ).first()
+        
+        if model_record:
+            try:
+                import io
+                import joblib
+                mlp = joblib.load(io.BytesIO(model_record.file_data))
+                for i in range(len(df_save)):
+                    if i >= 7:
+                        lag1 = float(df_save.loc[i-1, 'real_value'])
+                        lag7 = float(df_save.loc[i-7, 'real_value'])
+                        price_val = float(df_save.loc[i, 'price'])
+                        dt_val = df_save.loc[i, 'day']
+                        if isinstance(dt_val, str):
+                            dt = pd.to_datetime(dt_val)
+                        else:
+                            dt = dt_val
+                        day_of_week = dt.weekday() + 1
+                        month = dt.month
+                        X_pred = np.array([[lag1, lag7, price_val, day_of_week, month]])
+                        y_pred = max(0.0, float(mlp.predict(X_pred)[0]))
+                        df_save.loc[i, 'prediction'] = y_pred
+            except Exception as e:
+                print(f"[BuyerAgent Training] Falha ao prever historico com MLP: {e}")
+        else:
+            # Tentar Autoformer
+            model_record_auto = TrainedModel.objects.filter(
+                owner=user,
+                culture=subfamily,
+                model_type='sales_autoformer',
+                file_name='autoformer.pt'
+            ).first()
+            if model_record_auto:
+                try:
+                    from BuyerAgent.autoformer_forecaster import predict_horizon
+                    for i in range(len(df_save)):
+                        if i >= 30:
+                            running_history = [float(x) for x in df_save.iloc[i-30:i]['real_value']]
+                            avg_price = float(df_save.iloc[i-30:i]['price'].mean())
+                            preds_list = predict_horizon(model_record_auto.file_data, running_history, avg_price, 1)
+                            df_save.loc[i, 'prediction'] = max(0.0, float(preds_list[0]))
+                except Exception as e:
+                    print(f"[BuyerAgent Training] Falha ao prever historico com Autoformer: {e}")
         
     df_save.to_excel(temp_excel_path, index=False)
     
@@ -383,10 +510,10 @@ def train_buyer_agent_optimizer_generator(user, subfamily, df_market_data, max_e
     env["EXCEL_PATH"] = os.path.join('Dados', temp_filename)
     env["MAX_EPISODES_TOTAL"] = str(max_episodes) 
     env["SINGLE_SEED"] = "1337"
-    env["NUM_WORKERS"] = "4" # Configurado para usar 4 cores físicos do CPU do servidor
+    env["NUM_WORKERS"] = os.environ.get("NUM_WORKERS", "4")
     
     # 3. Invocar o script 0_training_constrained.py
-    cmd = [sys.executable, '0_training_constrained.py']
+    cmd = [sys.executable, '-u', '0_training_constrained.py']
     
     yield "[Django] A iniciar subprocesso de treino (0_training_constrained.py)...\n"
     

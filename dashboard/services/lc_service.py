@@ -170,3 +170,75 @@ def calculate_quality_decay_curve(culture_name, initial_score=10.0, sensor_readi
                 decay_curve.append(point)
         
     return decay_curve, rsl_days
+
+
+def generate_fallback_sensor_readings(warehouse):
+    """
+    Gera procedimentalmente um conjunto completo de 365 dias de leituras climáticas (180 dias passados e 184 dias futuros)
+    para o armazém com base no seu perfil regional (PT-NL, PT-NI, PT-CL, PT-CI, PT-LVT, PT-AL, PT-ALG, PT-SM, PT-MAD, PT-ACO).
+    """
+    import random
+    import datetime
+    from django.db import transaction
+    from dashboard.models import WarehouseSensorReading
+    
+    reg = str(warehouse.region).upper()
+    
+    # Perfis: (Temp_Média, Temp_Amplitude, Humidade_Média, Humidade_Amplitude)
+    profiles = {
+        'PT-NL': (14.5, 5.0, 83.0, 5.0),   # Norte Litoral: húmido, moderado
+        'PT-NI': (13.5, 10.0, 72.0, 12.0), # Norte Interior: grande amplitude, frio/quente
+        'PT-CL': (15.5, 6.0, 78.0, 6.0),   # Centro Litoral: temperado marítimo
+        'PT-CI': (14.0, 9.0, 70.0, 10.0),  # Centro Interior: continental
+        'PT-LVT': (17.0, 7.0, 72.0, 8.0),  # Lisboa e Vale do Tejo: mediterrânico moderado
+        'PT-AL': (17.5, 11.0, 64.0, 15.0), # Alentejo: seco, verão quente, invernos frios
+        'PT-ALG': (18.5, 6.5, 67.0, 8.0),  # Algarve: mediterrânico ameno, seco
+        'PT-SM': (8.5, 9.5, 78.0, 12.0),   # Serra da Estrela: montanha, frio rigoroso
+        'PT-MAD': (19.5, 3.5, 74.0, 4.0),  # Madeira: subtropical estável
+        'PT-ACO': (17.5, 3.0, 85.0, 4.0),  # Açores: oceânico muito húmido, estável
+    }
+    
+    # Fallback se não encontrar perfil
+    base_temp, temp_amp, base_hum, hum_amp = profiles.get(reg, (16.0, 7.0, 75.0, 8.0))
+    
+    is_controlled = (warehouse.control_type == 'Controlled')
+    today = datetime.date.today()
+    start_date = today - datetime.timedelta(days=180)
+    
+    readings = []
+    for day_offset in range(365):
+        current_date = start_date + datetime.timedelta(days=day_offset)
+        
+        # Sazonalidade via curva senoidal
+        day_of_year = current_date.timetuple().tm_yday
+        # Pico no dia 200 (Julho)
+        seasonal_factor = math.sin(2 * math.pi * (day_of_year - 110) / 365)
+        
+        if is_controlled:
+            # Armazém controlado (câmara de frio): ignora condições exteriores
+            temp = round(3.5 + random.uniform(-0.5, 0.5), 1)
+            hum = round(91.0 + random.uniform(-1.5, 1.5), 1)
+            ethylene = round(0.02 + random.uniform(-0.005, 0.005), 3)
+        else:
+            # Armazém ambiente
+            temp = round(base_temp + temp_amp * seasonal_factor + random.uniform(-1.2, 1.2), 1)
+            # Humidade inverte a temperatura (mais quente = mais seco)
+            hum = round(base_hum - hum_amp * seasonal_factor + random.uniform(-2.5, 2.5), 1)
+            # Etileno flutua ligeiramente com o calor/maturação
+            ethylene = round(0.05 + 0.02 * seasonal_factor + random.uniform(-0.01, 0.01), 3)
+            
+        readings.append(WarehouseSensorReading(
+            warehouse=warehouse,
+            date=current_date,
+            temperature=temp,
+            humidity=hum,
+            ethylene=ethylene
+        ))
+        
+    with transaction.atomic():
+        # Limpar leituras antigas deste armazém para evitar violação de unique_together
+        WarehouseSensorReading.objects.filter(warehouse=warehouse).delete()
+        WarehouseSensorReading.objects.bulk_create(readings)
+        
+    return len(readings)
+

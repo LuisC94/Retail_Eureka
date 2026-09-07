@@ -40,6 +40,14 @@ urlpatterns = [
     path('transporter/validate-pickup/', views.transporter_validate_pickup, name='transporter_validate_pickup'),
     path('transporter/submit-delivery/', views.transporter_submit_delivery, name='transporter_submit_delivery'),
     
+    # NOVAS ROTAS DE VEÍCULOS E ROTAS OTIMIZADAS
+    path('transporter/register-vehicle/', views.transporter_register_vehicle, name='transporter_register_vehicle'),
+    path('transporter/accept-route/', views.transporter_accept_route, name='transporter_accept_route'),
+    path('transporter/route-plan/', views.transporter_route_plan, name='transporter_route_plan'),
+    path('transporter/route-pickup/', views.transporter_route_pickup, name='transporter_route_pickup'),
+    path('transporter/route-delivery/', views.transporter_route_delivery, name='transporter_route_delivery'),
+    path('transporter/simulate-route-opt/', views.transporter_simulate_route_opt, name='transporter_simulate_route_opt'),
+    
     # 3. ROTAS DE DASHBOARD PARA OUTROS PERFIS
     path('consumer/', views.ConsumerDashboardView.as_view(), name='consumer_dashboard'),
     path('processor/', views.ProcessorDashboardView.as_view(), name='processor_dashboard'),
@@ -47,10 +55,12 @@ urlpatterns = [
     path('processor/submit-sensor/', views.processor_submit_sensor, name='processor_submit_sensor'),
     path('processor/accept-order/', views.processor_accept_order, name='processor_accept_order'),
     path('processor/submit-processing/', views.processor_submit_processing, name='processor_submit_processing'),
+    path('processor/request-association/', views.processor_request_association, name='processor_request_association'),
     path('retailer/', views.RetailerDashboardView.as_view(), name='retailer_dashboard'),
     path('retailer/submit-warehouse/', views.retailer_submit_warehouse, name='retailer_submit_warehouse'),
     path('retailer/submit-sensor/', views.retailer_submit_sensor, name='retailer_submit_sensor'),
     path('retailer/accept-order/', views.retailer_accept_order, name='retailer_accept_order'),
+    path('retailer/respond-association/', views.retailer_respond_association, name='retailer_respond_association'),
     path('buy-direct-makro/', views.buy_direct_makro, name='buy_direct_makro'),
     path('create-supply-contract/', views.create_supply_contract, name='create_supply_contract'),
     path('warehouse/<int:warehouse_id>/import-readings/', views.import_sensor_readings, name='import_sensor_readings'),

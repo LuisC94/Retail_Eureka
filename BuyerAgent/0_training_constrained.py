@@ -6,18 +6,35 @@ import pandas as pd
 import multiprocessing as mp
 from environment_constrained import StockEnvironment, EnvRunningStat
 from agent.ppo_agent import ParallelPPOAgent
-from torch.utils.tensorboard import SummaryWriter
-from loguru import logger
+try:
+    from torch.utils.tensorboard import SummaryWriter
+except ImportError:
+    class SummaryWriter:
+        def __init__(self, *args, **kwargs): pass
+        def add_scalar(self, *args, **kwargs): pass
+        def close(self, *args, **kwargs): pass
+
+try:
+    from loguru import logger
+except ImportError:
+    import logging
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    class LoggerMock:
+        def info(self, msg, *args, **kwargs): logging.info(msg)
+        def warning(self, msg, *args, **kwargs): logging.warning(msg)
+        def error(self, msg, *args, **kwargs): logging.error(msg)
+        def debug(self, msg, *args, **kwargs): logging.debug(msg)
+    logger = LoggerMock()
 
 # --- HYPERPARAMETERS ---
-EXCEL_PATH = r"Dados\m5_foods_3_080.xlsx"
+EXCEL_PATH = os.environ.get("EXCEL_PATH", r"Dados\m5_foods_3_080.xlsx")
 NUM_ENVS = 64               
-NUM_WORKERS = 4              # Usar 4 cores reais
+NUM_WORKERS = int(os.environ.get("NUM_WORKERS", "4")) # Usar 4 cores reais por defeito
 ENVS_PER_WORKER = NUM_ENVS // NUM_WORKERS
 
-MAX_EPISODES_TOTAL = 20000    
+MAX_EPISODES_TOTAL = int(os.environ.get("MAX_EPISODES_TOTAL", "20000"))
 HORIZON = 90                 # Cenário B: Passos por ronda
-MAX_CAPACITY = 500            
+MAX_CAPACITY = int(os.environ.get("MAX_CAPACITY", "500"))            
 
 LR_ACTOR = 0.0003
 LR_CRITIC = 0.001
@@ -235,6 +252,10 @@ def train_multi_core(seed: int):
                 logger.error(f"[ERRO] Falha ao gerar gráfico de losses: {e}")
 
 if __name__ == "__main__":
-    SEEDS = [1337, 42]
-    for current_seed in SEEDS:
-        train_multi_core(seed=current_seed)
+    single_seed = os.environ.get("SINGLE_SEED")
+    if single_seed:
+        train_multi_core(seed=int(single_seed))
+    else:
+        SEEDS = [1337, 42]
+        for current_seed in SEEDS:
+            train_multi_core(seed=current_seed)

@@ -18,14 +18,14 @@ from agent.ppo_agent import ParallelPPOAgent
 # =====================================================================
 # --- CONFIGURAÇÃO MANUAL DO DATASET (Altere o caminho para cada treino) ---
 # =====================================================================
-EXCEL_PATH = os.path.join(current_dir, "datasets", "911753_151dias_com_real.xlsx")
+EXCEL_PATH = os.environ.get("EXCEL_PATH", os.path.join(current_dir, "datasets", "911753_151dias_com_real.xlsx"))
 
 # --- PARÂMETROS DE TREINO (Igualados a 0_training_constrained.py) ---
-NUM_ENVS = 64               
-NUM_WORKERS = 4              # Usar 4 cores reais
+NUM_ENVS = int(os.environ.get("NUM_ENVS", "64"))
+NUM_WORKERS = int(os.environ.get("NUM_WORKERS", "4"))
 ENVS_PER_WORKER = NUM_ENVS // NUM_WORKERS
 
-MAX_EPISODES_TOTAL = 20000    
+MAX_EPISODES_TOTAL = int(os.environ.get("MAX_EPISODES_TOTAL", "20000"))
 HORIZON = 90                 # Passos por ronda
 MAX_CAPACITY = 500            
 

@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User, Group
 # Importar apenas os modelos necessários
-from .models import PlantationPlan, Product, Harvest, QUALITY_SCORE_CHOICES, Sensor, Warehouse, SENSOR_TYPE_CHOICES, SoilCharacteristic, PlantationEvent, FertilizerSyntheticData, FertilizerOrganicData, SoilCorrectiveData, PestControlData, MachineryData, FuelData, ElectricEnergyData, IrrigationWaterData, ProductSubFamily, PlantationCrop, MarketplaceOrder 
+from .models import PlantationPlan, Product, Harvest, QUALITY_SCORE_CHOICES, Sensor, Warehouse, SENSOR_TYPE_CHOICES, SoilCharacteristic, PlantationEvent, FertilizerSyntheticData, FertilizerOrganicData, SoilCorrectiveData, PestControlData, MachineryData, FuelData, ElectricEnergyData, IrrigationWaterData, ProductSubFamily, PlantationCrop, MarketplaceOrder, Vehicle, Route
 from django.forms import CheckboxSelectMultiple
 
 # Lista de Roles (mantida)
@@ -260,6 +260,7 @@ class HarvestForm(forms.ModelForm):
         queryset=PlantationPlan.objects.all(), 
         label='Plantation',
         empty_label="--- Select Plantation ---",
+        required=False,
         widget=forms.Select(attrs={'class': 'form-control', 'id': 'harvest_plantation_select'})
     )
     
@@ -270,6 +271,33 @@ class HarvestForm(forms.ModelForm):
         required=True, # Obrigatório
         widget=forms.Select(attrs={'class': 'form-control', 'id': 'harvest_subfamily_select'})
     )
+    
+    utilized_quantity_kg = forms.DecimalField(
+        required=False,
+        initial=0.0,
+        label='Waste (Kg)',
+        widget=forms.NumberInput(attrs={'class': 'form-control'})
+    )
+    
+    avg_quality_score = forms.ChoiceField(
+        choices=QUALITY_SCORE_CHOICES,
+        required=False,
+        initial=10,
+        label='Average Quality Score (1-10)',
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+    def clean_utilized_quantity_kg(self):
+        val = self.cleaned_data.get('utilized_quantity_kg')
+        if val is None:
+            return 0.0
+        return val
+
+    def clean_avg_quality_score(self):
+        val = self.cleaned_data.get('avg_quality_score')
+        if val is None or val == '':
+            return 10
+        return int(val)
 
     class Meta:
         model = Harvest
@@ -316,14 +344,17 @@ class WarehouseRegistrationForm(forms.ModelForm):
     
     class Meta:
         model = Warehouse
-        fields = ['location', 'control_type', 'capacity', 'sensors']
+        fields = ['location', 'region', 'control_type', 'capacity', 'sensors', 'latitude', 'longitude']
         
         # Usar CheckboxSelectMultiple para facilitar a seleção de múltiplos sensores
         widgets = {
             'location': forms.TextInput(attrs={'class': 'form-control'}),
+            'region': forms.Select(attrs={'class': 'form-control'}),
             'control_type': forms.Select(attrs={'class': 'form-control'}),
             'capacity': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
             'sensors': forms.CheckboxSelectMultiple(), # Renderiza checkboxes em vez de um seletor simples
+            'latitude': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.000001', 'placeholder': 'Ex: 38.7223 (Opcional)'}),
+            'longitude': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.000001', 'placeholder': 'Ex: -9.1393 (Opcional)'}),
         }
 
     def clean(self):
@@ -335,6 +366,16 @@ class WarehouseRegistrationForm(forms.ModelForm):
             self.add_error('sensors', "Armazéns controlados devem ter pelo menos um sensor associado.")
         
         return cleaned_data
+
+class VehicleForm(forms.ModelForm):
+    class Meta:
+        model = Vehicle
+        fields = ['license_plate', 'brand_model', 'capacity_kg']
+        widgets = {
+            'license_plate': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: AA-00-00'}),
+            'brand_model': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Scania R450'}),
+            'capacity_kg': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'placeholder': 'Ex: 15000'}),
+        }
 
 # ----------------------------------------------------------------------
 # 6. FORMULÁRIO DE MARKETPLACE

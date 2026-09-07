@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 # ----------------------------------------------------------------------
 # 1. CONSTANTES E CHOICES (CONSOLIDADOS)
@@ -38,10 +39,18 @@ EVENT_TYPE_CHOICES = [
 # Choices para Armazéns e Sensores
 SENSOR_TYPE_CHOICES = [('Temperature', 'Temperatura'), ('Humidity', 'Humidade'), ('Light', 'Luminosidade'), ('Gas', 'Gás/CO2')]
 CONTROL_TYPE_CHOICES = [('Controlled', 'Controlado'), ('Non-Controlled', 'Não Controlado')]
-
-# ----------------------------------------------------------------------
-# 2. MODELOS DE DETALHE (ORDEM CORRIGIDA PARA FKs)
-# ----------------------------------------------------------------------
+REGION_CHOICES = [
+    ('PT-NL', 'Norte Litoral (Muito húmido, temperaturas moderadas)'),
+    ('PT-NI', 'Norte Interior (Invernos frios, verões quentes)'),
+    ('PT-CL', 'Centro Litoral (Clima marítimo temperado)'),
+    ('PT-CI', 'Centro Interior (Grande amplitude térmica)'),
+    ('PT-LVT', 'Lisboa e Vale do Tejo (Mediterrânico moderado)'),
+    ('PT-AL', 'Alentejo (Muito quente e seco no verão)'),
+    ('PT-ALG', 'Algarve (Mediterrânico costeiro)'),
+    ('PT-SM', 'Serra da Estrela e montanhas (Frio e neve no inverno)'),
+    ('PT-MAD', 'Madeira (Subtropical oceânico)'),
+    ('PT-ACO', 'Açores (Oceânico húmido)'),
+]
 
 class UserProfile(models.Model):
     PRODUCER_TYPE_CHOICES = [
@@ -148,8 +157,11 @@ class Warehouse(models.Model):
     owner = models.ForeignKey(User, on_delete=models.CASCADE, limit_choices_to={'groups__name': 'Producer'}, verbose_name="Dono/Perfil")
     warehouse_id = models.AutoField(primary_key=True)
     location = models.CharField(max_length=255, verbose_name="Localização")
+    region = models.CharField(max_length=10, choices=REGION_CHOICES, default='PT-LVT', verbose_name="Região Climática")
     control_type = models.CharField(max_length=20, choices=CONTROL_TYPE_CHOICES, verbose_name="Tipo de Armazém")
     capacity = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Capacidade (m² ou Kg)")
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, verbose_name="Latitude")
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, verbose_name="Longitude")
     sensors = models.ManyToManyField(Sensor, blank=True, verbose_name="Sensores Instalados")
     class Meta: db_table = 'warehouses'
     def __str__(self): return f"Armazém {self.warehouse_id} - {self.location} - {self.get_control_type_display()}"
@@ -379,6 +391,46 @@ class Harvest(models.Model):
     @property
     def pk_str(self): return str(self.pk)
 
+class Vehicle(models.Model):
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='vehicles', limit_choices_to={'groups__name': 'Transporter'}, verbose_name="Proprietário")
+    license_plate = models.CharField(max_length=20, verbose_name="Matrícula")
+    brand_model = models.CharField(max_length=100, verbose_name="Marca/Modelo")
+    capacity_kg = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Capacidade (Kg)")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'vehicles'
+
+    def __str__(self):
+        return f"{self.brand_model} ({self.license_plate}) - {self.capacity_kg}kg"
+
+
+class Route(models.Model):
+    ROUTE_STATUS_CHOICES = [
+        ('PENDING', 'Pendente (Criada Automática)'),
+        ('ACCEPTED', 'Aceite pelo Transportador'),
+        ('PLANNED', 'Planeada'),
+        ('IN_TRANSIT', 'Em Trânsito'),
+        ('DELIVERED', 'Entregue'),
+    ]
+    transporter = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='routes', limit_choices_to={'groups__name': 'Transporter'}, verbose_name="Transportador")
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Veículo")
+    route_date = models.DateField(default=timezone.now, verbose_name="Data da Rota")
+    status = models.CharField(max_length=20, choices=ROUTE_STATUS_CHOICES, default='PENDING', verbose_name="Estado da Rota")
+    optimized_path = models.TextField(null=True, blank=True, verbose_name="Caminho Otimizado (Pontos)")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'routes'
+
+    def __str__(self):
+        return f"Rota #{self.pk} - {self.route_date} ({self.get_status_display()})"
+
+    @property
+    def total_weight_kg(self):
+        return sum(order.quantity_kg for order in self.orders.all())
+
+
 # ----------------------------------------------------------------------
 # 6. MODELO DE MARKETPLACE (TRANSAÇÕES)
 # ----------------------------------------------------------------------
@@ -453,6 +505,10 @@ class MarketplaceOrder(models.Model):
     # Usamos TextField para simplicidade (pode conter JSON)
     transport_sensor_data = models.TextField(null=True, blank=True, verbose_name="Dados dos Sensores (JSON)")
 
+    # Relacionamento com Frota e Otimização de Rotas
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Veículo")
+    route = models.ForeignKey(Route, on_delete=models.SET_NULL, null=True, blank=True, related_name='orders', verbose_name="Rota")
+
     # --- PROCESSOR: PROCESSING FIELDS ---
     is_processed = models.BooleanField(default=False, verbose_name="Processado?")
     packaging_type = models.CharField(
@@ -475,6 +531,33 @@ class MarketplaceOrder(models.Model):
     @property
     def pk_str(self):
         return str(self.pk)
+
+    @property
+    def total_price(self):
+        if self.price_per_kg and self.quantity_kg:
+            return self.price_per_kg * self.quantity_kg
+        return 0.0
+
+    @property
+    def destination_warehouse(self):
+        if self.warehouse_location and ' (WH:' in self.warehouse_location:
+            try:
+                wh_id = int(self.warehouse_location.split(' (WH:')[-1].replace(')', '').strip())
+                from .models import Warehouse
+                return Warehouse.objects.filter(pk=wh_id).first()
+            except Exception:
+                pass
+        return None
+
+    @property
+    def destination_latitude(self):
+        wh = self.destination_warehouse
+        return wh.latitude if wh else None
+
+    @property
+    def destination_longitude(self):
+        wh = self.destination_warehouse
+        return wh.longitude if wh else None
 
     def __str__(self):
         return f"{self.order_type} - {self.culture.name} ({self.quantity_kg}kg) by {self.requester.username}"
@@ -657,3 +740,25 @@ class TrainedModel(models.Model):
 
     def __str__(self):
         return f"{self.owner.username} - {self.culture.name} ({self.model_type} - {self.file_name})"
+
+
+class StoreProcessorAssociation(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pendente'),
+        ('APPROVED', 'Aprovado'),
+        ('REJECTED', 'Rejeitado'),
+    ]
+    processor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='store_associations', limit_choices_to={'groups__name': 'Processor'}, verbose_name="Processador")
+    retailer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='processor_associations', limit_choices_to={'groups__name': 'Retailer'}, verbose_name="Retalhista/Loja")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING', verbose_name="Estado")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'store_processor_associations'
+        unique_together = ('processor', 'retailer')
+        verbose_name = "Associação de Loja"
+        verbose_name_plural = "Associações de Lojas"
+
+    def __str__(self):
+        return f"{self.processor.username} -> {self.retailer.username} ({self.status})"

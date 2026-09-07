@@ -7,3 +7,5 @@ env/
 .DS_Store
 .env
 staticfiles/
+storage/
+

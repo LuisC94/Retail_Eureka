@@ -1,4 +1,6 @@
 import os
+import threading
+from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.db.models import Sum, Q
 from django import forms
@@ -17,7 +19,7 @@ from .models import (
     SoilCharacteristic, PlantationSoilValue, ProductSubFamily, PlantationCrop,
     FertilizerSyntheticData, FertilizerOrganicData, SoilCorrectiveData, PestControlData,
     MachineryData, FuelData, ElectricEnergyData, IrrigationWaterData, MarketplaceOrder,
-    ConsolidatedStock, TrainedModel
+    ConsolidatedStock, TrainedModel, Vehicle, Route, StoreProcessorAssociation
 )
 from blockchain.services import blockchain_service
 from blockchain.utils import create_genesis_dossier
@@ -28,7 +30,7 @@ from .forms import (
     FertilizerSyntheticForm, FertilizerOrganicForm, SoilCorrectiveForm, PestControlForm,
     MachineryForm, FuelForm, ElectricEnergyForm, IrrigationWaterForm, SoilCharacteristicForm, PlantationCropForm, MarketplaceOrderForm,
     MarketSellOrderForm,
-    TransportPlanForm, TransportDeliveryForm, ProcessorProcessingForm
+    TransportPlanForm, TransportDeliveryForm, ProcessorProcessingForm, VehicleForm
 )
 
 # ----------------------------------------------------------------------
@@ -107,21 +109,33 @@ class TransporterDashboardView(View):
     def get(self, request):
         user = request.user
         
-        # 0. Mercado de Trabalho (Transações FEITAS, status=APPROVED, mas sem Transportador)
-        # Mostra encomendas onde Producer e Retailer já fecharam negócio.
-        open_orders = MarketplaceOrder.objects.filter(status='APPROVED', transport_status='PENDING').select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')
+        # Frota de Veículos
+        vehicles = Vehicle.objects.filter(owner=user).order_by('-created_at')
+        vehicle_form = VehicleForm()
 
-        # 1. Encomendas ACEITES pelo Transportador (Status Transporte = ACCEPTED) -> Passam para Planeamento
-        orders_to_plan = MarketplaceOrder.objects.filter(status='APPROVED', transport_status='ACCEPTED').select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')
-        
-        # 2. Encomendas Planeadas, prontas para recolha (Status Transporte = PLANNED)
-        orders_ready_pickup = MarketplaceOrder.objects.filter(status='APPROVED', transport_status='PLANNED').select_related('requester', 'culture', 'fulfilled_by').order_by('planned_pickup_date')
-        
-        # 3. Encomendas Em Trânsito (Status Transporte = IN_TRANSIT)
-        orders_in_transit = MarketplaceOrder.objects.filter(status='APPROVED', transport_status='IN_TRANSIT').select_related('requester', 'culture', 'fulfilled_by').order_by('actual_pickup_date')
+        # 0. Mercado de Trabalho - Cargas Individuais (sem rota)
+        open_orders = MarketplaceOrder.objects.filter(status='APPROVED', transport_status='PENDING', route__isnull=True).select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')
 
-        # 4. Histórico de Entregas (Status Transporte = DELIVERED)
-        closed_orders = MarketplaceOrder.objects.filter(status='APPROVED', transport_status='DELIVERED').select_related('requester', 'culture', 'fulfilled_by').order_by('-actual_delivery_date')
+        # Mercado de Trabalho - Rotas Otimizadas Criadas (Pendente aceitação)
+        open_routes = Route.objects.filter(status='PENDING').prefetch_related('orders__requester', 'orders__culture').order_by('-created_at')
+
+        # Minhas Rotas Ativas (Aceites, Planeadas, Em Trânsito)
+        my_active_routes = Route.objects.filter(transporter=user).exclude(status='DELIVERED').prefetch_related('orders__requester', 'orders__culture').order_by('-created_at')
+
+        # Histórico de Rotas Concluídas
+        my_closed_routes = Route.objects.filter(transporter=user, status='DELIVERED').prefetch_related('orders__requester', 'orders__culture').order_by('-created_at')
+
+        # 1. Encomendas Individuais ACEITES pelo Transportador (sem rota) -> Planeamento
+        orders_to_plan = MarketplaceOrder.objects.filter(status='APPROVED', transport_status='ACCEPTED', route__isnull=True).select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')
+        
+        # 2. Encomendas Individuais Planeadas (sem rota) -> Recolha
+        orders_ready_pickup = MarketplaceOrder.objects.filter(status='APPROVED', transport_status='PLANNED', route__isnull=True).select_related('requester', 'culture', 'fulfilled_by').order_by('planned_pickup_date')
+        
+        # 3. Encomendas Individuais Em Trânsito (sem rota) -> Entrega
+        orders_in_transit = MarketplaceOrder.objects.filter(status='APPROVED', transport_status='IN_TRANSIT', route__isnull=True).select_related('requester', 'culture', 'fulfilled_by').order_by('actual_pickup_date')
+
+        # 4. Histórico de Entregas Individuais (sem rota)
+        closed_orders = MarketplaceOrder.objects.filter(status='APPROVED', transport_status='DELIVERED', route__isnull=True).select_related('requester', 'culture', 'fulfilled_by').order_by('-actual_delivery_date')
         
         try:
             user_profile = UserProfile.objects.get(user=user)
@@ -133,12 +147,19 @@ class TransporterDashboardView(View):
             'role': 'Transporter',
             'user_profile': user_profile,
             
-            # Listas segmentadas
+            # Listas de Veículos e Rotas
+            'vehicles': vehicles,
+            'vehicle_form': vehicle_form,
+            'open_routes': open_routes,
+            'my_active_routes': my_active_routes,
+            'my_closed_routes': my_closed_routes,
+            
+            # Listas segmentadas individuais
             'open_market_orders': open_orders,
             'orders_to_plan': orders_to_plan,
             'orders_ready_pickup': orders_ready_pickup,
             'orders_in_transit': orders_in_transit,
-            'closed_market_orders': closed_orders, # Histórico
+            'closed_market_orders': closed_orders, 
             
             # Formulários
             'market_order_form': MarketplaceOrderForm(initial={'role': 'Transporter', 'order_type': 'BUY'}),
@@ -212,8 +233,7 @@ class ProcessorDashboardView(View):
             has_sales_model = TrainedModel.objects.filter(
                 owner=user,
                 culture=stock_obj.culture,
-                model_type='sales_mlp',
-                file_name='sales_mlp.joblib'
+                model_type__in=['sales_mlp', 'sales_autoformer']
             ).exists()
             has_agent_model = TrainedModel.objects.filter(
                 owner=user,
@@ -235,6 +255,58 @@ class ProcessorDashboardView(View):
                 'has_agent_model': has_agent_model,
             })
 
+        # Check and heal empty warehouses
+        from .services.lc_service import generate_fallback_sensor_readings
+        processor_warehouses = list(Warehouse.objects.filter(owner=user).order_by('-warehouse_id'))
+        for wh in processor_warehouses:
+            wh_stock = ConsolidatedStock.objects.filter(
+                Q(warehouse_location=wh.location) | Q(warehouse_location__contains=f"WH:{wh.warehouse_id}") | Q(warehouse_location__contains=f"WH: {wh.warehouse_id}")
+            ).filter(owner=user).aggregate(total=Sum('quantity'))['total'] or 0
+            wh.current_stock = float(wh_stock)
+            wh.occupancy_percentage = min(100.0, round((float(wh_stock) / float(wh.capacity)) * 100.0, 2)) if wh.capacity > 0 else 0.0
+            
+            if wh.sensor_readings.count() < 30:
+                try:
+                    generate_fallback_sensor_readings(wh)
+                except Exception:
+                    pass
+
+        # Central Warehouse (Lojas/Retalhistas Associadas)
+        from dashboard.models import StoreProcessorAssociation
+        my_associations = StoreProcessorAssociation.objects.filter(processor=user).select_related('retailer')
+        
+        associated_retailer_ids = my_associations.values_list('retailer_id', flat=True)
+        available_retailers = User.objects.filter(groups__name='Retailer').exclude(id__in=associated_retailer_ids).order_by('username')
+        
+        approved_stores_data = []
+        for assoc in my_associations.filter(status='APPROVED'):
+            store = assoc.retailer
+            # Fetch store warehouses and calculate capacity/occupancy
+            store_warehouses = list(Warehouse.objects.filter(owner=store).order_by('-warehouse_id'))
+            for wh in store_warehouses:
+                wh_stock = ConsolidatedStock.objects.filter(
+                    Q(warehouse_location=wh.location) | Q(warehouse_location__contains=f"WH:{wh.warehouse_id}") | Q(warehouse_location__contains=f"WH: {wh.warehouse_id}")
+                ).filter(owner=store).aggregate(total=Sum('quantity'))['total'] or 0
+                wh.current_stock = float(wh_stock)
+                wh.occupancy_percentage = min(100.0, round((float(wh_stock) / float(wh.capacity)) * 100.0, 2)) if wh.capacity > 0 else 0.0
+            
+            # Fetch store detailed stock
+            store_stock = ConsolidatedStock.objects.filter(owner=store).select_related('culture')
+            
+            # Fetch store daily orders (only for the current day)
+            store_orders = MarketplaceOrder.objects.filter(
+                Q(requester=store) | Q(fulfilled_by=store),
+                created_at__date=timezone.now().date()
+            ).select_related('culture', 'requester', 'fulfilled_by').order_by('-created_at')
+            
+            approved_stores_data.append({
+                'store': store,
+                'association_id': assoc.pk,
+                'warehouses': store_warehouses,
+                'stock': store_stock,
+                'orders': store_orders
+            })
+
         context = { 
             'username': user.username, 
             'role': 'Processor',
@@ -243,7 +315,7 @@ class ProcessorDashboardView(View):
             'closed_market_orders': closed_orders,
             'warehouse_form': WarehouseRegistrationForm(),
             'sensor_form': SensorRegistrationForm(),
-            'processor_warehouses': Warehouse.objects.filter(owner=user).order_by('-warehouse_id'),
+            'processor_warehouses': processor_warehouses,
             'market_order_form': MarketplaceOrderForm(initial={'role': 'Processor'}),
             'processor_stock': processor_stock,
             'unprocessed_orders': unprocessed_orders,
@@ -252,6 +324,10 @@ class ProcessorDashboardView(View):
             'instant_producers': instant_producers,
             'contract_producers': contract_producers,
             'contracts': contracts,
+            # Novos campos para Armazém Central
+            'my_associations': my_associations,
+            'available_retailers': available_retailers,
+            'approved_stores_data': approved_stores_data,
         }
         return render(request, 'dashboard/processorDash.html', context)
 
@@ -287,8 +363,7 @@ class RetailerDashboardView(View):
             has_sales_model = TrainedModel.objects.filter(
                 owner=user,
                 culture=stock_obj.culture,
-                model_type='sales_mlp',
-                file_name='sales_mlp.joblib'
+                model_type__in=['sales_mlp', 'sales_autoformer']
             ).exists()
             has_agent_model = TrainedModel.objects.filter(
                 owner=user,
@@ -312,9 +387,23 @@ class RetailerDashboardView(View):
 
         # Prepare Market Order Form with Warehouse Dropdown
         market_order_form = MarketplaceOrderForm(initial={'role': 'Retailer', 'order_type': 'BUY'})
-        retailer_warehouses = Warehouse.objects.filter(owner=user).order_by('warehouse_id')
-        
-        if retailer_warehouses.exists():
+        # Check and heal empty warehouses
+        from .services.lc_service import generate_fallback_sensor_readings
+        retailer_warehouses = list(Warehouse.objects.filter(owner=user).order_by('warehouse_id'))
+        for wh in retailer_warehouses:
+            wh_stock = ConsolidatedStock.objects.filter(
+                Q(warehouse_location=wh.location) | Q(warehouse_location__contains=f"WH:{wh.warehouse_id}") | Q(warehouse_location__contains=f"WH: {wh.warehouse_id}")
+            ).filter(owner=user).aggregate(total=Sum('quantity'))['total'] or 0
+            wh.current_stock = float(wh_stock)
+            wh.occupancy_percentage = min(100.0, round((float(wh_stock) / float(wh.capacity)) * 100.0, 2)) if wh.capacity > 0 else 0.0
+            
+            if wh.sensor_readings.count() < 30:
+                try:
+                    generate_fallback_sensor_readings(wh)
+                except Exception:
+                    pass
+
+        if len(retailer_warehouses) > 0:
             # Create choices tuple list: (Location Name, Location Name)
             # We use location name as value because the model expects a CharField
             wh_choices = [(w.location, w.location) for w in retailer_warehouses]
@@ -322,6 +411,11 @@ class RetailerDashboardView(View):
         else:
             # Fallback if no warehouses (though retailer should create one)
             market_order_form.fields['warehouse_location'].widget.attrs.update({'placeholder': 'No warehouses found. Please register one.'})
+
+        # Central Warehouse Associations
+        from dashboard.models import StoreProcessorAssociation
+        incoming_associations = StoreProcessorAssociation.objects.filter(retailer=user, status='PENDING').select_related('processor')
+        active_associations = StoreProcessorAssociation.objects.filter(retailer=user, status='APPROVED').select_related('processor')
 
         context = { 
             'username': user.username, 
@@ -338,6 +432,9 @@ class RetailerDashboardView(View):
             'instant_producers': instant_producers,
             'contract_producers': contract_producers,
             'contracts': contracts,
+            # Novos campos para Armazém Central
+            'incoming_associations': incoming_associations,
+            'active_associations': active_associations,
         }
         return render(request, 'dashboard/retailerDash.html', context)
 
@@ -378,21 +475,36 @@ class ProducerDashboardView(View):
                 'score': h.avg_quality_score if h.avg_quality_score is not None else ""
             }
         
-        # AGGREGATION: Total Kgs per Product (Current Stock)
+        # AGGREGATION: Total Kgs per Product per Warehouse (Current Stock)
         harvest_sums = Harvest.objects.filter(producer=user).values(
-            'plantation__plantation_name', 
+            'warehouse__location', 
             'subfamily__name',
             'subfamily'
-        ).annotate(
         ).annotate(
             total_kg=Sum('harvest_quantity_kg'),
             delivered_kg=Sum('delivered_quantity_kg'),
             utilized_kg=Sum('utilized_quantity_kg')
-        ).order_by('plantation__plantation_name', 'subfamily__name')
+        ).order_by('warehouse__location', 'subfamily__name')
         
         for item in harvest_sums:
             # Stock disponível = Total - O que já foi vendido/utilizado
             item['current_stock'] = (item['total_kg'] or 0) - (item['utilized_kg'] or 0)
+            
+            # Check if this subfamily has a sales forecast model trained
+            item['has_sales_model'] = TrainedModel.objects.filter(
+                owner=user,
+                culture_id=item['subfamily'],
+                model_type='sales_mlp',
+                file_name='sales_mlp.joblib'
+            ).exists()
+            
+            # Check if this subfamily has a stock agent model trained
+            item['has_agent_model'] = TrainedModel.objects.filter(
+                owner=user,
+                culture_id=item['subfamily'],
+                model_type='stock_agent',
+                file_name='stock_agent_actor.pth'
+            ).exists()
 
         
         # 4. BUSCAR EVENTOS DO POMAR
@@ -400,7 +512,14 @@ class ProducerDashboardView(View):
         
         product_subfamilies = ProductSubFamily.objects.all().order_by('fruit_type', 'name')
         
-        producer_warehouses = Warehouse.objects.filter(owner=user).order_by('warehouse_id')
+        producer_warehouses_qs = Warehouse.objects.filter(owner=user).order_by('warehouse_id')
+        producer_warehouses = list(producer_warehouses_qs)
+        for wh in producer_warehouses:
+            wh_stock = ConsolidatedStock.objects.filter(
+                Q(warehouse_location=wh.location) | Q(warehouse_location__contains=f"WH:{wh.warehouse_id}") | Q(warehouse_location__contains=f"WH: {wh.warehouse_id}")
+            ).filter(owner=user).aggregate(total=Sum('quantity'))['total'] or 0
+            wh.current_stock = float(wh_stock)
+            wh.occupancy_percentage = min(100.0, round((float(wh_stock) / float(wh.capacity)) * 100.0, 2)) if wh.capacity > 0 else 0.0
         all_sensors = Sensor.objects.all().order_by('sensor_id')
 
         # 5. MARKETPLACE DATA
@@ -431,6 +550,7 @@ class ProducerDashboardView(View):
         irrigation_water_form = IrrigationWaterForm()
         
         harvest_form.fields['plantation'].queryset = base_plantation_query 
+        harvest_form.fields['warehouse'].queryset = producer_warehouses_qs
         
         # --- MAP for Dynamic Filtering in Harvest Form ---
         plantation_subfamilies_map = {}
@@ -672,8 +792,9 @@ def producer_submit_harvest(request):
     if request.method == 'POST':
         form = HarvestForm(request.POST)
 
-        # Filtro de Segurança: Garante que só pode colher os seus planos
+        # Filtro de Segurança: Garante que só pode colher os seus planos e selecionar os seus armazéns
         form.fields['plantation'].queryset = PlantationPlan.objects.filter(producer=request.user)
+        form.fields['warehouse'].queryset = Warehouse.objects.filter(owner=request.user)
 
         if form.is_valid():
             try:
@@ -703,7 +824,7 @@ def producer_submit_harvest(request):
                         fabric_service.create_order(
                             order_id=dossier['batch_id'],
                             producer_id=harvest_record.producer.username,
-                            culture_type=harvest_record.plantation.production_type,
+                            culture_type=harvest_record.plantation.production_type if harvest_record.plantation else "N/A",
                             quantity=float(harvest_record.harvest_quantity_kg),
                             harvest_date=harvest_record.harvest_date.strftime("%Y-%m-%d"),
                             additional_data=dossier
@@ -723,6 +844,8 @@ def producer_submit_harvest(request):
             except Exception as e:
                 db_error = f"Erro desconhecido: {e}"
                 request.session['db_error'] = db_error
+        else:
+            messages.error(request, f"Erro de validação do formulário: {form.errors.as_text()}")
         
         # Redirecionamento após lógica/erro
         return redirect('producer_dashboard')
@@ -751,6 +874,13 @@ def producer_submit_warehouse(request):
                 
                 # 4. Salva a relação Many-to-Many para os sensores (APÓS salvar o objeto principal)
                 form.save_m2m() 
+                
+                # Gerar automaticamente leituras climáticas (self-healing)
+                try:
+                    from dashboard.services.lc_service import generate_fallback_sensor_readings
+                    generate_fallback_sensor_readings(warehouse_record)
+                except Exception:
+                    pass
                 
                 # Sucesso
                 return redirect('producer_dashboard')
@@ -801,6 +931,14 @@ def processor_submit_warehouse(request):
                 warehouse_record.owner = request.user
                 warehouse_record.save()
                 form.save_m2m() 
+                
+                # Gerar automaticamente leituras climáticas (self-healing)
+                try:
+                    from dashboard.services.lc_service import generate_fallback_sensor_readings
+                    generate_fallback_sensor_readings(warehouse_record)
+                except Exception:
+                    pass
+                    
                 return redirect('processor_dashboard')
             except IntegrityError as e:
                 db_error = f"Erro ao salvar Armazém na DB: {e}"
@@ -931,7 +1069,7 @@ def processor_accept_order(request):
             order.warehouse_location = f"{warehouse.location} (WH: {warehouse.warehouse_id})"
             
             order.save()
-            
+            check_and_create_optimal_route(order.fulfilled_at.date())
             return redirect('processor_dashboard')
             
         except (MarketplaceOrder.DoesNotExist, Warehouse.DoesNotExist):
@@ -953,6 +1091,14 @@ def retailer_submit_warehouse(request):
                 warehouse_record.owner = request.user
                 warehouse_record.save()
                 form.save_m2m() 
+                
+                # Gerar automaticamente leituras climáticas (self-healing)
+                try:
+                    from dashboard.services.lc_service import generate_fallback_sensor_readings
+                    generate_fallback_sensor_readings(warehouse_record)
+                except Exception:
+                    pass
+                    
                 return redirect('retailer_dashboard')
             except IntegrityError as e:
                 db_error = f"Erro ao salvar Armazém na DB: {e}"
@@ -993,6 +1139,7 @@ def retailer_accept_order(request):
             order.warehouse_location = f"{warehouse.location} (WH: {warehouse.warehouse_id})"
             
             order.save()
+            check_and_create_optimal_route(order.fulfilled_at.date())
             return redirect('retailer_dashboard')
             
         except (MarketplaceOrder.DoesNotExist, Warehouse.DoesNotExist):
@@ -1465,6 +1612,7 @@ def market_accept_order(request):
                     harvest.utilized_quantity_kg += order.quantity_kg
                     harvest.save()
                     order.save()
+                    check_and_create_optimal_route(order.fulfilled_at.date())
                     
                     messages.success(request, f"Pedido aceite! {order.quantity_kg}kg alocados do Lote #{harvest.pk}.")
             
@@ -1474,6 +1622,7 @@ def market_accept_order(request):
                 order.fulfilled_by = request.user
                 order.fulfilled_at = timezone.now()
                 order.save()
+                check_and_create_optimal_route(order.fulfilled_at.date())
                 messages.success(request, f"Pedido #{order.pk} aceite!")
             
     return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
@@ -1482,23 +1631,263 @@ def market_accept_order(request):
 # 6. VIEWS DE LOGÍSTICA (TRANSPORTER)
 # ----------------------------------------------------------------------
 
+def check_and_create_optimal_route(order_date):
+    orders = MarketplaceOrder.objects.filter(
+        status='APPROVED',
+        transport_status='PENDING',
+        fulfilled_at__date=order_date,
+        route__isnull=True
+    )
+    if orders.count() >= 6:
+        route = Route.objects.create(
+            route_date=order_date,
+            status='PENDING'
+        )
+        locations = []
+        for order in orders:
+            order.route = route
+            order.save()
+            if order.warehouse_location not in locations:
+                locations.append(order.warehouse_location)
+            dest = f"Armazém {order.requester.username}"
+            if dest not in locations:
+                locations.append(dest)
+                
+        route.optimized_path = " -> ".join(locations)
+        route.save()
+        return route
+    return None
+
+@login_required
+@role_required(['Transporter'])
+def transporter_register_vehicle(request):
+    if request.method == "POST":
+        form = VehicleForm(request.POST)
+        if form.is_valid():
+            vehicle = form.save(commit=False)
+            vehicle.owner = request.user
+            vehicle.save()
+            messages.success(request, f"Veículo com matrícula {vehicle.license_plate} registado com sucesso!")
+        else:
+            messages.error(request, f"Erro ao registar veículo: {form.errors}")
+    return redirect('transporter_dashboard')
+
+@login_required
+@role_required(['Transporter'])
+def transporter_accept_route(request):
+    if request.method == "POST":
+        route_id = request.POST.get('route_id')
+        vehicle_id = request.POST.get('vehicle_id')
+        route = get_object_or_404(Route, pk=route_id)
+        
+        if not vehicle_id:
+            messages.error(request, "Tem de selecionar um veículo para esta rota.")
+            return redirect('transporter_dashboard')
+            
+        vehicle = get_object_or_404(Vehicle, pk=vehicle_id, owner=request.user)
+        
+        if route.status == 'PENDING':
+            with transaction.atomic():
+                route.status = 'ACCEPTED'
+                route.transporter = request.user
+                route.vehicle = vehicle
+                route.save()
+                
+                # Atualizar todas as encomendas na rota
+                for order in route.orders.all():
+                    order.transport_status = 'ACCEPTED'
+                    order.vehicle = vehicle
+                    order.save()
+                    
+            messages.success(request, f"Rota #{route.pk} aceite com o veículo {vehicle.brand_model} ({vehicle.license_plate})!")
+        else:
+            messages.error(request, "Esta rota já não está disponível.")
+            
+    return redirect('transporter_dashboard')
+
+@login_required
+@role_required(['Transporter'])
+def transporter_route_plan(request):
+    if request.method == "POST":
+        route_id = request.POST.get('route_id')
+        route = get_object_or_404(Route, pk=route_id, transporter=request.user)
+        planned_pickup = request.POST.get('planned_pickup_date')
+        planned_delivery = request.POST.get('planned_delivery_date')
+        
+        if planned_pickup and planned_delivery:
+            with transaction.atomic():
+                route.status = 'PLANNED'
+                route.save()
+                for order in route.orders.all():
+                    order.planned_pickup_date = planned_pickup
+                    order.planned_delivery_date = planned_delivery
+                    order.transport_status = 'PLANNED'
+                    order.save()
+            messages.success(request, f"Plano de transporte registado para a Rota #{route.pk}!")
+        else:
+            messages.error(request, "Datas de recolha e entrega inválidas.")
+    return redirect('transporter_dashboard')
+
+@login_required
+@role_required(['Transporter'])
+def transporter_route_pickup(request):
+    if request.method == "POST":
+        route_id = request.POST.get('route_id')
+        route = get_object_or_404(Route, pk=route_id, transporter=request.user)
+        
+        now = timezone.now()
+        with transaction.atomic():
+            route.status = 'IN_TRANSIT'
+            route.save()
+            for order in route.orders.all():
+                order.actual_pickup_date = now
+                order.transport_status = 'IN_TRANSIT'
+                order.save()
+                
+                # Blockchain Custody Block
+                dossier = {
+                    "action": "TRANSPORT_PICKUP",
+                    "order_id": order.pk,
+                    "transporter": request.user.username,
+                    "pickup_time": order.actual_pickup_date.isoformat(),
+                    "origin": order.warehouse_location,
+                    "planned_pickup": order.planned_pickup_date.isoformat() if order.planned_pickup_date else "N/A",
+                    "harvest_origin": order.harvest_origin.pk if order.harvest_origin else "N/A"
+                }
+                data_hash = blockchain_service.generate_dossier_hash(dossier)
+                blockchain_service.sign_and_submit_block(
+                    user_role='Transporter',
+                    batch_id=f"ORDER-{order.pk}",
+                    data_hash=data_hash,
+                    event_type='TRANSPORT_PICKUP',
+                    data_payload=dossier
+                )
+                try:
+                    if order.harvest_origin:
+                        from dashboard.services.fabric_service import fabric_service
+                        fabric_service.update_order(
+                            order_id=f"LOTE-{order.harvest_origin.pk}",
+                            new_status="IN_TRANSIT",
+                            additional_data=dossier
+                        )
+                except Exception as fe:
+                    print(f"Erro fabric: {fe}")
+                    
+        messages.success(request, f"Viagem da Rota #{route.pk} iniciada!")
+    return redirect('transporter_dashboard')
+
+@login_required
+@role_required(['Transporter'])
+def transporter_route_delivery(request):
+    if request.method == "POST":
+        route_id = request.POST.get('route_id')
+        route = get_object_or_404(Route, pk=route_id, transporter=request.user)
+        sensor_data = request.POST.get('transport_sensor_data', 'No Data')
+        
+        now = timezone.now()
+        with transaction.atomic():
+            route.status = 'DELIVERED'
+            route.save()
+            for order in route.orders.all():
+                order.actual_delivery_date = now
+                order.transport_sensor_data = sensor_data
+                order.transport_status = 'DELIVERED'
+                order.save()
+                
+                # Atualizar stock entregue no Lote
+                if order.harvest_origin:
+                    harvest = order.harvest_origin
+                    harvest.delivered_quantity_kg = (harvest.delivered_quantity_kg or 0) + order.quantity_kg
+                    harvest.save()
+                    
+                # Blockchain delivery
+                dossier = {
+                    "action": "TRANSPORT_DELIVERY",
+                    "order_id": order.pk,
+                    "transporter": request.user.username,
+                    "delivery_time": order.actual_delivery_date.isoformat(),
+                    "sensor_data": sensor_data,
+                    "harvest_origin": order.harvest_origin.pk if order.harvest_origin else "N/A"
+                }
+                data_hash = blockchain_service.generate_dossier_hash(dossier)
+                blockchain_service.sign_and_submit_block(
+                    user_role='Transporter',
+                    batch_id=f"ORDER-{order.pk}",
+                    data_hash=data_hash,
+                    event_type='TRANSPORT_DELIVERY',
+                    data_payload=dossier
+                )
+                try:
+                    if order.harvest_origin:
+                        from dashboard.services.fabric_service import fabric_service
+                        fabric_service.update_order(
+                            order_id=f"LOTE-{order.harvest_origin.pk}",
+                            new_status="DELIVERED",
+                            additional_data=dossier
+                        )
+                except Exception as fe:
+                    print(f"Erro fabric: {fe}")
+                    
+        messages.success(request, f"Entrega da Rota #{route.pk} concluída com sucesso!")
+    return redirect('transporter_dashboard')
+
+@login_required
+@role_required(['Transporter'])
+def transporter_simulate_route_opt(request):
+    orders = MarketplaceOrder.objects.filter(
+        status='APPROVED',
+        transport_status='PENDING',
+        route__isnull=True
+    )
+    if not orders.exists():
+        messages.error(request, "Não existem transações pendentes de transporte no mercado neste momento.")
+        return redirect('transporter_dashboard')
+        
+    with transaction.atomic():
+        selected_orders = orders[:10]
+        route = Route.objects.create(
+            route_date=timezone.now().date(),
+            status='PENDING'
+        )
+        locations = []
+        for order in selected_orders:
+            order.route = route
+            order.save()
+            if order.warehouse_location not in locations:
+                locations.append(order.warehouse_location)
+            dest = f"Armazém {order.requester.username}"
+            if dest not in locations:
+                locations.append(dest)
+                
+        route.optimized_path = " -> ".join(locations)
+        route.save()
+        
+    messages.success(request, f"Simulação Concluída! Rota #{route.pk} criada otimizando {len(selected_orders)} transações.")
+    return redirect('transporter_dashboard')
+
 @login_required
 @role_required(['Transporter'])
 def transporter_accept_job(request):
     """
     Passo 1: Aceitar o trabalho (Move de 'PENDING' para 'ACCEPTED').
-    Significa "Eu vou transportar isto!".
     """
     if request.method == "POST":
         order_id = request.POST.get('order_id')
+        vehicle_id = request.POST.get('vehicle_id')
         order = get_object_or_404(MarketplaceOrder, pk=order_id)
         
-        # Só aceitar se estiver livre (PENDING)
+        if not vehicle_id:
+            messages.error(request, "Tem de selecionar um veículo para aceitar esta carga.")
+            return redirect('transporter_dashboard')
+            
+        vehicle = get_object_or_404(Vehicle, pk=vehicle_id, owner=request.user)
+        
         if order.transport_status == 'PENDING':
-            order.transport_status = 'ACCEPTED'
-            # Aqui poderiamos guardar order.transport_fulfilled_by = request.user se tivessemos o campo
-            order.save()
-            messages.success(request, f"Trabalho aceite! Encomenda #{order.pk} movida para Planeamento.")
+            with transaction.atomic():
+                order.transport_status = 'ACCEPTED'
+                order.vehicle = vehicle
+                order.save()
+            messages.success(request, f"Trabalho aceite! Encomenda #{order.pk} movida para Planeamento com o veículo {vehicle.license_plate}.")
         else:
             messages.error(request, "Esta encomenda já não está disponível.")
             
@@ -1650,6 +2039,50 @@ def transporter_submit_delivery(request):
     return redirect('transporter_dashboard')
 
 
+@login_required
+@role_required(['Processor'])
+def processor_request_association(request):
+    if request.method == "POST":
+        from django.contrib.auth.models import User
+        retailer_id = request.POST.get('retailer_id')
+        retailer = get_object_or_404(User, pk=retailer_id, groups__name='Retailer')
+        
+        # Create or update association status to PENDING
+        assoc, created = StoreProcessorAssociation.objects.get_or_create(
+            processor=request.user,
+            retailer=retailer
+        )
+        if not created and assoc.status != 'PENDING':
+            assoc.status = 'PENDING'
+            assoc.save()
+            
+        messages.success(request, f"Pedido de associação enviado para a loja {retailer.username}!")
+    return redirect('processor_dashboard')
+
+
+@login_required
+@role_required(['Retailer'])
+def retailer_respond_association(request):
+    if request.method == "POST":
+        association_id = request.POST.get('association_id')
+        action = request.POST.get('action') # 'approve', 'reject', 'revoke'
+        assoc = get_object_or_404(StoreProcessorAssociation, pk=association_id, retailer=request.user)
+        
+        if action == 'approve':
+            assoc.status = 'APPROVED'
+            assoc.save()
+            messages.success(request, f"Permissão concedida ao processador {assoc.processor.username}!")
+        elif action == 'reject':
+            assoc.status = 'REJECTED'
+            assoc.save()
+            messages.warning(request, f"Pedido de associação do processador {assoc.processor.username} rejeitado.")
+        elif action == 'revoke':
+            assoc.delete()
+            messages.info(request, f"Acesso do processador {assoc.processor.username} revogado.")
+            
+    return redirect('retailer_dashboard')
+
+
 from dashboard.services.fabric_service import fabric_service
 
 @login_required
@@ -1760,6 +2193,13 @@ def get_agent_recommendations(request):
                     warehouse = Warehouse.objects.filter(owner=request.user, location=clean_loc).first()
                     sensor_readings = []
                     if warehouse:
+                        # Self-healing check
+                        if WarehouseSensorReading.objects.filter(warehouse=warehouse).count() < 30:
+                            try:
+                                from dashboard.services.lc_service import generate_fallback_sensor_readings
+                                generate_fallback_sensor_readings(warehouse)
+                            except Exception:
+                                pass
                         today_date = datetime.date.today()
                         future_readings = WarehouseSensorReading.objects.filter(warehouse=warehouse, date__gte=today_date).order_by('date')
                         if future_readings.exists():
@@ -1869,8 +2309,30 @@ def get_stock_recommendations(request):
             
             checkpoint_dir = os.path.join(stock_management_path, 'models')
             
-            # Tentar carregar o modelo específico da SKU (suportando subpastas, seeds e best de forma dinâmica)
             loaded = False
+            # Tentar primeiro carregar o modelo treinado da BD para este utilizador e cultura
+            culture_name = sku_culture_map.get(item_id, "Gala")
+            culture = ProductSubFamily.objects.filter(name=culture_name).first()
+            
+            db_actor = None
+            if culture:
+                db_actor = TrainedModel.objects.filter(
+                    owner=request.user,
+                    culture=culture,
+                    model_type='stock_agent',
+                    file_name='stock_agent_actor.pth'
+                ).first()
+                
+            if db_actor:
+                try:
+                    import io
+                    agent.policy_old_actor.load_state_dict(torch.load(io.BytesIO(db_actor.file_data), map_location='cpu'))
+                    agent.policy_old_actor.eval()
+                    loaded = True
+                except Exception as db_err:
+                    print(f"Erro ao carregar modelo de stock da BD: {db_err}")
+
+            # Tentar carregar o modelo específico da SKU (suportando subpastas, seeds e best de forma dinâmica)
             import glob
             for base_name in [model_sku, "3_080"]:
                 sku_folder = os.path.join(checkpoint_dir, base_name)
@@ -2297,38 +2759,244 @@ def async_stock_training(user_id, sku, excel_file_path, storage_dir):
             'loss': 0.0,
             'message': f'A ler ficheiro de histórico de stocks e colheitas para {sku}...'
         }
-        time.sleep(2)
+        
+        import os
+        import sys
+        import re
+        import subprocess
+        import io
+        import pandas as pd
+        import numpy as np
+        import joblib
+        import torch
+        from django.conf import settings
+        from django.contrib.auth.models import User
+        from .models import ProductSubFamily, TrainedModel, WarehouseSensorReading, Warehouse, Harvest
+
+        # Resolve SKU
+        subfamily_id = sku
+        harvest_id = None
+        if '|' in sku:
+            parts = sku.split('|')
+            subfamily_id = parts[0]
+            try:
+                harvest_id = int(parts[1])
+            except ValueError:
+                pass
+                
+        subfamily = ProductSubFamily.objects.get(pk=subfamily_id)
+        
+        # Load the user's trained sales prediction model (MLP)
+        model_record = TrainedModel.objects.filter(
+            owner_id=user_id,
+            culture=subfamily,
+            model_type='sales_mlp',
+            file_name='sales_mlp.joblib'
+        ).first()
+        
+        if not model_record:
+            raise FileNotFoundError("Precisa de treinar primeiro o modelo de previsão de vendas (MLP) para esta cultura no menu 'Previsão de Vendas'.")
+            
+        TRAINING_STATUS[user_id].update({
+            'progress': 20,
+            'message': 'A inicializar previsor de vendas e a processar dados...'
+        })
+        
+        # Load excel file
+        if excel_file_path.endswith('.xlsx') or excel_file_path.endswith('.xls'):
+            df = pd.read_excel(excel_file_path)
+        else:
+            df = pd.read_csv(excel_file_path)
+            
+        # Normalize columns
+        col_mapping = {
+            'day': 'date', 'date': 'date', 'data': 'date', 'Data': 'date',
+            'real_value': 'sales_quantity_kg', 'sales_quantity_kg': 'sales_quantity_kg',
+            'vendas_kg': 'sales_quantity_kg', 'Vendas_Kg': 'sales_quantity_kg',
+            'price': 'price_per_kg', 'price_per_kg': 'price_per_kg',
+            'preco_venda_euro': 'price_per_kg', 'Preco_Venda_Euro': 'price_per_kg',
+            'Stock_Inicial_Kg': 'stock_inicial_kg', 'Colheita_Kg': 'colheita_kg',
+            'Stock_Final_Kg': 'stock_final_kg',
+        }
+        df = df.rename(columns=col_mapping)
+        if 'date' not in df.columns or 'sales_quantity_kg' not in df.columns:
+            raise KeyError("O ficheiro deve conter as colunas de data ('Data' ou 'date') e de quantidade de vendas ('Vendas_Kg' ou 'sales_quantity_kg').")
+            
+        df = df.sort_values(by='date').reset_index(drop=True)
+        df['date'] = pd.to_datetime(df['date'])
+        
+        # Load forecasting model
+        mlp = joblib.load(io.BytesIO(model_record.file_data))
+        
+        df['day_of_week'] = df['date'].apply(lambda x: x.weekday() + 1)
+        df['month'] = df['date'].apply(lambda x: x.month)
+        
+        df['real_value_lag1'] = df['sales_quantity_kg'].shift(1)
+        df['real_value_lag7'] = df['sales_quantity_kg'].shift(7)
+        
+        # Fill lags
+        mean_sales = df['sales_quantity_kg'].mean() if len(df) > 0 else 10.0
+        df['real_value_lag1'] = df['real_value_lag1'].bfill().fillna(mean_sales)
+        df['real_value_lag7'] = df['real_value_lag7'].bfill().fillna(mean_sales)
+        
+        if 'price_per_kg' not in df.columns:
+            df['price_per_kg'] = 2.0
+            
+        X = df[['real_value_lag1', 'real_value_lag7', 'price_per_kg', 'day_of_week', 'month']].values
+        df['prediction'] = mlp.predict(X)
+        df['prediction'] = df['prediction'].clip(lower=0.0)
+        
+        # Fetch warehouse readings
+        user = User.objects.get(pk=user_id)
+        warehouse = None
+        if harvest_id:
+            try:
+                harvest = Harvest.objects.get(pk=harvest_id, producer=user)
+                warehouse = harvest.warehouse
+            except Exception:
+                pass
+        if not warehouse:
+            warehouse = Warehouse.objects.filter(owner=user).first()
+            
+        temperatures = []
+        humidities = []
+        ethylenes = []
+        for idx, row in df.iterrows():
+            d_val = row['date'].date()
+            reading = None
+            if warehouse:
+                reading = WarehouseSensorReading.objects.filter(warehouse=warehouse, date=d_val).first()
+            if not reading:
+                reading = WarehouseSensorReading.objects.filter(date=d_val).first()
+            if reading:
+                temperatures.append(float(reading.temperature))
+                humidities.append(float(reading.humidity))
+                ethylenes.append(float(reading.ethylene))
+            else:
+                temperatures.append(18.0)
+                humidities.append(72.0)
+                ethylenes.append(0.15)
+                
+        df['temperature'] = temperatures
+        df['humidity'] = humidities
+        df['ethylene'] = ethylenes
+        
+        preset_volume = 0.002
+        if subfamily.lifecycle_presets and isinstance(subfamily.lifecycle_presets, dict):
+            preset_volume = subfamily.lifecycle_presets.get('volume', 0.002)
+        df['volume'] = preset_volume
+        df['price'] = df['price_per_kg']
+        
+        # Save enriched excel file
+        temp_excel_dir = os.path.join(storage_dir, 'temp_stock')
+        os.makedirs(temp_excel_dir, exist_ok=True)
+        temp_excel_path = os.path.join(temp_excel_dir, f"stock_train_dataset_{user_id}.xlsx")
+        
+        save_cols = ['date', 'prediction', 'price', 'volume', 'temperature', 'humidity', 'ethylene']
+        if 'sales_quantity_kg' in df.columns:
+            df['real_value'] = df['sales_quantity_kg']
+            save_cols.append('real_value')
+            
+        df[save_cols].to_excel(temp_excel_path, index=False)
         
         TRAINING_STATUS[user_id].update({
-            'progress': 35,
-            'message': f'A inicializar ambiente do Stock Agent para {sku}...'
+            'progress': 30,
+            'message': 'A inicializar subprocesso de treino PPO para o Stock Agent...'
         })
-        time.sleep(2)
         
-        # Simular o treino do Stock Agent
-        for epoch in range(1, 6):
-            time.sleep(1.5)
+        # Launch subprocess
+        stock_mgmt_dir = os.path.join(settings.BASE_DIR, 'StockManagement')
+        cmd = [sys.executable, 'train_pricing.py']
+        
+        env = os.environ.copy()
+        env["EXCEL_PATH"] = temp_excel_path
+        env["MAX_EPISODES_TOTAL"] = "640" # Quick training episode limit
+        env["NUM_WORKERS"] = "2" # Safe execution
+        env["NUM_ENVS"] = "32"
+        
+        process = subprocess.Popen(
+            cmd,
+            cwd=stock_mgmt_dir,
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1
+        )
+        
+        for line in process.stdout:
+            clean_line = line.strip()
+            if clean_line:
+                if "Episódios:" in clean_line or "Episodios:" in clean_line:
+                    match = re.search(r'(?:Episódios|Episodios):\s+(\d+)/(\d+)\s+\|\s+Média Lucro Batch:\s+([\d.-]+)€\s+\|\s+Loss Total:\s+([\d.-]+)', clean_line)
+                    if match:
+                        ep = int(match.group(1))
+                        tot = int(match.group(2))
+                        profit = float(match.group(3))
+                        loss = float(match.group(4))
+                        
+                        progress = 30 + int((ep / tot) * 60) # Map 0%-100% of training to 30%-90% of UI progress
+                        TRAINING_STATUS[user_id].update({
+                            'progress': progress,
+                            'epoch': ep,
+                            'loss': loss,
+                            'message': f"A treinar Stock Agent: {ep}/{tot} episódios | Lucro: {profit:.1f}€ | Loss: {loss:.4f}"
+                        })
+                elif "ERRO" in clean_line or "Error" in clean_line:
+                    print(f"[Stock Training Subprocess Error] {clean_line}")
+                    
+        process.wait()
+        
+        # Load weights and save to database
+        actor_path = os.path.join(stock_mgmt_dir, 'models', 'custom_sku_seed42_actor.pth')
+        critic_path = os.path.join(stock_mgmt_dir, 'models', 'custom_sku_seed42_critic.pth')
+        
+        if not os.path.exists(actor_path):
+            actor_path = os.path.join(stock_mgmt_dir, 'models', 'custom_sku_seed1337_actor.pth')
+            critic_path = os.path.join(stock_mgmt_dir, 'models', 'custom_sku_seed1337_critic.pth')
+            
+        if os.path.exists(actor_path) and os.path.exists(critic_path):
+            with open(actor_path, 'rb') as f:
+                actor_data = f.read()
+            TrainedModel.objects.update_or_create(
+                owner=user,
+                culture=subfamily,
+                model_type='stock_agent',
+                file_name='stock_agent_actor.pth',
+                defaults={'file_data': actor_data}
+            )
+            
+            with open(critic_path, 'rb') as f:
+                critic_data = f.read()
+            TrainedModel.objects.update_or_create(
+                owner=user,
+                culture=subfamily,
+                model_type='stock_agent',
+                file_name='stock_agent_critic.pth',
+                defaults={'file_data': critic_data}
+            )
+            
+            # Clean up
+            try:
+                for file_to_del in [actor_path, critic_path]:
+                    if os.path.exists(file_to_del):
+                        os.remove(file_to_del)
+                import glob
+                for f in glob.glob(os.path.join(stock_mgmt_dir, 'models', 'custom_sku_seed*')):
+                    os.remove(f)
+                if os.path.exists(temp_excel_path):
+                    os.remove(temp_excel_path)
+            except Exception as cl_err:
+                print(f"Erro ao limpar arquivos temporários: {cl_err}")
+                
             TRAINING_STATUS[user_id].update({
-                'progress': 35 + (epoch * 13),
-                'epoch': epoch * 10,
-                'loss': round(0.06 / epoch, 4),
-                'message': f'Otimização do Agente de Stock (PPO) para {sku} - Época {epoch * 10}/50...'
+                'status': 'completed',
+                'progress': 100,
+                'message': f'Treino do Stock Agent para {subfamily.name} concluído com sucesso!'
             })
+        else:
+            raise FileNotFoundError("Não foi possível gerar os pesos finais do modelo (PPO Actor/Critic).")
             
-        # Salvar pesos do Stock Agent
-        stock_dir = os.path.join(storage_dir, 'stock')
-        os.makedirs(stock_dir, exist_ok=True)
-        with open(os.path.join(stock_dir, 'actor.pth'), 'w') as f:
-            f.write('stock_actor_dummy_weights')
-        with open(os.path.join(stock_dir, 'critic.pth'), 'w') as f:
-            f.write('stock_critic_dummy_weights')
-            
-        TRAINING_STATUS[user_id].update({
-            'status': 'completed',
-            'progress': 100,
-            'message': f'Treino do Stock Agent para {sku} concluído com sucesso!'
-        })
-        
     except Exception as e:
         TRAINING_STATUS[user_id] = {
             'status': 'failed',
@@ -2425,7 +3093,7 @@ def submit_stock_training(request):
             destination.write(chunk)
             
     # Disparar thread de treino
-    thread = threading.Thread(target=async_stock_training, args=(user_id, sku_label, temp_file_path, storage_dir))
+    thread = threading.Thread(target=async_stock_training, args=(user_id, sku, temp_file_path, storage_dir))
     thread.daemon = True
     thread.start()
     
@@ -2486,6 +3154,105 @@ def adjust_stock_manually(request):
         stock.quantity = new_qty
         stock.save()
         
+        # Se for um Produtor, sincronizar com o modelo Harvest
+        if request.user.groups.filter(name='Producer').exists():
+            from dashboard.models import Harvest, Warehouse
+            from decimal import Decimal
+            import datetime
+            
+            # Tenta encontrar o objeto Warehouse correspondente
+            warehouse_obj = Warehouse.objects.filter(owner=request.user, location=warehouse_location).first()
+            
+            # 1. Obter todos os lotes com plantação
+            plantation_harvests = list(Harvest.objects.filter(
+                producer=request.user,
+                subfamily=culture,
+                warehouse=warehouse_obj,
+                plantation__isnull=False
+            ))
+            
+            # Calcular stock disponível atual nos lotes com plantação
+            plant_avail = Decimal('0.0')
+            for h in plantation_harvests:
+                plant_avail += Decimal(str(h.harvest_quantity_kg)) - Decimal(str(h.utilized_quantity_kg))
+                
+            target = Decimal(str(new_qty))
+            
+            if target >= plant_avail:
+                # Apagamos todos os lotes manuais (sem plantação)
+                Harvest.objects.filter(
+                    producer=request.user,
+                    subfamily=culture,
+                    warehouse=warehouse_obj,
+                    plantation__isnull=True
+                ).delete()
+                
+                diff = target - plant_avail
+                if diff > 0:
+                    new_harvest = Harvest.objects.create(
+                        producer=request.user,
+                        subfamily=culture,
+                        warehouse=warehouse_obj,
+                        plantation=None,
+                        harvest_date=datetime.date.today(),
+                        harvest_quantity_kg=diff,
+                        utilized_quantity_kg=Decimal('0.0'),
+                        avg_quality_score=10
+                    )
+                    
+                    # --- SUBMETER À BLOCKCHAIN NO AJUSTE MANUAL ---
+                    try:
+                        from blockchain.utils import create_genesis_dossier
+                        from blockchain.services import blockchain_service
+                        
+                        dossier = create_genesis_dossier(new_harvest)
+                        data_hash = blockchain_service.generate_dossier_hash(dossier)
+                        
+                        # 1. Simulação Local na BD (PostgreSQL)
+                        blockchain_service.sign_and_submit_block(
+                            user_role='Producer',
+                            batch_id=dossier['batch_id'],
+                            data_hash=data_hash,
+                            event_type='GENESIS',
+                            data_payload=dossier
+                        )
+                        
+                        # 2. Blockchain Real (Hyperledger Fabric)
+                        try:
+                            from dashboard.services.fabric_service import fabric_service
+                            fabric_service.create_order(
+                                order_id=dossier['batch_id'],
+                                producer_id=new_harvest.producer.username,
+                                culture_type="N/A",
+                                quantity=float(new_harvest.harvest_quantity_kg),
+                                harvest_date=new_harvest.harvest_date.strftime("%Y-%m-%d"),
+                                additional_data=dossier
+                            )
+                        except Exception:
+                            pass
+                    except Exception:
+                        pass
+            else:
+                # Apagamos todos os lotes manuais
+                Harvest.objects.filter(
+                    producer=request.user,
+                    subfamily=culture,
+                    warehouse=warehouse_obj,
+                    plantation__isnull=True
+                ).delete()
+                
+                # E aumentamos o desperdício das plantações para atingir o target
+                diff_to_subtract = plant_avail - target
+                for h in plantation_harvests:
+                    if diff_to_subtract <= 0:
+                        break
+                    avail = Decimal(str(h.harvest_quantity_kg)) - Decimal(str(h.utilized_quantity_kg))
+                    if avail > 0:
+                        to_sub = min(avail, diff_to_subtract)
+                        h.utilized_quantity_kg = Decimal(str(h.utilized_quantity_kg)) + to_sub
+                        h.save()
+                        diff_to_subtract -= to_sub
+                        
         return JsonResponse({
             'status': 'success',
             'message': f"Sucesso: Foram {action_desc} {culture.name} no armazém {warehouse_location}. Stock atual: {new_qty} kg.",
@@ -2711,7 +3478,7 @@ def create_supply_contract(request):
 from django.http import JsonResponse
 
 @login_required
-@role_required(['Retailer', 'Processor'])
+@role_required(['Retailer', 'Processor', 'Producer'])
 def upload_sales_history(request):
     if request.method == "POST" and request.FILES.get('sales_file'):
         culture_id = request.POST.get('culture_id')
@@ -2753,11 +3520,14 @@ def upload_sales_history(request):
             # Ler apenas as colunas necessárias e descartar todas as outras colunas adicionais
             df = df[['date', 'sales_quantity_kg', 'price_per_kg']].dropna(subset=['date', 'sales_quantity_kg'])
                 
-            # Treinar MLP preditivo de vendas
-            from dashboard.services.agent_service import train_sales_forecaster
-            count = train_sales_forecaster(request.user, subfamily, df)
+            model_type = request.POST.get('model_type', 'mlp')
             
-            messages.success(request, f"Histórico de vendas e modelo preditivo de vendas (MLP) treinado com sucesso! {count} dias registados.")
+            # Treinar modelo preditivo de vendas (MLP ou Autoformer)
+            from dashboard.services.agent_service import train_sales_forecaster
+            count = train_sales_forecaster(request.user, subfamily, df, model_type=model_type)
+            
+            model_display = "Autoformer" if model_type == "autoformer" else "MLP"
+            messages.success(request, f"Histórico de vendas e modelo preditivo de vendas ({model_display}) treinado com sucesso! {count} dias registados.")
         except Exception as e:
             messages.error(request, f"Erro ao processar ficheiro de histórico: {e}")
             
@@ -2765,7 +3535,7 @@ def upload_sales_history(request):
 
 
 @login_required
-@role_required(['Retailer', 'Processor'])
+@role_required(['Retailer', 'Processor', 'Producer'])
 def infer_sales_forecast(request):
     if request.method == "POST":
         culture_id = request.POST.get('culture_id')
@@ -2909,8 +3679,8 @@ def get_lc_decay_data(request):
         harvest_item = get_object_or_404(Harvest, pk=stock_id)
         culture_name = f"{harvest_item.subfamily.name} ({harvest_item.subfamily.fruit_type})"
         initial_score = harvest_item.avg_quality_score or 10.0
-        brix = harvest_item.soluble_solids or 10.0
-        caliber = harvest_item.caliber or 65.0
+        brix = harvest_item.soluble_solids
+        caliber = harvest_item.caliber
         quantity = harvest_item.current_stock_kg
         warehouse = harvest_item.warehouse
         warehouse_location = warehouse.location if warehouse else ""
@@ -2919,8 +3689,8 @@ def get_lc_decay_data(request):
         stock_item = get_object_or_404(ConsolidatedStock, pk=stock_id)
         culture_name = f"{stock_item.culture.name} ({stock_item.culture.fruit_type})"
         initial_score = stock_item.avg_quality_score or 10.0
-        brix = stock_item.avg_soluble_solids or 10.0
-        caliber = stock_item.avg_caliber or 65.0
+        brix = stock_item.avg_soluble_solids
+        caliber = stock_item.avg_caliber
         quantity = stock_item.quantity
         warehouse_location = stock_item.warehouse_location
         owner = stock_item.owner
@@ -2931,6 +3701,13 @@ def get_lc_decay_data(request):
     # Obter leituras de sensores para este armazém
     sensor_readings = []
     if warehouse:
+        # Self-healing check
+        if WarehouseSensorReading.objects.filter(warehouse=warehouse).count() < 30:
+            try:
+                from dashboard.services.lc_service import generate_fallback_sensor_readings
+                generate_fallback_sensor_readings(warehouse)
+            except Exception:
+                pass
         today_date = datetime.date.today()
         future_readings = WarehouseSensorReading.objects.filter(warehouse=warehouse, date__gte=today_date).order_by('date')
         if future_readings.exists():
@@ -2963,8 +3740,8 @@ def get_lc_decay_data(request):
         'culture_name': culture_name,
         'rsl_days': rsl_days,
         'initial_score': float(initial_score),
-        'brix': float(brix),
-        'caliber': float(caliber),
+        'brix': float(brix) if brix is not None else "N/A",
+        'caliber': float(caliber) if caliber is not None else "N/A",
         'quantity': float(quantity),
         'warehouse_location': warehouse_location,
         'temp_today': temp_today,

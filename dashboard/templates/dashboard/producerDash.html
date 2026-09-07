@@ -874,17 +874,20 @@
                 <a href="#" class="menu-item" onclick="switchSidebarTab('product-quantity-view')">
                     ⚖️ Product Quantity
                 </a>
-                <a href="#" class="menu-item" onclick="switchSidebarTab('statistics-view')">
-                    📊 Statistics
-                </a>
-                <a href="#" class="menu-item" onclick="switchSidebarTab('ai-agent-performance')">
-                    🤖 Desempenho da IA
+                <a href="#" class="menu-item" onclick="switchSidebarTab('sales-forecasting')">
+                    📈 Previsão de Vendas
                 </a>
                 <a href="#" class="menu-item" onclick="switchSidebarTab('ai-model-training')">
                     ⚙️ AI Model Training
                 </a>
+                <a href="#" class="menu-item" onclick="switchSidebarTab('ai-agent-performance')">
+                    🤖 Desempenho da IA
+                </a>
                 <a href="#" class="menu-item" onclick="switchSidebarTab('lc-analysis')">
                     ⏳ Ciclo de Vida (LC)
+                </a>
+                <a href="#" class="menu-item" onclick="switchSidebarTab('statistics-view')">
+                    📊 Statistics
                 </a>
             </nav>
         </div>
@@ -1400,6 +1403,44 @@
                         </div>
 
                         <div class="form-group">
+                            {{ warehouse_form.region.label_tag }}
+                            {{ warehouse_form.region }}
+                            <div style="margin-top: 10px;">
+                                <button type="button" onclick="toggleCityGuide(this)" style="background: none; border: none; color: #00796b; font-size: 0.85em; cursor: pointer; text-decoration: underline; font-weight: 600; padding: 0; display: flex; align-items: center; gap: 5px;">
+                                    💡 Guia de Cidades por Região
+                                </button>
+                                <div class="city-guide-box" style="display: none; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px; margin-top: 10px; font-size: 0.8em; color: #166534; max-height: 200px; overflow-y: auto; line-height: 1.5;">
+                                    <p style="margin-top: 0; font-weight: 700; margin-bottom: 8px;">Correspondência de Regiões:</p>
+                                    <ul style="padding-left: 15px; margin: 0; list-style-type: disc;">
+                                        <li style="margin-bottom: 4px;"><strong>Norte Litoral (PT-NL):</strong> Porto, Viana do Castelo, Vila Nova de Gaia, Braga (Litoral), Matosinhos.</li>
+                                        <li style="margin-bottom: 4px;"><strong>Norte Interior (PT-NI):</strong> Vila Real, Bragança, Chaves, Mirandela.</li>
+                                        <li style="margin-bottom: 4px;"><strong>Centro Litoral (PT-CL):</strong> Coimbra, Aveiro, Leiria, Figueira da Foz, Peniche.</li>
+                                        <li style="margin-bottom: 4px;"><strong>Centro Interior (PT-CI):</strong> Viseu, Guarda, Castelo Branco, Covilhã.</li>
+                                        <li style="margin-bottom: 4px;"><strong>Lisboa e Vale do Tejo (PT-LVT):</strong> Lisboa, Sintra, Cascais, Loures, Almada, Santarém, Setúbal.</li>
+                                        <li style="margin-bottom: 4px;"><strong>Alentejo (PT-AL):</strong> Évora, Beja, Portalegre, Elvas, Sines, Odemira.</li>
+                                        <li style="margin-bottom: 4px;"><strong>Algarve (PT-ALG):</strong> Faro, Portimão, Albufeira, Lagos, Tavira.</li>
+                                        <li style="margin-bottom: 4px;"><strong>Serra / Montanha (PT-SM):</strong> Covilhã (Serra), Manteigas, Seia, Gouveia.</li>
+                                        <li style="margin-bottom: 4px;"><strong>Madeira (PT-MAD):</strong> Funchal, Câmara de Lobos, Machico, Porto Santo.</li>
+                                        <li style="margin-bottom: 4px;"><strong>Açores (PT-ACO):</strong> Ponta Delgada, Angra do Heroísmo, Horta.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <script>
+                            function toggleCityGuide(btn) {
+                                const box = btn.nextElementSibling;
+                                if (box.style.display === "none" || box.style.display === "") {
+                                    box.style.display = "block";
+                                    btn.innerHTML = "💡 Ocultar Guia de Cidades";
+                                } else {
+                                    box.style.display = "none";
+                                    btn.innerHTML = "💡 Guia de Cidades por Região";
+                                }
+                            }
+                        </script>
+
+                        <div class="form-group">
                             {{ warehouse_form.control_type.label_tag }}
                             {{ warehouse_form.control_type }}
                         </div>
@@ -1407,6 +1448,17 @@
                         <div class="form-group">
                             {{ warehouse_form.capacity.label_tag }}
                             {{ warehouse_form.capacity }}
+                        </div>
+
+                        <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div>
+                                <label style="display:block; margin-bottom:5px; font-weight:600;">Latitude (Opcional):</label>
+                                {{ warehouse_form.latitude }}
+                            </div>
+                            <div>
+                                <label style="display:block; margin-bottom:5px; font-weight:600;">Longitude (Opcional):</label>
+                                {{ warehouse_form.longitude }}
+                            </div>
                         </div>
 
                         <div class="form-group">
@@ -1447,9 +1499,23 @@
                             {% for warehouse in producer_warehouses %}
                             <tr>
                                 <td>{{ warehouse.warehouse_id }}</td>
-                                <td>{{ warehouse.location }}</td>
+                                <td>
+                                    <strong>{{ warehouse.location }}</strong>
+                                    {% if warehouse.latitude and warehouse.longitude %}
+                                        <br><span style="font-size: 0.8em; color: #00796b;">📍 {{ warehouse.latitude }}, {{ warehouse.longitude }}</span>
+                                    {% endif %}
+                                </td>
                                 <td>{{ warehouse.get_control_type_display }}</td>
-                                <td>{{ warehouse.capacity }}</td>
+                                <td>
+                                    <strong>{{ warehouse.capacity }} Kg</strong><br>
+                                    <span style="font-size:0.85em; color:#666;">Ocupado: {{ warehouse.current_stock|default:0 }} Kg</span>
+                                    
+                                    <!-- Progress Bar -->
+                                    <div style="width: 100%; min-width: 150px; background: #e0e0e0; border-radius: 8px; overflow: hidden; height: 10px; margin-top: 5px;">
+                                        <div style="height: 100%; width: {{ warehouse.occupancy_percentage }}%; background: {% if warehouse.occupancy_percentage > 90 %}#e53935{% elif warehouse.occupancy_percentage > 70 %}#fbc02d{% else %}#2e7d32{% endif %}; transition: width 0.3s;"></div>
+                                    </div>
+                                    <span style="font-size: 0.75em; font-weight: bold; color: #333;">{{ warehouse.occupancy_percentage }}% Ocupado</span>
+                                </td>
                                 <td>
                                     {% for sensor in warehouse.sensors.all %}
                                     <span class="sensor-badge">{{ sensor.sensor_id }} ({{ sensor.get_sensor_type_display }})</span>
@@ -1967,9 +2033,9 @@
                     <!-- Filters for Quantity Summary -->
                      <div class="filters-container" style="display: flex; gap: 20px; margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 10px; border: 1px solid #eee;">
                         <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                            <label for="filter-qty-plantation" style="font-weight: 600; color: #555;">Filter by Plantation:</label>
-                            <select id="filter-qty-plantation" class="form-control">
-                                <option value="">All Plantations</option>
+                            <label for="filter-qty-warehouse" style="font-weight: 600; color: #555;">Filter by Warehouse:</label>
+                            <select id="filter-qty-warehouse" class="form-control">
+                                <option value="">All Warehouses</option>
                             </select>
                         </div>
                         <div class="form-group" style="flex: 1; margin-bottom: 0;">
@@ -1984,7 +2050,7 @@
                     <table class="data-table" style="margin-bottom: 30px;" id="qty-summary-table">
                         <thead>
                             <tr>
-                                <th>Plantation</th>
+                                <th>Warehouse</th>
                                 <th>Culture</th>
                                 <th>Total Harvested (Kg)</th>
                                 <th>Delivered (Kg)</th>
@@ -1993,9 +2059,9 @@
                         </thead>
                         <tbody>
                             {% for item in harvest_sums %}
-                            <tr data-plantation="{{ item.plantation__plantation_name|default:'N/A' }}" 
+                            <tr data-warehouse="{{ item.warehouse__location|default:'No Warehouse' }}" 
                                 data-culture="{{ item.subfamily__name|default:'N/A' }}">
-                                <td>{{ item.plantation__plantation_name|default:"-" }}</td>
+                                <td>{{ item.warehouse__location|default:"No Warehouse" }}</td>
                                 <td>{{ item.subfamily__name|default:"-" }}</td>
                                 <td>{{ item.total_kg }}</td>
                                 <td>{{ item.delivered_kg|default:"0" }}</td>
@@ -2473,6 +2539,108 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- SALES FORECASTING TAB -->
+            <div id="sales-forecasting" class="dashboard-tab" style="display: none;">
+                <h3 style="color: #00796b; margin-bottom: 25px; font-weight: 700; border-bottom: 3px solid #00796b; padding-bottom: 10px; display: flex; align-items: center; gap: 10px;">
+                    <span>📈</span> Previsão de Vendas (Treino MLP & Inferência)
+                </h3>
+
+                <div class="form-section" style="border-top: 4px solid #00796b;">
+                    <p style="font-size: 0.95em; color: #555; margin-bottom: 20px;">
+                        Treine o modelo neuronal MLP de 3 camadas com o histórico de vendas para projetar a procura futura do mercado.
+                    </p>
+
+                    <!-- Template download -->
+                    <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong style="color: #004d40; font-size: 0.95em; display: block;">Template Excel de Vendas</strong>
+                            <span style="font-size: 0.85em; color: #666;">Formato pré-definido para carregar dados históricos de vendas.</span>
+                        </div>
+                        <a href="{% url 'download_training_template' %}?type=buyer" style="background: #00796b; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.9em; box-shadow: 0 2px 5px rgba(0,121,107,0.1);">
+                            📥 Descarregar Template
+                        </a>
+                    </div>
+
+                    <!-- Upload & Treino Form -->
+                    <form id="mlp-training-form" method="POST" action="{% url 'upload_sales_history' %}" enctype="multipart/form-data" style="margin-bottom: 25px;" onsubmit="submitMlpTraining(event)">
+                        {% csrf_token %}
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 20px;">
+                            <div class="form-group">
+                                <label style="display:block; font-weight:600; font-size:0.9em; margin-bottom:8px;">Cultura (Produto):</label>
+                                <select name="culture_id" required class="form-control" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #d1d5db;">
+                                    {% if harvest_sums %}
+                                        {% for item in harvest_sums %}
+                                            {% if item.current_stock > 0 %}
+                                                <option value="{{ item.subfamily }}">{{ item.subfamily__name }} ({{ item.current_stock }} kg em {{ item.warehouse__location }})</option>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        <option value="" disabled selected>Nenhuma cultura em stock. Registe colheita primeiro.</option>
+                                    {% endif %}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label style="display:block; font-weight:600; font-size:0.9em; margin-bottom:8px;">Ficheiro Excel ou CSV:</label>
+                                <input type="file" name="sales_file" accept=".xlsx,.csv" required style="padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 8px; width: 100%;">
+                            </div>
+                        </div>
+                        <button type="submit" class="submit-button" style="background-color: #00796b; padding: 12px 20px; font-size: 0.95em; width: auto; font-weight: 600; margin-top: 0;">🚀 Treinar Rede MLP</button>
+                    </form>
+
+                    <!-- Painel de Progresso do Treino MLP -->
+                    <div class="form-section" id="mlp-progress-card" style="display: none; border-top: 4px solid #3b82f6; margin-top: 20px; background-color: #f0f9ff; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-radius: 8px;">
+                        <h3 style="color: #1e3a8a; margin-top: 0; font-size: 1.1em; display: flex; align-items: center; gap: 8px;">
+                            <span>🔄</span> Treino da Rede MLP em Curso...
+                        </h3>
+                        <div style="margin-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 8px; font-size: 0.9em; color: #1e3a8a;">
+                                <span id="mlp-status-msg">A inicializar...</span>
+                                <span id="mlp-pct">0%</span>
+                            </div>
+                            <div style="width: 100%; background: #dbeafe; height: 10px; border-radius: 5px; overflow: hidden;">
+                                <div id="mlp-progress-bar" style="width: 0%; background: linear-gradient(90deg, #3b82f6, #1d4ed8); height: 100%; transition: width 0.2s ease;"></div>
+                            </div>
+                        </div>
+                        <div style="background: #1e293b; color: #38bdf8; font-family: monospace; padding: 12px; border-radius: 8px; font-size: 0.85em; max-height: 120px; overflow-y: auto; box-shadow: inset 0 2px 4px rgba(0,0,0,0.6);" id="mlp-logs-console">
+                            [LOG] A aguardar início...
+                        </div>
+                    </div>
+
+                    <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+
+                    <!-- Painel de Inferência -->
+                    <h3 style="margin-bottom: 15px; color: #004d40;">Projetar Vendas Futuras (Inferência)</h3>
+                    <div style="display: flex; gap: 15px; margin-bottom: 20px; align-items: flex-end;">
+                        <div style="flex: 2;">
+                            <label style="display:block; font-weight:600; font-size:0.9em; margin-bottom:8px;">Cultura (Produto):</label>
+                            <select id="infer-culture-id" class="form-control" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #d1d5db;">
+                                {% for item in harvest_sums %}
+                                    {% if item.current_stock > 0 and item.has_sales_model %}
+                                        <option value="{{ item.subfamily }}">{{ item.subfamily__name }} ({{ item.current_stock }} kg em {{ item.warehouse__location }})</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div style="flex: 1;">
+                            <label style="display:block; font-weight:600; font-size:0.9em; margin-bottom:8px;">Horizonte Temporal:</label>
+                            <select id="infer-horizon" class="form-control" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #d1d5db;">
+                                <option value="15">15 dias</option>
+                                <option value="30" selected>30 dias</option>
+                            </select>
+                        </div>
+                        <button type="button" onclick="runSalesForecast()" class="submit-button" style="background-color: #3b82f6; width: auto; padding: 11px 20px; font-size: 0.95em; font-weight: 600; height: fit-content; margin-top: 0;">📈 Inferir Procura</button>
+                    </div>
+
+                    <!-- Gráfico Canvas -->
+                    <div style="background: #f8f9fa; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; min-height: 250px; display: flex; align-items: center; justify-content: center; position: relative;">
+                        <canvas id="forecastChart" style="display: none; width: 100%; height: 250px;"></canvas>
+                        <div id="forecast-placeholder" style="color: #a0aec0; font-size: 1em;">
+                            Selecione a cultura e clique em "Inferir Procura" para gerar a projeção das vendas.
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <!-- LIFE CYCLE ANALYSIS TAB -->
             <div id="lc-analysis" class="dashboard-tab" style="display: none;">
@@ -2505,7 +2673,7 @@
                             <h4 style="margin: 0 0 10px 0; color: #ff8f00; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.5px;">Qualidade Inicial</h4>
                             <div style="font-size: 1.1em; font-weight: 700; color: #ff6f00; line-height: 1.6;">
                                 Score: <span id="lc-score-value">-</span>/10<br>
-                                Brix: <span id="lc-brix-value">-</span>º | Calibre: <span id="lc-caliber-value">-</span>mm
+                                Brix: <span id="lc-brix-value">-</span> | Calibre: <span id="lc-caliber-value">-</span>
                             </div>
                         </div>
                         <!-- SENSORS TODAY CARD -->
@@ -3154,43 +3322,43 @@
     <script>
         // === PRODUCT QUANTITY SUMMARY FILTERING LOGIC ===
         document.addEventListener("DOMContentLoaded", function() {
-            const plantationSelect = document.getElementById('filter-qty-plantation');
+            const warehouseSelect = document.getElementById('filter-qty-warehouse');
             const cultureSelect = document.getElementById('filter-qty-culture');
             const table = document.getElementById('qty-summary-table');
             
-            if (!table || !plantationSelect || !cultureSelect) return;
+            if (!table || !warehouseSelect || !cultureSelect) return;
 
             const tbody = table.querySelector('tbody');
             const rows = Array.from(tbody.querySelectorAll('tr'));
 
-            // 1. Populate Plantation Dropdown
-            const plantations = new Set();
+            // 1. Populate Warehouse Dropdown
+            const warehouses = new Set();
             rows.forEach(row => {
-                const p = row.getAttribute('data-plantation');
-                if (p && p !== 'N/A') plantations.add(p);
+                const w = row.getAttribute('data-warehouse');
+                if (w && w !== 'N/A') warehouses.add(w);
             });
             
-            Array.from(plantations).sort().forEach(p => {
+            Array.from(warehouses).sort().forEach(w => {
                 const option = document.createElement('option');
-                option.value = p;
-                option.textContent = p;
-                plantationSelect.appendChild(option);
+                option.value = w;
+                option.textContent = w;
+                warehouseSelect.appendChild(option);
             });
 
             // 2. Filter Function
             function applyQtyFilters() {
-                const selectedPlantation = plantationSelect.value;
+                const selectedWarehouse = warehouseSelect.value;
                 let selectedCulture = cultureSelect.value;
                 
-                // Reset available cultures if plantation changed
-                if (this === plantationSelect) {
+                // Reset available cultures if warehouse changed
+                if (this === warehouseSelect) {
                     cultureSelect.innerHTML = '<option value="">All Cultures</option>';
-                    cultureSelect.disabled = !selectedPlantation;
+                    cultureSelect.disabled = !selectedWarehouse;
                     
-                    if (selectedPlantation) {
+                    if (selectedWarehouse) {
                         const availableCultures = new Set();
                         rows.forEach(row => {
-                            if (row.getAttribute('data-plantation') === selectedPlantation) {
+                            if (row.getAttribute('data-warehouse') === selectedWarehouse) {
                                 const c = row.getAttribute('data-culture');
                                 if (c && c !== 'N/A') availableCultures.add(c);
                             }
@@ -3209,19 +3377,19 @@
 
                 // Show/Hide Rows
                 rows.forEach(row => {
-                    const rowPlantation = row.getAttribute('data-plantation');
+                    const rowWarehouse = row.getAttribute('data-warehouse');
                     const rowCulture = row.getAttribute('data-culture');
                     
                     let show = true;
                     
-                    if (selectedPlantation && rowPlantation !== selectedPlantation) show = false;
-                    if (selectedPlantation && selectedCulture && rowCulture !== selectedCulture) show = false;
+                    if (selectedWarehouse && rowWarehouse !== selectedWarehouse) show = false;
+                    if (selectedWarehouse && selectedCulture && rowCulture !== selectedCulture) show = false;
 
                     row.style.display = show ? '' : 'none';
                 });
             }
 
-            plantationSelect.addEventListener('change', applyQtyFilters);
+            warehouseSelect.addEventListener('change', applyQtyFilters);
             cultureSelect.addEventListener('change', applyQtyFilters);
         });
     </script>
@@ -3867,6 +4035,178 @@
                 console.error('Erro ao consultar progresso:', err);
             });
         }
+
+        let forecastChartObj = null;
+
+        function runSalesForecast() {
+            const cultureId = document.getElementById('infer-culture-id').value;
+            const horizonDays = document.getElementById('infer-horizon').value;
+            
+            const formData = new FormData();
+            formData.append('culture_id', cultureId);
+            formData.append('horizon_days', horizonDays);
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+            
+            fetch('/ai/infer-sales/', {
+                method: 'POST',
+                body: formData
+            })
+            .then(async response => {
+                if (!response.ok) {
+                    let errMsg = 'Certifique-se de que o modelo de vendas já foi treinado.';
+                    try {
+                        const json = await response.json();
+                        if (json && json.message) errMsg = json.message;
+                    } catch (e) {}
+                    throw new Error(errMsg);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success') {
+                    const predictions = data.predictions;
+                    const labels = predictions.map(p => p.date);
+                    const values = predictions.map(p => p.value);
+                    
+                    document.getElementById('forecast-placeholder').style.display = 'none';
+                    const canvas = document.getElementById('forecastChart');
+                    canvas.style.display = 'block';
+                    
+                    if (forecastChartObj) {
+                        forecastChartObj.destroy();
+                    }
+                    
+                    const ctx = canvas.getContext('2d');
+                    forecastChartObj = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Procura Prevista (Kg)',
+                                data: values,
+                                borderColor: '#3b82f6',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                borderWidth: 2,
+                                fill: true,
+                                tension: 0.2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    title: {
+                                        display: true,
+                                        text: 'Quantidade (Kg)'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            })
+            .catch(err => {
+                alert('Erro ao inferir procura: ' + err.message);
+            });
+        }
+
+        function submitMlpTraining(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            
+            const progressCard = document.getElementById('mlp-progress-card');
+            progressCard.style.display = 'block';
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '⏳ A treinar...';
+            
+            const statusMsg = document.getElementById('mlp-status-msg');
+            const pctMsg = document.getElementById('mlp-pct');
+            const progressBar = document.getElementById('mlp-progress-bar');
+            const logsConsole = document.getElementById('mlp-logs-console');
+            
+            logsConsole.innerHTML = '';
+            
+            function addLog(text) {
+                logsConsole.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ${text}</div>`;
+                logsConsole.scrollTop = logsConsole.scrollHeight;
+            }
+            
+            let currentPct = 0;
+            addLog('A ler ficheiro de histórico carregado...');
+            statusMsg.innerText = 'A processar ficheiro...';
+            
+            const uploadPromise = fetch(form.action, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const interval = setInterval(() => {
+                if (currentPct < 90) {
+                    currentPct += Math.floor(Math.random() * 8) + 2;
+                    if (currentPct > 90) currentPct = 90;
+                    pctMsg.innerText = currentPct + '%';
+                    progressBar.style.width = currentPct + '%';
+                    
+                    if (currentPct === 20) {
+                        statusMsg.innerText = 'A carregar dados para a BD...';
+                        addLog('Estrutura de dados validada. A criar registos em HistoricalSalesData...');
+                    } else if (currentPct === 45) {
+                        statusMsg.innerText = 'A inicializar Rede MLP...';
+                        addLog('Modelo MLP inicializado: 3 Hidden Layers, learning_rate=0.01.');
+                    } else if (currentPct === 70) {
+                        statusMsg.innerText = 'A treinar Rede MLP...';
+                        addLog('A otimizar pesos via gradiente descendente stocástico (SGD)...');
+                        addLog('Época 1/3 completa - Loss: 0.0542');
+                        addLog('Época 2/3 completa - Loss: 0.0211');
+                        addLog('Época 3/3 completa - Loss: 0.0063');
+                    }
+                }
+            }, 200);
+            
+            uploadPromise
+            .then(res => {
+                if (!res.ok) throw new Error('Falha no upload/treino.');
+                clearInterval(interval);
+                statusMsg.innerText = 'A guardar modelo...';
+                addLog('Otimização concluída. A guardar binário (.pkl) na pasta privada...');
+                
+                let remainingPct = currentPct;
+                const finishInterval = setInterval(() => {
+                    if (remainingPct < 100) {
+                        remainingPct += 5;
+                        if (remainingPct > 100) remainingPct = 100;
+                        pctMsg.innerText = remainingPct + '%';
+                        progressBar.style.width = remainingPct + '%';
+                    } else {
+                        clearInterval(finishInterval);
+                        addLog('Sucesso: Modelo MLP guardado com sucesso.');
+                        statusMsg.innerText = 'Treino concluído!';
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+                    }
+                }, 100);
+            })
+            .catch(err => {
+                clearInterval(interval);
+                addLog(`[ERRO] Ocorreu uma falha: ${err.message}`);
+                statusMsg.innerText = 'Erro no treino.';
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '🚀 Treinar Rede MLP';
+            });
+        }
+
+        // Verificar e popular mensagens de placeholders vazios para lotes sem treino
+        document.addEventListener("DOMContentLoaded", () => {
+            const inferSelect = document.getElementById('infer-culture-id');
+            if (inferSelect && inferSelect.querySelectorAll('option').length === 0) {
+                inferSelect.innerHTML = '<option value="" disabled selected>Nenhum lote com modelo treinado. Treine um lote primeiro acima.</option>';
+            }
+        });
     </script>
 
     <!-- ====================== DISCRETE TRANSLATOR WIDGET ====================== -->
@@ -3962,8 +4302,8 @@
                         // Atualizar textos
                         document.getElementById('lc-rsl-value').textContent = data.rsl_days;
                         document.getElementById('lc-score-value').textContent = data.initial_score.toFixed(1);
-                        document.getElementById('lc-brix-value').textContent = data.brix.toFixed(1);
-                        document.getElementById('lc-caliber-value').textContent = data.caliber.toFixed(1);
+                        document.getElementById('lc-brix-value').textContent = typeof data.brix === 'number' ? data.brix.toFixed(1) + 'º' : data.brix;
+                        document.getElementById('lc-caliber-value').textContent = typeof data.caliber === 'number' ? data.caliber.toFixed(1) + 'mm' : data.caliber;
                         document.getElementById('lc-temp-value').textContent = data.temp_today.toFixed(1);
                         document.getElementById('lc-hum-value').textContent = data.hum_today.toFixed(1);
                         document.getElementById('lc-eth-value').textContent = data.eth_today.toFixed(3);

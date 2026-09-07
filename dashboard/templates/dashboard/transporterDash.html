@@ -5,6 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RETAILL - Transporter Dashboard</title>
+    <!-- Leaflet.js for interactive maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <style>
         /* ==================== RESET & GLOBAL ==================== */
         * {
@@ -412,6 +415,9 @@
                 <a href="#" class="menu-item" onclick="switchSidebarTab('marketplace-view')">
                     🤝 Marketplace
                 </a>
+                <a href="#" class="menu-item" onclick="switchSidebarTab('vehicles-view')">
+                    🚚 Veículos / Frota
+                </a>
             </nav>
         </div>
 
@@ -435,9 +441,7 @@
             <!-- HOME VIEW -->
             <div id="home-view" class="tab-content active">
                 <h3 style="color: #00796b; margin-bottom: 20px;">Global Supply Chain Map</h3>
-                <div class="supply-map">
-                     - Map Integration Plugin (Leaflet/Google Maps) -
-                </div>
+                <div id="leaflet-map" style="height: 450px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 2px solid #e0f2f1; margin-bottom: 25px; z-index: 1;"></div>
                 
                 <h3 style="color: #00796b; margin-bottom: 20px;">Key Performance Indicators</h3>
                 <div class="kpi-section">
@@ -451,9 +455,68 @@
             <!-- MARKETPLACE & LOGISTICS VIEW -->
             <div id="marketplace-view" class="tab-content">
                 
+                <!-- Banner Otimização Manual -->
+                <div style="background: #e0f2f1; padding: 20px; border-radius: 12px; margin-bottom: 25px; border-left: 5px solid #00796b; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                    <div>
+                        <h4 style="color:#004d40; margin-bottom:5px; font-size:1.1em; font-weight:700;">🗺️ Simulação de Otimização de Rotas</h4>
+                        <p style="font-size:0.9em; margin:0; color:#00695c;">Quando houver 6 transações pendentes no mesmo dia, o sistema cria automaticamente uma rota ótima. Também pode forçar a simulação aqui para agrupar as cargas atuais.</p>
+                    </div>
+                    <form method="POST" action="{% url 'transporter_simulate_route_opt' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-action" style="background: #00796b; padding: 10px 20px; font-weight:bold; font-size:0.95em;">⚡ Simular Rota Ótima</button>
+                    </form>
+                </div>
+
+                <!-- 0. OPTIMIZED ROUTES MARKET -->
+                <div class="data-table-container" style="border-left: 5px solid #00796b; margin-bottom: 30px;">
+                    <h3>🗺️ Rotas Ótimas Disponíveis</h3>
+                    {% if open_routes %}
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Rota #</th>
+                                <th>Data da Rota</th>
+                                <th>Nº Encomendas</th>
+                                <th>Caminho Otimizado</th>
+                                <th>Peso Total</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for route in open_routes %}
+                            <tr>
+                                <td><strong>#{{ route.pk }}</strong></td>
+                                <td>{{ route.route_date|date:"d/m/Y" }}</td>
+                                <td><span style="background:#e0f2f1; padding:4px 10px; border-radius:10px; font-weight:bold; color:#004d40;">{{ route.orders.count }}</span></td>
+                                <td><span style="font-size:0.85em; font-family:monospace; color:#555; background:#f5f5f5; padding:4px; border-radius:4px; display:inline-block; max-width: 350px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ route.optimized_path|default:"Sem caminho definido" }}</span></td>
+                                <td><strong>{{ route.total_weight_kg }} Kg</strong></td>
+                                <td>
+                                    <form method="POST" action="{% url 'transporter_accept_route' %}" style="display:flex; align-items:center; gap:8px; margin:0;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="route_id" value="{{ route.id }}">
+                                        <select name="vehicle_id" required style="padding: 8px; border-radius: 6px; border: 1.5px solid #ccc; font-size: 0.85em; width:170px;">
+                                            <option value="" disabled selected>Escolher Veículo...</option>
+                                            {% for vehicle in vehicles %}
+                                                <option value="{{ vehicle.id }}">{{ vehicle.brand_model }} ({{ vehicle.license_plate }})</option>
+                                            {% empty %}
+                                                <option value="" disabled>Sem veículos registados!</option>
+                                            {% endfor %}
+                                        </select>
+                                        <button type="submit" class="btn-action" style="background:#00796b;" {% if not vehicles %}disabled style="opacity:0.5; cursor:not-allowed;"{% endif %}>✅ Aceitar Rota</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p style="color:#666; padding:15px; font-style:italic;">Não existem rotas otimizadas pendentes de transporte no mercado.</p>
+                    {% endif %}
+                </div>
+                
                 <!-- 1. JOB MARKET (Available Transactions) -->
                 <div class="data-table-container">
-                    <h3>💼 Available Loads</h3>
+                    <h3>💼 Available Loads (Individual Cargas)</h3>
                     {% if open_market_orders %}
                     <table class="data-table">
                         <thead>
@@ -475,10 +538,18 @@
                                 <td>{{ order.culture.name }}</td>
                                 <td>{{ order.quantity_kg }} Kg</td>
                                 <td>
-                                    <form method="POST" action="{% url 'transporter_accept_job' %}">
+                                    <form method="POST" action="{% url 'transporter_accept_job' %}" style="display:flex; align-items:center; gap:8px; margin:0;">
                                         {% csrf_token %}
                                         <input type="hidden" name="order_id" value="{{ order.id }}">
-                                        <button type="submit" class="btn-action">✅ Accept Job</button>
+                                        <select name="vehicle_id" required style="padding: 8px; border-radius: 6px; border: 1.5px solid #ccc; font-size: 0.85em; width:170px;">
+                                            <option value="" disabled selected>Escolher Veículo...</option>
+                                            {% for vehicle in vehicles %}
+                                                <option value="{{ vehicle.id }}">{{ vehicle.brand_model }} ({{ vehicle.license_plate }})</option>
+                                            {% empty %}
+                                                <option value="" disabled>Sem veículos registados!</option>
+                                            {% endfor %}
+                                        </select>
+                                        <button type="submit" class="btn-action" {% if not vehicles %}disabled style="opacity:0.5; cursor:not-allowed;"{% endif %}>✅ Accept Job</button>
                                     </form>
                                 </td>
                             </tr>
@@ -486,7 +557,92 @@
                         </tbody>
                     </table>
                     {% else %}
-                    <p>No completed transactions waiting for transport.</p>
+                    <p style="color:#666; padding:15px; font-style:italic;">No completed transactions waiting for transport.</p>
+                    {% endif %}
+                </div>
+
+                <!-- 1.5 MINHAS ROTAS ATIVAS -->
+                <div class="data-table-container" style="border-left: 5px solid #00796b; margin-top: 30px; margin-bottom: 30px;">
+                    <h3>🚚 Minhas Rotas Ativas (Carga Otimizada)</h3>
+                    {% if my_active_routes %}
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Rota #</th>
+                                <th>Veículo (Capacidade)</th>
+                                <th>Estado</th>
+                                <th>Ação / Próximo Passo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for route in my_active_routes %}
+                            <tr>
+                                <td>
+                                    <strong>Rota #{{ route.pk }}</strong><br>
+                                    <span style="font-size:0.85em; color:#666;">Data: {{ route.route_date|date:"d/m/Y" }}</span><br>
+                                    <span style="font-size:0.85em; font-family:monospace; color:#888;">{{ route.optimized_path|default:"N/A" }}</span>
+                                </td>
+                                <td>
+                                    <strong>{{ route.vehicle.brand_model }}</strong> ({{ route.vehicle.license_plate }})<br>
+                                    <span style="font-size:0.85em; color:#666;">Carga: {{ route.total_weight_kg }} / {{ route.vehicle.capacity_kg }} Kg</span><br>
+                                    
+                                    <!-- ProgressBar Capacidade Veiculo -->
+                                    <div style="width: 100%; max-width: 250px; background: #e0e0e0; border-radius: 8px; overflow: hidden; height: 14px; margin-top: 5px;">
+                                        <div style="height: 100%; width: {% if route.vehicle.capacity_kg > 0 %}{% widthratio route.total_weight_kg route.vehicle.capacity_kg 100 %}{% else %}0{% endif %}%; background: {% if route.total_weight_kg > route.vehicle.capacity_kg %}#e53935{% else %}#00796b{% endif %}; transition: width 0.3s;"></div>
+                                    </div>
+                                    <span style="font-size: 0.8em; font-weight: bold; color: #004d40;">
+                                        {% if route.vehicle.capacity_kg > 0 %}
+                                            {% widthratio route.total_weight_kg route.vehicle.capacity_kg 100 %}% Ocupação
+                                        {% else %}
+                                            0% Ocupação
+                                        {% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span style="background: {% if route.status == 'ACCEPTED' %}#ffe082; color:#5d4037;{% elif route.status == 'PLANNED' %}#bbdefb; color:#0d47a1;{% else %}#c8e6c9; color:#1b5e20;{% endif %} padding: 4px 10px; border-radius: 20px; font-size: 0.85em; font-weight: bold;">
+                                        {{ route.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if route.status == 'ACCEPTED' %}
+                                        <!-- Form to set Plan -->
+                                        <form method="POST" action="{% url 'transporter_route_plan' %}" style="display:flex; flex-direction:column; gap:8px; width: 220px; border: 1px solid #ffe082; padding: 10px; border-radius: 8px; background: #fffde7; margin:0;">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="route_id" value="{{ route.id }}">
+                                            <div style="display:flex; flex-direction:column; gap:2px;">
+                                                <label style="font-size:0.8em; font-weight:bold;">Data/Hora Recolha:</label>
+                                                <input type="datetime-local" name="planned_pickup_date" required style="padding: 4px; font-size:0.85em; border-radius:4px; border:1.5px solid #ccc;">
+                                            </div>
+                                            <div style="display:flex; flex-direction:column; gap:2px;">
+                                                <label style="font-size:0.8em; font-weight:bold;">Data/Hora Entrega:</label>
+                                                <input type="datetime-local" name="planned_delivery_date" required style="padding: 4px; font-size:0.85em; border-radius:4px; border:1.5px solid #ccc;">
+                                            </div>
+                                            <button type="submit" class="btn-action" style="background:#ffa000; width:100%; padding:6px; font-size:0.85em;">📅 Registar Plano</button>
+                                        </form>
+                                    {% elif route.status == 'PLANNED' %}
+                                        <!-- Form to Pickup -->
+                                        <form method="POST" action="{% url 'transporter_route_pickup' %}" style="margin:0;">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="route_id" value="{{ route.id }}">
+                                            <button type="submit" class="btn-action" style="background:#1976D2;">⏱️ Iniciar Viagem (Recolhido)</button>
+                                        </form>
+                                    {% elif route.status == 'IN_TRANSIT' %}
+                                        <!-- Form to Deliver (requires sensor data) -->
+                                        <form method="POST" action="{% url 'transporter_route_delivery' %}" style="display:flex; flex-direction:column; gap:6px; width: 220px; border: 1px solid #c8e6c9; padding: 10px; border-radius: 8px; background: #f1f8e9; margin:0;">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="route_id" value="{{ route.id }}">
+                                            <label style="font-size:0.8em; font-weight:bold;">Dados dos Sensores (JSON):</label>
+                                            <textarea name="transport_sensor_data" required placeholder="Cole o JSON dos sensores aqui..." rows="2" style="font-family:monospace; font-size:0.75em; padding: 4px; border-radius:4px; border:1.5px solid #ccc;"></textarea>
+                                            <button type="submit" class="btn-action" style="background:#388E3C; width:100%; padding:6px; font-size:0.85em;">🏁 Confirmar Entrega</button>
+                                        </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p style="color:#666; padding:15px; font-style:italic;">Não tem nenhuma rota de transporte ativa atribuída.</p>
                     {% endif %}
                 </div>
 
@@ -689,6 +845,59 @@
                     {% endif %}
                 </div>
             </div>
+            
+            <!-- VEHICLES VIEW (FLEET MANAGEMENT) -->
+            <div id="vehicles-view" class="tab-content">
+                <div class="form-section">
+                    <h3>🚚 Registar Novo Veículo</h3>
+                    <form method="POST" action="{% url 'transporter_register_vehicle' %}">
+                        {% csrf_token %}
+                        <div class="form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div>
+                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Matrícula:</label>
+                                {{ vehicle_form.license_plate }}
+                            </div>
+                            <div>
+                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Marca / Modelo:</label>
+                                {{ vehicle_form.brand_model }}
+                            </div>
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Capacidade Máxima (Kg):</label>
+                            {{ vehicle_form.capacity_kg }}
+                        </div>
+                        <button type="submit" class="submit-button">✓ Registar Veículo</button>
+                    </form>
+                </div>
+
+                <div class="data-table-container">
+                    <h3>📋 Veículos Registados</h3>
+                    {% if vehicles %}
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Marca/Modelo</th>
+                                <th>Matrícula</th>
+                                <th>Capacidade (Kg)</th>
+                                <th>Data de Registo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for vehicle in vehicles %}
+                            <tr>
+                                <td><strong>{{ vehicle.brand_model }}</strong></td>
+                                <td><span style="background: #e0f2f1; padding: 4px 8px; border-radius: 6px; font-family: monospace; font-weight: bold; color: #004d40;">{{ vehicle.license_plate }}</span></td>
+                                <td>{{ vehicle.capacity_kg }} Kg</td>
+                                <td>{{ vehicle.created_at|date:"d/m/Y" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p style="text-align: center; color: #666; padding: 20px;">Nenhum veículo registado anteriormente.</p>
+                    {% endif %}
+                </div>
+            </div>
         </div>
     </div>
 
@@ -813,7 +1022,167 @@
         </div>
     </div>
 
+    <script id="active-routes-json" type="application/json">
+    [
+        {% for route in my_active_routes %}
+        {
+            "id": "{{ route.id }}",
+            "status": "{{ route.get_status_display }}",
+            "optimized_path": "{{ route.optimized_path }}",
+            "vehicle": "{{ route.vehicle.brand_model }} ({{ route.vehicle.license_plate }})",
+            "orders": [
+                {% for order in route.orders.all %}
+                {
+                    "id": "{{ order.id }}",
+                    "origin": "{{ order.warehouse_location }}",
+                    "dest": "Armazém {{ order.requester.username }}",
+                    "culture": "{{ order.culture.name }}",
+                    "quantity": "{{ order.quantity_kg }}",
+                    "origin_lat": {% if order.harvest_origin.warehouse.latitude %}{{ order.harvest_origin.warehouse.latitude }}{% else %}null{% endif %},
+                    "origin_lon": {% if order.harvest_origin.warehouse.longitude %}{{ order.harvest_origin.warehouse.longitude }}{% else %}null{% endif %},
+                    "dest_lat": {% if order.destination_latitude %}{{ order.destination_latitude }}{% else %}null{% endif %},
+                    "dest_lon": {% if order.destination_longitude %}{{ order.destination_longitude }}{% else %}null{% endif %}
+                }{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ]
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ]
+    </script>
+
     <script>
+        // Helper to get location coordinates with deterministic hashing fallback for Portugal
+        function getLocationCoords(locName) {
+            const dict = {
+                'lisboa': [38.7223, -9.1393],
+                'porto': [41.1579, -8.6291],
+                'coimbra': [40.2033, -8.4103],
+                'faro': [37.0179, -7.9308],
+                'braga': [41.5454, -8.4265],
+                'évora': [38.5714, -7.9135],
+                'evora': [38.5714, -7.9135],
+                'santarém': [39.2362, -8.6814],
+                'santarem': [39.2362, -8.6814],
+                'leiria': [39.7438, -8.8078],
+                'viseu': [40.6566, -7.9125],
+                'castelo branco': [39.8222, -7.4909],
+                'bragança': [41.8058, -6.7572],
+                'braganca': [41.8058, -6.7572],
+                'guarda': [40.5365, -7.2684],
+                'portalegre': [39.2938, -7.4312],
+                'beja': [38.0153, -7.8652],
+                'vila real': [41.3010, -7.7422],
+                'viana do castelo': [41.6932, -8.8328],
+                'setúbal': [38.5244, -8.8882],
+                'setubal': [38.5244, -8.8882],
+                'aveiro': [40.6405, -8.6538]
+            };
+            const normalized = locName.toLowerCase().trim();
+            for (const key in dict) {
+                if (normalized.includes(key)) {
+                    return dict[key];
+                }
+            }
+            // Generate deterministic coordinate within Portugal based on string hash
+            let hash = 0;
+            for (let i = 0; i < normalized.length; i++) {
+                hash = normalized.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const lat = 37.5 + Math.abs((hash % 100) / 100) * 4.0; // 37.5 to 41.5
+            const lon = -9.0 + Math.abs(((hash >> 8) % 100) / 100) * 2.5; // -9.0 to -6.5
+            return [lat, lon];
+        }
+
+        // Initialize Leaflet Map
+        let map;
+        function initMap() {
+            const mapContainer = document.getElementById('leaflet-map');
+            if (!mapContainer) return;
+            
+            map = L.map('leaflet-map').setView([39.5, -8.0], 7);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 18,
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            
+            // Load and plot active routes
+            const routesDataEl = document.getElementById('active-routes-json');
+            if (routesDataEl) {
+                try {
+                    const routes = JSON.parse(routesDataEl.textContent);
+                    const colors = ['#00796b', '#1976D2', '#D32F2F', '#7B1FA2', '#F57C00', '#388E3C'];
+                    
+                    routes.forEach((route, idx) => {
+                        const color = colors[idx % colors.length];
+                        const routeCoords = [];
+                        
+                        // Collect pickup coordinates
+                        route.orders.forEach(order => {
+                            let originLat = order.origin_lat;
+                            let originLon = order.origin_lon;
+                            if (!originLat || !originLon) {
+                                const resolved = getLocationCoords(order.origin);
+                                originLat = resolved[0];
+                                originLon = resolved[1];
+                            }
+                            const pickupCoord = [parseFloat(originLat), parseFloat(originLon)];
+                            routeCoords.push(pickupCoord);
+                            
+                            // Marker for origin
+                            L.circleMarker(pickupCoord, {
+                                radius: 8,
+                                fillColor: '#1976D2',
+                                color: '#0d47a1',
+                                weight: 2,
+                                opacity: 1,
+                                fillOpacity: 0.8
+                            }).addTo(map)
+                              .bindPopup(`<b>Recolha (Lote/Origem)</b><br>Local: ${order.origin}<br>Rota: Rota #${route.id}<br>Veículo: ${route.vehicle}<br>Produto: ${order.culture} (${order.quantity} Kg)`);
+                        });
+                        
+                        // Collect delivery coordinates
+                        route.orders.forEach(order => {
+                            let destLat = order.dest_lat;
+                            let destLon = order.dest_lon;
+                            if (!destLat || !destLon) {
+                                const resolved = getLocationCoords(order.dest);
+                                destLat = resolved[0];
+                                destLon = resolved[1];
+                            }
+                            const deliveryCoord = [parseFloat(destLat), parseFloat(destLon)];
+                            routeCoords.push(deliveryCoord);
+                            
+                            // Marker for destination
+                            L.circleMarker(deliveryCoord, {
+                                radius: 8,
+                                fillColor: '#388E3C',
+                                color: '#1b5e20',
+                                weight: 2,
+                                opacity: 1,
+                                fillOpacity: 0.8
+                            }).addTo(map)
+                              .bindPopup(`<b>Entrega (Destinatário)</b><br>Destino: ${order.dest}<br>Rota: Rota #${route.id}<br>Veículo: ${route.vehicle}<br>Produto: ${order.culture} (${order.quantity} Kg)`);
+                        });
+                        
+                        // Plot route line (polyline)
+                        if (routeCoords.length > 1) {
+                            const polyline = L.polyline(routeCoords, {
+                                color: color,
+                                weight: 4,
+                                opacity: 0.7,
+                                dashArray: '5, 10'
+                            }).addTo(map);
+                            
+                            polyline.bindPopup(`<b>Rota Otimizada #${route.id}</b><br>Estado: ${route.status}<br>Veículo: ${route.vehicle}<br>Caminho: ${route.optimized_path}`);
+                        }
+                    });
+                } catch(e) {
+                    console.error("Erro ao processar dados de rotas no mapa: ", e);
+                }
+            }
+        }
+
         function switchSidebarTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => {
                 el.classList.remove('active');
@@ -824,6 +1193,11 @@
             if (selectedTab) {
                 selectedTab.classList.add('active');
                 selectedTab.style.display = 'block';
+                if (tabId === 'home-view' && map) {
+                    setTimeout(() => {
+                        map.invalidateSize();
+                    }, 200);
+                }
             }
 
             document.querySelectorAll('.menu-item').forEach(item => {
@@ -914,6 +1288,9 @@
                 const btn = document.querySelector(`button[onclick*="'${savedInner}'"]`);
                 if(btn) btn.click();
             }
+
+            // Inicializar o mapa Leaflet
+            initMap();
 
             // 2. LOADING INDICATOR ON SUBMIT
             // We do NOT prevent default. We let the page reload.

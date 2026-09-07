@@ -429,6 +429,9 @@
                 <a href="#" class="menu-item" onclick="switchSidebarTab('lc-analysis')">
                     ⏳ Ciclo de Vida (LC)
                 </a>
+                <a href="#" class="menu-item" onclick="switchSidebarTab('central-warehouse-mgmt')">
+                    🏢 Gestão Central (Associações)
+                </a>
             </nav>
         </div>
 
@@ -459,6 +462,19 @@
                     {{ message }}
                 </div>
                 {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- NOTIFICAÇÃO DE ASSOCIAÇÃO PENDENTE -->
+            {% if incoming_associations %}
+            <div style="background: #fff8e1; border-left: 6px solid #ffa000; padding: 20px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                <div>
+                    <h4 style="color:#b78103; margin-bottom:5px; font-size:1.1em; font-weight:700;">🏢 Solicitação de Acesso (Armazém Central)</h4>
+                    <p style="font-size:0.9em; margin:0; color:#5d4037;">Tem <strong>{{ incoming_associations.count }}</strong> pedido(s) pendente(s) de processadores para se associarem como o seu Armazém Central.</p>
+                </div>
+                <button class="btn-action" style="background: #ffa000; padding: 10px 20px; color:#333; font-weight:bold; font-size:0.95em; border:none; border-radius:8px; cursor:pointer;" onclick="switchSidebarTab('central-warehouse-mgmt')">
+                    🔍 Ver Pedidos
+                </button>
             </div>
             {% endif %}
 
@@ -1595,11 +1611,7 @@
                                 <td>
                                     {% if order.requester != user %}
                                     <div style="display:flex; gap:10px;">
-                                        <!-- 1. BUTTON: CALCULATE (DEMO) -->
-                                        <button type="button" class="btn-action" style="background:linear-gradient(135deg, #1976D2, #1565C0);"
-                                            onclick="openCalculateModal('{{ order.id }}', '{{ order.culture.name|escapejs }}', '{{ order.quantity_kg }}')">
-                                            🧮 Calculate
-                                        </button>
+
 
                                         <!-- 2. BUTTON: ACCEPT -->
                                         <button type="button" class="btn-action" 
@@ -1752,6 +1764,17 @@
                             {{ warehouse_form.capacity }}
                         </div>
 
+                        <div style="margin-bottom: 25px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div>
+                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Latitude (Opcional):</label>
+                                {{ warehouse_form.latitude }}
+                            </div>
+                            <div>
+                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Longitude (Opcional):</label>
+                                {{ warehouse_form.longitude }}
+                            </div>
+                        </div>
+
                         <div style="margin-bottom: 25px;">
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                                 <label style="display:block; color:#2c3e50; font-weight:600;">{{ warehouse_form.sensors.label }}</label>
@@ -1794,9 +1817,23 @@
                             {% for warehouse in retailer_warehouses %}
                             <tr>
                                 <td>{{ warehouse.warehouse_id }}</td>
-                                <td>{{ warehouse.location }}</td>
+                                <td>
+                                    <strong>{{ warehouse.location }}</strong>
+                                    {% if warehouse.latitude and warehouse.longitude %}
+                                        <br><span style="font-size: 0.8em; color: #00796b;">📍 {{ warehouse.latitude }}, {{ warehouse.longitude }}</span>
+                                    {% endif %}
+                                </td>
                                 <td>{{ warehouse.get_control_type_display }}</td>
-                                <td>{{ warehouse.capacity }}</td>
+                                <td>
+                                    <strong>{{ warehouse.capacity }} Kg</strong><br>
+                                    <span style="font-size:0.85em; color:#666;">Ocupado: {{ warehouse.current_stock|default:0 }} Kg</span>
+                                    
+                                    <!-- Progress Bar -->
+                                    <div style="width: 100%; min-width: 150px; background: #e0e0e0; border-radius: 8px; overflow: hidden; height: 10px; margin-top: 5px;">
+                                        <div style="height: 100%; width: {{ warehouse.occupancy_percentage }}%; background: {% if warehouse.occupancy_percentage > 90 %}#e53935{% elif warehouse.occupancy_percentage > 70 %}#fbc02d{% else %}#2e7d32{% endif %}; transition: width 0.3s;"></div>
+                                    </div>
+                                    <span style="font-size: 0.75em; font-weight: bold; color: #333;">{{ warehouse.occupancy_percentage }}% Ocupado</span>
+                                </td>
                                 <td>
                                     {% for sensor in warehouse.sensors.all %}
                                     <span style="display:inline-block; background:#e0f2f1; color:#004d40; padding:5px 12px; border-radius:20px; font-size:0.85em; font-weight:600; margin:3px; border:1px solid #00796b;">
@@ -2180,7 +2217,7 @@
                             <h4 style="margin: 0 0 10px 0; color: #ff8f00; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.5px;">Qualidade Inicial</h4>
                             <div style="font-size: 1.1em; font-weight: 700; color: #ff6f00; line-height: 1.6;">
                                 Score: <span id="lc-score-value">-</span>/10<br>
-                                Brix: <span id="lc-brix-value">-</span>º | Calibre: <span id="lc-caliber-value">-</span>mm
+                                Brix: <span id="lc-brix-value">-</span> | Calibre: <span id="lc-caliber-value">-</span>
                             </div>
                         </div>
                         <!-- SENSORS TODAY CARD -->
@@ -2206,6 +2243,93 @@
 
                 <div id="lc-empty-state" style="background: #f8f9fa; border: 2px dashed #cbd5e1; border-radius: 20px; padding: 40px; text-align: center; color: #64748b; font-weight: 600; font-size: 1.1em;">
                     👋 Por favor, selecione um lote em stock acima para analisar o seu ciclo de vida.
+                </div>
+            </div>
+
+            <!-- CENTRAL WAREHOUSE MANAGEMENT TAB -->
+            <div id="central-warehouse-mgmt" class="tab-content" style="display: none;">
+                <h3 style="color: #00796b; margin-bottom: 25px;">🏢 Gestão do Acesso do Armazém Central (Processadores)</h3>
+                
+                <!-- Pedidos Pendentes de Autorização -->
+                <div class="data-table-container" style="margin-bottom:30px; border-left: 5px solid #ffe082;">
+                    <h3>📋 Pedidos Pendentes de Associação</h3>
+                    {% if incoming_associations %}
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Processador</th>
+                                <th>Data do Pedido</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for assoc in incoming_associations %}
+                            <tr>
+                                <td><strong>{{ assoc.processor.username }}</strong></td>
+                                <td>{{ assoc.created_at|date:"d/m/Y H:i" }}</td>
+                                <td>
+                                    <div style="display:flex; gap:10px;">
+                                        <form method="POST" action="{% url 'retailer_respond_association' %}" style="margin:0;">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="association_id" value="{{ assoc.id }}">
+                                            <input type="hidden" name="action" value="approve">
+                                            <button type="submit" class="btn-action" style="background:#2e7d32; color:white; padding:8px 16px; font-weight:600; border:none; border-radius:6px; cursor:pointer;">
+                                                ✓ Permitir Partilha
+                                            </button>
+                                        </form>
+                                        <form method="POST" action="{% url 'retailer_respond_association' %}" style="margin:0;">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="association_id" value="{{ assoc.id }}">
+                                            <input type="hidden" name="action" value="reject">
+                                            <button type="submit" class="btn-action" style="background:#c62828; color:white; padding:8px 16px; font-weight:600; border:none; border-radius:6px; cursor:pointer;">
+                                                ✗ Recusar
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p style="color:#666; font-style:italic; padding:15px;">Não existem pedidos de associação pendentes.</p>
+                    {% endif %}
+                </div>
+
+                <!-- Associações Ativas / Autorizações Concedidas -->
+                <div class="data-table-container">
+                    <h3>👥 Acessos Concedidos Ativos</h3>
+                    {% if active_associations %}
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Processador (Armazém Central)</th>
+                                <th>Data de Autorização</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for assoc in active_associations %}
+                            <tr>
+                                <td><strong>{{ assoc.processor.username }}</strong></td>
+                                <td>{{ assoc.updated_at|date:"d/m/Y H:i" }}</td>
+                                <td>
+                                    <form method="POST" action="{% url 'retailer_respond_association' %}" style="margin:0;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="association_id" value="{{ assoc.id }}">
+                                        <input type="hidden" name="action" value="revoke">
+                                        <button type="submit" class="btn-action" style="background:#e53935; color:white; padding:8px 16px; font-weight:600; border:none; border-radius:6px; cursor:pointer;" onclick="return confirm('Tem a certeza que deseja revogar o acesso deste processador às suas informações?')">
+                                            ⚠️ Revogar Acesso
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p style="color:#666; font-style:italic; padding:15px;">Ainda não concedeu autorização de partilha a nenhum processador.</p>
+                    {% endif %}
                 </div>
             </div>
 
@@ -3286,8 +3410,8 @@
                         // Atualizar textos
                         document.getElementById('lc-rsl-value').textContent = data.rsl_days;
                         document.getElementById('lc-score-value').textContent = data.initial_score.toFixed(1);
-                        document.getElementById('lc-brix-value').textContent = data.brix.toFixed(1);
-                        document.getElementById('lc-caliber-value').textContent = data.caliber.toFixed(1);
+                        document.getElementById('lc-brix-value').textContent = typeof data.brix === 'number' ? data.brix.toFixed(1) + 'º' : data.brix;
+                        document.getElementById('lc-caliber-value').textContent = typeof data.caliber === 'number' ? data.caliber.toFixed(1) + 'mm' : data.caliber;
                         document.getElementById('lc-temp-value').textContent = data.temp_today.toFixed(1);
                         document.getElementById('lc-hum-value').textContent = data.hum_today.toFixed(1);
                         document.getElementById('lc-eth-value').textContent = data.eth_today.toFixed(3);
