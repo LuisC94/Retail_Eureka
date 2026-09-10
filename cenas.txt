@@ -1,0 +1,6 @@
+tm1:qwerty - producer
+tm4:qwerty - producer
+tm2:qwerty - retailer
+tm3:qwerty - transporter
+tm5:qwerty - processor
+tm6:qwerty - consumer
