@@ -1,0 +1,238 @@
+======================================================
+
+       SIMULAÇÃO E COMPARAÇÃO DE MODELOS              
+
+======================================================
+
+SKU: 911753_151dias_com_real
+
+Excel Path: /app/Dados/911753_151dias_com_real.xlsx
+
+2026-07-31 16:40:56.017 | INFO     | environment_constrained:__init__:127 - Environment Constrained initialized in TESTING Mode: 61 days. Max Order Limit: 205.0
+
+2026-07-31 16:40:56.027 | INFO     | environment_constrained:__init__:127 - Environment Constrained initialized in TESTING Mode: 61 days. Max Order Limit: 205.0
+
+2026-07-31 16:40:56.036 | INFO     | environment_constrained:__init__:127 - Environment Constrained initialized in TESTING Mode: 61 days. Max Order Limit: 205.0
+
+2026-07-31 16:40:56.045 | INFO     | environment_constrained:__init__:127 - Environment Constrained initialized in TESTING Mode: 61 days. Max Order Limit: 205.0
+
+2026-07-31 16:40:56.053 | INFO     | environment_constrained:__init__:127 - Environment Constrained initialized in TESTING Mode: 61 days. Max Order Limit: 205.0
+
+2026-07-31 16:40:56.062 | INFO     | environment_constrained:__init__:127 - Environment Constrained initialized in TESTING Mode: 61 days. Max Order Limit: 205.0
+
+2026-07-31 16:40:56.070 | INFO     | environment_constrained:__init__:127 - Environment Constrained initialized in TESTING Mode: 61 days. Max Order Limit: 205.0
+
+2026-07-31 16:40:56.079 | INFO     | environment_constrained:__init__:127 - Environment Constrained initialized in TESTING Mode: 61 days. Max Order Limit: 205.0
+
+2026-07-31 16:40:56.088 | INFO     | environment_constrained:__init__:127 - Environment Constrained initialized in TESTING Mode: 61 days. Max Order Limit: 205.0
+
+Limite Máximo de Encomenda Diária (Constrained): 205.0 un
+
+[LOAD] A carregar Modelo A (PPO) de: /app/911753_151dias_com_real/PPO_Limitado_911753_151dias_com_real/ppo_constrained_final
+
+[OK] Modelo A carregado.
+
+[OK] Estatísticas Z-Score do Modelo A carregadas.
+
+[LOAD] A carregar Modelo B (Agregador) de: /app/911753_151dias_com_real/PPO_Agregador_Transition_911753_151dias_com_real/ppo_transition_iter313
+
+[OK] Modelo B carregado.
+
+[OK] Estatísticas Z-Score do Modelo B carregadas.
+
+[LOAD] A carregar Modelo Gamma 0.95 de: /app/911753_151dias_com_real/PPO_Sem_Limites_Gamma095_911753_151dias_com_real/ppo_completely_unconstrained_final
+
+[OK] Modelo Gamma 0.95 carregado.
+
+[LOAD] A carregar Modelo Gamma 0.8 de: /app/911753_151dias_com_real/PPO_Sem_Limites_911753_151dias_com_real/ppo_completely_unconstrained_final
+
+[OK] Modelo Gamma 0.8 carregado.
+
+[LOAD] A carregar Modelo Limitado Gamma 0.95 de: /app/911753_151dias_com_real/PPO_Limitado_Gamma095_911753_151dias_com_real/ppo_constrained_final
+
+[OK] Modelo Limitado Gamma 0.95 carregado.
+
+[OK] Min-Max Baseline Config: s=35, S=130
+
+A iniciar a simulação diária comparativa...
+
+[Dia 000] Ação Encomenda -> PPO: 077 | Agregador (Elite): 000 || Lucro Diário -> PPO: 768.3€ | Agregador: 876.0€
+
+[Dia 001] Ação Encomenda -> PPO: 189 | Agregador (Elite): 184 || Lucro Diário -> PPO: -222.0€ | Agregador: -266.4€
+
+[Dia 002] Ação Encomenda -> PPO: 025 | Agregador (Elite): 029 || Lucro Diário -> PPO: 715.9€ | Agregador: 718.8€
+
+[Dia 003] Ação Encomenda -> PPO: 019 | Agregador (Elite): 085 || Lucro Diário -> PPO: 747.9€ | Agregador: 744.4€
+
+[Dia 004] Ação Encomenda -> PPO: 000 | Agregador (Elite): 071 || Lucro Diário -> PPO: 881.5€ | Agregador: 774.9€
+
+[Dia 005] Ação Encomenda -> PPO: 185 | Agregador (Elite): 006 || Lucro Diário -> PPO: 124.7€ | Agregador: 396.6€
+
+[Dia 006] Ação Encomenda -> PPO: 050 | Agregador (Elite): 005 || Lucro Diário -> PPO: 861.2€ | Agregador: 281.1€
+
+[Dia 007] Ação Encomenda -> PPO: 124 | Agregador (Elite): 000 || Lucro Diário -> PPO: 1747.2€ | Agregador: -523.6€
+
+[Dia 008] Ação Encomenda -> PPO: 058 | Agregador (Elite): 043 || Lucro Diário -> PPO: 908.3€ | Agregador: -435.4€
+
+[Dia 009] Ação Encomenda -> PPO: 029 | Agregador (Elite): 083 || Lucro Diário -> PPO: 1571.8€ | Agregador: 161.2€
+
+[Dia 010] Ação Encomenda -> PPO: 115 | Agregador (Elite): 086 || Lucro Diário -> PPO: 0.3€ | Agregador: 968.9€
+
+[Dia 011] Ação Encomenda -> PPO: 094 | Agregador (Elite): 000 || Lucro Diário -> PPO: 549.9€ | Agregador: 660.0€
+
+[Dia 012] Ação Encomenda -> PPO: 000 | Agregador (Elite): 162 || Lucro Diário -> PPO: 842.6€ | Agregador: 630.8€
+
+[Dia 013] Ação Encomenda -> PPO: 082 | Agregador (Elite): 074 || Lucro Diário -> PPO: 782.9€ | Agregador: 781.6€
+
+[Dia 014] Ação Encomenda -> PPO: 089 | Agregador (Elite): 023 || Lucro Diário -> PPO: 917.9€ | Agregador: 922.8€
+
+[Dia 015] Ação Encomenda -> PPO: 016 | Agregador (Elite): 000 || Lucro Diário -> PPO: 1476.0€ | Agregador: 1578.5€
+
+[Dia 016] Ação Encomenda -> PPO: 063 | Agregador (Elite): 000 || Lucro Diário -> PPO: 552.9€ | Agregador: -10.6€
+
+[Dia 017] Ação Encomenda -> PPO: 071 | Agregador (Elite): 096 || Lucro Diário -> PPO: 512.5€ | Agregador: -335.2€
+
+[Dia 018] Ação Encomenda -> PPO: 065 | Agregador (Elite): 101 || Lucro Diário -> PPO: 667.6€ | Agregador: 563.8€
+
+[Dia 019] Ação Encomenda -> PPO: 080 | Agregador (Elite): 015 || Lucro Diário -> PPO: 510.2€ | Agregador: 515.0€
+
+[Dia 020] Ação Encomenda -> PPO: 130 | Agregador (Elite): 000 || Lucro Diário -> PPO: 799.6€ | Agregador: 1013.6€
+
+[Dia 021] Ação Encomenda -> PPO: 195 | Agregador (Elite): 033 || Lucro Diário -> PPO: 508.3€ | Agregador: 171.4€
+
+[Dia 022] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 762.7€ | Agregador: 165.8€
+
+[Dia 023] Ação Encomenda -> PPO: 021 | Agregador (Elite): 014 || Lucro Diário -> PPO: 753.2€ | Agregador: -366.2€
+
+[Dia 024] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 520.0€ | Agregador: -7.4€
+
+[Dia 025] Ação Encomenda -> PPO: 051 | Agregador (Elite): 099 || Lucro Diário -> PPO: 456.8€ | Agregador: -300.5€
+
+[Dia 026] Ação Encomenda -> PPO: 178 | Agregador (Elite): 163 || Lucro Diário -> PPO: 314.5€ | Agregador: 316.5€
+
+[Dia 027] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 686.4€ | Agregador: 687.5€
+
+[Dia 028] Ação Encomenda -> PPO: 089 | Agregador (Elite): 024 || Lucro Diário -> PPO: 1225.8€ | Agregador: 1233.4€
+
+[Dia 029] Ação Encomenda -> PPO: 000 | Agregador (Elite): 143 || Lucro Diário -> PPO: 1998.1€ | Agregador: 517.0€
+
+[Dia 030] Ação Encomenda -> PPO: 189 | Agregador (Elite): 000 || Lucro Diário -> PPO: -35.2€ | Agregador: 1026.1€
+
+[Dia 031] Ação Encomenda -> PPO: 031 | Agregador (Elite): 025 || Lucro Diário -> PPO: 700.0€ | Agregador: 705.3€
+
+[Dia 032] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 833.6€ | Agregador: 507.1€
+
+[Dia 033] Ação Encomenda -> PPO: 067 | Agregador (Elite): 031 || Lucro Diário -> PPO: 743.9€ | Agregador: -389.8€
+
+[Dia 034] Ação Encomenda -> PPO: 109 | Agregador (Elite): 011 || Lucro Diário -> PPO: 1096.3€ | Agregador: 68.0€
+
+[Dia 035] Ação Encomenda -> PPO: 195 | Agregador (Elite): 209 || Lucro Diário -> PPO: 1301.0€ | Agregador: -548.4€
+
+[Dia 036] Ação Encomenda -> PPO: 018 | Agregador (Elite): 069 || Lucro Diário -> PPO: 1782.7€ | Agregador: 1779.1€
+
+[Dia 037] Ação Encomenda -> PPO: 049 | Agregador (Elite): 088 || Lucro Diário -> PPO: 1151.8€ | Agregador: 1147.3€
+
+[Dia 038] Ação Encomenda -> PPO: 099 | Agregador (Elite): 106 || Lucro Diário -> PPO: 1024.9€ | Agregador: 922.1€
+
+[Dia 039] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 1186.1€ | Agregador: 1183.6€
+
+[Dia 040] Ação Encomenda -> PPO: 068 | Agregador (Elite): 000 || Lucro Diário -> PPO: 924.1€ | Agregador: 1028.5€
+
+[Dia 041] Ação Encomenda -> PPO: 146 | Agregador (Elite): 101 || Lucro Diário -> PPO: 816.0€ | Agregador: 820.8€
+
+[Dia 042] Ação Encomenda -> PPO: 182 | Agregador (Elite): 143 || Lucro Diário -> PPO: 438.1€ | Agregador: 444.0€
+
+[Dia 043] Ação Encomenda -> PPO: 038 | Agregador (Elite): 140 || Lucro Diário -> PPO: 684.6€ | Agregador: 578.0€
+
+[Dia 044] Ação Encomenda -> PPO: 064 | Agregador (Elite): 022 || Lucro Diário -> PPO: 413.6€ | Agregador: 417.4€
+
+[Dia 045] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 434.7€ | Agregador: 436.0€
+
+[Dia 046] Ação Encomenda -> PPO: 141 | Agregador (Elite): 224 || Lucro Diário -> PPO: 201.7€ | Agregador: 94.6€
+
+[Dia 047] Ação Encomenda -> PPO: 000 | Agregador (Elite): 073 || Lucro Diário -> PPO: 498.2€ | Agregador: 388.8€
+
+[Dia 048] Ação Encomenda -> PPO: 124 | Agregador (Elite): 000 || Lucro Diário -> PPO: 367.2€ | Agregador: 574.6€
+
+[Dia 049] Ação Encomenda -> PPO: 110 | Agregador (Elite): 000 || Lucro Diário -> PPO: 1728.3€ | Agregador: 1939.3€
+
+[Dia 050] Ação Encomenda -> PPO: 061 | Agregador (Elite): 000 || Lucro Diário -> PPO: 1991.1€ | Agregador: 1137.5€
+
+[Dia 051] Ação Encomenda -> PPO: 118 | Agregador (Elite): 000 || Lucro Diário -> PPO: 782.8€ | Agregador: -336.9€
+
+[Dia 052] Ação Encomenda -> PPO: 031 | Agregador (Elite): 020 || Lucro Diário -> PPO: 976.7€ | Agregador: -460.8€
+
+[Dia 053] Ação Encomenda -> PPO: 003 | Agregador (Elite): 000 || Lucro Diário -> PPO: 858.0€ | Agregador: 109.4€
+
+[Dia 054] Ação Encomenda -> PPO: 057 | Agregador (Elite): 020 || Lucro Diário -> PPO: 767.0€ | Agregador: -408.2€
+
+[Dia 055] Ação Encomenda -> PPO: 101 | Agregador (Elite): 000 || Lucro Diário -> PPO: 1135.9€ | Agregador: 13.1€
+
+[Dia 056] Ação Encomenda -> PPO: 167 | Agregador (Elite): 000 || Lucro Diário -> PPO: 1601.6€ | Agregador: -535.3€
+
+[Dia 057] Ação Encomenda -> PPO: 079 | Agregador (Elite): 126 || Lucro Diário -> PPO: 1998.7€ | Agregador: -820.4€
+
+[Dia 058] Ação Encomenda -> PPO: 127 | Agregador (Elite): 000 || Lucro Diário -> PPO: 1460.2€ | Agregador: 1673.5€
+
+[Dia 059] Ação Encomenda -> PPO: 149 | Agregador (Elite): 169 || Lucro Diário -> PPO: 876.1€ | Agregador: -128.3€
+
+======================================================
+
+[FIM SIMULAÇÃO] 60 dias completados.
+
+Lucro Acumulado Final Modelo A (PPO Original):         51,682.59€
+
+Lucro Acumulado Final Modelo B (Agregador Elite):      25,799.92€
+
+Lucro Acumulado Final Baseline Min-Max:                44,460.28€
+
+Lucro Acumulado Final Baseline Média 5 Dias:           54,827.12€
+
+Lucro Acumulado Final Baseline Floating Point:         42,386.62€
+
+Lucro Acumulado Final Baseline Time Supply:            54,422.56€
+
+Lucro Acumulado Final PPO Deslimitado Gamma 0.95:      52,383.83€
+
+Lucro Acumulado Final PPO Deslimitado Gamma 0.8:       53,273.10€
+
+Lucro Acumulado Final PPO Limitado Gamma 0.95:         53,478.48€
+
+======================================================
+
+======================================================
+
+   COMPARAÇÃO DE PERFORMANCE RELATIVA AO MELHOR       
+
+   (Melhor: Baseline Média 5 Dias = 54,827.12€)
+
+======================================================
+
+- PPO Original (Modelo A)                 :    51,682.59€ |  -5.74%
+
+- Agregador Elite (Modelo B)              :    25,799.92€ | -52.94%
+
+- Baseline Min-Max                        :    44,460.28€ | -18.91%
+
+- Baseline Média 5 Dias                   :    54,827.12€ | (MELHOR)
+
+- Baseline Floating Point                 :    42,386.62€ | -22.69%
+
+- Baseline Time Supply                    :    54,422.56€ |  -0.74%
+
+- PPO Gamma 0.95 (Deslimitado)            :    52,383.83€ |  -4.46%
+
+- PPO Gamma 0.8 (Deslimitado)             :    53,273.10€ |  -2.83%
+
+- PPO Gamma 0.95 (Limitado)               :    53,478.48€ |  -2.46%
+
+======================================================
+
+[OK] Gráfico comparativo guardado em: /app/Dados/comparacao_modelos_sku_911753_151dias_com_real.png
+
+[OK] Ficheiro Excel detalhado guardado em: /app/Resultados/Comparativo_Modelos_SKU_911753_151dias_com_real.xlsx
+
+A gerar dashboard interativo Plotly...
+
+[OK] Dashboard Plotly Dinâmico guardado em: /app/Resultados/Dashboard_Comparativo_Modelos.html
+

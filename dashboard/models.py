@@ -52,6 +52,34 @@ REGION_CHOICES = [
     ('PT-ACO', 'Açores (Oceânico húmido)'),
 ]
 
+# --- CONSTANTES LOGÍSTICAS DE ACONDICIONAMENTO E FROTAS ---
+STORAGE_UNIT_CHOICES = [
+    ('CRATES', 'Grades (20 Kg / Caixa)'),
+    ('PALLETS', 'Paletes (800 Kg / Euro-Palete)'),
+]
+
+VEHICLE_ACCESS_CHOICES = [
+    ('VAN', 'Apenas Carrinha Ligeira (<= 3.5t)'),
+    ('RIGID_TRUCK', 'Até Camião Ligeiro (<= 12t)'),
+    ('HEAVY_TIR', 'Todos / Camião TIR (<= 40t)'),
+]
+
+CRATE_WEIGHT_KG = 20.0
+PALLET_WEIGHT_KG = 800.0
+CRATES_PER_PALLET = 40
+
+VEHICLE_TYPE_CHOICES = [
+    ('VAN', 'Carrinha Ligeira (3.5t)'),
+    ('RIGID_TRUCK', 'Camião Ligeiro (12t)'),
+    ('HEAVY_TIR', 'Camião TIR (40t)'),
+]
+
+VEHICLE_DEFAULT_CAPACITIES = {
+    'VAN': 1200.0,
+    'RIGID_TRUCK': 5000.0,
+    'HEAVY_TIR': 24000.0,
+}
+
 class UserProfile(models.Model):
     PRODUCER_TYPE_CHOICES = [
         ('manual', 'Manual/Tradicional'),
@@ -154,17 +182,19 @@ class Sensor(models.Model):
     def __str__(self): return f"{self.sensor_id} - {self.brand} ({self.get_sensor_type_display()})"
     
 class Warehouse(models.Model):
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, limit_choices_to={'groups__name': 'Producer'}, verbose_name="Dono/Perfil")
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Dono/Perfil")
     warehouse_id = models.AutoField(primary_key=True)
     location = models.CharField(max_length=255, verbose_name="Localização")
     region = models.CharField(max_length=10, choices=REGION_CHOICES, default='PT-LVT', verbose_name="Região Climática")
     control_type = models.CharField(max_length=20, choices=CONTROL_TYPE_CHOICES, verbose_name="Tipo de Armazém")
+    storage_unit = models.CharField(max_length=20, choices=STORAGE_UNIT_CHOICES, default='PALLETS', verbose_name="Acondicionamento de Stock")
+    max_vehicle_access = models.CharField(max_length=20, choices=VEHICLE_ACCESS_CHOICES, default='HEAVY_TIR', verbose_name="Acesso Máximo de Veículo")
     capacity = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Capacidade (m² ou Kg)")
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, verbose_name="Latitude")
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, verbose_name="Longitude")
     sensors = models.ManyToManyField(Sensor, blank=True, verbose_name="Sensores Instalados")
     class Meta: db_table = 'warehouses'
-    def __str__(self): return f"Armazém {self.warehouse_id} - {self.location} - {self.get_control_type_display()}"
+    def __str__(self): return f"Armazém {self.warehouse_id} - {self.location} ({self.get_storage_unit_display()})"
 
 # --- NOVOS MODELOS DE DETALHE DE EVENTO (Devem vir antes de PlantationEvent) ---
 class FertilizerSyntheticData(models.Model):
@@ -395,14 +425,30 @@ class Vehicle(models.Model):
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='vehicles', limit_choices_to={'groups__name': 'Transporter'}, verbose_name="Proprietário")
     license_plate = models.CharField(max_length=20, verbose_name="Matrícula")
     brand_model = models.CharField(max_length=100, verbose_name="Marca/Modelo")
-    capacity_kg = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Capacidade (Kg)")
+    vehicle_type = models.CharField(max_length=20, choices=VEHICLE_TYPE_CHOICES, default='RIGID_TRUCK', verbose_name="Tipo de Veículo")
+    capacity_kg = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Capacidade (Kg)")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'vehicles'
 
+    def save(self, *args, **kwargs):
+        if self.vehicle_type in VEHICLE_DEFAULT_CAPACITIES:
+            self.capacity_kg = VEHICLE_DEFAULT_CAPACITIES[self.vehicle_type]
+        elif not self.capacity_kg:
+            self.capacity_kg = 5000.0
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"{self.brand_model} ({self.license_plate}) - {self.capacity_kg}kg"
+        return f"{self.get_vehicle_type_display()} - {self.brand_model} ({self.license_plate}) - {self.capacity_kg}kg"
+
+    @property
+    def capacity_crates(self):
+        return int(float(self.capacity_kg) / CRATE_WEIGHT_KG) if self.capacity_kg else 0
+
+    @property
+    def capacity_pallets(self):
+        return round(float(self.capacity_kg) / PALLET_WEIGHT_KG, 1) if self.capacity_kg else 0
 
 
 class Route(models.Model):
@@ -415,10 +461,10 @@ class Route(models.Model):
     ]
     transporter = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='routes', limit_choices_to={'groups__name': 'Transporter'}, verbose_name="Transportador")
     vehicle = models.ForeignKey(Vehicle, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Veículo")
-    route_date = models.DateField(default=timezone.now, verbose_name="Data da Rota")
-    status = models.CharField(max_length=20, choices=ROUTE_STATUS_CHOICES, default='PENDING', verbose_name="Estado da Rota")
+    route_date = models.DateField(default=timezone.now, db_index=True, verbose_name="Data da Rota")
+    status = models.CharField(max_length=20, choices=ROUTE_STATUS_CHOICES, default='PENDING', db_index=True, verbose_name="Estado da Rota")
     optimized_path = models.TextField(null=True, blank=True, verbose_name="Caminho Otimizado (Pontos)")
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
         db_table = 'routes'
@@ -429,6 +475,14 @@ class Route(models.Model):
     @property
     def total_weight_kg(self):
         return sum(order.quantity_kg for order in self.orders.all())
+
+    @property
+    def total_crates(self):
+        return int(float(self.total_weight_kg) / CRATE_WEIGHT_KG) if self.total_weight_kg else 0
+
+    @property
+    def total_pallets(self):
+        return round(float(self.total_weight_kg) / PALLET_WEIGHT_KG, 1) if self.total_weight_kg else 0
 
 
 # ----------------------------------------------------------------------
@@ -476,11 +530,11 @@ class MarketplaceOrder(models.Model):
     min_quality_score = models.IntegerField(null=True, blank=True, verbose_name="Min Quality Score (1-10)")
     
     # Estado e Aprovação
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='OPEN')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='OPEN', db_index=True)
     fulfilled_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='market_orders_fulfilled')
     
-    created_at = models.DateTimeField(auto_now_add=True)
-    fulfilled_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    fulfilled_at = models.DateTimeField(null=True, blank=True, db_index=True)
 
     # --- CAMPOS DE LOGÍSTICA (TRANSPORTE LIACC) ---
     TRANSPORT_STATUS_CHOICES = [
@@ -491,7 +545,7 @@ class MarketplaceOrder(models.Model):
         ('DELIVERED', 'Delivered (Entregue)'),
     ]
     
-    transport_status = models.CharField(max_length=20, choices=TRANSPORT_STATUS_CHOICES, default='PENDING', verbose_name="Estado do Transporte")
+    transport_status = models.CharField(max_length=20, choices=TRANSPORT_STATUS_CHOICES, default='PENDING', db_index=True, verbose_name="Estado do Transporte")
     
     # Planeamento (Input da LIACC)
     planned_pickup_date = models.DateTimeField(null=True, blank=True, verbose_name="Data Prevista de Recolha")
@@ -499,7 +553,7 @@ class MarketplaceOrder(models.Model):
     
     # Execução Real (Input do Transportador/Blocos)
     actual_pickup_date = models.DateTimeField(null=True, blank=True, verbose_name="Data Real de Recolha")
-    actual_delivery_date = models.DateTimeField(null=True, blank=True, verbose_name="Data Real de Entrega")
+    actual_delivery_date = models.DateTimeField(null=True, blank=True, db_index=True, verbose_name="Data Real de Entrega")
     
     # Dados de Sensores (JSON Dump da LIACC)
     # Usamos TextField para simplicidade (pode conter JSON)
@@ -558,6 +612,14 @@ class MarketplaceOrder(models.Model):
     def destination_longitude(self):
         wh = self.destination_warehouse
         return wh.longitude if wh else None
+
+    @property
+    def total_crates(self):
+        return int(float(self.quantity_kg) / CRATE_WEIGHT_KG) if self.quantity_kg else 0
+
+    @property
+    def total_pallets(self):
+        return round(float(self.quantity_kg) / PALLET_WEIGHT_KG, 1) if self.quantity_kg else 0
 
     def __str__(self):
         return f"{self.order_type} - {self.culture.name} ({self.quantity_kg}kg) by {self.requester.username}"

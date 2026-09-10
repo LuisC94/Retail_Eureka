@@ -1,3 +1,4 @@
+import re
 from django import forms
 from django.contrib.auth.models import User, Group
 # Importar apenas os modelos necessários
@@ -344,13 +345,15 @@ class WarehouseRegistrationForm(forms.ModelForm):
     
     class Meta:
         model = Warehouse
-        fields = ['location', 'region', 'control_type', 'capacity', 'sensors', 'latitude', 'longitude']
+        fields = ['location', 'region', 'control_type', 'storage_unit', 'max_vehicle_access', 'capacity', 'sensors', 'latitude', 'longitude']
         
         # Usar CheckboxSelectMultiple para facilitar a seleção de múltiplos sensores
         widgets = {
             'location': forms.TextInput(attrs={'class': 'form-control'}),
             'region': forms.Select(attrs={'class': 'form-control'}),
             'control_type': forms.Select(attrs={'class': 'form-control'}),
+            'storage_unit': forms.Select(attrs={'class': 'form-control'}),
+            'max_vehicle_access': forms.Select(attrs={'class': 'form-control'}),
             'capacity': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
             'sensors': forms.CheckboxSelectMultiple(), # Renderiza checkboxes em vez de um seletor simples
             'latitude': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.000001', 'placeholder': 'Ex: 38.7223 (Opcional)'}),
@@ -370,12 +373,33 @@ class WarehouseRegistrationForm(forms.ModelForm):
 class VehicleForm(forms.ModelForm):
     class Meta:
         model = Vehicle
-        fields = ['license_plate', 'brand_model', 'capacity_kg']
+        fields = ['license_plate', 'brand_model', 'vehicle_type']
         widgets = {
-            'license_plate': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: AA-00-00'}),
-            'brand_model': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Scania R450'}),
-            'capacity_kg': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'placeholder': 'Ex: 15000'}),
+            'license_plate': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ex: AA-11-BB',
+                'maxlength': '8',
+                'pattern': r'[A-Za-z]{2}-[0-9]{2}-[A-Za-z]{2}',
+                'style': 'text-transform: uppercase; font-family: monospace; font-weight: bold; letter-spacing: 1.5px;',
+                'title': 'Formato obrigatório: AA-11-BB (2 letras - 2 números - 2 letras)',
+                'id': 'id_license_plate'
+            }),
+            'brand_model': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Scania R450 / Renault Master'}),
+            'vehicle_type': forms.Select(attrs={'class': 'form-control', 'id': 'id_vehicle_type'}),
         }
+
+    def clean_license_plate(self):
+        plate = self.cleaned_data.get('license_plate', '').strip().upper()
+        
+        # Se inserido sem hífen (ex: AA11BB), formata automaticamente
+        if re.match(r'^[A-Z]{2}\d{2}[A-Z]{2}$', plate):
+            plate = f"{plate[:2]}-{plate[2:4]}-{plate[4:6]}"
+            
+        pattern = r'^[A-Z]{2}-\d{2}-[A-Z]{2}$'
+        if not re.match(pattern, plate):
+            raise forms.ValidationError("A matrícula deve estar no formato oficial 'AA-11-BB' (2 letras, 2 números e 2 letras, ex: AA-01-BB).")
+            
+        return plate
 
 # ----------------------------------------------------------------------
 # 6. FORMULÁRIO DE MARKETPLACE

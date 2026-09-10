@@ -47,6 +47,7 @@ urlpatterns = [
     path('transporter/route-pickup/', views.transporter_route_pickup, name='transporter_route_pickup'),
     path('transporter/route-delivery/', views.transporter_route_delivery, name='transporter_route_delivery'),
     path('transporter/simulate-route-opt/', views.transporter_simulate_route_opt, name='transporter_simulate_route_opt'),
+    path('transporter/api/job-history/', views.transporter_job_history_api, name='transporter_job_history_api'),
     
     # 3. ROTAS DE DASHBOARD PARA OUTROS PERFIS
     path('consumer/', views.ConsumerDashboardView.as_view(), name='consumer_dashboard'),

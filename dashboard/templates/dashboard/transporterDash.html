@@ -440,8 +440,25 @@
 
             <!-- HOME VIEW -->
             <div id="home-view" class="tab-content active">
-                <h3 style="color: #00796b; margin-bottom: 20px;">Global Supply Chain Map</h3>
-                <div id="leaflet-map" style="height: 450px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 2px solid #e0f2f1; margin-bottom: 25px; z-index: 1;"></div>
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; background: #e0f2f1; padding: 18px 24px; border-radius: 15px; border-left: 5px solid #00796b;">
+                    <div>
+                        <h3 style="color: #004d40; margin: 0; font-size: 1.4em; font-weight: 700;">🗺️ Mapa Logístico da Cadeia de Abastecimento</h3>
+                        <p style="margin: 4px 0 0 0; color: #00695c; font-size: 0.9em;">Acompanhamento visual em tempo real das rotas ativas, trajetos rodoviários e pontos de recolha/entrega.</p>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <span style="background: white; color: #00796b; padding: 6px 14px; border-radius: 20px; font-weight: bold; font-size: 0.9em; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
+                            🚚 {{ map_active_items_count|default:0 }} Tarefas Ativas
+                        </span>
+                        <button type="button" class="btn-action" style="background: #00796b; padding: 8px 16px; font-size: 0.85em; font-weight: bold;" onclick="fitAllRoutes()">
+                            🌍 Ver Todas no Mapa
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Barra de Rotas e Cargas Clicáveis -->
+                <div id="map-routes-bar" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; min-height: 24px;"></div>
+
+                <div id="leaflet-map" style="height: 520px; border-radius: 15px; box-shadow: 0 6px 20px rgba(0,0,0,0.1); border: 2px solid #b2dfdb; margin-bottom: 25px; z-index: 1;"></div>
                 
                 <h3 style="color: #00796b; margin-bottom: 20px;">Key Performance Indicators</h3>
                 <div class="kpi-section">
@@ -580,11 +597,13 @@
                                 <td>
                                     <strong>Rota #{{ route.pk }}</strong><br>
                                     <span style="font-size:0.85em; color:#666;">Data: {{ route.route_date|date:"d/m/Y" }}</span><br>
-                                    <span style="font-size:0.85em; font-family:monospace; color:#888;">{{ route.optimized_path|default:"N/A" }}</span>
+                                    <span style="font-size:0.85em; font-family:monospace; color:#888;">{{ route.optimized_path|default:"N/A" }}</span><br>
+                                    <button type="button" class="btn-action" style="background:#00796b; padding: 4px 10px; font-size: 0.8em; margin-top: 6px;" onclick="focusRouteOnMap('{{ route.id }}')">🗺️ Ver Rota no Mapa</button>
                                 </td>
                                 <td>
                                     <strong>{{ route.vehicle.brand_model }}</strong> ({{ route.vehicle.license_plate }})<br>
-                                    <span style="font-size:0.85em; color:#666;">Carga: {{ route.total_weight_kg }} / {{ route.vehicle.capacity_kg }} Kg</span><br>
+                                    <span style="font-size:0.85em; color:#666;">Carga: <strong>{{ route.total_weight_kg }}</strong> / {{ route.vehicle.capacity_kg }} Kg</span><br>
+                                    <span style="font-size:0.78em; color:#00796b; font-weight:600;">(~{{ route.total_pallets }} Paletes / {{ route.total_crates }} Grades)</span><br>
                                     
                                     <!-- ProgressBar Capacidade Veiculo -->
                                     <div style="width: 100%; max-width: 250px; background: #e0e0e0; border-radius: 8px; overflow: hidden; height: 14px; margin-top: 5px;">
@@ -599,41 +618,30 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <span style="background: {% if route.status == 'ACCEPTED' %}#ffe082; color:#5d4037;{% elif route.status == 'PLANNED' %}#bbdefb; color:#0d47a1;{% else %}#c8e6c9; color:#1b5e20;{% endif %} padding: 4px 10px; border-radius: 20px; font-size: 0.85em; font-weight: bold;">
+                                    <span style="background: {% if route.status == 'ACCEPTED' %}#ffe082; color:#5d4037;{% elif route.status == 'IN_TRANSIT' %}#bbdefb; color:#0d47a1;{% else %}#c8e6c9; color:#1b5e20;{% endif %} padding: 4px 10px; border-radius: 20px; font-size: 0.85em; font-weight: bold;">
                                         {{ route.get_status_display }}
                                     </span>
                                 </td>
                                 <td>
-                                    {% if route.status == 'ACCEPTED' %}
-                                        <!-- Form to set Plan -->
-                                        <form method="POST" action="{% url 'transporter_route_plan' %}" style="display:flex; flex-direction:column; gap:8px; width: 220px; border: 1px solid #ffe082; padding: 10px; border-radius: 8px; background: #fffde7; margin:0;">
+                                    {% if route.status == 'ACCEPTED' or route.status == 'PLANNED' %}
+                                        <!-- Form to Pickup / Start Trip directly -->
+                                        <form method="POST" action="{% url 'transporter_route_pickup' %}" style="display:flex; flex-direction:column; gap:6px; width: 230px; border: 1px solid #bbdefb; padding: 10px; border-radius: 8px; background: #e3f2fd; margin:0;">
                                             {% csrf_token %}
                                             <input type="hidden" name="route_id" value="{{ route.id }}">
-                                            <div style="display:flex; flex-direction:column; gap:2px;">
-                                                <label style="font-size:0.8em; font-weight:bold;">Data/Hora Recolha:</label>
-                                                <input type="datetime-local" name="planned_pickup_date" required style="padding: 4px; font-size:0.85em; border-radius:4px; border:1.5px solid #ccc;">
-                                            </div>
-                                            <div style="display:flex; flex-direction:column; gap:2px;">
-                                                <label style="font-size:0.8em; font-weight:bold;">Data/Hora Entrega:</label>
-                                                <input type="datetime-local" name="planned_delivery_date" required style="padding: 4px; font-size:0.85em; border-radius:4px; border:1.5px solid #ccc;">
-                                            </div>
-                                            <button type="submit" class="btn-action" style="background:#ffa000; width:100%; padding:6px; font-size:0.85em;">📅 Registar Plano</button>
-                                        </form>
-                                    {% elif route.status == 'PLANNED' %}
-                                        <!-- Form to Pickup -->
-                                        <form method="POST" action="{% url 'transporter_route_pickup' %}" style="margin:0;">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="route_id" value="{{ route.id }}">
-                                            <button type="submit" class="btn-action" style="background:#1976D2;">⏱️ Iniciar Viagem (Recolhido)</button>
+                                            <label style="font-size:0.75em; font-weight:bold; color:#1565c0;">Data/Hora Recolha (Opcional):</label>
+                                            <input type="datetime-local" name="actual_pickup_date" style="font-size:0.75em; padding: 4px; border: 1px solid #90caf9; border-radius: 4px; background: #fff; width: 100%;">
+                                            <button type="submit" class="btn-action" style="background:#1976D2; width:100%; padding:6px; font-weight: bold; font-size: 0.85em;">⏱️ Iniciar Viagem</button>
                                         </form>
                                     {% elif route.status == 'IN_TRANSIT' %}
-                                        <!-- Form to Deliver (requires sensor data) -->
-                                        <form method="POST" action="{% url 'transporter_route_delivery' %}" style="display:flex; flex-direction:column; gap:6px; width: 220px; border: 1px solid #c8e6c9; padding: 10px; border-radius: 8px; background: #f1f8e9; margin:0;">
+                                        <!-- Form to Deliver (optional sensor file upload + optional retroactive datetime) -->
+                                        <form method="POST" action="{% url 'transporter_route_delivery' %}" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:6px; width: 230px; border: 1px solid #c8e6c9; padding: 10px; border-radius: 8px; background: #f1f8e9; margin:0;">
                                             {% csrf_token %}
                                             <input type="hidden" name="route_id" value="{{ route.id }}">
-                                            <label style="font-size:0.8em; font-weight:bold;">Dados dos Sensores (JSON):</label>
-                                            <textarea name="transport_sensor_data" required placeholder="Cole o JSON dos sensores aqui..." rows="2" style="font-family:monospace; font-size:0.75em; padding: 4px; border-radius:4px; border:1.5px solid #ccc;"></textarea>
-                                            <button type="submit" class="btn-action" style="background:#388E3C; width:100%; padding:6px; font-size:0.85em;">🏁 Confirmar Entrega</button>
+                                            <label style="font-size:0.75em; font-weight:bold; color:#2e7d32;">Data/Hora Entrega (Opcional):</label>
+                                            <input type="datetime-local" name="actual_delivery_date" style="font-size:0.75em; padding: 4px; border: 1px solid #a5d6a7; border-radius: 4px; background: #fff; width: 100%;">
+                                            <label style="font-size:0.75em; font-weight:bold; color:#2e7d32; margin-top:2px;">📁 Sensores JSON (Opcional):</label>
+                                            <input type="file" name="sensor_file" accept=".json,application/json" style="font-size:0.72em; padding: 2px; border: 1.5px dashed #81c784; border-radius: 4px; background: #fff; width: 100%;">
+                                            <button type="submit" class="btn-action" style="background:#388E3C; width:100%; padding:6px; font-size:0.85em; font-weight:bold; margin-top:2px;">🏁 Confirmar Entrega</button>
                                         </form>
                                     {% endif %}
                                 </td>
@@ -646,203 +654,250 @@
                     {% endif %}
                 </div>
 
-                <!-- 2. PLANNING (My Pending Jobs) -->
-                <div class="data-table-container" style="border-left: 5px solid #ffa000;">
-                    <h3>📋 Planning Phase (Define ETAs)</h3>
-                    {% if orders_to_plan %}
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Order #</th>
-                                <th>Origin</th>
-                                <th>Accepted At</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for order in orders_to_plan %}
-                            <tr>
-                                <td>#{{ order.pk }}</td>
-                                <td>{{ order.warehouse_location }}</td>
-                                <td>{{ order.fulfilled_at|date:"d/m H:i" }}</td>
-                                <td>
-                                    <button class="btn-action" style="background: #ffa000;" onclick="openPlanModal('{{ order.pk }}')">
-                                        📅 Set Plan
-                                    </button>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                    {% else %}
-                    <p>No orders waiting for planning.</p>
-                    {% endif %}
-                </div>
-
-                <!-- 3. PICKUP (Ready to Start) -->
+                <!-- 2. RECOLHA / PRONTO PARA INICIAR VIAGEM -->
                 <div class="data-table-container" style="border-left: 5px solid #1976D2;">
-                    <h3>🚚 Search/Pickup (Go to Origin)</h3>
+                    <h3>🚚 Cargas Aceites (Prontas para Iniciar Transporte)</h3>
                     {% if orders_ready_pickup %}
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Order #</th>
-                                <th>Pickup ETA</th>
-                                <th>Origin</th>
-                                <th>Action</th>
+                                <th>Encomenda #</th>
+                                <th>Cultura</th>
+                                <th>Quantidade</th>
+                                <th>Origem (Armazém)</th>
+                                <th>Destino</th>
+                                <th>Ação</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for order in orders_ready_pickup %}
                             <tr>
-                                <td>#{{ order.pk }}</td>
-                                <td>{{ order.planned_pickup_date|date:"d/m H:i" }}</td>
-                                <td>{{ order.warehouse_location }}</td>
+                                <td><strong>#{{ order.pk }}</strong></td>
+                                <td>{{ order.culture.name }}</td>
                                 <td>
-                                    <button class="btn-action" style="background: #1976D2;" onclick="openPickupModal('{{ order.pk }}')">
-                                        ⏱️ Validate Pickup (Start Trip)
-                                    </button>
+                                    <strong>{{ order.quantity_kg }} Kg</strong><br>
+                                    <span style="font-size:0.78em; color:#00796b; font-weight:600;">(~{{ order.total_pallets }} Paletes / {{ order.total_crates }} Grades)</span>
+                                </td>
+                                <td>{{ order.warehouse_location }}</td>
+                                <td>Armazém {{ order.requester.username }}</td>
+                                <td>
+                                    <div style="display:flex; gap:6px; align-items:center;">
+                                        <button class="btn-action" style="background: #1976D2;" onclick="openPickupModal('{{ order.pk }}')">
+                                            ⏱️ Iniciar Viagem
+                                        </button>
+                                        <button type="button" class="btn-action" style="background:#00796b; padding: 6px 12px; font-size: 0.85em;" onclick="focusRouteOnMap('job_{{ order.pk }}')">
+                                            🗺️ Mapa
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                     {% else %}
-                    <p>No orders ready for pickup.</p>
+                    <p style="color:#666; padding:15px; font-style:italic;">Não existem cargas individuais a aguardar início de transporte.</p>
                     {% endif %}
                 </div>
 
-                <!-- 4. IN TRANSIT (On the Road) -->
+                <!-- 3. EM TRÂNSITO (Na Estrada) -->
                 <div class="data-table-container" style="border-left: 5px solid #388E3C;">
-                    <h3>📦 In Transit (En Route)</h3>
+                    <h3>📦 Em Trânsito (A Caminho do Destino)</h3>
                     {% if orders_in_transit %}
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Order #</th>
-                                <th>Picked Up At</th>
-                                <th>Delivery ETA</th>
-                                <th>Action</th>
+                                <th>Encomenda #</th>
+                                <th>Cultura</th>
+                                <th>Quantidade</th>
+                                <th>Início de Viagem</th>
+                                <th>Destino</th>
+                                <th>Ação</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for order in orders_in_transit %}
                             <tr>
-                                <td>#{{ order.pk }}</td>
+                                <td><strong>#{{ order.pk }}</strong></td>
+                                <td>{{ order.culture.name }}</td>
+                                <td><strong>{{ order.quantity_kg }} Kg</strong></td>
                                 <td>{{ order.actual_pickup_date|date:"d/m H:i" }}</td>
-                                <td>{{ order.planned_delivery_date|date:"d/m H:i" }}</td>
+                                <td>Armazém {{ order.requester.username }}</td>
                                 <td>
-                                    <button class="btn-action" style="background: #388E3C;" onclick="openDeliveryModal('{{ order.pk }}')">
-                                        🏁 Register Delivery
-                                    </button>
+                                    <div style="display:flex; gap:6px; align-items:center;">
+                                        <button class="btn-action" style="background: #388E3C;" onclick="openDeliveryModal('{{ order.pk }}')">
+                                            🏁 Concluir Entrega
+                                        </button>
+                                        <button type="button" class="btn-action" style="background:#00796b; padding: 6px 12px; font-size: 0.85em;" onclick="focusRouteOnMap('job_{{ order.pk }}')">
+                                            🗺️ Mapa
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                     {% else %}
-                    <p>No orders currently in transit.</p>
+                    <p style="color:#666; padding:15px; font-style:italic;">Nenhuma encomenda individual atualmente em trânsito.</p>
                     {% endif %}
                 </div>
 
                 <!-- 5. HISTORY -->
-                <div class="data-table-container">
-                    <h3>✅ Completed Job History</h3>
-                    {% if closed_market_orders %}
-                    <table class="data-table" id="job-history-table">
-                        <thead>
-                             <tr>
-                                <th>Delivered At</th>
-                                <th>Order #</th>
-                                <th>Item</th>
-                                <th>Travel Time</th>
-                                <th>History</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                             {% for order in closed_market_orders %}
-                            <tr>
-                                <td>{{ order.actual_delivery_date|date:"d/m H:i" }}</td>
-                                <td>#{{ order.pk }}</td>
-                                <td>{{ order.culture.name }}</td>
-                                <td>-</td>
-                                <td>
-                                    <!-- Use origin harvest ID for history -->
-                                    {% if order.harvest_origin %}
-                                    <button onclick="openHistoryModal('{{ order.harvest_origin.pk }}')" class="btn-action" style="background: #546E7A; text-decoration: none; padding: 5px 10px; font-size: 0.8em;">
-                                        📜 View History
-                                    </button>
-                                    {% else %}
-                                    -
-                                    {% endif %}
-                                </td>
-                            </tr>
-                             {% endfor %}
-                        </tbody>
-                    </table>
+                <div class="data-table-container" style="border-left: 5px solid #00796b;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 15px;">
+                        <div>
+                            <h3 style="margin: 0; color: #004d40;">✅ Completed Job History</h3>
+                            <p style="margin: 5px 0 0; color: #666; font-size: 0.9em;">
+                                Total de entregas realizadas: <strong style="color: #00796b; font-size: 1.1em;">{{ closed_orders_count }}</strong>
+                            </p>
+                        </div>
+                        <button id="toggle-history-btn" class="btn-action" style="background: #00796b; padding: 10px 18px; font-weight: bold;" onclick="toggleJobHistory()">
+                            📜 Carregar Histórico de Trabalhos
+                        </button>
+                    </div>
                     
-                    <!-- PAGINATION CONTROLS -->
-                    <div id="pagination-controls" style="margin-top: 20px; display: flex; justify-content: center; gap: 10px; align-items: center;">
-                        <button id="prevBtn" class="btn-action" style="padding: 5px 15px;">Prev</button>
-                        <span id="pageInfo" style="font-weight: 600; color: #555;">Page 1</span>
-                        <button id="nextBtn" class="btn-action" style="padding: 5px 15px;">Next</button>
+                    <div id="job-history-wrapper" style="display: none; margin-top: 15px;">
+                        <div id="job-history-loading" style="display: none; padding: 25px; text-align: center; color: #00796b; font-weight: 600;">
+                            ⏳ A carregar histórico de entregas...
+                        </div>
+                        
+                        <div id="job-history-content"></div>
+                        
+                        <!-- Dynamic Pagination Controls -->
+                        <div id="job-history-pagination" style="display: none; margin-top: 20px; justify-content: center; gap: 10px; align-items: center;">
+                            <button id="historyPrevBtn" class="btn-action" style="padding: 6px 16px; background: #00796b;">Anterior</button>
+                            <span id="historyPageInfo" style="font-weight: 600; color: #555;">Página 1</span>
+                            <button id="historyNextBtn" class="btn-action" style="padding: 6px 16px; background: #00796b;">Seguinte</button>
+                        </div>
                     </div>
 
                     <script>
-                        document.addEventListener('DOMContentLoaded', function() {
-                            const table = document.getElementById('job-history-table');
-                            const tbody = table.querySelector('tbody');
-                            const rows = Array.from(tbody.querySelectorAll('tr'));
-                            const rowsPerPage = 10;
-                            let currentPage = 1;
-                            const totalPages = Math.ceil(rows.length / rowsPerPage);
-                            
-                            const prevBtn = document.getElementById('prevBtn');
-                            const nextBtn = document.getElementById('nextBtn');
-                            const pageInfo = document.getElementById('pageInfo');
+                        let historyCurrentPage = 1;
+                        let historyTotalPages = 1;
+                        let historyLoaded = false;
 
-                            function displayRows(page) {
-                                const start = (page - 1) * rowsPerPage;
-                                const end = start + rowsPerPage;
-                                
-                                rows.forEach((row, index) => {
-                                    if (index >= start && index < end) {
-                                        row.style.display = '';
-                                    } else {
-                                        row.style.display = 'none';
+                        function toggleJobHistory() {
+                            const wrapper = document.getElementById('job-history-wrapper');
+                            const btn = document.getElementById('toggle-history-btn');
+                            
+                            if (wrapper.style.display === 'none') {
+                                wrapper.style.display = 'block';
+                                btn.innerText = '🔼 Ocultar Histórico';
+                                if (!historyLoaded) {
+                                    loadJobHistory(1);
+                                }
+                            } else {
+                                wrapper.style.display = 'none';
+                                btn.innerText = '📜 Ver / Carregar Histórico';
+                            }
+                        }
+
+                        function loadJobHistory(page) {
+                            const loadingDiv = document.getElementById('job-history-loading');
+                            const contentDiv = document.getElementById('job-history-content');
+                            const paginationDiv = document.getElementById('job-history-pagination');
+                            const prevBtn = document.getElementById('historyPrevBtn');
+                            const nextBtn = document.getElementById('historyNextBtn');
+                            const pageInfo = document.getElementById('historyPageInfo');
+
+                            loadingDiv.style.display = 'block';
+                            contentDiv.innerHTML = '';
+                            paginationDiv.style.display = 'none';
+
+                            fetch(`/dashboard/transporter/api/job-history/?page=${page}`)
+                                .then(response => {
+                                    if (!response.ok) throw new Error('Erro na resposta do servidor');
+                                    return response.json();
+                                })
+                                .then(data => {
+                                    loadingDiv.style.display = 'none';
+                                    historyLoaded = true;
+                                    historyCurrentPage = data.current_page;
+                                    historyTotalPages = data.total_pages;
+
+                                    if (!data.orders || data.orders.length === 0) {
+                                        contentDiv.innerHTML = '<p style="color:#666; padding:15px; font-style:italic;">Nenhuma entrega concluída encontrada.</p>';
+                                        return;
+                                    }
+
+                                    let html = `
+                                        <table class="data-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Data Entrega</th>
+                                                    <th>Enc. #</th>
+                                                    <th>Produto</th>
+                                                    <th>Quantidade</th>
+                                                    <th>Origem</th>
+                                                    <th>Destinatário</th>
+                                                    <th>Veículo</th>
+                                                    <th>Histórico</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                    `;
+
+                                    data.orders.forEach(order => {
+                                        const historyBtn = order.harvest_id 
+                                            ? `<button onclick="openHistoryModal('${order.harvest_id}')" class="btn-action" style="background: #546E7A; text-decoration: none; padding: 5px 10px; font-size: 0.8em;">📜 Ver Histórico</button>`
+                                            : `-`;
+
+                                        html += `
+                                            <tr>
+                                                <td><strong>${order.actual_delivery_date}</strong></td>
+                                                <td>#${order.pk}</td>
+                                                <td>${order.culture_name}</td>
+                                                <td><strong>${order.quantity_kg} Kg</strong></td>
+                                                <td><span style="font-size:0.85em; color:#555;">${order.origin}</span></td>
+                                                <td>${order.requester}</td>
+                                                <td>${order.vehicle}</td>
+                                                <td>${historyBtn}</td>
+                                            </tr>
+                                        `;
+                                    });
+
+                                    html += '</tbody></table>';
+                                    contentDiv.innerHTML = html;
+
+                                    if (historyTotalPages > 1) {
+                                        paginationDiv.style.display = 'flex';
+                                        pageInfo.innerText = `Página ${historyCurrentPage} de ${historyTotalPages} (${data.total_count} registos)`;
+                                        
+                                        prevBtn.disabled = !data.has_previous;
+                                        prevBtn.style.opacity = data.has_previous ? '1' : '0.5';
+                                        prevBtn.style.cursor = data.has_previous ? 'pointer' : 'not-allowed';
+
+                                        nextBtn.disabled = !data.has_next;
+                                        nextBtn.style.opacity = data.has_next ? '1' : '0.5';
+                                        nextBtn.style.cursor = data.has_next ? 'pointer' : 'not-allowed';
+                                    }
+                                })
+                                .catch(err => {
+                                    loadingDiv.style.display = 'none';
+                                    contentDiv.innerHTML = `<div style="color:#d32f2f; padding:15px;">Erro ao carregar o histórico: ${err.message}</div>`;
+                                });
+                        }
+
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const prevBtn = document.getElementById('historyPrevBtn');
+                            const nextBtn = document.getElementById('historyNextBtn');
+                            
+                            if (prevBtn) {
+                                prevBtn.addEventListener('click', () => {
+                                    if (historyCurrentPage > 1) {
+                                        loadJobHistory(historyCurrentPage - 1);
                                     }
                                 });
-                                
-                                pageInfo.innerText = `Page ${page} of ${totalPages || 1}`;
-                                
-                                prevBtn.disabled = page === 1;
-                                prevBtn.style.opacity = page === 1 ? '0.5' : '1';
-                                
-                                nextBtn.disabled = page === totalPages || totalPages === 0;
-                                nextBtn.style.opacity = (page === totalPages || totalPages === 0) ? '0.5' : '1';
                             }
-
-                            prevBtn.addEventListener('click', () => {
-                                if (currentPage > 1) {
-                                    currentPage--;
-                                    displayRows(currentPage);
-                                }
-                            });
-
-                            nextBtn.addEventListener('click', () => {
-                                if (currentPage < totalPages) {
-                                    currentPage++;
-                                    displayRows(currentPage);
-                                }
-                            });
-
-                            // Display initial page
-                            displayRows(1);
+                            
+                            if (nextBtn) {
+                                nextBtn.addEventListener('click', () => {
+                                    if (historyCurrentPage < historyTotalPages) {
+                                        loadJobHistory(historyCurrentPage + 1);
+                                    }
+                                });
+                            }
                         });
                     </script>
-                     {% else %}
-                    <p>No history.</p>
-                    {% endif %}
                 </div>
             </div>
             
@@ -854,20 +909,78 @@
                         {% csrf_token %}
                         <div class="form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                             <div>
-                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Matrícula:</label>
+                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:6px;">Matrícula (AA-11-BB):</label>
                                 {{ vehicle_form.license_plate }}
+                                <span style="font-size:0.75em; color:#00796b; font-weight:600; display:block; margin-top:4px;">Exemplo: AA-01-BB</span>
                             </div>
                             <div>
-                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Marca / Modelo:</label>
+                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:6px;">Marca / Modelo:</label>
                                 {{ vehicle_form.brand_model }}
                             </div>
                         </div>
-                        <div style="margin-top: 15px;">
-                            <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Capacidade Máxima (Kg):</label>
-                            {{ vehicle_form.capacity_kg }}
+                        <div class="form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px;">
+                            <div>
+                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:6px;">Tipo de Veículo:</label>
+                                {{ vehicle_form.vehicle_type }}
+                            </div>
+                            <div>
+                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:6px;">Capacidade Homologada (Fixa):</label>
+                                <div id="vehicle-capacity-badge" style="background: #e8f5e9; border: 1.5px solid #a5d6a7; color: #1b5e20; padding: 10px 15px; border-radius: 8px; font-size: 0.9em; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                                    <span>📦</span>
+                                    <span id="vehicle-capacity-text">5.000 Kg (~6.0 Paletes / 250 Grades)</span>
+                                </div>
+                            </div>
                         </div>
-                        <button type="submit" class="submit-button">✓ Registar Veículo</button>
+                        <button type="submit" class="submit-button" style="margin-top: 20px;">✓ Registar Veículo</button>
                     </form>
+
+                    <script>
+                        document.addEventListener("DOMContentLoaded", function() {
+                            // 1. Atualizar display da capacidade
+                            const vTypeSelect = document.getElementById('id_vehicle_type');
+                            const capText = document.getElementById('vehicle-capacity-text');
+                            
+                            const vehicleInfo = {
+                                'VAN': '1.200 Kg (~1.5 Paletes / 60 Grades)',
+                                'RIGID_TRUCK': '5.000 Kg (~6.0 Paletes / 250 Grades)',
+                                'HEAVY_TIR': '24.000 Kg (~30.0 Paletes / 1.200 Grades)'
+                            };
+
+                            function updateCapDisplay() {
+                                if (vTypeSelect && capText) {
+                                    const selected = vTypeSelect.value || 'RIGID_TRUCK';
+                                    capText.innerText = vehicleInfo[selected] || '5.000 Kg (~6.0 Paletes / 250 Grades)';
+                                }
+                            }
+
+                            if (vTypeSelect) {
+                                vTypeSelect.addEventListener('change', updateCapDisplay);
+                                updateCapDisplay();
+                            }
+
+                            // 2. Máscara de formatação da matrícula AA-11-BB
+                            function applyPlateMask(inputElem) {
+                                if (!inputElem) return;
+                                inputElem.addEventListener('input', function(e) {
+                                    let val = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                                    if (val.length > 6) val = val.slice(0, 6);
+                                    
+                                    let formatted = '';
+                                    if (val.length > 4) {
+                                        formatted = val.slice(0, 2) + '-' + val.slice(2, 4) + '-' + val.slice(4);
+                                    } else if (val.length > 2) {
+                                        formatted = val.slice(0, 2) + '-' + val.slice(2);
+                                    } else {
+                                        formatted = val;
+                                    }
+                                    this.value = formatted;
+                                });
+                            }
+
+                            applyPlateMask(document.getElementById('id_license_plate'));
+                            applyPlateMask(document.querySelector('input[name="license_plate"]'));
+                        });
+                    </script>
                 </div>
 
                 <div class="data-table-container">
@@ -876,18 +989,27 @@
                     <table class="data-table">
                         <thead>
                             <tr>
+                                <th>Tipo</th>
                                 <th>Marca/Modelo</th>
                                 <th>Matrícula</th>
-                                <th>Capacidade (Kg)</th>
+                                <th>Capacidade (Kg / Unidades)</th>
                                 <th>Data de Registo</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for vehicle in vehicles %}
                             <tr>
+                                <td>
+                                    <span style="background: #e0f2f1; color: #00796b; padding: 4px 10px; border-radius: 12px; font-size: 0.85em; font-weight: bold;">
+                                        {{ vehicle.get_vehicle_type_display }}
+                                    </span>
+                                </td>
                                 <td><strong>{{ vehicle.brand_model }}</strong></td>
-                                <td><span style="background: #e0f2f1; padding: 4px 8px; border-radius: 6px; font-family: monospace; font-weight: bold; color: #004d40;">{{ vehicle.license_plate }}</span></td>
-                                <td>{{ vehicle.capacity_kg }} Kg</td>
+                                <td><span style="background: #eceff1; padding: 4px 8px; border-radius: 6px; font-family: monospace; font-weight: bold; color: #37474f;">{{ vehicle.license_plate }}</span></td>
+                                <td>
+                                    <strong>{{ vehicle.capacity_kg }} Kg</strong><br>
+                                    <span style="font-size: 0.8em; color: #00796b; font-weight: 600;">(~{{ vehicle.capacity_pallets }} Paletes / {{ vehicle.capacity_crates }} Grades)</span>
+                                </td>
                                 <td>{{ vehicle.created_at|date:"d/m/Y" }}</td>
                             </tr>
                             {% endfor %}
@@ -901,43 +1023,24 @@
         </div>
     </div>
 
-    <!-- MODAL: PLAN TRANSPORT -->
-    <div id="planModal" class="modal" style="display:none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6);">
-        <div class="modal-content" style="background: white; margin: 10% auto; padding: 30px; border-radius: 15px; width: 50%; max-width: 500px;">
-            <span onclick="document.getElementById('planModal').style.display='none'" style="float:right; cursor:pointer; font-size:1.5em;">&times;</span>
-            <h3 style="color:#ffa000;">📅 Logistics Plan (LIACC)</h3>
-            <p>Enter the ETAs calculated by the Algorithm.</p>
-            <form method="POST" action="{% url 'transporter_submit_plan' %}">
-                {% csrf_token %}
-                <input type="hidden" name="order_id" id="plan_order_id">
-                
-                <div style="margin-top:15px;">
-                    <label>Pickup ETA:</label>
-                    {{ transport_plan_form.planned_pickup_date }}
-                </div>
-                <div style="margin-top:15px;">
-                    <label>Delivery ETA:</label>
-                    {{ transport_plan_form.planned_delivery_date }}
-                </div>
-                
-                <button type="submit" class="submit-button" style="background: #ffa000; color: #333;">Confirm Plan</button>
-            </form>
-        </div>
-    </div>
-
     <!-- MODAL: PICKUP & LICENSE PLATE -->
     <div id="pickupModal" class="modal" style="display:none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6);">
         <div class="modal-content" style="background: white; margin: 10% auto; padding: 30px; border-radius: 15px; width: 50%; max-width: 500px;">
             <span onclick="document.getElementById('pickupModal').style.display='none'" style="float:right; cursor:pointer; font-size:1.5em;">&times;</span>
             <h3 style="color:#1976D2;">🚚 Iniciar Transporte</h3>
-            <p>Por favor, insira a matrícula do veículo.</p>
+            <p style="color:#666; font-size:0.9em;">Indique a matrícula e opcionalmente a data/hora real de recolha.</p>
             <form method="POST" action="{% url 'transporter_validate_pickup' %}">
                 {% csrf_token %}
                 <input type="hidden" name="order_id" id="pickup_order_id">
                 
-                <div style="margin-top:15px; margin-bottom:20px;">
-                    <label style="display:block; margin-bottom:5px; font-weight:600;">Matrícula (Ex: AA-11-BB):</label>
-                    <input type="text" name="license_plate" required placeholder="Inserir matrícula..." style="padding: 10px; width: 100%; border: 1px solid #ccc; border-radius: 8px;">
+                <div style="margin-top:15px; margin-bottom:15px;">
+                    <label style="display:block; margin-bottom:5px; font-weight:600;">Matrícula (Formato: AA-11-BB):</label>
+                    <input type="text" name="license_plate" required placeholder="Ex: AA-01-BB" maxlength="8" pattern="[A-Za-z]{2}-[0-9]{2}-[A-Za-z]{2}" title="Formato obrigatório: AA-11-BB" style="padding: 10px; width: 100%; border: 1px solid #ccc; border-radius: 8px; text-transform: uppercase; font-family: monospace; font-weight: bold; letter-spacing: 1.5px;">
+                </div>
+
+                <div style="margin-bottom:20px;">
+                    <label style="display:block; margin-bottom:5px; font-weight:600; color:#1565c0;">Data/Hora Real de Recolha (Opcional):</label>
+                    <input type="datetime-local" name="actual_pickup_date" style="padding: 8px; width: 100%; border: 1px solid #90caf9; border-radius: 8px; font-size:0.9em;">
                 </div>
                 
                 <button type="submit" class="submit-button" style="background: #1976D2;">Iniciar Viagem</button>
@@ -949,18 +1052,23 @@
     <div id="deliveryModal" class="modal" style="display:none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6);">
         <div class="modal-content" style="background: white; margin: 10% auto; padding: 30px; border-radius: 15px; width: 50%; max-width: 600px;">
             <span onclick="document.getElementById('deliveryModal').style.display='none'" style="float:right; cursor:pointer; font-size:1.5em;">&times;</span>
-            <h3 style="color:#388E3C;">🏁 Finalize Delivery</h3>
-            <p>Upload the sensor data from the trip.</p>
-            <form method="POST" action="{% url 'transporter_submit_delivery' %}">
+            <h3 style="color:#388E3C;">🏁 Concluir Entrega</h3>
+            <p style="color:#666; font-size:0.9em; margin-top:5px;">Pode carregar o ficheiro JSON de telemetria dos sensores e indicar a data/hora real de entrega (opcionais).</p>
+            <form method="POST" action="{% url 'transporter_submit_delivery' %}" enctype="multipart/form-data">
                 {% csrf_token %}
                 <input type="hidden" name="order_id" id="delivery_order_id">
                 
-                <div style="margin-top:15px;">
-                    <label>Sensor Data JSON:</label>
-                    {{ transport_delivery_form.transport_sensor_data }}
+                <div style="margin-top:15px; margin-bottom:15px;">
+                    <label style="display:block; margin-bottom:5px; font-weight:600; color:#2e7d32;">Data/Hora Real de Entrega (Opcional):</label>
+                    <input type="datetime-local" name="actual_delivery_date" style="padding: 8px; width: 100%; border: 1px solid #a5d6a7; border-radius: 8px; font-size:0.9em;">
+                </div>
+
+                <div style="margin-bottom:25px;">
+                    <label style="display:block; margin-bottom:8px; font-weight:600; color:#2e7d32;">📁 Ficheiro JSON de Sensores (Opcional):</label>
+                    <input type="file" name="sensor_file" accept=".json,application/json" style="padding: 10px; width: 100%; border: 1.5px dashed #81c784; border-radius: 8px; background: #f1f8e9; font-size:0.9em;">
                 </div>
                 
-                <button type="submit" class="submit-button" style="background: #388E3C;">Confirm Delivery</button>
+                <button type="submit" class="submit-button" style="background: #388E3C;">✓ Confirmar Entrega</button>
             </form>
         </div>
     </div>
@@ -1023,81 +1131,23 @@
     </div>
 
     <script id="active-routes-json" type="application/json">
-    [
-        {% for route in my_active_routes %}
-        {
-            "id": "{{ route.id }}",
-            "status": "{{ route.get_status_display }}",
-            "optimized_path": "{{ route.optimized_path }}",
-            "vehicle": "{{ route.vehicle.brand_model }} ({{ route.vehicle.license_plate }})",
-            "orders": [
-                {% for order in route.orders.all %}
-                {
-                    "id": "{{ order.id }}",
-                    "origin": "{{ order.warehouse_location }}",
-                    "dest": "Armazém {{ order.requester.username }}",
-                    "culture": "{{ order.culture.name }}",
-                    "quantity": "{{ order.quantity_kg }}",
-                    "origin_lat": {% if order.harvest_origin.warehouse.latitude %}{{ order.harvest_origin.warehouse.latitude }}{% else %}null{% endif %},
-                    "origin_lon": {% if order.harvest_origin.warehouse.longitude %}{{ order.harvest_origin.warehouse.longitude }}{% else %}null{% endif %},
-                    "dest_lat": {% if order.destination_latitude %}{{ order.destination_latitude }}{% else %}null{% endif %},
-                    "dest_lon": {% if order.destination_longitude %}{{ order.destination_longitude }}{% else %}null{% endif %}
-                }{% if not forloop.last %},{% endif %}
-                {% endfor %}
-            ]
-        }{% if not forloop.last %},{% endif %}
-        {% endfor %}
-    ]
+    {{ active_routes_json_data|safe }}
     </script>
 
     <script>
-        // Helper to get location coordinates with deterministic hashing fallback for Portugal
-        function getLocationCoords(locName) {
-            const dict = {
-                'lisboa': [38.7223, -9.1393],
-                'porto': [41.1579, -8.6291],
-                'coimbra': [40.2033, -8.4103],
-                'faro': [37.0179, -7.9308],
-                'braga': [41.5454, -8.4265],
-                'évora': [38.5714, -7.9135],
-                'evora': [38.5714, -7.9135],
-                'santarém': [39.2362, -8.6814],
-                'santarem': [39.2362, -8.6814],
-                'leiria': [39.7438, -8.8078],
-                'viseu': [40.6566, -7.9125],
-                'castelo branco': [39.8222, -7.4909],
-                'bragança': [41.8058, -6.7572],
-                'braganca': [41.8058, -6.7572],
-                'guarda': [40.5365, -7.2684],
-                'portalegre': [39.2938, -7.4312],
-                'beja': [38.0153, -7.8652],
-                'vila real': [41.3010, -7.7422],
-                'viana do castelo': [41.6932, -8.8328],
-                'setúbal': [38.5244, -8.8882],
-                'setubal': [38.5244, -8.8882],
-                'aveiro': [40.6405, -8.6538]
-            };
-            const normalized = locName.toLowerCase().trim();
-            for (const key in dict) {
-                if (normalized.includes(key)) {
-                    return dict[key];
-                }
-            }
-            // Generate deterministic coordinate within Portugal based on string hash
-            let hash = 0;
-            for (let i = 0; i < normalized.length; i++) {
-                hash = normalized.charCodeAt(i) + ((hash << 5) - hash);
-            }
-            const lat = 37.5 + Math.abs((hash % 100) / 100) * 4.0; // 37.5 to 41.5
-            const lon = -9.0 + Math.abs(((hash >> 8) % 100) / 100) * 2.5; // -9.0 to -6.5
-            return [lat, lon];
-        }
-
-        // Initialize Leaflet Map
         let map;
+        let routeLayerGroups = {};
+        let allMapBounds = null;
+
         function initMap() {
             const mapContainer = document.getElementById('leaflet-map');
             if (!mapContainer) return;
+            
+            // Se o mapa já existir, remover para reinicializar limpo
+            if (map) {
+                map.remove();
+                map = null;
+            }
             
             map = L.map('leaflet-map').setView([39.5, -8.0], 7);
             
@@ -1105,82 +1155,204 @@
                 maxZoom: 18,
                 attribution: '© OpenStreetMap contributors'
             }).addTo(map);
+
+            routeLayerGroups = {};
             
-            // Load and plot active routes
             const routesDataEl = document.getElementById('active-routes-json');
-            if (routesDataEl) {
+            const routesBarEl = document.getElementById('map-routes-bar');
+            if (routesBarEl) routesBarEl.innerHTML = '';
+
+            if (routesDataEl && routesDataEl.textContent.trim()) {
                 try {
                     const routes = JSON.parse(routesDataEl.textContent);
-                    const colors = ['#00796b', '#1976D2', '#D32F2F', '#7B1FA2', '#F57C00', '#388E3C'];
-                    
+                    const colors = ['#00796b', '#1976D2', '#D32F2F', '#7B1FA2', '#F57C00', '#00897B'];
+                    const allMapPoints = [];
+
+                    if (!routes || routes.length === 0) {
+                        if (routesBarEl) {
+                            routesBarEl.innerHTML = '<span style="font-size:0.9em; color:#666; font-style:italic; padding: 6px 12px; background:#f5f5f5; border-radius:8px;">ℹ️ Nenhuma rota ou carga atribuída de momento. Aceite tarefas no separador Marketplace para as visualizar no mapa.</span>';
+                        }
+                        return;
+                    }
+
                     routes.forEach((route, idx) => {
                         const color = colors[idx % colors.length];
                         const routeCoords = [];
+                        const routeLayerGroup = L.featureGroup().addTo(map);
                         
-                        // Collect pickup coordinates
-                        route.orders.forEach(order => {
-                            let originLat = order.origin_lat;
-                            let originLon = order.origin_lon;
-                            if (!originLat || !originLon) {
-                                const resolved = getLocationCoords(order.origin);
-                                originLat = resolved[0];
-                                originLon = resolved[1];
-                            }
-                            const pickupCoord = [parseFloat(originLat), parseFloat(originLon)];
-                            routeCoords.push(pickupCoord);
-                            
-                            // Marker for origin
-                            L.circleMarker(pickupCoord, {
-                                radius: 8,
-                                fillColor: '#1976D2',
-                                color: '#0d47a1',
-                                weight: 2,
-                                opacity: 1,
-                                fillOpacity: 0.8
-                            }).addTo(map)
-                              .bindPopup(`<b>Recolha (Lote/Origem)</b><br>Local: ${order.origin}<br>Rota: Rota #${route.id}<br>Veículo: ${route.vehicle}<br>Produto: ${order.culture} (${order.quantity} Kg)`);
-                        });
-                        
-                        // Collect delivery coordinates
-                        route.orders.forEach(order => {
-                            let destLat = order.dest_lat;
-                            let destLon = order.dest_lon;
-                            if (!destLat || !destLon) {
-                                const resolved = getLocationCoords(order.dest);
-                                destLat = resolved[0];
-                                destLon = resolved[1];
-                            }
-                            const deliveryCoord = [parseFloat(destLat), parseFloat(destLon)];
-                            routeCoords.push(deliveryCoord);
-                            
-                            // Marker for destination
-                            L.circleMarker(deliveryCoord, {
-                                radius: 8,
-                                fillColor: '#388E3C',
-                                color: '#1b5e20',
-                                weight: 2,
-                                opacity: 1,
-                                fillOpacity: 0.8
-                            }).addTo(map)
-                              .bindPopup(`<b>Entrega (Destinatário)</b><br>Destino: ${order.dest}<br>Rota: Rota #${route.id}<br>Veículo: ${route.vehicle}<br>Produto: ${order.culture} (${order.quantity} Kg)`);
-                        });
-                        
-                        // Plot route line (polyline)
-                        if (routeCoords.length > 1) {
-                            const polyline = L.polyline(routeCoords, {
-                                color: color,
-                                weight: 4,
-                                opacity: 0.7,
-                                dashArray: '5, 10'
-                            }).addTo(map);
-                            
-                            polyline.bindPopup(`<b>Rota Otimizada #${route.id}</b><br>Estado: ${route.status}<br>Veículo: ${route.vehicle}<br>Caminho: ${route.optimized_path}`);
+                        // Criar botão/chip interativo na barra de rotas
+                        if (routesBarEl) {
+                            const btn = document.createElement('button');
+                            btn.type = 'button';
+                            btn.className = 'route-chip-btn';
+                            btn.style.cssText = `background: white; border: 2px solid ${color}; color: ${color}; padding: 6px 14px; border-radius: 20px; font-size: 0.85em; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: all 0.2s ease;`;
+                            btn.innerHTML = `<span style="width: 10px; height: 10px; border-radius: 50%; background: ${color}; display: inline-block;"></span> ${route.display_id} (${route.total_weight_kg} Kg)`;
+                            btn.onmouseover = () => { btn.style.background = color; btn.style.color = '#ffffff'; };
+                            btn.onmouseout = () => { btn.style.background = '#ffffff'; btn.style.color = color; };
+                            btn.onclick = () => focusRouteOnMap(route.id);
+                            routesBarEl.appendChild(btn);
                         }
+
+                        // 1. Processar pontos de Recolha (Origem)
+                        if (route.orders && route.orders.length > 0) {
+                            route.orders.forEach(order => {
+                                if (order.origin_lat && order.origin_lon) {
+                                    const pickupCoord = [parseFloat(order.origin_lat), parseFloat(order.origin_lon)];
+                                    routeCoords.push(pickupCoord);
+                                    allMapPoints.push(pickupCoord);
+
+                                    const marker = L.circleMarker(pickupCoord, {
+                                        radius: 9,
+                                        fillColor: '#1976D2',
+                                        color: '#ffffff',
+                                        weight: 2.5,
+                                        opacity: 1,
+                                        fillOpacity: 0.95
+                                    }).addTo(routeLayerGroup);
+
+                                    marker.bindPopup(`
+                                        <div style="font-family: inherit; font-size: 0.9em; min-width: 220px;">
+                                            <div style="background: #1976D2; color: white; padding: 6px 10px; border-radius: 6px 6px 0 0; margin: -10px -10px 8px -10px; font-weight: bold;">
+                                                📦 Ponto de Recolha (Origem)
+                                            </div>
+                                            <p style="margin: 3px 0;"><strong>${route.display_id}:</strong> <span style="color:#00796b; font-weight:bold;">${route.status}</span></p>
+                                            <p style="margin: 3px 0;"><strong>Local:</strong> ${order.origin}</p>
+                                            <p style="margin: 3px 0;"><strong>Veículo:</strong> ${route.vehicle}</p>
+                                            <p style="margin: 3px 0; color: #00796b;"><strong>Carga:</strong> ${order.culture} — ${order.quantity} Kg <span style="font-size:0.85em;">(~${order.pallets} Paletes / ${order.crates} Grades)</span></p>
+                                        </div>
+                                    `);
+                                }
+                            });
+
+                            // 2. Processar pontos de Entrega (Destino)
+                            route.orders.forEach(order => {
+                                if (order.dest_lat && order.dest_lon) {
+                                    const deliveryCoord = [parseFloat(order.dest_lat), parseFloat(order.dest_lon)];
+                                    routeCoords.push(deliveryCoord);
+                                    allMapPoints.push(deliveryCoord);
+
+                                    const marker = L.circleMarker(deliveryCoord, {
+                                        radius: 9,
+                                        fillColor: '#2e7d32',
+                                        color: '#ffffff',
+                                        weight: 2.5,
+                                        opacity: 1,
+                                        fillOpacity: 0.95
+                                    }).addTo(routeLayerGroup);
+
+                                    marker.bindPopup(`
+                                        <div style="font-family: inherit; font-size: 0.9em; min-width: 220px;">
+                                            <div style="background: #2e7d32; color: white; padding: 6px 10px; border-radius: 6px 6px 0 0; margin: -10px -10px 8px -10px; font-weight: bold;">
+                                                🏁 Ponto de Entrega (Destino)
+                                            </div>
+                                            <p style="margin: 3px 0;"><strong>${route.display_id}:</strong> <span style="color:#00796b; font-weight:bold;">${route.status}</span></p>
+                                            <p style="margin: 3px 0;"><strong>Destinatário:</strong> ${order.dest}</p>
+                                            <p style="margin: 3px 0;"><strong>Veículo:</strong> ${route.vehicle}</p>
+                                            <p style="margin: 3px 0; color: #00796b;"><strong>Mercadoria:</strong> ${order.culture} — ${order.quantity} Kg</p>
+                                        </div>
+                                    `);
+                                }
+                            });
+                        }
+
+                        // 3. Traçar percurso rodoviário com OSRM e fallback
+                        if (routeCoords.length > 1) {
+                            const osrmCoords = routeCoords.map(c => `${c[1]},${c[0]}`).join(';');
+                            const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${osrmCoords}?overview=full&geometries=geojson`;
+
+                            fetch(osrmUrl)
+                                .then(response => {
+                                    if (!response.ok) throw new Error('OSRM network error');
+                                    return response.json();
+                                })
+                                .then(data => {
+                                    if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+                                        const routeGeo = data.routes[0];
+                                        const roadLatLngs = routeGeo.geometry.coordinates.map(c => [c[1], c[0]]);
+                                        
+                                        const roadPolyline = L.polyline(roadLatLngs, {
+                                            color: color,
+                                            weight: 5,
+                                            opacity: 0.85,
+                                            lineJoin: 'round'
+                                        }).addTo(routeLayerGroup);
+                                        
+                                        const distanceKm = (routeGeo.distance / 1000).toFixed(1);
+                                        const durationMin = Math.round(routeGeo.duration / 60);
+                                        
+                                        roadPolyline.bindPopup(`
+                                            <div style="font-family:inherit; min-width:220px;">
+                                                <div style="background:${color}; color:white; padding:6px 10px; border-radius:6px 6px 0 0; margin:-10px -10px 8px -10px; font-weight:bold;">
+                                                    🛣️ ${route.display_id} — Trajeto Rodoviário
+                                                </div>
+                                                <p style="margin:3px 0;"><strong>Estado:</strong> ${route.status}</p>
+                                                <p style="margin:3px 0;"><strong>Veículo:</strong> ${route.vehicle}</p>
+                                                <p style="margin:3px 0;"><strong>Distância Real:</strong> <span style="color:#00796b; font-weight:bold;">${distanceKm} km</span></p>
+                                                <p style="margin:3px 0;"><strong>Tempo Estimado:</strong> <span style="color:#1976D2; font-weight:bold;">${durationMin} min</span></p>
+                                                <p style="margin:3px 0;"><strong>Peso Total:</strong> ${route.total_weight_kg} Kg (~${route.total_pallets} Paletes / ${route.total_crates} Grades)</p>
+                                                <div style="margin-top:6px; font-size:0.8em; color:#555; font-family:monospace; background:#f5f5f5; padding:6px; border-radius:4px; max-height:60px; overflow-y:auto;">
+                                                    ${route.optimized_path || 'Percurso Direto'}
+                                                </div>
+                                            </div>
+                                        `);
+                                    } else {
+                                        drawFallbackLine(routeCoords, route, color, routeLayerGroup);
+                                    }
+                                })
+                                .catch(err => {
+                                    drawFallbackLine(routeCoords, route, color, routeLayerGroup);
+                                });
+                        }
+
+                        routeLayerGroups[route.id] = routeLayerGroup;
                     });
+
+                    function drawFallbackLine(coords, route, col, group) {
+                        const fallback = L.polyline(coords, {
+                            color: col,
+                            weight: 4,
+                            opacity: 0.8,
+                            dashArray: '6, 8'
+                        }).addTo(group);
+                        fallback.bindPopup(`
+                            <div style="font-family:inherit; min-width:200px;">
+                                <h4 style="margin:0 0 6px 0; color:#004d40;">🛣️ ${route.display_id} (Linha Direta)</h4>
+                                <p style="margin:3px 0;"><strong>Estado:</strong> ${route.status}</p>
+                                <p style="margin:3px 0;"><strong>Veículo:</strong> ${route.vehicle}</p>
+                                <p style="margin:3px 0;"><strong>Peso:</strong> ${route.total_weight_kg} Kg</p>
+                            </div>
+                        `);
+                    }
+
+                    if (allMapPoints.length > 0) {
+                        allMapBounds = L.latLngBounds(allMapPoints);
+                        map.fitBounds(allMapBounds, { padding: [50, 50], maxZoom: 13 });
+                    }
                 } catch(e) {
                     console.error("Erro ao processar dados de rotas no mapa: ", e);
                 }
             }
+        }
+
+        function fitAllRoutes() {
+            if (map && allMapBounds && allMapBounds.isValid()) {
+                map.fitBounds(allMapBounds, { padding: [50, 50], maxZoom: 13 });
+            }
+        }
+
+        function focusRouteOnMap(routeId) {
+            switchSidebarTab('home-view');
+            setTimeout(() => {
+                if (map) {
+                    map.invalidateSize();
+                    const group = routeLayerGroups[routeId];
+                    if (group && group.getBounds && group.getBounds().isValid()) {
+                        map.fitBounds(group.getBounds(), { padding: [60, 60], maxZoom: 14 });
+                    } else if (allMapBounds && allMapBounds.isValid()) {
+                        map.fitBounds(allMapBounds, { padding: [50, 50], maxZoom: 13 });
+                    }
+                }
+            }, 250);
         }
 
         function switchSidebarTab(tabId) {
@@ -1196,13 +1368,17 @@
                 if (tabId === 'home-view' && map) {
                     setTimeout(() => {
                         map.invalidateSize();
+                        if (allMapBounds && allMapBounds.isValid()) {
+                            map.fitBounds(allMapBounds, { padding: [50, 50], maxZoom: 13 });
+                        }
                     }, 200);
                 }
             }
 
             document.querySelectorAll('.menu-item').forEach(item => {
                 item.classList.remove('active');
-                if (item.getAttribute('onclick').includes(tabId)) {
+                const onclickVal = item.getAttribute('onclick') || '';
+                if (onclickVal.includes(tabId)) {
                     item.classList.add('active');
                 }
             });
@@ -1214,11 +1390,6 @@
 
         function closeProfileModal() {
             document.getElementById('profileModal').style.display = "none";
-        }
-
-        function openPlanModal(orderId) {
-            document.getElementById('plan_order_id').value = orderId;
-            document.getElementById('planModal').style.display = "block";
         }
 
         function openDeliveryModal(orderId) {
@@ -1233,12 +1404,10 @@
 
         window.onclick = function (event) {
             let modalProfile = document.getElementById('profileModal');
-            let modalPlan = document.getElementById('planModal');
             let modalDelivery = document.getElementById('deliveryModal');
             let modalPickup = document.getElementById('pickupModal');
             
             if (event.target === modalProfile) { closeProfileModal(); }
-            if (event.target === modalPlan) { modalPlan.style.display = "none"; }
             if (event.target === modalDelivery) { modalDelivery.style.display = "none"; }
             if (event.target === modalPickup) { modalPickup.style.display = "none"; }
         }

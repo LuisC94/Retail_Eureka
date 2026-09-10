@@ -1,0 +1,1670 @@
+======================================================
+
+       SIMULAÇÃO E COMPARAÇÃO DE MODELOS              
+
+======================================================
+
+SKU: 3_586
+
+Excel Path: /app/Dados/m5_foods_3_586.xlsx
+
+2026-07-30 22:43:42.474 | INFO     | environment_constrained:__init__:127 - Environment Constrained initialized in TESTING Mode: 777 days. Max Order Limit: 133.0
+
+2026-07-30 22:43:42.523 | INFO     | environment_constrained:__init__:127 - Environment Constrained initialized in TESTING Mode: 777 days. Max Order Limit: 133.0
+
+2026-07-30 22:43:42.571 | INFO     | environment_constrained:__init__:127 - Environment Constrained initialized in TESTING Mode: 777 days. Max Order Limit: 133.0
+
+2026-07-30 22:43:42.619 | INFO     | environment_constrained:__init__:127 - Environment Constrained initialized in TESTING Mode: 777 days. Max Order Limit: 133.0
+
+2026-07-30 22:43:42.710 | INFO     | environment_constrained:__init__:127 - Environment Constrained initialized in TESTING Mode: 777 days. Max Order Limit: 133.0
+
+2026-07-30 22:43:42.758 | INFO     | environment_constrained:__init__:127 - Environment Constrained initialized in TESTING Mode: 777 days. Max Order Limit: 133.0
+
+2026-07-30 22:43:42.806 | INFO     | environment_constrained:__init__:127 - Environment Constrained initialized in TESTING Mode: 777 days. Max Order Limit: 133.0
+
+2026-07-30 22:43:42.854 | INFO     | environment_constrained:__init__:127 - Environment Constrained initialized in TESTING Mode: 777 days. Max Order Limit: 133.0
+
+2026-07-30 22:43:42.902 | INFO     | environment_constrained:__init__:127 - Environment Constrained initialized in TESTING Mode: 777 days. Max Order Limit: 133.0
+
+Limite Máximo de Encomenda Diária (Constrained): 133.0 un
+
+[LOAD] A carregar Modelo A (PPO) de: /app/3_586/PPO_Limitado_3_586/ppo_constrained_final
+
+[OK] Modelo A carregado.
+
+[OK] Estatísticas Z-Score do Modelo A carregadas.
+
+[LOAD] A carregar Modelo B (Agregador) de: /app/3_586/PPO_Agregador_Transition_3_586/ppo_transition_iter313
+
+[OK] Modelo B carregado.
+
+[OK] Estatísticas Z-Score do Modelo B carregadas.
+
+[LOAD] A carregar Modelo Gamma 0.95 de: /app/3_586/PPO_Sem_Limites_Gamma095_3_586/ppo_completely_unconstrained_final
+
+[OK] Modelo Gamma 0.95 carregado.
+
+[LOAD] A carregar Modelo Gamma 0.8 de: /app/3_586/PPO_Sem_Limites_3_586/ppo_completely_unconstrained_final
+
+[OK] Modelo Gamma 0.8 carregado.
+
+[LOAD] A carregar Modelo Limitado Gamma 0.95 de: /app/3_586/PPO_Limitado_Gamma095_3_586/ppo_constrained_final
+
+[OK] Modelo Limitado Gamma 0.95 carregado.
+
+[OK] Min-Max Baseline Config: s=100, S=250
+
+A iniciar a simulação diária comparativa...
+
+[Dia 000] Ação Encomenda -> PPO: 000 | Agregador (Elite): 087 || Lucro Diário -> PPO: 70.5€ | Agregador: -38.2€
+
+[Dia 001] Ação Encomenda -> PPO: 000 | Agregador (Elite): 023 || Lucro Diário -> PPO: 43.2€ | Agregador: -62.6€
+
+[Dia 002] Ação Encomenda -> PPO: 062 | Agregador (Elite): 040 || Lucro Diário -> PPO: -79.3€ | Agregador: -41.4€
+
+[Dia 003] Ação Encomenda -> PPO: 000 | Agregador (Elite): 097 || Lucro Diário -> PPO: 38.0€ | Agregador: -74.6€
+
+[Dia 004] Ação Encomenda -> PPO: 000 | Agregador (Elite): 011 || Lucro Diário -> PPO: 53.6€ | Agregador: -54.3€
+
+[Dia 005] Ação Encomenda -> PPO: 108 | Agregador (Elite): 000 || Lucro Diário -> PPO: -234.5€ | Agregador: 81.8€
+
+[Dia 006] Ação Encomenda -> PPO: 005 | Agregador (Elite): 000 || Lucro Diário -> PPO: -15.7€ | Agregador: 84.0€
+
+[Dia 007] Ação Encomenda -> PPO: 014 | Agregador (Elite): 000 || Lucro Diário -> PPO: -40.5€ | Agregador: 60.3€
+
+[Dia 008] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 40.8€ | Agregador: 40.8€
+
+[Dia 009] Ação Encomenda -> PPO: 090 | Agregador (Elite): 011 || Lucro Diário -> PPO: -114.9€ | Agregador: -105.0€
+
+[Dia 010] Ação Encomenda -> PPO: 000 | Agregador (Elite): 017 || Lucro Diário -> PPO: 67.7€ | Agregador: -105.3€
+
+[Dia 011] Ação Encomenda -> PPO: 008 | Agregador (Elite): 000 || Lucro Diário -> PPO: -40.4€ | Agregador: 3.2€
+
+[Dia 012] Ação Encomenda -> PPO: 038 | Agregador (Elite): 000 || Lucro Diário -> PPO: -118.4€ | Agregador: -30.4€
+
+[Dia 013] Ação Encomenda -> PPO: 010 | Agregador (Elite): 000 || Lucro Diário -> PPO: -57.2€ | Agregador: -31.2€
+
+[Dia 014] Ação Encomenda -> PPO: 030 | Agregador (Elite): 203 || Lucro Diário -> PPO: -114.1€ | Agregador: -351.1€
+
+[Dia 015] Ação Encomenda -> PPO: 133 | Agregador (Elite): 000 || Lucro Diário -> PPO: -175.6€ | Agregador: 30.8€
+
+[Dia 016] Ação Encomenda -> PPO: 000 | Agregador (Elite): 097 || Lucro Diário -> PPO: 44.7€ | Agregador: -66.6€
+
+[Dia 017] Ação Encomenda -> PPO: 000 | Agregador (Elite): 058 || Lucro Diário -> PPO: 37.8€ | Agregador: -73.5€
+
+[Dia 018] Ação Encomenda -> PPO: 005 | Agregador (Elite): 000 || Lucro Diário -> PPO: -42.2€ | Agregador: 50.5€
+
+[Dia 019] Ação Encomenda -> PPO: 029 | Agregador (Elite): 027 || Lucro Diário -> PPO: -53.0€ | Agregador: -60.4€
+
+[Dia 020] Ação Encomenda -> PPO: 051 | Agregador (Elite): 005 || Lucro Diário -> PPO: -42.1€ | Agregador: -45.1€
+
+[Dia 021] Ação Encomenda -> PPO: 000 | Agregador (Elite): 020 || Lucro Diário -> PPO: 44.7€ | Agregador: -63.0€
+
+[Dia 022] Ação Encomenda -> PPO: 000 | Agregador (Elite): 045 || Lucro Diário -> PPO: 34.4€ | Agregador: -58.6€
+
+[Dia 023] Ação Encomenda -> PPO: 000 | Agregador (Elite): 027 || Lucro Diário -> PPO: -21.3€ | Agregador: -55.7€
+
+[Dia 024] Ação Encomenda -> PPO: 053 | Agregador (Elite): 001 || Lucro Diário -> PPO: -127.8€ | Agregador: -48.0€
+
+[Dia 025] Ação Encomenda -> PPO: 093 | Agregador (Elite): 064 || Lucro Diário -> PPO: -36.9€ | Agregador: -38.2€
+
+[Dia 026] Ação Encomenda -> PPO: 000 | Agregador (Elite): 021 || Lucro Diário -> PPO: 67.3€ | Agregador: -37.9€
+
+[Dia 027] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 70.7€ | Agregador: 66.7€
+
+[Dia 028] Ação Encomenda -> PPO: 019 | Agregador (Elite): 053 || Lucro Diário -> PPO: -102.3€ | Agregador: -51.3€
+
+[Dia 029] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 19.8€ | Agregador: 35.5€
+
+[Dia 030] Ação Encomenda -> PPO: 015 | Agregador (Elite): 039 || Lucro Diário -> PPO: -123.6€ | Agregador: -49.6€
+
+[Dia 031] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 7.5€ | Agregador: 54.2€
+
+[Dia 032] Ação Encomenda -> PPO: 000 | Agregador (Elite): 104 || Lucro Diário -> PPO: -19.8€ | Agregador: -164.5€
+
+[Dia 033] Ação Encomenda -> PPO: 000 | Agregador (Elite): 020 || Lucro Diário -> PPO: -23.3€ | Agregador: -44.5€
+
+[Dia 034] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -30.4€ | Agregador: 87.4€
+
+[Dia 035] Ação Encomenda -> PPO: 054 | Agregador (Elite): 000 || Lucro Diário -> PPO: -129.1€ | Agregador: 62.2€
+
+[Dia 036] Ação Encomenda -> PPO: 051 | Agregador (Elite): 000 || Lucro Diário -> PPO: -53.8€ | Agregador: 30.4€
+
+[Dia 037] Ação Encomenda -> PPO: 013 | Agregador (Elite): 000 || Lucro Diário -> PPO: -52.3€ | Agregador: -20.5€
+
+[Dia 038] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 59.4€ | Agregador: -22.9€
+
+[Dia 039] Ação Encomenda -> PPO: 000 | Agregador (Elite): 021 || Lucro Diário -> PPO: 5.5€ | Agregador: -126.2€
+
+[Dia 040] Ação Encomenda -> PPO: 001 | Agregador (Elite): 000 || Lucro Diário -> PPO: -122.2€ | Agregador: 19.4€
+
+[Dia 041] Ação Encomenda -> PPO: 000 | Agregador (Elite): 070 || Lucro Diário -> PPO: -24.1€ | Agregador: -133.1€
+
+[Dia 042] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -24.9€ | Agregador: 66.9€
+
+[Dia 043] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -17.8€ | Agregador: 39.4€
+
+[Dia 044] Ação Encomenda -> PPO: 027 | Agregador (Elite): 046 || Lucro Diário -> PPO: -119.7€ | Agregador: -117.6€
+
+[Dia 045] Ação Encomenda -> PPO: 087 | Agregador (Elite): 000 || Lucro Diário -> PPO: -72.5€ | Agregador: 35.4€
+
+[Dia 046] Ação Encomenda -> PPO: 000 | Agregador (Elite): 083 || Lucro Diário -> PPO: 59.5€ | Agregador: -86.2€
+
+[Dia 047] Ação Encomenda -> PPO: 000 | Agregador (Elite): 034 || Lucro Diário -> PPO: 62.7€ | Agregador: -41.9€
+
+[Dia 048] Ação Encomenda -> PPO: 075 | Agregador (Elite): 000 || Lucro Diário -> PPO: -110.3€ | Agregador: 73.1€
+
+[Dia 049] Ação Encomenda -> PPO: 000 | Agregador (Elite): 066 || Lucro Diário -> PPO: 73.1€ | Agregador: -73.8€
+
+[Dia 050] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 35.9€ | Agregador: 44.3€
+
+[Dia 051] Ação Encomenda -> PPO: 067 | Agregador (Elite): 000 || Lucro Diário -> PPO: -121.3€ | Agregador: 26.1€
+
+[Dia 052] Ação Encomenda -> PPO: 006 | Agregador (Elite): 000 || Lucro Diário -> PPO: -56.3€ | Agregador: 20.1€
+
+[Dia 053] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 61.2€ | Agregador: -25.7€
+
+[Dia 054] Ação Encomenda -> PPO: 073 | Agregador (Elite): 013 || Lucro Diário -> PPO: -134.6€ | Agregador: -128.6€
+
+[Dia 055] Ação Encomenda -> PPO: 000 | Agregador (Elite): 018 || Lucro Diário -> PPO: 99.1€ | Agregador: -108.9€
+
+[Dia 056] Ação Encomenda -> PPO: 133 | Agregador (Elite): 000 || Lucro Diário -> PPO: -217.6€ | Agregador: 11.5€
+
+[Dia 057] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 41.7€ | Agregador: -19.4€
+
+[Dia 058] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 60.6€ | Agregador: -23.7€
+
+[Dia 059] Ação Encomenda -> PPO: 125 | Agregador (Elite): 000 || Lucro Diário -> PPO: -147.0€ | Agregador: -24.5€
+
+[Dia 060] Ação Encomenda -> PPO: 000 | Agregador (Elite): 021 || Lucro Diário -> PPO: 50.8€ | Agregador: -123.8€
+
+[Dia 061] Ação Encomenda -> PPO: 000 | Agregador (Elite): 004 || Lucro Diário -> PPO: 74.9€ | Agregador: -86.2€
+
+[Dia 062] Ação Encomenda -> PPO: 072 | Agregador (Elite): 000 || Lucro Diário -> PPO: -18.7€ | Agregador: -28.0€
+
+[Dia 063] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 84.6€ | Agregador: -29.2€
+
+[Dia 064] Ação Encomenda -> PPO: 060 | Agregador (Elite): 000 || Lucro Diário -> PPO: -88.6€ | Agregador: -18.2€
+
+[Dia 065] Ação Encomenda -> PPO: 009 | Agregador (Elite): 000 || Lucro Diário -> PPO: -38.5€ | Agregador: -23.7€
+
+[Dia 066] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 32.0€ | Agregador: -25.3€
+
+[Dia 067] Ação Encomenda -> PPO: 000 | Agregador (Elite): 009 || Lucro Diário -> PPO: -32.0€ | Agregador: -132.9€
+
+[Dia 068] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -33.2€ | Agregador: -15.4€
+
+[Dia 069] Ação Encomenda -> PPO: 047 | Agregador (Elite): 024 || Lucro Diário -> PPO: -126.4€ | Agregador: -124.1€
+
+[Dia 070] Ação Encomenda -> PPO: 000 | Agregador (Elite): 069 || Lucro Diário -> PPO: 46.7€ | Agregador: -79.3€
+
+[Dia 071] Ação Encomenda -> PPO: 000 | Agregador (Elite): 009 || Lucro Diário -> PPO: 13.4€ | Agregador: -53.4€
+
+[Dia 072] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -23.3€ | Agregador: 61.3€
+
+[Dia 073] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -24.1€ | Agregador: -8.3€
+
+[Dia 074] Ação Encomenda -> PPO: 078 | Agregador (Elite): 006 || Lucro Diário -> PPO: -135.8€ | Agregador: -128.6€
+
+[Dia 075] Ação Encomenda -> PPO: 000 | Agregador (Elite): 049 || Lucro Diário -> PPO: 71.4€ | Agregador: -119.1€
+
+[Dia 076] Ação Encomenda -> PPO: 089 | Agregador (Elite): 000 || Lucro Diário -> PPO: -77.3€ | Agregador: 65.2€
+
+[Dia 077] Ação Encomenda -> PPO: 000 | Agregador (Elite): 003 || Lucro Diário -> PPO: 67.7€ | Agregador: -125.6€
+
+[Dia 078] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 43.6€ | Agregador: -13.0€
+
+[Dia 079] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 11.5€ | Agregador: -22.1€
+
+[Dia 080] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -24.5€ | Agregador: -24.5€
+
+[Dia 081] Ação Encomenda -> PPO: 021 | Agregador (Elite): 000 || Lucro Diário -> PPO: -123.8€ | Agregador: -21.7€
+
+[Dia 082] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 14.6€ | Agregador: -26.9€
+
+[Dia 083] Ação Encomenda -> PPO: 000 | Agregador (Elite): 043 || Lucro Diário -> PPO: -38.7€ | Agregador: -143.0€
+
+[Dia 084] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -24.1€ | Agregador: 64.7€
+
+[Dia 085] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -22.9€ | Agregador: -19.0€
+
+[Dia 086] Ação Encomenda -> PPO: 000 | Agregador (Elite): 053 || Lucro Diário -> PPO: -26.1€ | Agregador: -131.4€
+
+[Dia 087] Ação Encomenda -> PPO: 039 | Agregador (Elite): 064 || Lucro Diário -> PPO: -131.2€ | Agregador: -29.1€
+
+[Dia 088] Ação Encomenda -> PPO: 000 | Agregador (Elite): 066 || Lucro Diário -> PPO: 41.9€ | Agregador: -7.5€
+
+[Dia 089] Ação Encomenda -> PPO: 017 | Agregador (Elite): 017 || Lucro Diário -> PPO: -129.0€ | Agregador: -25.0€
+
+[Dia 090] Ação Encomenda -> PPO: 058 | Agregador (Elite): 000 || Lucro Diário -> PPO: -111.7€ | Agregador: 27.6€
+
+[Dia 091] Ação Encomenda -> PPO: 000 | Agregador (Elite): 046 || Lucro Diário -> PPO: 77.1€ | Agregador: -131.9€
+
+[Dia 092] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -9.1€ | Agregador: 64.0€
+
+[Dia 093] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -29.6€ | Agregador: -29.6€
+
+[Dia 094] Ação Encomenda -> PPO: 005 | Agregador (Elite): 012 || Lucro Diário -> PPO: -124.6€ | Agregador: -125.3€
+
+[Dia 095] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -22.1€ | Agregador: -8.3€
+
+[Dia 096] Ação Encomenda -> PPO: 000 | Agregador (Elite): 039 || Lucro Diário -> PPO: -32.8€ | Agregador: -136.7€
+
+[Dia 097] Ação Encomenda -> PPO: 000 | Agregador (Elite): 048 || Lucro Diário -> PPO: -39.9€ | Agregador: -67.7€
+
+[Dia 098] Ação Encomenda -> PPO: 000 | Agregador (Elite): 004 || Lucro Diário -> PPO: -30.8€ | Agregador: -36.4€
+
+[Dia 099] Ação Encomenda -> PPO: 000 | Agregador (Elite): 118 || Lucro Diário -> PPO: -25.7€ | Agregador: -229.6€
+
+[Dia 100] Ação Encomenda -> PPO: 000 | Agregador (Elite): 061 || Lucro Diário -> PPO: -21.3€ | Agregador: -55.7€
+
+[Dia 101] Ação Encomenda -> PPO: 133 | Agregador (Elite): 000 || Lucro Diário -> PPO: -241.7€ | Agregador: 78.4€
+
+[Dia 102] Ação Encomenda -> PPO: 035 | Agregador (Elite): 000 || Lucro Diário -> PPO: -3.5€ | Agregador: 101.6€
+
+[Dia 103] Ação Encomenda -> PPO: 108 | Agregador (Elite): 000 || Lucro Diário -> PPO: -77.2€ | Agregador: 13.8€
+
+[Dia 104] Ação Encomenda -> PPO: 004 | Agregador (Elite): 000 || Lucro Diário -> PPO: 42.0€ | Agregador: -43.8€
+
+[Dia 105] Ação Encomenda -> PPO: 045 | Agregador (Elite): 115 || Lucro Diário -> PPO: -54.3€ | Agregador: -238.4€
+
+[Dia 106] Ação Encomenda -> PPO: 000 | Agregador (Elite): 062 || Lucro Diário -> PPO: 48.4€ | Agregador: -60.6€
+
+[Dia 107] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -5.5€ | Agregador: 97.8€
+
+[Dia 108] Ação Encomenda -> PPO: 000 | Agregador (Elite): 005 || Lucro Diário -> PPO: -32.0€ | Agregador: -5.0€
+
+[Dia 109] Ação Encomenda -> PPO: 021 | Agregador (Elite): 015 || Lucro Diário -> PPO: -115.5€ | Agregador: -79.9€
+
+[Dia 110] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 4.2€ | Agregador: 16.8€
+
+[Dia 111] Ação Encomenda -> PPO: 000 | Agregador (Elite): 032 || Lucro Diário -> PPO: -39.5€ | Agregador: -142.7€
+
+[Dia 112] Ação Encomenda -> PPO: 000 | Agregador (Elite): 025 || Lucro Diário -> PPO: -31.9€ | Agregador: -67.2€
+
+[Dia 113] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -32.8€ | Agregador: 19.7€
+
+[Dia 114] Ação Encomenda -> PPO: 000 | Agregador (Elite): 056 || Lucro Diário -> PPO: -38.6€ | Agregador: -144.2€
+
+[Dia 115] Ação Encomenda -> PPO: 007 | Agregador (Elite): 000 || Lucro Diário -> PPO: -134.7€ | Agregador: 83.6€
+
+[Dia 116] Ação Encomenda -> PPO: 003 | Agregador (Elite): 018 || Lucro Diário -> PPO: -126.8€ | Agregador: -143.0€
+
+[Dia 117] Ação Encomenda -> PPO: 008 | Agregador (Elite): 008 || Lucro Diário -> PPO: -144.1€ | Agregador: -112.6€
+
+[Dia 118] Ação Encomenda -> PPO: 009 | Agregador (Elite): 018 || Lucro Diário -> PPO: -132.8€ | Agregador: -133.7€
+
+[Dia 119] Ação Encomenda -> PPO: 000 | Agregador (Elite): 019 || Lucro Diário -> PPO: -8.8€ | Agregador: -91.8€
+
+[Dia 120] Ação Encomenda -> PPO: 004 | Agregador (Elite): 036 || Lucro Diário -> PPO: -122.7€ | Agregador: -86.0€
+
+[Dia 121] Ação Encomenda -> PPO: 000 | Agregador (Elite): 002 || Lucro Diário -> PPO: -19.7€ | Agregador: -52.7€
+
+[Dia 122] Ação Encomenda -> PPO: 000 | Agregador (Elite): 101 || Lucro Diário -> PPO: -27.3€ | Agregador: -233.2€
+
+[Dia 123] Ação Encomenda -> PPO: 000 | Agregador (Elite): 035 || Lucro Diário -> PPO: -27.7€ | Agregador: -28.4€
+
+[Dia 124] Ação Encomenda -> PPO: 000 | Agregador (Elite): 063 || Lucro Diário -> PPO: -39.1€ | Agregador: 15.7€
+
+[Dia 125] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -52.9€ | Agregador: 115.1€
+
+[Dia 126] Ação Encomenda -> PPO: 031 | Agregador (Elite): 049 || Lucro Diário -> PPO: -136.7€ | Agregador: -138.5€
+
+[Dia 127] Ação Encomenda -> PPO: 004 | Agregador (Elite): 000 || Lucro Diário -> PPO: -65.1€ | Agregador: 73.1€
+
+[Dia 128] Ação Encomenda -> PPO: 089 | Agregador (Elite): 009 || Lucro Diário -> PPO: -131.6€ | Agregador: -132.0€
+
+[Dia 129] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 91.0€ | Agregador: -12.6€
+
+[Dia 130] Ação Encomenda -> PPO: 075 | Agregador (Elite): 044 || Lucro Diário -> PPO: -72.2€ | Agregador: -140.5€
+
+[Dia 131] Ação Encomenda -> PPO: 000 | Agregador (Elite): 004 || Lucro Diário -> PPO: 112.1€ | Agregador: -53.4€
+
+[Dia 132] Ação Encomenda -> PPO: 057 | Agregador (Elite): 000 || Lucro Diário -> PPO: -152.7€ | Agregador: -38.6€
+
+[Dia 133] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 86.1€ | Agregador: -33.6€
+
+[Dia 134] Ação Encomenda -> PPO: 000 | Agregador (Elite): 006 || Lucro Diário -> PPO: -25.6€ | Agregador: -126.2€
+
+[Dia 135] Ação Encomenda -> PPO: 039 | Agregador (Elite): 000 || Lucro Diário -> PPO: -128.7€ | Agregador: -12.2€
+
+[Dia 136] Ação Encomenda -> PPO: 057 | Agregador (Elite): 000 || Lucro Diário -> PPO: -48.8€ | Agregador: -22.7€
+
+[Dia 137] Ação Encomenda -> PPO: 057 | Agregador (Elite): 000 || Lucro Diário -> PPO: -17.0€ | Agregador: -30.7€
+
+[Dia 138] Ação Encomenda -> PPO: 023 | Agregador (Elite): 034 || Lucro Diário -> PPO: -2.3€ | Agregador: -142.0€
+
+[Dia 139] Ação Encomenda -> PPO: 011 | Agregador (Elite): 000 || Lucro Diário -> PPO: -96.9€ | Agregador: 27.3€
+
+[Dia 140] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 3.4€ | Agregador: -19.7€
+
+[Dia 141] Ação Encomenda -> PPO: 012 | Agregador (Elite): 078 || Lucro Diário -> PPO: -131.9€ | Agregador: -138.5€
+
+[Dia 142] Ação Encomenda -> PPO: 002 | Agregador (Elite): 000 || Lucro Diário -> PPO: -98.1€ | Agregador: 57.1€
+
+[Dia 143] Ação Encomenda -> PPO: 000 | Agregador (Elite): 041 || Lucro Diário -> PPO: -23.1€ | Agregador: -41.1€
+
+[Dia 144] Ação Encomenda -> PPO: 000 | Agregador (Elite): 067 || Lucro Diário -> PPO: -31.1€ | Agregador: -51.7€
+
+[Dia 145] Ação Encomenda -> PPO: 000 | Agregador (Elite): 037 || Lucro Diário -> PPO: -36.1€ | Agregador: 7.1€
+
+[Dia 146] Ação Encomenda -> PPO: 000 | Agregador (Elite): 025 || Lucro Diário -> PPO: -40.3€ | Agregador: -63.0€
+
+[Dia 147] Ação Encomenda -> PPO: 108 | Agregador (Elite): 000 || Lucro Diário -> PPO: -247.8€ | Agregador: 15.5€
+
+[Dia 148] Ação Encomenda -> PPO: 000 | Agregador (Elite): 003 || Lucro Diário -> PPO: 64.5€ | Agregador: -125.5€
+
+[Dia 149] Ação Encomenda -> PPO: 004 | Agregador (Elite): 075 || Lucro Diário -> PPO: -55.0€ | Agregador: -121.4€
+
+[Dia 150] Ação Encomenda -> PPO: 080 | Agregador (Elite): 043 || Lucro Diário -> PPO: -44.4€ | Agregador: -41.9€
+
+[Dia 151] Ação Encomenda -> PPO: 030 | Agregador (Elite): 044 || Lucro Diário -> PPO: -20.4€ | Agregador: -21.6€
+
+[Dia 152] Ação Encomenda -> PPO: 000 | Agregador (Elite): 044 || Lucro Diário -> PPO: 105.7€ | Agregador: 1.0€
+
+[Dia 153] Ação Encomenda -> PPO: 045 | Agregador (Elite): 006 || Lucro Diário -> PPO: -136.4€ | Agregador: -23.3€
+
+[Dia 154] Ação Encomenda -> PPO: 007 | Agregador (Elite): 000 || Lucro Diário -> PPO: -33.9€ | Agregador: -15.1€
+
+[Dia 155] Ação Encomenda -> PPO: 000 | Agregador (Elite): 050 || Lucro Diário -> PPO: -17.2€ | Agregador: -136.9€
+
+[Dia 156] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -37.0€ | Agregador: 68.0€
+
+[Dia 157] Ação Encomenda -> PPO: 033 | Agregador (Elite): 102 || Lucro Diário -> PPO: -129.3€ | Agregador: -236.2€
+
+[Dia 158] Ação Encomenda -> PPO: 108 | Agregador (Elite): 000 || Lucro Diário -> PPO: -173.0€ | Agregador: 90.5€
+
+[Dia 159] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 116.1€ | Agregador: 60.9€
+
+[Dia 160] Ação Encomenda -> PPO: 000 | Agregador (Elite): 085 || Lucro Diário -> PPO: 44.9€ | Agregador: -143.4€
+
+[Dia 161] Ação Encomenda -> PPO: 000 | Agregador (Elite): 024 || Lucro Diário -> PPO: -26.0€ | Agregador: -33.6€
+
+[Dia 162] Ação Encomenda -> PPO: 005 | Agregador (Elite): 040 || Lucro Diário -> PPO: -126.1€ | Agregador: -36.2€
+
+[Dia 163] Ação Encomenda -> PPO: 004 | Agregador (Elite): 031 || Lucro Diário -> PPO: -113.4€ | Agregador: -43.8€
+
+[Dia 164] Ação Encomenda -> PPO: 000 | Agregador (Elite): 026 || Lucro Diário -> PPO: -18.9€ | Agregador: -27.6€
+
+[Dia 165] Ação Encomenda -> PPO: 103 | Agregador (Elite): 055 || Lucro Diário -> PPO: -244.3€ | Agregador: -51.3€
+
+[Dia 166] Ação Encomenda -> PPO: 000 | Agregador (Elite): 001 || Lucro Diário -> PPO: 90.5€ | Agregador: -16.1€
+
+[Dia 167] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 67.2€ | Agregador: -31.5€
+
+[Dia 168] Ação Encomenda -> PPO: 000 | Agregador (Elite): 021 || Lucro Diário -> PPO: -23.1€ | Agregador: -125.2€
+
+[Dia 169] Ação Encomenda -> PPO: 024 | Agregador (Elite): 056 || Lucro Diário -> PPO: -126.3€ | Agregador: -85.4€
+
+[Dia 170] Ação Encomenda -> PPO: 024 | Agregador (Elite): 145 || Lucro Diário -> PPO: -75.9€ | Agregador: -153.1€
+
+[Dia 171] Ação Encomenda -> PPO: 000 | Agregador (Elite): 075 || Lucro Diário -> PPO: 30.7€ | Agregador: -67.6€
+
+[Dia 172] Ação Encomenda -> PPO: 007 | Agregador (Elite): 047 || Lucro Diário -> PPO: -125.9€ | Agregador: -44.4€
+
+[Dia 173] Ação Encomenda -> PPO: 051 | Agregador (Elite): 023 || Lucro Diário -> PPO: -124.0€ | Agregador: -7.9€
+
+[Dia 174] Ação Encomenda -> PPO: 000 | Agregador (Elite): 005 || Lucro Diário -> PPO: 77.3€ | Agregador: -20.1€
+
+[Dia 175] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -25.6€ | Agregador: 65.1€
+
+[Dia 176] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -23.5€ | Agregador: 58.1€
+
+[Dia 177] Ação Encomenda -> PPO: 001 | Agregador (Elite): 000 || Lucro Diário -> PPO: -124.5€ | Agregador: 63.0€
+
+[Dia 178] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -23.5€ | Agregador: 18.5€
+
+[Dia 179] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -35.7€ | Agregador: -35.7€
+
+[Dia 180] Ação Encomenda -> PPO: 000 | Agregador (Elite): 066 || Lucro Diário -> PPO: -30.2€ | Agregador: -136.8€
+
+[Dia 181] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -40.3€ | Agregador: 98.3€
+
+[Dia 182] Ação Encomenda -> PPO: 000 | Agregador (Elite): 008 || Lucro Diário -> PPO: -23.1€ | Agregador: -123.9€
+
+[Dia 183] Ação Encomenda -> PPO: 045 | Agregador (Elite): 000 || Lucro Diário -> PPO: -131.8€ | Agregador: -10.5€
+
+[Dia 184] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 41.2€ | Agregador: -18.9€
+
+[Dia 185] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 17.2€ | Agregador: -24.8€
+
+[Dia 186] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -31.5€ | Agregador: -31.5€
+
+[Dia 187] Ação Encomenda -> PPO: 036 | Agregador (Elite): 103 || Lucro Diário -> PPO: -136.8€ | Agregador: -243.5€
+
+[Dia 188] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 40.3€ | Agregador: 106.0€
+
+[Dia 189] Ação Encomenda -> PPO: 022 | Agregador (Elite): 069 || Lucro Diário -> PPO: -120.7€ | Agregador: -67.2€
+
+[Dia 190] Ação Encomenda -> PPO: 097 | Agregador (Elite): 040 || Lucro Diário -> PPO: -89.5€ | Agregador: -35.1€
+
+[Dia 191] Ação Encomenda -> PPO: 009 | Agregador (Elite): 000 || Lucro Diário -> PPO: -56.6€ | Agregador: 44.9€
+
+[Dia 192] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 86.3€ | Agregador: 87.3€
+
+[Dia 193] Ação Encomenda -> PPO: 000 | Agregador (Elite): 033 || Lucro Diário -> PPO: 23.1€ | Agregador: -130.6€
+
+[Dia 194] Ação Encomenda -> PPO: 049 | Agregador (Elite): 054 || Lucro Diário -> PPO: -145.2€ | Agregador: -76.4€
+
+[Dia 195] Ação Encomenda -> PPO: 076 | Agregador (Elite): 000 || Lucro Diário -> PPO: -46.7€ | Agregador: 71.4€
+
+[Dia 196] Ação Encomenda -> PPO: 060 | Agregador (Elite): 066 || Lucro Diário -> PPO: -55.7€ | Agregador: -128.0€
+
+[Dia 197] Ação Encomenda -> PPO: 009 | Agregador (Elite): 046 || Lucro Diário -> PPO: -46.6€ | Agregador: -48.8€
+
+[Dia 198] Ação Encomenda -> PPO: 000 | Agregador (Elite): 024 || Lucro Diário -> PPO: 65.6€ | Agregador: -36.7€
+
+[Dia 199] Ação Encomenda -> PPO: 044 | Agregador (Elite): 000 || Lucro Diário -> PPO: -42.4€ | Agregador: 61.2€
+
+[Dia 200] Ação Encomenda -> PPO: 000 | Agregador (Elite): 010 || Lucro Diário -> PPO: 67.6€ | Agregador: -79.6€
+
+[Dia 201] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -39.1€ | Agregador: -18.1€
+
+[Dia 202] Ação Encomenda -> PPO: 000 | Agregador (Elite): 001 || Lucro Diário -> PPO: -24.8€ | Agregador: -124.9€
+
+[Dia 203] Ação Encomenda -> PPO: 042 | Agregador (Elite): 000 || Lucro Diário -> PPO: -128.6€ | Agregador: -22.3€
+
+[Dia 204] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 49.9€ | Agregador: -21.0€
+
+[Dia 205] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 1.7€ | Agregador: -23.5€
+
+[Dia 206] Ação Encomenda -> PPO: 000 | Agregador (Elite): 066 || Lucro Diário -> PPO: -23.5€ | Agregador: -130.1€
+
+[Dia 207] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -24.8€ | Agregador: 64.4€
+
+[Dia 208] Ação Encomenda -> PPO: 118 | Agregador (Elite): 000 || Lucro Diário -> PPO: -244.6€ | Agregador: 23.9€
+
+[Dia 209] Ação Encomenda -> PPO: 000 | Agregador (Elite): 028 || Lucro Diário -> PPO: 124.3€ | Agregador: -142.7€
+
+[Dia 210] Ação Encomenda -> PPO: 002 | Agregador (Elite): 000 || Lucro Diário -> PPO: -37.2€ | Agregador: 31.5€
+
+[Dia 211] Ação Encomenda -> PPO: 000 | Agregador (Elite): 042 || Lucro Diário -> PPO: -18.1€ | Agregador: -126.5€
+
+[Dia 212] Ação Encomenda -> PPO: 133 | Agregador (Elite): 015 || Lucro Diário -> PPO: -236.8€ | Agregador: -41.3€
+
+[Dia 213] Ação Encomenda -> PPO: 059 | Agregador (Elite): 000 || Lucro Diário -> PPO: -45.9€ | Agregador: 19.7€
+
+[Dia 214] Ação Encomenda -> PPO: 023 | Agregador (Elite): 006 || Lucro Diário -> PPO: -51.7€ | Agregador: -122.9€
+
+[Dia 215] Ação Encomenda -> PPO: 024 | Agregador (Elite): 054 || Lucro Diário -> PPO: 20.8€ | Agregador: -132.7€
+
+[Dia 216] Ação Encomenda -> PPO: 000 | Agregador (Elite): 031 || Lucro Diário -> PPO: 135.6€ | Agregador: -32.1€
+
+[Dia 217] Ação Encomenda -> PPO: 032 | Agregador (Elite): 117 || Lucro Diário -> PPO: -105.3€ | Agregador: -173.9€
+
+[Dia 218] Ação Encomenda -> PPO: 046 | Agregador (Elite): 067 || Lucro Diário -> PPO: -63.9€ | Agregador: -37.4€
+
+[Dia 219] Ação Encomenda -> PPO: 004 | Agregador (Elite): 037 || Lucro Diário -> PPO: -47.2€ | Agregador: -54.3€
+
+[Dia 220] Ação Encomenda -> PPO: 053 | Agregador (Elite): 003 || Lucro Diário -> PPO: -90.6€ | Agregador: -45.9€
+
+[Dia 221] Ação Encomenda -> PPO: 004 | Agregador (Elite): 000 || Lucro Diário -> PPO: -13.1€ | Agregador: 84.9€
+
+[Dia 222] Ação Encomenda -> PPO: 000 | Agregador (Elite): 041 || Lucro Diário -> PPO: -21.4€ | Agregador: -10.3€
+
+[Dia 223] Ação Encomenda -> PPO: 037 | Agregador (Elite): 005 || Lucro Diário -> PPO: -138.1€ | Agregador: -36.2€
+
+[Dia 224] Ação Encomenda -> PPO: 079 | Agregador (Elite): 017 || Lucro Diário -> PPO: -57.5€ | Agregador: -118.5€
+
+[Dia 225] Ação Encomenda -> PPO: 073 | Agregador (Elite): 026 || Lucro Diário -> PPO: -53.7€ | Agregador: -89.2€
+
+[Dia 226] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 50.3€ | Agregador: 32.8€
+
+[Dia 227] Ação Encomenda -> PPO: 039 | Agregador (Elite): 000 || Lucro Diário -> PPO: -52.3€ | Agregador: -21.8€
+
+[Dia 228] Ação Encomenda -> PPO: 025 | Agregador (Elite): 000 || Lucro Diário -> PPO: -40.9€ | Agregador: -24.4€
+
+[Dia 229] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 87.9€ | Agregador: -30.7€
+
+[Dia 230] Ação Encomenda -> PPO: 000 | Agregador (Elite): 045 || Lucro Diário -> PPO: 27.7€ | Agregador: -135.6€
+
+[Dia 231] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -29.4€ | Agregador: 65.1€
+
+[Dia 232] Ação Encomenda -> PPO: 000 | Agregador (Elite): 038 || Lucro Diário -> PPO: -22.7€ | Agregador: -126.5€
+
+[Dia 233] Ação Encomenda -> PPO: 125 | Agregador (Elite): 010 || Lucro Diário -> PPO: -243.6€ | Agregador: -52.3€
+
+[Dia 234] Ação Encomenda -> PPO: 107 | Agregador (Elite): 000 || Lucro Diário -> PPO: -98.7€ | Agregador: -16.0€
+
+[Dia 235] Ação Encomenda -> PPO: 000 | Agregador (Elite): 041 || Lucro Diário -> PPO: 76.0€ | Agregador: -132.7€
+
+[Dia 236] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 86.5€ | Agregador: 55.4€
+
+[Dia 237] Ação Encomenda -> PPO: 051 | Agregador (Elite): 034 || Lucro Diário -> PPO: -9.8€ | Agregador: -140.4€
+
+[Dia 238] Ação Encomenda -> PPO: 013 | Agregador (Elite): 000 || Lucro Diário -> PPO: -24.2€ | Agregador: 43.7€
+
+[Dia 239] Ação Encomenda -> PPO: 125 | Agregador (Elite): 000 || Lucro Diário -> PPO: -200.3€ | Agregador: -25.6€
+
+[Dia 240] Ação Encomenda -> PPO: 010 | Agregador (Elite): 040 || Lucro Diário -> PPO: -38.9€ | Agregador: -128.8€
+
+[Dia 241] Ação Encomenda -> PPO: 000 | Agregador (Elite): 117 || Lucro Diário -> PPO: 87.3€ | Agregador: -158.4€
+
+[Dia 242] Ação Encomenda -> PPO: 006 | Agregador (Elite): 067 || Lucro Diário -> PPO: -44.3€ | Agregador: -6.5€
+
+[Dia 243] Ação Encomenda -> PPO: 040 | Agregador (Elite): 023 || Lucro Diário -> PPO: -123.3€ | Agregador: -10.9€
+
+[Dia 244] Ação Encomenda -> PPO: 020 | Agregador (Elite): 067 || Lucro Diário -> PPO: -54.5€ | Agregador: 4.9€
+
+[Dia 245] Ação Encomenda -> PPO: 133 | Agregador (Elite): 000 || Lucro Diário -> PPO: -193.6€ | Agregador: 53.2€
+
+[Dia 246] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 73.8€ | Agregador: 76.8€
+
+[Dia 247] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 113.5€ | Agregador: -13.9€
+
+[Dia 248] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 20.2€ | Agregador: -19.7€
+
+[Dia 249] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -27.3€ | Agregador: -27.3€
+
+[Dia 250] Ação Encomenda -> PPO: 053 | Agregador (Elite): 065 || Lucro Diário -> PPO: -135.1€ | Agregador: -136.3€
+
+[Dia 251] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 72.2€ | Agregador: 97.4€
+
+[Dia 252] Ação Encomenda -> PPO: 000 | Agregador (Elite): 119 || Lucro Diário -> PPO: -29.0€ | Agregador: -240.9€
+
+[Dia 253] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -27.7€ | Agregador: 74.4€
+
+[Dia 254] Ação Encomenda -> PPO: 035 | Agregador (Elite): 047 || Lucro Diário -> PPO: -129.1€ | Agregador: -37.1€
+
+[Dia 255] Ação Encomenda -> PPO: 000 | Agregador (Elite): 011 || Lucro Diário -> PPO: 45.4€ | Agregador: -23.4€
+
+[Dia 256] Ação Encomenda -> PPO: 105 | Agregador (Elite): 083 || Lucro Diário -> PPO: -246.6€ | Agregador: -54.1€
+
+[Dia 257] Ação Encomenda -> PPO: 000 | Agregador (Elite): 027 || Lucro Diário -> PPO: 135.1€ | Agregador: 33.3€
+
+[Dia 258] Ação Encomenda -> PPO: 011 | Agregador (Elite): 016 || Lucro Diário -> PPO: -99.0€ | Agregador: -89.0€
+
+[Dia 259] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -9.2€ | Agregador: 1.3€
+
+[Dia 260] Ação Encomenda -> PPO: 108 | Agregador (Elite): 059 || Lucro Diário -> PPO: -246.1€ | Agregador: -141.2€
+
+[Dia 261] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 95.4€ | Agregador: 97.4€
+
+[Dia 262] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -2.0€ | Agregador: -0.0€
+
+[Dia 263] Ação Encomenda -> PPO: 053 | Agregador (Elite): 024 || Lucro Diário -> PPO: -28.2€ | Agregador: -128.0€
+
+[Dia 264] Ação Encomenda -> PPO: 097 | Agregador (Elite): 000 || Lucro Diário -> PPO: -29.4€ | Agregador: 21.8€
+
+[Dia 265] Ação Encomenda -> PPO: 000 | Agregador (Elite): 024 || Lucro Diário -> PPO: 73.2€ | Agregador: -129.7€
+
+[Dia 266] Ação Encomenda -> PPO: 050 | Agregador (Elite): 070 || Lucro Diário -> PPO: -59.3€ | Agregador: -76.8€
+
+[Dia 267] Ação Encomenda -> PPO: 063 | Agregador (Elite): 000 || Lucro Diário -> PPO: -63.2€ | Agregador: 43.6€
+
+[Dia 268] Ação Encomenda -> PPO: 111 | Agregador (Elite): 054 || Lucro Diário -> PPO: -159.1€ | Agregador: -50.4€
+
+[Dia 269] Ação Encomenda -> PPO: 100 | Agregador (Elite): 000 || Lucro Diário -> PPO: -45.6€ | Agregador: 69.7€
+
+[Dia 270] Ação Encomenda -> PPO: 030 | Agregador (Elite): 004 || Lucro Diário -> PPO: -46.1€ | Agregador: -79.0€
+
+[Dia 271] Ação Encomenda -> PPO: 050 | Agregador (Elite): 000 || Lucro Diário -> PPO: -37.4€ | Agregador: -18.9€
+
+[Dia 272] Ação Encomenda -> PPO: 086 | Agregador (Elite): 012 || Lucro Diário -> PPO: -37.8€ | Agregador: -129.3€
+
+[Dia 273] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 48.6€ | Agregador: 2.1€
+
+[Dia 274] Ação Encomenda -> PPO: 000 | Agregador (Elite): 092 || Lucro Diário -> PPO: 50.0€ | Agregador: -132.3€
+
+[Dia 275] Ação Encomenda -> PPO: 000 | Agregador (Elite): 067 || Lucro Diário -> PPO: 51.4€ | Agregador: -50.2€
+
+[Dia 276] Ação Encomenda -> PPO: 096 | Agregador (Elite): 000 || Lucro Diário -> PPO: -43.0€ | Agregador: 69.0€
+
+[Dia 277] Ação Encomenda -> PPO: 000 | Agregador (Elite): 072 || Lucro Diário -> PPO: 47.2€ | Agregador: -53.7€
+
+[Dia 278] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 98.4€ | Agregador: 101.8€
+
+[Dia 279] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 82.0€ | Agregador: 85.4€
+
+[Dia 280] Ação Encomenda -> PPO: 004 | Agregador (Elite): 000 || Lucro Diário -> PPO: -43.9€ | Agregador: -8.4€
+
+[Dia 281] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 28.5€ | Agregador: -16.0€
+
+[Dia 282] Ação Encomenda -> PPO: 067 | Agregador (Elite): 000 || Lucro Diário -> PPO: -68.9€ | Agregador: -18.1€
+
+[Dia 283] Ação Encomenda -> PPO: 000 | Agregador (Elite): 060 || Lucro Diário -> PPO: 55.0€ | Agregador: -128.7€
+
+[Dia 284] Ação Encomenda -> PPO: 069 | Agregador (Elite): 032 || Lucro Diário -> PPO: -48.8€ | Agregador: -45.4€
+
+[Dia 285] Ação Encomenda -> PPO: 000 | Agregador (Elite): 058 || Lucro Diário -> PPO: 75.6€ | Agregador: -29.0€
+
+[Dia 286] Ação Encomenda -> PPO: 076 | Agregador (Elite): 033 || Lucro Diário -> PPO: -53.4€ | Agregador: -9.7€
+
+[Dia 287] Ação Encomenda -> PPO: 115 | Agregador (Elite): 073 || Lucro Diário -> PPO: -142.3€ | Agregador: -36.9€
+
+[Dia 288] Ação Encomenda -> PPO: 000 | Agregador (Elite): 013 || Lucro Diário -> PPO: 62.8€ | Agregador: -35.6€
+
+[Dia 289] Ação Encomenda -> PPO: 000 | Agregador (Elite): 020 || Lucro Diário -> PPO: 59.3€ | Agregador: -40.4€
+
+[Dia 290] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 33.2€ | Agregador: 34.8€
+
+[Dia 291] Ação Encomenda -> PPO: 045 | Agregador (Elite): 040 || Lucro Diário -> PPO: -32.6€ | Agregador: -105.3€
+
+[Dia 292] Ação Encomenda -> PPO: 037 | Agregador (Elite): 011 || Lucro Diário -> PPO: -25.0€ | Agregador: -45.2€
+
+[Dia 293] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 68.8€ | Agregador: -2.5€
+
+[Dia 294] Ação Encomenda -> PPO: 000 | Agregador (Elite): 004 || Lucro Diário -> PPO: -16.0€ | Agregador: -120.6€
+
+[Dia 295] Ação Encomenda -> PPO: 059 | Agregador (Elite): 057 || Lucro Diário -> PPO: -126.9€ | Agregador: -118.3€
+
+[Dia 296] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 42.4€ | Agregador: 42.4€
+
+[Dia 297] Ação Encomenda -> PPO: 014 | Agregador (Elite): 000 || Lucro Diário -> PPO: -68.3€ | Agregador: 33.2€
+
+[Dia 298] Ação Encomenda -> PPO: 080 | Agregador (Elite): 016 || Lucro Diário -> PPO: -72.7€ | Agregador: -99.9€
+
+[Dia 299] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 91.4€ | Agregador: 2.1€
+
+[Dia 300] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 25.6€ | Agregador: -26.9€
+
+[Dia 301] Ação Encomenda -> PPO: 000 | Agregador (Elite): 048 || Lucro Diário -> PPO: -24.8€ | Agregador: -129.6€
+
+[Dia 302] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -23.9€ | Agregador: 61.7€
+
+[Dia 303] Ação Encomenda -> PPO: 000 | Agregador (Elite): 072 || Lucro Diário -> PPO: -22.7€ | Agregador: -106.8€
+
+[Dia 304] Ação Encomenda -> PPO: 009 | Agregador (Elite): 044 || Lucro Diário -> PPO: -125.7€ | Agregador: -40.2€
+
+[Dia 305] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -2.1€ | Agregador: 48.5€
+
+[Dia 306] Ação Encomenda -> PPO: 107 | Agregador (Elite): 000 || Lucro Diário -> PPO: -242.6€ | Agregador: 66.8€
+
+[Dia 307] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 88.6€ | Agregador: -31.1€
+
+[Dia 308] Ação Encomenda -> PPO: 006 | Agregador (Elite): 000 || Lucro Diário -> PPO: -16.7€ | Agregador: -29.4€
+
+[Dia 309] Ação Encomenda -> PPO: 073 | Agregador (Elite): 000 || Lucro Diário -> PPO: -111.9€ | Agregador: -23.5€
+
+[Dia 310] Ação Encomenda -> PPO: 096 | Agregador (Elite): 000 || Lucro Diário -> PPO: -43.7€ | Agregador: -25.2€
+
+[Dia 311] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 48.2€ | Agregador: -21.4€
+
+[Dia 312] Ação Encomenda -> PPO: 013 | Agregador (Elite): 000 || Lucro Diário -> PPO: -29.5€ | Agregador: -26.9€
+
+[Dia 313] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 90.2€ | Agregador: -31.1€
+
+[Dia 314] Ação Encomenda -> PPO: 000 | Agregador (Elite): 009 || Lucro Diário -> PPO: 4.2€ | Agregador: -124.0€
+
+[Dia 315] Ação Encomenda -> PPO: 000 | Agregador (Elite): 032 || Lucro Diário -> PPO: -24.4€ | Agregador: -108.7€
+
+[Dia 316] Ação Encomenda -> PPO: 045 | Agregador (Elite): 017 || Lucro Diário -> PPO: -127.2€ | Agregador: -57.2€
+
+[Dia 317] Ação Encomenda -> PPO: 000 | Agregador (Elite): 039 || Lucro Diário -> PPO: 39.5€ | Agregador: -86.7€
+
+[Dia 318] Ação Encomenda -> PPO: 008 | Agregador (Elite): 000 || Lucro Diário -> PPO: -78.1€ | Agregador: 51.8€
+
+[Dia 319] Ação Encomenda -> PPO: 000 | Agregador (Elite): 009 || Lucro Diário -> PPO: -2.9€ | Agregador: -103.8€
+
+[Dia 320] Ação Encomenda -> PPO: 000 | Agregador (Elite): 074 || Lucro Diário -> PPO: -23.5€ | Agregador: -112.0€
+
+[Dia 321] Ação Encomenda -> PPO: 133 | Agregador (Elite): 000 || Lucro Diário -> PPO: -239.8€ | Agregador: 71.0€
+
+[Dia 322] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 39.4€ | Agregador: 43.5€
+
+[Dia 323] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 42.2€ | Agregador: -9.2€
+
+[Dia 324] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 32.9€ | Agregador: -17.2€
+
+[Dia 325] Ação Encomenda -> PPO: 012 | Agregador (Elite): 000 || Lucro Diário -> PPO: -58.8€ | Agregador: -19.3€
+
+[Dia 326] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 55.0€ | Agregador: -22.3€
+
+[Dia 327] Ação Encomenda -> PPO: 000 | Agregador (Elite): 071 || Lucro Diário -> PPO: 3.8€ | Agregador: -128.5€
+
+[Dia 328] Ação Encomenda -> PPO: 000 | Agregador (Elite): 022 || Lucro Diário -> PPO: -28.6€ | Agregador: -22.5€
+
+[Dia 329] Ação Encomenda -> PPO: 032 | Agregador (Elite): 000 || Lucro Diário -> PPO: -123.8€ | Agregador: 48.1€
+
+[Dia 330] Ação Encomenda -> PPO: 000 | Agregador (Elite): 054 || Lucro Diário -> PPO: 45.2€ | Agregador: -91.5€
+
+[Dia 331] Ação Encomenda -> PPO: 033 | Agregador (Elite): 000 || Lucro Diário -> PPO: -113.8€ | Agregador: 49.4€
+
+[Dia 332] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 45.8€ | Agregador: 26.9€
+
+[Dia 333] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -26.0€ | Agregador: -26.0€
+
+[Dia 334] Ação Encomenda -> PPO: 000 | Agregador (Elite): 081 || Lucro Diário -> PPO: -27.3€ | Agregador: -135.4€
+
+[Dia 335] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -32.8€ | Agregador: 96.5€
+
+[Dia 336] Ação Encomenda -> PPO: 133 | Agregador (Elite): 078 || Lucro Diário -> PPO: -239.3€ | Agregador: -85.5€
+
+[Dia 337] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 56.6€ | Agregador: 58.8€
+
+[Dia 338] Ação Encomenda -> PPO: 133 | Agregador (Elite): 070 || Lucro Diário -> PPO: -146.7€ | Agregador: -38.2€
+
+[Dia 339] Ação Encomenda -> PPO: 127 | Agregador (Elite): 000 || Lucro Diário -> PPO: -151.5€ | Agregador: 66.0€
+
+[Dia 340] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 69.8€ | Agregador: 37.0€
+
+[Dia 341] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 106.1€ | Agregador: -36.5€
+
+[Dia 342] Ação Encomenda -> PPO: 093 | Agregador (Elite): 000 || Lucro Diário -> PPO: -24.6€ | Agregador: -30.7€
+
+[Dia 343] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 26.3€ | Agregador: -16.8€
+
+[Dia 344] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 65.0€ | Agregador: -26.0€
+
+[Dia 345] Ação Encomenda -> PPO: 116 | Agregador (Elite): 017 || Lucro Diário -> PPO: -162.2€ | Agregador: -123.5€
+
+[Dia 346] Ação Encomenda -> PPO: 032 | Agregador (Elite): 000 || Lucro Diário -> PPO: -60.6€ | Agregador: 14.7€
+
+[Dia 347] Ação Encomenda -> PPO: 000 | Agregador (Elite): 070 || Lucro Diário -> PPO: 58.0€ | Agregador: -131.8€
+
+[Dia 348] Ação Encomenda -> PPO: 039 | Agregador (Elite): 024 || Lucro Diário -> PPO: -34.0€ | Agregador: -27.8€
+
+[Dia 349] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 82.2€ | Agregador: 72.7€
+
+[Dia 350] Ação Encomenda -> PPO: 000 | Agregador (Elite): 008 || Lucro Diário -> PPO: 60.2€ | Agregador: -125.2€
+
+[Dia 351] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 49.7€ | Agregador: -4.6€
+
+[Dia 352] Ação Encomenda -> PPO: 054 | Agregador (Elite): 000 || Lucro Diário -> PPO: -52.8€ | Agregador: -21.8€
+
+[Dia 353] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 51.8€ | Agregador: -21.8€
+
+[Dia 354] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 54.8€ | Agregador: -22.3€
+
+[Dia 355] Ação Encomenda -> PPO: 037 | Agregador (Elite): 000 || Lucro Diário -> PPO: -96.1€ | Agregador: -28.1€
+
+[Dia 356] Ação Encomenda -> PPO: 000 | Agregador (Elite): 019 || Lucro Diário -> PPO: 45.8€ | Agregador: -133.8€
+
+[Dia 357] Ação Encomenda -> PPO: 000 | Agregador (Elite): 044 || Lucro Diário -> PPO: -26.0€ | Agregador: -90.5€
+
+[Dia 358] Ação Encomenda -> PPO: 000 | Agregador (Elite): 005 || Lucro Diário -> PPO: -20.6€ | Agregador: -52.4€
+
+[Dia 359] Ação Encomenda -> PPO: 063 | Agregador (Elite): 075 || Lucro Diário -> PPO: -129.4€ | Agregador: -88.6€
+
+[Dia 360] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 68.0€ | Agregador: 67.5€
+
+[Dia 361] Ação Encomenda -> PPO: 060 | Agregador (Elite): 012 || Lucro Diário -> PPO: -88.8€ | Agregador: -58.8€
+
+[Dia 362] Ação Encomenda -> PPO: 048 | Agregador (Elite): 000 || Lucro Diário -> PPO: -14.1€ | Agregador: -10.1€
+
+[Dia 363] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 63.8€ | Agregador: -37.0€
+
+[Dia 364] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -20.2€ | Agregador: -20.2€
+
+[Dia 365] Ação Encomenda -> PPO: 045 | Agregador (Elite): 046 || Lucro Diário -> PPO: -128.0€ | Agregador: -128.1€
+
+[Dia 366] Ação Encomenda -> PPO: 000 | Agregador (Elite): 067 || Lucro Diário -> PPO: 68.7€ | Agregador: -38.0€
+
+[Dia 367] Ação Encomenda -> PPO: 000 | Agregador (Elite): 007 || Lucro Diário -> PPO: -12.6€ | Agregador: -52.0€
+
+[Dia 368] Ação Encomenda -> PPO: 029 | Agregador (Elite): 041 || Lucro Diário -> PPO: -124.7€ | Agregador: -51.0€
+
+[Dia 369] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 26.9€ | Agregador: 87.8€
+
+[Dia 370] Ação Encomenda -> PPO: 000 | Agregador (Elite): 094 || Lucro Diário -> PPO: -37.0€ | Agregador: -146.4€
+
+[Dia 371] Ação Encomenda -> PPO: 083 | Agregador (Elite): 000 || Lucro Diário -> PPO: -132.2€ | Agregador: 59.9€
+
+[Dia 372] Ação Encomenda -> PPO: 038 | Agregador (Elite): 000 || Lucro Diário -> PPO: -62.4€ | Agregador: 42.4€
+
+[Dia 373] Ação Encomenda -> PPO: 036 | Agregador (Elite): 000 || Lucro Diário -> PPO: -42.0€ | Agregador: 40.7€
+
+[Dia 374] Ação Encomenda -> PPO: 000 | Agregador (Elite): 064 || Lucro Diário -> PPO: 54.8€ | Agregador: -129.1€
+
+[Dia 375] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 94.0€ | Agregador: 93.8€
+
+[Dia 376] Ação Encomenda -> PPO: 065 | Agregador (Elite): 017 || Lucro Diário -> PPO: -126.2€ | Agregador: -110.9€
+
+[Dia 377] Ação Encomenda -> PPO: 075 | Agregador (Elite): 020 || Lucro Diário -> PPO: -8.6€ | Agregador: -99.5€
+
+[Dia 378] Ação Encomenda -> PPO: 044 | Agregador (Elite): 014 || Lucro Diário -> PPO: -32.0€ | Agregador: -86.3€
+
+[Dia 379] Ação Encomenda -> PPO: 088 | Agregador (Elite): 057 || Lucro Diário -> PPO: -36.4€ | Agregador: -103.2€
+
+[Dia 380] Ação Encomenda -> PPO: 000 | Agregador (Elite): 022 || Lucro Diário -> PPO: 89.6€ | Agregador: -9.9€
+
+[Dia 381] Ação Encomenda -> PPO: 060 | Agregador (Elite): 048 || Lucro Diário -> PPO: -40.0€ | Agregador: -79.6€
+
+[Dia 382] Ação Encomenda -> PPO: 023 | Agregador (Elite): 074 || Lucro Diário -> PPO: -9.6€ | Agregador: -38.5€
+
+[Dia 383] Ação Encomenda -> PPO: 046 | Agregador (Elite): 018 || Lucro Diário -> PPO: -43.2€ | Agregador: -41.1€
+
+[Dia 384] Ação Encomenda -> PPO: 006 | Agregador (Elite): 000 || Lucro Diário -> PPO: -5.2€ | Agregador: 83.2€
+
+[Dia 385] Ação Encomenda -> PPO: 091 | Agregador (Elite): 007 || Lucro Diário -> PPO: -98.6€ | Agregador: -121.7€
+
+[Dia 386] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 44.5€ | Agregador: -5.5€
+
+[Dia 387] Ação Encomenda -> PPO: 133 | Agregador (Elite): 000 || Lucro Diário -> PPO: -167.7€ | Agregador: -20.2€
+
+[Dia 388] Ação Encomenda -> PPO: 001 | Agregador (Elite): 026 || Lucro Diário -> PPO: -43.2€ | Agregador: -126.5€
+
+[Dia 389] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 65.2€ | Agregador: 29.0€
+
+[Dia 390] Ação Encomenda -> PPO: 133 | Agregador (Elite): 000 || Lucro Diário -> PPO: -130.9€ | Agregador: -29.4€
+
+[Dia 391] Ação Encomenda -> PPO: 000 | Agregador (Elite): 008 || Lucro Diário -> PPO: 87.6€ | Agregador: -132.3€
+
+[Dia 392] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 70.9€ | Agregador: -10.1€
+
+[Dia 393] Ação Encomenda -> PPO: 059 | Agregador (Elite): 000 || Lucro Diário -> PPO: -52.1€ | Agregador: -22.3€
+
+[Dia 394] Ação Encomenda -> PPO: 000 | Agregador (Elite): 002 || Lucro Diário -> PPO: 51.0€ | Agregador: -122.0€
+
+[Dia 395] Ação Encomenda -> PPO: 000 | Agregador (Elite): 100 || Lucro Diário -> PPO: 52.3€ | Agregador: -127.6€
+
+[Dia 396] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 44.9€ | Agregador: 95.8€
+
+[Dia 397] Ação Encomenda -> PPO: 119 | Agregador (Elite): 000 || Lucro Diário -> PPO: -251.8€ | Agregador: 48.3€
+
+[Dia 398] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 96.7€ | Agregador: -33.2€
+
+[Dia 399] Ação Encomenda -> PPO: 052 | Agregador (Elite): 000 || Lucro Diário -> PPO: -6.1€ | Agregador: -33.2€
+
+[Dia 400] Ação Encomenda -> PPO: 000 | Agregador (Elite): 111 || Lucro Diário -> PPO: 79.4€ | Agregador: -243.0€
+
+[Dia 401] Ação Encomenda -> PPO: 059 | Agregador (Elite): 000 || Lucro Diário -> PPO: -137.8€ | Agregador: 91.9€
+
+[Dia 402] Ação Encomenda -> PPO: 011 | Agregador (Elite): 062 || Lucro Diário -> PPO: -51.9€ | Agregador: -56.8€
+
+[Dia 403] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 42.8€ | Agregador: 130.7€
+
+[Dia 404] Ação Encomenda -> PPO: 133 | Agregador (Elite): 016 || Lucro Diário -> PPO: -243.5€ | Agregador: -112.9€
+
+[Dia 405] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 128.8€ | Agregador: -7.6€
+
+[Dia 406] Ação Encomenda -> PPO: 093 | Agregador (Elite): 000 || Lucro Diário -> PPO: -20.3€ | Agregador: -30.7€
+
+[Dia 407] Ação Encomenda -> PPO: 010 | Agregador (Elite): 018 || Lucro Diário -> PPO: -61.8€ | Agregador: -120.7€
+
+[Dia 408] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 63.9€ | Agregador: 13.0€
+
+[Dia 409] Ação Encomenda -> PPO: 006 | Agregador (Elite): 040 || Lucro Diário -> PPO: -45.2€ | Agregador: -134.7€
+
+[Dia 410] Ação Encomenda -> PPO: 000 | Agregador (Elite): 077 || Lucro Diário -> PPO: -15.5€ | Agregador: -51.8€
+
+[Dia 411] Ação Encomenda -> PPO: 069 | Agregador (Elite): 019 || Lucro Diário -> PPO: -143.4€ | Agregador: 10.3€
+
+[Dia 412] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 102.5€ | Agregador: 18.5€
+
+[Dia 413] Ação Encomenda -> PPO: 018 | Agregador (Elite): 007 || Lucro Diário -> PPO: -132.5€ | Agregador: -131.4€
+
+[Dia 414] Ação Encomenda -> PPO: 000 | Agregador (Elite): 006 || Lucro Diário -> PPO: 12.6€ | Agregador: -111.1€
+
+[Dia 415] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -23.1€ | Agregador: -10.5€
+
+[Dia 416] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -26.9€ | Agregador: -26.9€
+
+[Dia 417] Ação Encomenda -> PPO: 000 | Agregador (Elite): 002 || Lucro Diário -> PPO: -27.7€ | Agregador: -127.9€
+
+[Dia 418] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -43.7€ | Agregador: -39.5€
+
+[Dia 419] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -43.7€ | Agregador: -43.7€
+
+[Dia 420] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -37.0€ | Agregador: -37.0€
+
+[Dia 421] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -23.9€ | Agregador: -23.9€
+
+[Dia 422] Ação Encomenda -> PPO: 000 | Agregador (Elite): 014 || Lucro Diário -> PPO: -29.4€ | Agregador: -130.8€
+
+[Dia 423] Ação Encomenda -> PPO: 000 | Agregador (Elite): 080 || Lucro Diário -> PPO: -28.6€ | Agregador: -107.2€
+
+[Dia 424] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -27.7€ | Agregador: 75.9€
+
+[Dia 425] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -37.4€ | Agregador: 34.0€
+
+[Dia 426] Ação Encomenda -> PPO: 059 | Agregador (Elite): 063 || Lucro Diário -> PPO: -141.2€ | Agregador: -141.6€
+
+[Dia 427] Ação Encomenda -> PPO: 071 | Agregador (Elite): 000 || Lucro Diário -> PPO: -30.3€ | Agregador: 76.6€
+
+[Dia 428] Ação Encomenda -> PPO: 000 | Agregador (Elite): 066 || Lucro Diário -> PPO: 98.1€ | Agregador: -104.1€
+
+[Dia 429] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 19.7€ | Agregador: 97.1€
+
+[Dia 430] Ação Encomenda -> PPO: 133 | Agregador (Elite): 032 || Lucro Diário -> PPO: -249.8€ | Agregador: -122.9€
+
+[Dia 431] Ação Encomenda -> PPO: 085 | Agregador (Elite): 026 || Lucro Diário -> PPO: -10.6€ | Agregador: -69.0€
+
+[Dia 432] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 107.2€ | Agregador: 18.5€
+
+[Dia 433] Ação Encomenda -> PPO: 044 | Agregador (Elite): 000 || Lucro Diário -> PPO: 39.8€ | Agregador: -44.5€
+
+[Dia 434] Ação Encomenda -> PPO: 000 | Agregador (Elite): 069 || Lucro Diário -> PPO: 73.7€ | Agregador: -133.8€
+
+[Dia 435] Ação Encomenda -> PPO: 007 | Agregador (Elite): 019 || Lucro Diário -> PPO: -112.9€ | Agregador: -37.6€
+
+[Dia 436] Ação Encomenda -> PPO: 000 | Agregador (Elite): 017 || Lucro Diário -> PPO: -15.1€ | Agregador: -28.6€
+
+[Dia 437] Ação Encomenda -> PPO: 069 | Agregador (Elite): 000 || Lucro Diário -> PPO: -133.8€ | Agregador: 8.8€
+
+[Dia 438] Ação Encomenda -> PPO: 133 | Agregador (Elite): 027 || Lucro Diário -> PPO: -133.5€ | Agregador: -131.3€
+
+[Dia 439] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 121.1€ | Agregador: 17.2€
+
+[Dia 440] Ação Encomenda -> PPO: 030 | Agregador (Elite): 061 || Lucro Diário -> PPO: 22.2€ | Agregador: -148.9€
+
+[Dia 441] Ação Encomenda -> PPO: 046 | Agregador (Elite): 000 || Lucro Diário -> PPO: -66.0€ | Agregador: 62.9€
+
+[Dia 442] Ação Encomenda -> PPO: 065 | Agregador (Elite): 015 || Lucro Diário -> PPO: -45.6€ | Agregador: -88.9€
+
+[Dia 443] Ação Encomenda -> PPO: 084 | Agregador (Elite): 003 || Lucro Diário -> PPO: -42.2€ | Agregador: -94.0€
+
+[Dia 444] Ação Encomenda -> PPO: 025 | Agregador (Elite): 004 || Lucro Diário -> PPO: -3.7€ | Agregador: -127.7€
+
+[Dia 445] Ação Encomenda -> PPO: 091 | Agregador (Elite): 000 || Lucro Diário -> PPO: -29.5€ | Agregador: -20.2€
+
+[Dia 446] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 138.1€ | Agregador: -43.3€
+
+[Dia 447] Ação Encomenda -> PPO: 074 | Agregador (Elite): 000 || Lucro Diário -> PPO: -70.0€ | Agregador: -34.0€
+
+[Dia 448] Ação Encomenda -> PPO: 003 | Agregador (Elite): 000 || Lucro Diário -> PPO: -27.6€ | Agregador: -26.9€
+
+[Dia 449] Ação Encomenda -> PPO: 000 | Agregador (Elite): 042 || Lucro Diário -> PPO: 37.8€ | Agregador: -135.7€
+
+[Dia 450] Ação Encomenda -> PPO: 090 | Agregador (Elite): 000 || Lucro Diário -> PPO: -138.0€ | Agregador: 59.2€
+
+[Dia 451] Ação Encomenda -> PPO: 133 | Agregador (Elite): 000 || Lucro Diário -> PPO: -130.9€ | Agregador: -29.4€
+
+[Dia 452] Ação Encomenda -> PPO: 000 | Agregador (Elite): 048 || Lucro Diário -> PPO: 94.6€ | Agregador: -138.0€
+
+[Dia 453] Ação Encomenda -> PPO: 000 | Agregador (Elite): 039 || Lucro Diário -> PPO: 98.6€ | Agregador: -36.7€
+
+[Dia 454] Ação Encomenda -> PPO: 000 | Agregador (Elite): 032 || Lucro Diário -> PPO: 81.1€ | Agregador: -53.6€
+
+[Dia 455] Ação Encomenda -> PPO: 005 | Agregador (Elite): 014 || Lucro Diário -> PPO: -126.1€ | Agregador: -59.8€
+
+[Dia 456] Ação Encomenda -> PPO: 109 | Agregador (Elite): 021 || Lucro Diário -> PPO: -226.4€ | Agregador: -98.7€
+
+[Dia 457] Ação Encomenda -> PPO: 093 | Agregador (Elite): 026 || Lucro Diário -> PPO: -48.3€ | Agregador: -82.9€
+
+[Dia 458] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 70.8€ | Agregador: 27.3€
+
+[Dia 459] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 91.6€ | Agregador: -31.9€
+
+[Dia 460] Ação Encomenda -> PPO: 035 | Agregador (Elite): 000 || Lucro Diário -> PPO: -8.0€ | Agregador: -32.3€
+
+[Dia 461] Ação Encomenda -> PPO: 000 | Agregador (Elite): 061 || Lucro Diário -> PPO: 41.6€ | Agregador: -150.6€
+
+[Dia 462] Ação Encomenda -> PPO: 122 | Agregador (Elite): 000 || Lucro Diário -> PPO: -238.2€ | Agregador: 69.8€
+
+[Dia 463] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 65.6€ | Agregador: 14.3€
+
+[Dia 464] Ação Encomenda -> PPO: 081 | Agregador (Elite): 011 || Lucro Diário -> PPO: -63.2€ | Agregador: -121.3€
+
+[Dia 465] Ação Encomenda -> PPO: 000 | Agregador (Elite): 036 || Lucro Diário -> PPO: 56.6€ | Agregador: -104.0€
+
+[Dia 466] Ação Encomenda -> PPO: 045 | Agregador (Elite): 000 || Lucro Diário -> PPO: -19.0€ | Agregador: 45.4€
+
+[Dia 467] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 72.0€ | Agregador: -26.9€
+
+[Dia 468] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 59.2€ | Agregador: -39.5€
+
+[Dia 469] Ação Encomenda -> PPO: 000 | Agregador (Elite): 080 || Lucro Diário -> PPO: -29.8€ | Agregador: -137.8€
+
+[Dia 470] Ação Encomenda -> PPO: 000 | Agregador (Elite): 017 || Lucro Diário -> PPO: -25.2€ | Agregador: -36.1€
+
+[Dia 471] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -20.6€ | Agregador: 47.6€
+
+[Dia 472] Ação Encomenda -> PPO: 000 | Agregador (Elite): 019 || Lucro Diário -> PPO: -21.8€ | Agregador: -64.9€
+
+[Dia 473] Ação Encomenda -> PPO: 000 | Agregador (Elite): 034 || Lucro Diário -> PPO: -34.0€ | Agregador: -97.5€
+
+[Dia 474] Ação Encomenda -> PPO: 000 | Agregador (Elite): 054 || Lucro Diário -> PPO: -28.6€ | Agregador: -62.6€
+
+[Dia 475] Ação Encomenda -> PPO: 096 | Agregador (Elite): 017 || Lucro Diário -> PPO: -147.8€ | Agregador: -26.5€
+
+[Dia 476] Ação Encomenda -> PPO: 012 | Agregador (Elite): 000 || Lucro Diário -> PPO: -34.5€ | Agregador: 10.1€
+
+[Dia 477] Ação Encomenda -> PPO: 021 | Agregador (Elite): 000 || Lucro Diário -> PPO: -34.3€ | Agregador: -25.6€
+
+[Dia 478] Ação Encomenda -> PPO: 131 | Agregador (Elite): 063 || Lucro Diário -> PPO: -156.5€ | Agregador: -129.0€
+
+[Dia 479] Ação Encomenda -> PPO: 052 | Agregador (Elite): 024 || Lucro Diário -> PPO: -54.2€ | Agregador: -48.2€
+
+[Dia 480] Ação Encomenda -> PPO: 032 | Agregador (Elite): 017 || Lucro Diário -> PPO: 0.4€ | Agregador: -23.6€
+
+[Dia 481] Ação Encomenda -> PPO: 076 | Agregador (Elite): 000 || Lucro Diário -> PPO: 5.8€ | Agregador: -1.7€
+
+[Dia 482] Ação Encomenda -> PPO: 090 | Agregador (Elite): 052 || Lucro Diário -> PPO: -2.7€ | Agregador: -140.9€
+
+[Dia 483] Ação Encomenda -> PPO: 052 | Agregador (Elite): 031 || Lucro Diário -> PPO: -6.8€ | Agregador: -27.9€
+
+[Dia 484] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 74.7€ | Agregador: 37.0€
+
+[Dia 485] Ação Encomenda -> PPO: 000 | Agregador (Elite): 015 || Lucro Diário -> PPO: 98.9€ | Agregador: -135.1€
+
+[Dia 486] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 75.5€ | Agregador: 4.2€
+
+[Dia 487] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -27.3€ | Agregador: -31.5€
+
+[Dia 488] Ação Encomenda -> PPO: 059 | Agregador (Elite): 000 || Lucro Diário -> PPO: -139.9€ | Agregador: -34.0€
+
+[Dia 489] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 77.7€ | Agregador: -46.2€
+
+[Dia 490] Ação Encomenda -> PPO: 106 | Agregador (Elite): 139 || Lucro Diário -> PPO: -243.8€ | Agregador: -247.1€
+
+[Dia 491] Ação Encomenda -> PPO: 123 | Agregador (Elite): 000 || Lucro Diário -> PPO: -103.0€ | Agregador: 108.0€
+
+[Dia 492] Ação Encomenda -> PPO: 000 | Agregador (Elite): 005 || Lucro Diário -> PPO: 76.0€ | Agregador: -20.9€
+
+[Dia 493] Ação Encomenda -> PPO: 000 | Agregador (Elite): 069 || Lucro Diário -> PPO: 86.6€ | Agregador: -74.6€
+
+[Dia 494] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 90.4€ | Agregador: 90.1€
+
+[Dia 495] Ação Encomenda -> PPO: 000 | Agregador (Elite): 003 || Lucro Diário -> PPO: -26.5€ | Agregador: -112.1€
+
+[Dia 496] Ação Encomenda -> PPO: 000 | Agregador (Elite): 064 || Lucro Diário -> PPO: -41.6€ | Agregador: -141.7€
+
+[Dia 497] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -34.4€ | Agregador: 104.1€
+
+[Dia 498] Ação Encomenda -> PPO: 005 | Agregador (Elite): 000 || Lucro Diário -> PPO: -129.9€ | Agregador: -25.2€
+
+[Dia 499] Ação Encomenda -> PPO: 002 | Agregador (Elite): 026 || Lucro Diário -> PPO: -119.5€ | Agregador: -132.4€
+
+[Dia 500] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -18.9€ | Agregador: 31.5€
+
+[Dia 501] Ação Encomenda -> PPO: 109 | Agregador (Elite): 029 || Lucro Diário -> PPO: -239.5€ | Agregador: -131.5€
+
+[Dia 502] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 133.2€ | Agregador: 18.9€
+
+[Dia 503] Ação Encomenda -> PPO: 000 | Agregador (Elite): 027 || Lucro Diário -> PPO: 19.3€ | Agregador: -144.3€
+
+[Dia 504] Ação Encomenda -> PPO: 000 | Agregador (Elite): 041 || Lucro Diário -> PPO: -23.5€ | Agregador: -70.9€
+
+[Dia 505] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -19.7€ | Agregador: 44.8€
+
+[Dia 506] Ação Encomenda -> PPO: 001 | Agregador (Elite): 077 || Lucro Diário -> PPO: -126.6€ | Agregador: -104.8€
+
+[Dia 507] Ação Encomenda -> PPO: 016 | Agregador (Elite): 006 || Lucro Diário -> PPO: -126.8€ | Agregador: -26.3€
+
+[Dia 508] Ação Encomenda -> PPO: 031 | Agregador (Elite): 063 || Lucro Diário -> PPO: -94.7€ | Agregador: -51.7€
+
+[Dia 509] Ação Encomenda -> PPO: 027 | Agregador (Elite): 000 || Lucro Diário -> PPO: -69.1€ | Agregador: 92.1€
+
+[Dia 510] Ação Encomenda -> PPO: 055 | Agregador (Elite): 000 || Lucro Diário -> PPO: -84.1€ | Agregador: -18.5€
+
+[Dia 511] Ação Encomenda -> PPO: 057 | Agregador (Elite): 040 || Lucro Diário -> PPO: -47.7€ | Agregador: -127.1€
+
+[Dia 512] Ação Encomenda -> PPO: 000 | Agregador (Elite): 029 || Lucro Diário -> PPO: 74.3€ | Agregador: -46.2€
+
+[Dia 513] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 44.9€ | Agregador: 38.6€
+
+[Dia 514] Ação Encomenda -> PPO: 085 | Agregador (Elite): 037 || Lucro Diário -> PPO: -136.2€ | Agregador: -131.4€
+
+[Dia 515] Ação Encomenda -> PPO: 063 | Agregador (Elite): 000 || Lucro Diário -> PPO: -37.5€ | Agregador: 51.7€
+
+[Dia 516] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 85.2€ | Agregador: -30.2€
+
+[Dia 517] Ação Encomenda -> PPO: 041 | Agregador (Elite): 030 || Lucro Diário -> PPO: -28.1€ | Agregador: -140.4€
+
+[Dia 518] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 50.8€ | Agregador: 27.7€
+
+[Dia 519] Ação Encomenda -> PPO: 124 | Agregador (Elite): 000 || Lucro Diário -> PPO: -236.8€ | Agregador: -24.4€
+
+[Dia 520] Ação Encomenda -> PPO: 000 | Agregador (Elite): 009 || Lucro Diário -> PPO: 60.4€ | Agregador: -125.3€
+
+[Dia 521] Ação Encomenda -> PPO: 133 | Agregador (Elite): 000 || Lucro Diário -> PPO: -149.7€ | Agregador: -5.9€
+
+[Dia 522] Ação Encomenda -> PPO: 001 | Agregador (Elite): 031 || Lucro Diário -> PPO: -21.3€ | Agregador: -132.5€
+
+[Dia 523] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 87.6€ | Agregador: 34.0€
+
+[Dia 524] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 119.0€ | Agregador: -38.2€
+
+[Dia 525] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -7.6€ | Agregador: -20.2€
+
+[Dia 526] Ação Encomenda -> PPO: 000 | Agregador (Elite): 088 || Lucro Diário -> PPO: -24.4€ | Agregador: -133.2€
+
+[Dia 527] Ação Encomenda -> PPO: 017 | Agregador (Elite): 000 || Lucro Diário -> PPO: -122.7€ | Agregador: 48.1€
+
+[Dia 528] Ação Encomenda -> PPO: 006 | Agregador (Elite): 000 || Lucro Diário -> PPO: -88.8€ | Agregador: 61.3€
+
+[Dia 529] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -12.2€ | Agregador: 19.3€
+
+[Dia 530] Ação Encomenda -> PPO: 098 | Agregador (Elite): 034 || Lucro Diário -> PPO: -139.2€ | Agregador: -132.8€
+
+[Dia 531] Ação Encomenda -> PPO: 000 | Agregador (Elite): 031 || Lucro Diário -> PPO: 64.9€ | Agregador: -56.9€
+
+[Dia 532] Ação Encomenda -> PPO: 052 | Agregador (Elite): 000 || Lucro Diário -> PPO: -30.1€ | Agregador: 37.8€
+
+[Dia 533] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 80.0€ | Agregador: -28.6€
+
+[Dia 534] Ação Encomenda -> PPO: 000 | Agregador (Elite): 042 || Lucro Diário -> PPO: 16.0€ | Agregador: -123.9€
+
+[Dia 535] Ação Encomenda -> PPO: 005 | Agregador (Elite): 000 || Lucro Diário -> PPO: -125.7€ | Agregador: 67.1€
+
+[Dia 536] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -16.4€ | Agregador: -22.7€
+
+[Dia 537] Ação Encomenda -> PPO: 000 | Agregador (Elite): 038 || Lucro Diário -> PPO: -23.1€ | Agregador: -126.9€
+
+[Dia 538] Ação Encomenda -> PPO: 028 | Agregador (Elite): 053 || Lucro Diário -> PPO: -136.4€ | Agregador: -59.1€
+
+[Dia 539] Ação Encomenda -> PPO: 000 | Agregador (Elite): 071 || Lucro Diário -> PPO: 43.6€ | Agregador: -64.5€
+
+[Dia 540] Ação Encomenda -> PPO: 000 | Agregador (Elite): 094 || Lucro Diário -> PPO: -16.8€ | Agregador: -61.7€
+
+[Dia 541] Ação Encomenda -> PPO: 000 | Agregador (Elite): 048 || Lucro Diário -> PPO: -16.4€ | Agregador: -78.6€
+
+[Dia 542] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -24.8€ | Agregador: 59.4€
+
+[Dia 543] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -30.7€ | Agregador: 85.1€
+
+[Dia 544] Ação Encomenda -> PPO: 000 | Agregador (Elite): 012 || Lucro Diário -> PPO: -33.6€ | Agregador: -2.0€
+
+[Dia 545] Ação Encomenda -> PPO: 103 | Agregador (Elite): 000 || Lucro Diário -> PPO: -246.8€ | Agregador: 70.6€
+
+[Dia 546] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 52.6€ | Agregador: -22.3€
+
+[Dia 547] Ação Encomenda -> PPO: 000 | Agregador (Elite): 070 || Lucro Diário -> PPO: 48.8€ | Agregador: -128.0€
+
+[Dia 548] Ação Encomenda -> PPO: 084 | Agregador (Elite): 000 || Lucro Diário -> PPO: -56.7€ | Agregador: 50.5€
+
+[Dia 549] Ação Encomenda -> PPO: 000 | Agregador (Elite): 049 || Lucro Diário -> PPO: 46.2€ | Agregador: -56.6€
+
+[Dia 550] Ação Encomenda -> PPO: 000 | Agregador (Elite): 024 || Lucro Diário -> PPO: 71.4€ | Agregador: -30.8€
+
+[Dia 551] Ação Encomenda -> PPO: 027 | Agregador (Elite): 000 || Lucro Diário -> PPO: -93.0€ | Agregador: 49.6€
+
+[Dia 552] Ação Encomenda -> PPO: 078 | Agregador (Elite): 004 || Lucro Diário -> PPO: -88.5€ | Agregador: -137.8€
+
+[Dia 553] Ação Encomenda -> PPO: 037 | Agregador (Elite): 150 || Lucro Diário -> PPO: -44.9€ | Agregador: -230.1€
+
+[Dia 554] Ação Encomenda -> PPO: 031 | Agregador (Elite): 000 || Lucro Diário -> PPO: -51.2€ | Agregador: 49.0€
+
+[Dia 555] Ação Encomenda -> PPO: 000 | Agregador (Elite): 025 || Lucro Diário -> PPO: 57.1€ | Agregador: -47.0€
+
+[Dia 556] Ação Encomenda -> PPO: 023 | Agregador (Elite): 000 || Lucro Diário -> PPO: -52.4€ | Agregador: 47.3€
+
+[Dia 557] Ação Encomenda -> PPO: 018 | Agregador (Elite): 000 || Lucro Diário -> PPO: -50.1€ | Agregador: 60.5€
+
+[Dia 558] Ação Encomenda -> PPO: 000 | Agregador (Elite): 024 || Lucro Diário -> PPO: 8.4€ | Agregador: -45.7€
+
+[Dia 559] Ação Encomenda -> PPO: 000 | Agregador (Elite): 043 || Lucro Diário -> PPO: -29.8€ | Agregador: -83.7€
+
+[Dia 560] Ação Encomenda -> PPO: 001 | Agregador (Elite): 019 || Lucro Diário -> PPO: -121.9€ | Agregador: -48.6€
+
+[Dia 561] Ação Encomenda -> PPO: 040 | Agregador (Elite): 031 || Lucro Diário -> PPO: -124.6€ | Agregador: -62.8€
+
+[Dia 562] Ação Encomenda -> PPO: 000 | Agregador (Elite): 071 || Lucro Diário -> PPO: 56.9€ | Agregador: -64.7€
+
+[Dia 563] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -7.6€ | Agregador: 45.3€
+
+[Dia 564] Ação Encomenda -> PPO: 081 | Agregador (Elite): 029 || Lucro Diário -> PPO: -127.8€ | Agregador: -58.2€
+
+[Dia 565] Ação Encomenda -> PPO: 047 | Agregador (Elite): 000 || Lucro Diário -> PPO: -23.7€ | Agregador: 65.5€
+
+[Dia 566] Ação Encomenda -> PPO: 000 | Agregador (Elite): 035 || Lucro Diário -> PPO: 100.0€ | Agregador: -137.1€
+
+[Dia 567] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 21.8€ | Agregador: 38.2€
+
+[Dia 568] Ação Encomenda -> PPO: 031 | Agregador (Elite): 079 || Lucro Diário -> PPO: -124.9€ | Agregador: -104.5€
+
+[Dia 569] Ação Encomenda -> PPO: 000 | Agregador (Elite): 060 || Lucro Diário -> PPO: 43.3€ | Agregador: -54.1€
+
+[Dia 570] Ação Encomenda -> PPO: 038 | Agregador (Elite): 000 || Lucro Diário -> PPO: -129.4€ | Agregador: 66.2€
+
+[Dia 571] Ação Encomenda -> PPO: 009 | Agregador (Elite): 060 || Lucro Diário -> PPO: -43.9€ | Agregador: -50.2€
+
+[Dia 572] Ação Encomenda -> PPO: 000 | Agregador (Elite): 059 || Lucro Diário -> PPO: -8.8€ | Agregador: 3.9€
+
+[Dia 573] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -28.1€ | Agregador: 77.4€
+
+[Dia 574] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -16.8€ | Agregador: 32.9€
+
+[Dia 575] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -20.6€ | Agregador: 17.2€
+
+[Dia 576] Ação Encomenda -> PPO: 073 | Agregador (Elite): 034 || Lucro Diário -> PPO: -127.5€ | Agregador: -123.6€
+
+[Dia 577] Ação Encomenda -> PPO: 123 | Agregador (Elite): 040 || Lucro Diário -> PPO: -161.9€ | Agregador: -52.0€
+
+[Dia 578] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 63.9€ | Agregador: 68.8€
+
+[Dia 579] Ação Encomenda -> PPO: 051 | Agregador (Elite): 063 || Lucro Diário -> PPO: -15.5€ | Agregador: -133.6€
+
+[Dia 580] Ação Encomenda -> PPO: 025 | Agregador (Elite): 060 || Lucro Diário -> PPO: -28.2€ | Agregador: -29.4€
+
+[Dia 581] Ação Encomenda -> PPO: 002 | Agregador (Elite): 000 || Lucro Diário -> PPO: -69.8€ | Agregador: 31.3€
+
+[Dia 582] Ação Encomenda -> PPO: 083 | Agregador (Elite): 000 || Lucro Diário -> PPO: -30.7€ | Agregador: 78.6€
+
+[Dia 583] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 64.1€ | Agregador: -4.2€
+
+[Dia 584] Ação Encomenda -> PPO: 035 | Agregador (Elite): 000 || Lucro Diário -> PPO: -42.9€ | Agregador: -23.9€
+
+[Dia 585] Ação Encomenda -> PPO: 000 | Agregador (Elite): 019 || Lucro Diário -> PPO: 57.2€ | Agregador: -125.0€
+
+[Dia 586] Ação Encomenda -> PPO: 066 | Agregador (Elite): 114 || Lucro Diário -> PPO: -54.1€ | Agregador: -203.0€
+
+[Dia 587] Ação Encomenda -> PPO: 083 | Agregador (Elite): 000 || Lucro Diário -> PPO: -6.7€ | Agregador: 112.4€
+
+[Dia 588] Ação Encomenda -> PPO: 025 | Agregador (Elite): 005 || Lucro Diário -> PPO: -68.0€ | Agregador: -64.5€
+
+[Dia 589] Ação Encomenda -> PPO: 000 | Agregador (Elite): 080 || Lucro Diário -> PPO: 55.0€ | Agregador: -69.8€
+
+[Dia 590] Ação Encomenda -> PPO: 095 | Agregador (Elite): 000 || Lucro Diário -> PPO: -44.5€ | Agregador: 63.9€
+
+[Dia 591] Ação Encomenda -> PPO: 129 | Agregador (Elite): 000 || Lucro Diário -> PPO: -170.8€ | Agregador: 44.8€
+
+[Dia 592] Ação Encomenda -> PPO: 030 | Agregador (Elite): 056 || Lucro Diário -> PPO: -39.2€ | Agregador: -102.2€
+
+[Dia 593] Ação Encomenda -> PPO: 025 | Agregador (Elite): 000 || Lucro Diário -> PPO: -26.1€ | Agregador: 82.0€
+
+[Dia 594] Ação Encomenda -> PPO: 048 | Agregador (Elite): 000 || Lucro Diário -> PPO: -10.3€ | Agregador: -18.5€
+
+[Dia 595] Ação Encomenda -> PPO: 057 | Agregador (Elite): 000 || Lucro Diário -> PPO: -60.6€ | Agregador: -21.0€
+
+[Dia 596] Ação Encomenda -> PPO: 005 | Agregador (Elite): 000 || Lucro Diário -> PPO: -46.2€ | Agregador: -23.5€
+
+[Dia 597] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 65.9€ | Agregador: -26.0€
+
+[Dia 598] Ação Encomenda -> PPO: 000 | Agregador (Elite): 031 || Lucro Diário -> PPO: 100.2€ | Agregador: -137.1€
+
+[Dia 599] Ação Encomenda -> PPO: 000 | Agregador (Elite): 022 || Lucro Diário -> PPO: 83.2€ | Agregador: -71.5€
+
+[Dia 600] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -26.5€ | Agregador: 19.7€
+
+[Dia 601] Ação Encomenda -> PPO: 079 | Agregador (Elite): 021 || Lucro Diário -> PPO: -136.9€ | Agregador: -131.1€
+
+[Dia 602] Ação Encomenda -> PPO: 051 | Agregador (Elite): 044 || Lucro Diário -> PPO: -58.4€ | Agregador: -80.9€
+
+[Dia 603] Ação Encomenda -> PPO: 000 | Agregador (Elite): 034 || Lucro Diário -> PPO: 39.0€ | Agregador: -62.2€
+
+[Dia 604] Ação Encomenda -> PPO: 029 | Agregador (Elite): 000 || Lucro Diário -> PPO: -54.3€ | Agregador: 49.5€
+
+[Dia 605] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 43.4€ | Agregador: 28.6€
+
+[Dia 606] Ação Encomenda -> PPO: 003 | Agregador (Elite): 052 || Lucro Diário -> PPO: -43.7€ | Agregador: -127.9€
+
+[Dia 607] Ação Encomenda -> PPO: 070 | Agregador (Elite): 086 || Lucro Diário -> PPO: -112.9€ | Agregador: -41.0€
+
+[Dia 608] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 105.8€ | Agregador: 130.7€
+
+[Dia 609] Ação Encomenda -> PPO: 061 | Agregador (Elite): 007 || Lucro Diário -> PPO: -127.9€ | Agregador: -105.7€
+
+[Dia 610] Ação Encomenda -> PPO: 000 | Agregador (Elite): 038 || Lucro Diário -> PPO: 49.2€ | Agregador: -110.1€
+
+[Dia 611] Ação Encomenda -> PPO: 000 | Agregador (Elite): 003 || Lucro Diário -> PPO: 41.6€ | Agregador: -39.9€
+
+[Dia 612] Ação Encomenda -> PPO: 101 | Agregador (Elite): 026 || Lucro Diário -> PPO: -231.5€ | Agregador: -113.5€
+
+[Dia 613] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 44.1€ | Agregador: 34.4€
+
+[Dia 614] Ação Encomenda -> PPO: 133 | Agregador (Elite): 000 || Lucro Diário -> PPO: -104.4€ | Agregador: -35.7€
+
+[Dia 615] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 106.2€ | Agregador: -35.7€
+
+[Dia 616] Ação Encomenda -> PPO: 038 | Agregador (Elite): 000 || Lucro Diário -> PPO: -50.1€ | Agregador: -22.3€
+
+[Dia 617] Ação Encomenda -> PPO: 063 | Agregador (Elite): 000 || Lucro Diário -> PPO: -44.2€ | Agregador: -24.4€
+
+[Dia 618] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 47.4€ | Agregador: -21.0€
+
+[Dia 619] Ação Encomenda -> PPO: 049 | Agregador (Elite): 065 || Lucro Diário -> PPO: -23.7€ | Agregador: -135.5€
+
+[Dia 620] Ação Encomenda -> PPO: 000 | Agregador (Elite): 063 || Lucro Diário -> PPO: 57.2€ | Agregador: -48.7€
+
+[Dia 621] Ação Encomenda -> PPO: 024 | Agregador (Elite): 000 || Lucro Diário -> PPO: -50.3€ | Agregador: 101.2€
+
+[Dia 622] Ação Encomenda -> PPO: 031 | Agregador (Elite): 028 || Lucro Diário -> PPO: -83.8€ | Agregador: -66.7€
+
+[Dia 623] Ação Encomenda -> PPO: 000 | Agregador (Elite): 033 || Lucro Diário -> PPO: 39.1€ | Agregador: -70.5€
+
+[Dia 624] Ação Encomenda -> PPO: 040 | Agregador (Elite): 024 || Lucro Diário -> PPO: -127.5€ | Agregador: -56.6€
+
+[Dia 625] Ação Encomenda -> PPO: 000 | Agregador (Elite): 008 || Lucro Diário -> PPO: 54.2€ | Agregador: -80.2€
+
+[Dia 626] Ação Encomenda -> PPO: 025 | Agregador (Elite): 000 || Lucro Diário -> PPO: -134.4€ | Agregador: -15.1€
+
+[Dia 627] Ação Encomenda -> PPO: 044 | Agregador (Elite): 004 || Lucro Diário -> PPO: -105.4€ | Agregador: -108.8€
+
+[Dia 628] Ação Encomenda -> PPO: 000 | Agregador (Elite): 079 || Lucro Diário -> PPO: 60.9€ | Agregador: -123.4€
+
+[Dia 629] Ação Encomenda -> PPO: 057 | Agregador (Elite): 000 || Lucro Diário -> PPO: -65.4€ | Agregador: 72.5€
+
+[Dia 630] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 57.9€ | Agregador: 50.4€
+
+[Dia 631] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 26.0€ | Agregador: -20.2€
+
+[Dia 632] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -22.7€ | Agregador: -22.7€
+
+[Dia 633] Ação Encomenda -> PPO: 047 | Agregador (Elite): 017 || Lucro Diário -> PPO: -128.2€ | Agregador: -125.2€
+
+[Dia 634] Ação Encomenda -> PPO: 069 | Agregador (Elite): 091 || Lucro Diário -> PPO: -65.8€ | Agregador: -92.3€
+
+[Dia 635] Ação Encomenda -> PPO: 121 | Agregador (Elite): 084 || Lucro Diário -> PPO: -133.2€ | Agregador: -29.5€
+
+[Dia 636] Ação Encomenda -> PPO: 000 | Agregador (Elite): 049 || Lucro Diário -> PPO: 43.3€ | Agregador: -60.1€
+
+[Dia 637] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 56.5€ | Agregador: 56.0€
+
+[Dia 638] Ação Encomenda -> PPO: 000 | Agregador (Elite): 031 || Lucro Diário -> PPO: 42.5€ | Agregador: -61.1€
+
+[Dia 639] Ação Encomenda -> PPO: 133 | Agregador (Elite): 002 || Lucro Diário -> PPO: -200.7€ | Agregador: -89.3€
+
+[Dia 640] Ação Encomenda -> PPO: 028 | Agregador (Elite): 034 || Lucro Diário -> PPO: -59.0€ | Agregador: -56.1€
+
+[Dia 641] Ação Encomenda -> PPO: 018 | Agregador (Elite): 000 || Lucro Diário -> PPO: -49.4€ | Agregador: 55.7€
+
+[Dia 642] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 58.3€ | Agregador: 62.3€
+
+[Dia 643] Ação Encomenda -> PPO: 062 | Agregador (Elite): 000 || Lucro Diário -> PPO: -63.6€ | Agregador: 46.6€
+
+[Dia 644] Ação Encomenda -> PPO: 032 | Agregador (Elite): 003 || Lucro Diário -> PPO: -67.1€ | Agregador: -96.1€
+
+[Dia 645] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 30.6€ | Agregador: -11.3€
+
+[Dia 646] Ação Encomenda -> PPO: 000 | Agregador (Elite): 090 || Lucro Diário -> PPO: 40.1€ | Agregador: -128.7€
+
+[Dia 647] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 22.3€ | Agregador: 23.9€
+
+[Dia 648] Ação Encomenda -> PPO: 114 | Agregador (Elite): 001 || Lucro Diário -> PPO: -164.4€ | Agregador: -51.5€
+
+[Dia 649] Ação Encomenda -> PPO: 000 | Agregador (Elite): 082 || Lucro Diário -> PPO: 66.0€ | Agregador: -36.0€
+
+[Dia 650] Ação Encomenda -> PPO: 059 | Agregador (Elite): 099 || Lucro Diário -> PPO: -69.1€ | Agregador: -70.3€
+
+[Dia 651] Ação Encomenda -> PPO: 116 | Agregador (Elite): 017 || Lucro Diário -> PPO: -157.3€ | Agregador: -46.1€
+
+[Dia 652] Ação Encomenda -> PPO: 000 | Agregador (Elite): 059 || Lucro Diário -> PPO: 20.2€ | Agregador: -80.5€
+
+[Dia 653] Ação Encomenda -> PPO: 098 | Agregador (Elite): 053 || Lucro Diário -> PPO: -80.3€ | Agregador: -72.9€
+
+[Dia 654] Ação Encomenda -> PPO: 000 | Agregador (Elite): 016 || Lucro Diário -> PPO: 29.9€ | Agregador: -67.0€
+
+[Dia 655] Ação Encomenda -> PPO: 000 | Agregador (Elite): 034 || Lucro Diário -> PPO: 30.9€ | Agregador: -68.4€
+
+[Dia 656] Ação Encomenda -> PPO: 000 | Agregador (Elite): 049 || Lucro Diário -> PPO: 85.2€ | Agregador: -17.0€
+
+[Dia 657] Ação Encomenda -> PPO: 018 | Agregador (Elite): 048 || Lucro Diário -> PPO: -36.7€ | Agregador: -39.0€
+
+[Dia 658] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 43.8€ | Agregador: 43.3€
+
+[Dia 659] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 46.7€ | Agregador: 46.2€
+
+[Dia 660] Ação Encomenda -> PPO: 037 | Agregador (Elite): 033 || Lucro Diário -> PPO: -78.1€ | Agregador: -78.2€
+
+[Dia 661] Ação Encomenda -> PPO: 085 | Agregador (Elite): 000 || Lucro Diário -> PPO: -92.3€ | Agregador: 15.9€
+
+[Dia 662] Ação Encomenda -> PPO: 010 | Agregador (Elite): 000 || Lucro Diário -> PPO: -75.6€ | Agregador: 28.4€
+
+[Dia 663] Ação Encomenda -> PPO: 000 | Agregador (Elite): 057 || Lucro Diário -> PPO: 68.8€ | Agregador: -33.5€
+
+[Dia 664] Ação Encomenda -> PPO: 000 | Agregador (Elite): 004 || Lucro Diário -> PPO: 53.4€ | Agregador: -45.8€
+
+[Dia 665] Ação Encomenda -> PPO: 032 | Agregador (Elite): 000 || Lucro Diário -> PPO: -70.8€ | Agregador: 33.4€
+
+[Dia 666] Ação Encomenda -> PPO: 000 | Agregador (Elite): 057 || Lucro Diário -> PPO: 38.9€ | Agregador: -64.5€
+
+[Dia 667] Ação Encomenda -> PPO: 000 | Agregador (Elite): 047 || Lucro Diário -> PPO: 55.4€ | Agregador: -49.3€
+
+[Dia 668] Ação Encomenda -> PPO: 000 | Agregador (Elite): 039 || Lucro Diário -> PPO: 34.4€ | Agregador: -71.3€
+
+[Dia 669] Ação Encomenda -> PPO: 098 | Agregador (Elite): 000 || Lucro Diário -> PPO: -65.9€ | Agregador: 40.5€
+
+[Dia 670] Ação Encomenda -> PPO: 001 | Agregador (Elite): 000 || Lucro Diário -> PPO: -31.5€ | Agregador: 69.1€
+
+[Dia 671] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 72.0€ | Agregador: 72.6€
+
+[Dia 672] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 44.5€ | Agregador: 45.1€
+
+[Dia 673] Ação Encomenda -> PPO: 070 | Agregador (Elite): 057 || Lucro Diário -> PPO: -75.2€ | Agregador: -107.4€
+
+[Dia 674] Ação Encomenda -> PPO: 011 | Agregador (Elite): 083 || Lucro Diário -> PPO: -43.8€ | Agregador: -50.4€
+
+[Dia 675] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 69.7€ | Agregador: 88.7€
+
+[Dia 676] Ação Encomenda -> PPO: 012 | Agregador (Elite): 000 || Lucro Diário -> PPO: -127.7€ | Agregador: 71.9€
+
+[Dia 677] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -9.7€ | Agregador: -18.1€
+
+[Dia 678] Ação Encomenda -> PPO: 027 | Agregador (Elite): 000 || Lucro Diário -> PPO: -129.6€ | Agregador: -26.9€
+
+[Dia 679] Ação Encomenda -> PPO: 000 | Agregador (Elite): 018 || Lucro Diário -> PPO: 34.0€ | Agregador: -124.5€
+
+[Dia 680] Ação Encomenda -> PPO: 035 | Agregador (Elite): 000 || Lucro Diário -> PPO: -122.8€ | Agregador: 18.5€
+
+[Dia 681] Ação Encomenda -> PPO: 046 | Agregador (Elite): 000 || Lucro Diário -> PPO: -47.5€ | Agregador: -22.7€
+
+[Dia 682] Ação Encomenda -> PPO: 021 | Agregador (Elite): 017 || Lucro Diário -> PPO: -48.9€ | Agregador: -123.5€
+
+[Dia 683] Ação Encomenda -> PPO: 000 | Agregador (Elite): 015 || Lucro Diário -> PPO: 51.2€ | Agregador: -90.2€
+
+[Dia 684] Ação Encomenda -> PPO: 000 | Agregador (Elite): 010 || Lucro Diário -> PPO: -22.3€ | Agregador: -91.8€
+
+[Dia 685] Ação Encomenda -> PPO: 016 | Agregador (Elite): 032 || Lucro Diário -> PPO: -131.8€ | Agregador: -112.4€
+
+[Dia 686] Ação Encomenda -> PPO: 041 | Agregador (Elite): 000 || Lucro Diário -> PPO: -91.5€ | Agregador: 50.3€
+
+[Dia 687] Ação Encomenda -> PPO: 000 | Agregador (Elite): 038 || Lucro Diário -> PPO: 55.1€ | Agregador: -121.9€
+
+[Dia 688] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -2.5€ | Agregador: 43.2€
+
+[Dia 689] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -21.0€ | Agregador: 4.2€
+
+[Dia 690] Ação Encomenda -> PPO: 027 | Agregador (Elite): 000 || Lucro Diário -> PPO: -128.3€ | Agregador: -25.6€
+
+[Dia 691] Ação Encomenda -> PPO: 003 | Agregador (Elite): 000 || Lucro Diário -> PPO: -68.0€ | Agregador: -24.4€
+
+[Dia 692] Ação Encomenda -> PPO: 000 | Agregador (Elite): 035 || Lucro Diário -> PPO: -26.0€ | Agregador: -135.8€
+
+[Dia 693] Ação Encomenda -> PPO: 022 | Agregador (Elite): 000 || Lucro Diário -> PPO: -122.8€ | Agregador: 48.5€
+
+[Dia 694] Ação Encomenda -> PPO: 097 | Agregador (Elite): 000 || Lucro Diário -> PPO: -83.7€ | Agregador: -7.6€
+
+[Dia 695] Ação Encomenda -> PPO: 000 | Agregador (Elite): 044 || Lucro Diário -> PPO: 56.3€ | Agregador: -127.5€
+
+[Dia 696] Ação Encomenda -> PPO: 063 | Agregador (Elite): 023 || Lucro Diário -> PPO: -53.7€ | Agregador: -49.0€
+
+[Dia 697] Ação Encomenda -> PPO: 095 | Agregador (Elite): 000 || Lucro Diário -> PPO: -63.3€ | Agregador: 48.5€
+
+[Dia 698] Ação Encomenda -> PPO: 129 | Agregador (Elite): 090 || Lucro Diário -> PPO: -152.2€ | Agregador: -121.2€
+
+[Dia 699] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 82.9€ | Agregador: 89.3€
+
+[Dia 700] Ação Encomenda -> PPO: 000 | Agregador (Elite): 037 || Lucro Diário -> PPO: 55.8€ | Agregador: -52.0€
+
+[Dia 701] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 62.5€ | Agregador: 52.5€
+
+[Dia 702] Ação Encomenda -> PPO: 127 | Agregador (Elite): 000 || Lucro Diário -> PPO: -158.9€ | Agregador: -22.7€
+
+[Dia 703] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 62.1€ | Agregador: -25.6€
+
+[Dia 704] Ação Encomenda -> PPO: 091 | Agregador (Elite): 054 || Lucro Diário -> PPO: -83.2€ | Agregador: -121.8€
+
+[Dia 705] Ação Encomenda -> PPO: 000 | Agregador (Elite): 054 || Lucro Diário -> PPO: 62.6€ | Agregador: -35.3€
+
+[Dia 706] Ação Encomenda -> PPO: 046 | Agregador (Elite): 056 || Lucro Diário -> PPO: -49.0€ | Agregador: -44.6€
+
+[Dia 707] Ação Encomenda -> PPO: 000 | Agregador (Elite): 017 || Lucro Diário -> PPO: 58.7€ | Agregador: -38.0€
+
+[Dia 708] Ação Encomenda -> PPO: 000 | Agregador (Elite): 008 || Lucro Diário -> PPO: 37.9€ | Agregador: -58.6€
+
+[Dia 709] Ação Encomenda -> PPO: 000 | Agregador (Elite): 009 || Lucro Diário -> PPO: 40.7€ | Agregador: -56.3€
+
+[Dia 710] Ação Encomenda -> PPO: 076 | Agregador (Elite): 000 || Lucro Diário -> PPO: -45.2€ | Agregador: 31.9€
+
+[Dia 711] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 47.2€ | Agregador: -21.4€
+
+[Dia 712] Ação Encomenda -> PPO: 014 | Agregador (Elite): 000 || Lucro Diário -> PPO: -34.1€ | Agregador: -26.0€
+
+[Dia 713] Ação Encomenda -> PPO: 000 | Agregador (Elite): 006 || Lucro Diário -> PPO: 80.5€ | Agregador: -129.6€
+
+[Dia 714] Ação Encomenda -> PPO: 000 | Agregador (Elite): 038 || Lucro Diário -> PPO: 44.6€ | Agregador: -110.9€
+
+[Dia 715] Ação Encomenda -> PPO: 074 | Agregador (Elite): 003 || Lucro Diário -> PPO: -86.0€ | Agregador: -60.5€
+
+[Dia 716] Ação Encomenda -> PPO: 033 | Agregador (Elite): 000 || Lucro Diário -> PPO: -49.5€ | Agregador: 13.4€
+
+[Dia 717] Ação Encomenda -> PPO: 036 | Agregador (Elite): 054 || Lucro Diário -> PPO: -44.6€ | Agregador: -128.9€
+
+[Dia 718] Ação Encomenda -> PPO: 018 | Agregador (Elite): 018 || Lucro Diário -> PPO: -27.4€ | Agregador: -26.6€
+
+[Dia 719] Ação Encomenda -> PPO: 000 | Agregador (Elite): 087 || Lucro Diário -> PPO: 63.8€ | Agregador: -86.9€
+
+[Dia 720] Ação Encomenda -> PPO: 133 | Agregador (Elite): 000 || Lucro Diário -> PPO: -248.2€ | Agregador: 104.9€
+
+[Dia 721] Ação Encomenda -> PPO: 100 | Agregador (Elite): 053 || Lucro Diário -> PPO: -68.9€ | Agregador: -74.6€
+
+[Dia 722] Ação Encomenda -> PPO: 007 | Agregador (Elite): 021 || Lucro Diário -> PPO: -53.9€ | Agregador: -49.2€
+
+[Dia 723] Ação Encomenda -> PPO: 000 | Agregador (Elite): 044 || Lucro Diário -> PPO: 37.5€ | Agregador: -61.4€
+
+[Dia 724] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 42.0€ | Agregador: 45.8€
+
+[Dia 725] Ação Encomenda -> PPO: 000 | Agregador (Elite): 017 || Lucro Diário -> PPO: 56.8€ | Agregador: -58.0€
+
+[Dia 726] Ação Encomenda -> PPO: 084 | Agregador (Elite): 000 || Lucro Diário -> PPO: -0.2€ | Agregador: -0.0€
+
+[Dia 727] Ação Encomenda -> PPO: 084 | Agregador (Elite): 002 || Lucro Diário -> PPO: -19.9€ | Agregador: -131.3€
+
+[Dia 728] Ação Encomenda -> PPO: 110 | Agregador (Elite): 000 || Lucro Diário -> PPO: -165.0€ | Agregador: -16.8€
+
+[Dia 729] Ação Encomenda -> PPO: 050 | Agregador (Elite): 000 || Lucro Diário -> PPO: -50.2€ | Agregador: -23.9€
+
+[Dia 730] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 37.1€ | Agregador: -19.7€
+
+[Dia 731] Ação Encomenda -> PPO: 102 | Agregador (Elite): 000 || Lucro Diário -> PPO: -158.2€ | Agregador: -23.1€
+
+[Dia 732] Ação Encomenda -> PPO: 024 | Agregador (Elite): 098 || Lucro Diário -> PPO: -42.8€ | Agregador: -135.4€
+
+[Dia 733] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 93.0€ | Agregador: 99.3€
+
+[Dia 734] Ação Encomenda -> PPO: 004 | Agregador (Elite): 045 || Lucro Diário -> PPO: -25.7€ | Agregador: -53.3€
+
+[Dia 735] Ação Encomenda -> PPO: 077 | Agregador (Elite): 000 || Lucro Diário -> PPO: -51.9€ | Agregador: 60.1€
+
+[Dia 736] Ação Encomenda -> PPO: 000 | Agregador (Elite): 012 || Lucro Diário -> PPO: 42.2€ | Agregador: -102.9€
+
+[Dia 737] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 27.8€ | Agregador: 8.4€
+
+[Dia 738] Ação Encomenda -> PPO: 037 | Agregador (Elite): 062 || Lucro Diário -> PPO: -35.5€ | Agregador: -132.7€
+
+[Dia 739] Ação Encomenda -> PPO: 009 | Agregador (Elite): 030 || Lucro Diário -> PPO: -51.4€ | Agregador: -50.4€
+
+[Dia 740] Ação Encomenda -> PPO: 021 | Agregador (Elite): 010 || Lucro Diário -> PPO: -43.1€ | Agregador: -39.8€
+
+[Dia 741] Ação Encomenda -> PPO: 000 | Agregador (Elite): 075 || Lucro Diário -> PPO: 106.1€ | Agregador: -73.5€
+
+[Dia 742] Ação Encomenda -> PPO: 113 | Agregador (Elite): 000 || Lucro Diário -> PPO: -161.1€ | Agregador: 48.6€
+
+[Dia 743] Ação Encomenda -> PPO: 000 | Agregador (Elite): 020 || Lucro Diário -> PPO: 64.1€ | Agregador: -35.0€
+
+[Dia 744] Ação Encomenda -> PPO: 002 | Agregador (Elite): 009 || Lucro Diário -> PPO: -50.0€ | Agregador: -69.8€
+
+[Dia 745] Ação Encomenda -> PPO: 035 | Agregador (Elite): 000 || Lucro Diário -> PPO: -28.1€ | Agregador: -8.4€
+
+[Dia 746] Ação Encomenda -> PPO: 048 | Agregador (Elite): 000 || Lucro Diário -> PPO: -58.2€ | Agregador: -20.2€
+
+[Dia 747] Ação Encomenda -> PPO: 088 | Agregador (Elite): 078 || Lucro Diário -> PPO: -42.4€ | Agregador: -133.0€
+
+[Dia 748] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 88.6€ | Agregador: 89.8€
+
+[Dia 749] Ação Encomenda -> PPO: 017 | Agregador (Elite): 013 || Lucro Diário -> PPO: -35.0€ | Agregador: -76.1€
+
+[Dia 750] Ação Encomenda -> PPO: 037 | Agregador (Elite): 004 || Lucro Diário -> PPO: -55.0€ | Agregador: -93.7€
+
+[Dia 751] Ação Encomenda -> PPO: 000 | Agregador (Elite): 029 || Lucro Diário -> PPO: 50.1€ | Agregador: -115.5€
+
+[Dia 752] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -2.9€ | Agregador: 45.3€
+
+[Dia 753] Ação Encomenda -> PPO: 061 | Agregador (Elite): 000 || Lucro Diário -> PPO: -129.6€ | Agregador: -19.3€
+
+[Dia 754] Ação Encomenda -> PPO: 000 | Agregador (Elite): 097 || Lucro Diário -> PPO: 87.0€ | Agregador: -139.9€
+
+[Dia 755] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -11.3€ | Agregador: 85.6€
+
+[Dia 756] Ação Encomenda -> PPO: 000 | Agregador (Elite): 011 || Lucro Diário -> PPO: -25.6€ | Agregador: -32.4€
+
+[Dia 757] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -24.8€ | Agregador: 6.7€
+
+[Dia 758] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -22.7€ | Agregador: -22.7€
+
+[Dia 759] Ação Encomenda -> PPO: 000 | Agregador (Elite): 114 || Lucro Diário -> PPO: -24.8€ | Agregador: -236.2€
+
+[Dia 760] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -26.5€ | Agregador: 69.4€
+
+[Dia 761] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -30.2€ | Agregador: 86.6€
+
+[Dia 762] Ação Encomenda -> PPO: 033 | Agregador (Elite): 000 || Lucro Diário -> PPO: -137.3€ | Agregador: 5.9€
+
+[Dia 763] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 40.7€ | Agregador: -28.6€
+
+[Dia 764] Ação Encomenda -> PPO: 007 | Agregador (Elite): 061 || Lucro Diário -> PPO: -126.3€ | Agregador: -131.7€
+
+[Dia 765] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -8.0€ | Agregador: 56.0€
+
+[Dia 766] Ação Encomenda -> PPO: 100 | Agregador (Elite): 053 || Lucro Diário -> PPO: -136.9€ | Agregador: -75.5€
+
+[Dia 767] Ação Encomenda -> PPO: 124 | Agregador (Elite): 140 || Lucro Diário -> PPO: -144.2€ | Agregador: -143.9€
+
+[Dia 768] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 70.1€ | Agregador: 71.4€
+
+[Dia 769] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 116.6€ | Agregador: 117.9€
+
+[Dia 770] Ação Encomenda -> PPO: 000 | Agregador (Elite): 013 || Lucro Diário -> PPO: 55.8€ | Agregador: -44.2€
+
+[Dia 771] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: 39.5€ | Agregador: 1.7€
+
+[Dia 772] Ação Encomenda -> PPO: 000 | Agregador (Elite): 041 || Lucro Diário -> PPO: -22.3€ | Agregador: -126.4€
+
+[Dia 773] Ação Encomenda -> PPO: 000 | Agregador (Elite): 034 || Lucro Diário -> PPO: -16.0€ | Agregador: -74.1€
+
+[Dia 774] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -22.3€ | Agregador: 54.5€
+
+[Dia 775] Ação Encomenda -> PPO: 000 | Agregador (Elite): 000 || Lucro Diário -> PPO: -28.6€ | Agregador: 21.8€
+
+======================================================
+
+[FIM SIMULAÇÃO] 776 dias completados.
+
+Lucro Acumulado Final Modelo A (PPO Original):         -21,363.70€
+
+Lucro Acumulado Final Modelo B (Agregador Elite):      -28,034.88€
+
+Lucro Acumulado Final Baseline Min-Max:                8,434.46€
+
+Lucro Acumulado Final Baseline Média 5 Dias:           -28,224.02€
+
+Lucro Acumulado Final Baseline Floating Point:         916.48€
+
+Lucro Acumulado Final Baseline Time Supply:            3,015.58€
+
+Lucro Acumulado Final PPO Deslimitado Gamma 0.95:      -17,984.54€
+
+Lucro Acumulado Final PPO Deslimitado Gamma 0.8:       -17,170.53€
+
+Lucro Acumulado Final PPO Limitado Gamma 0.95:         -17,196.39€
+
+======================================================
+
+======================================================
+
+   COMPARAÇÃO DE PERFORMANCE RELATIVA AO MELHOR       
+
+   (Melhor: Baseline Min-Max = 8,434.46€)
+
+======================================================
+
+- PPO Original (Modelo A)                 :   -21,363.70€ | -353.29%
+
+- Agregador Elite (Modelo B)              :   -28,034.88€ | -432.39%
+
+- Baseline Min-Max                        :     8,434.46€ | (MELHOR)
+
+- Baseline Média 5 Dias                   :   -28,224.02€ | -434.63%
+
+- Baseline Floating Point                 :       916.48€ | -89.13%
+
+- Baseline Time Supply                    :     3,015.58€ | -64.25%
+
+- PPO Gamma 0.95 (Deslimitado)            :   -17,984.54€ | -313.23%
+
+- PPO Gamma 0.8 (Deslimitado)             :   -17,170.53€ | -303.58%
+
+- PPO Gamma 0.95 (Limitado)               :   -17,196.39€ | -303.88%
+
+======================================================
+
+[OK] Gráfico comparativo guardado em: /app/Dados/comparacao_modelos_sku_3_586.png
+
+[OK] Ficheiro Excel detalhado guardado em: /app/Resultados/Comparativo_Modelos_SKU_3_586.xlsx
+
+A gerar dashboard interativo Plotly...
+
+[OK] Dashboard Plotly Dinâmico guardado em: /app/Resultados/Dashboard_Comparativo_Modelos.html
+

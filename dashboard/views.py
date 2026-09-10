@@ -5,10 +5,13 @@ from django.db import IntegrityError, transaction
 from django.db.models import Sum, Q
 from django import forms
 from django.shortcuts import render, redirect, get_object_or_404
+from django.http import JsonResponse
+from django.core.paginator import Paginator
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from django.urls import reverse, reverse_lazy 
 from .decorators import role_required 
 from django.contrib.auth.models import Group
@@ -102,6 +105,78 @@ class RegisterView(View):
 # 2. DASHBOARD VIEWS PARA OUTROS PERFIS (Mantidas)
 # ----------------------------------------------------------------------
 
+import json
+import unicodedata
+import re
+import hashlib
+
+PORTUGAL_LOCATIONS_MAP = {
+    'lisboa': (38.7223, -9.1393), 'porto': (41.1579, -8.6291), 'coimbra': (40.2033, -8.4103),
+    'braga': (41.5454, -8.4265), 'faro': (37.0179, -7.9308), 'aveiro': (40.6405, -8.6538),
+    'leiria': (39.7438, -8.8078), 'setubal': (38.5244, -8.8882), 'santarem': (39.2362, -8.6814),
+    'evora': (38.5714, -7.9135), 'viseu': (40.6566, -7.9125), 'guarda': (40.5365, -7.2684),
+    'castelo branco': (39.8222, -7.4909), 'braganca': (41.8058, -6.7572), 'vila real': (41.3010, -7.7422),
+    'viana do castelo': (41.6932, -8.8328), 'portalegre': (39.2938, -7.4312), 'beja': (38.0153, -7.8652),
+    'guimaraes': (41.4425, -8.2918), 'lordelo': (41.3120, -8.4150), 'ronfe': (41.4402, -8.3650),
+    'santo tirso': (41.3431, -8.4738), 'espinho': (40.9930, -8.6342), 'famalicao': (41.4077, -8.5196),
+    'barcelos': (41.5388, -8.6151), 'maia': (41.2330, -8.6210), 'matosinhos': (41.1834, -8.6807),
+    'gaia': (41.1336, -8.6174), 'sintra': (38.8029, -9.3817), 'cascais': (38.6970, -9.4223),
+    'almada': (38.6790, -9.1569), 'seixal': (38.6416, -9.0988), 'barreiro': (38.6633, -9.0734),
+    'loures': (38.8315, -9.1681), 'amadora': (38.7538, -9.2308), 'oeiras': (38.6979, -9.3106),
+    'odivelas': (38.7954, -9.1852), 'pombal': (39.9157, -8.6278), 'caldas da rainha': (39.4034, -9.1369),
+    'torres vedras': (39.0918, -9.2600), 'tomar': (39.6036, -8.4079), 'abrantes': (39.4635, -8.1983),
+    'figueira da foz': (40.1508, -8.8618), 'penafiel': (41.2057, -8.2831), 'paredes': (41.2053, -8.3304),
+    'felgueiras': (41.3655, -8.1969), 'amarante': (41.2729, -8.0776), 'lamego': (41.0967, -7.8103),
+    'chaves': (41.7410, -7.4717), 'elvas': (38.8817, -7.1628), 'portimao': (37.1364, -8.5377),
+    'lagos': (37.1028, -8.6730), 'olhao': (37.0286, -7.8411), 'tavira': (37.1261, -7.6499),
+    'silves': (37.1887, -8.4398), 'sines': (37.9562, -8.8698),
+}
+
+def _resolve_geo_coords(loc_str, user=None, warehouse=None):
+    if warehouse and warehouse.latitude and warehouse.longitude:
+        return float(warehouse.latitude), float(warehouse.longitude)
+    if not warehouse and loc_str and ' (wh:' in str(loc_str).lower():
+        try:
+            match = re.search(r'\(wh:\s*(\d+)\)', str(loc_str), re.IGNORECASE)
+            if match:
+                wh_id = int(match.group(1))
+                wh = Warehouse.objects.filter(pk=wh_id).first()
+                if wh and wh.latitude and wh.longitude:
+                    return float(wh.latitude), float(wh.longitude)
+                elif wh:
+                    loc_str = wh.location
+        except Exception:
+            pass
+            
+    def _norm(t):
+        if not t: return ''
+        n = unicodedata.normalize('NFD', str(t).lower())
+        return ''.join(c for c in n if unicodedata.category(c) != 'Mn')
+        
+    clean = _norm(loc_str)
+    for city, coords in PORTUGAL_LOCATIONS_MAP.items():
+        if city in clean:
+            return coords
+            
+    if user:
+        u_wh = Warehouse.objects.filter(owner=user).first()
+        if u_wh:
+            if u_wh.latitude and u_wh.longitude:
+                return float(u_wh.latitude), float(u_wh.longitude)
+            for city, coords in PORTUGAL_LOCATIONS_MAP.items():
+                if city in _norm(u_wh.location):
+                    return coords
+        if hasattr(user, 'userprofile') and user.userprofile.address:
+            for city, coords in PORTUGAL_LOCATIONS_MAP.items():
+                if city in _norm(user.userprofile.address):
+                    return coords
+                    
+    # Deterministic fallback inside Continental Portugal
+    h = int(hashlib.md5((clean or 'portugal').encode('utf-8')).hexdigest()[:8], 16)
+    lat = 37.5 + (h % 400) / 100.0
+    lon = -8.9 + ((h >> 8) % 200) / 100.0
+    return round(lat, 5), round(lon, 5)
+
 # Transporter Dashboard
 @method_decorator(login_required, name='dispatch')
 @method_decorator(role_required(['Transporter']), name='dispatch')
@@ -114,28 +189,132 @@ class TransporterDashboardView(View):
         vehicle_form = VehicleForm()
 
         # 0. Mercado de Trabalho - Cargas Individuais (sem rota)
-        open_orders = MarketplaceOrder.objects.filter(status='APPROVED', transport_status='PENDING', route__isnull=True).select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')
+        open_orders = MarketplaceOrder.objects.filter(
+            status='APPROVED', 
+            transport_status='PENDING', 
+            route__isnull=True
+        ).select_related('requester', 'culture', 'fulfilled_by', 'harvest_origin').order_by('-fulfilled_at')
 
         # Mercado de Trabalho - Rotas Otimizadas Criadas (Pendente aceitação)
-        open_routes = Route.objects.filter(status='PENDING').prefetch_related('orders__requester', 'orders__culture').order_by('-created_at')
+        open_routes = Route.objects.filter(
+            status='PENDING'
+        ).select_related('vehicle').prefetch_related('orders__requester', 'orders__culture', 'orders__harvest_origin__warehouse').order_by('-created_at')
 
         # Minhas Rotas Ativas (Aceites, Planeadas, Em Trânsito)
-        my_active_routes = Route.objects.filter(transporter=user).exclude(status='DELIVERED').prefetch_related('orders__requester', 'orders__culture').order_by('-created_at')
+        my_active_routes = Route.objects.filter(
+            transporter=user
+        ).exclude(status='DELIVERED').select_related('vehicle').prefetch_related('orders__requester', 'orders__culture', 'orders__harvest_origin__warehouse', 'orders__fulfilled_by').order_by('-created_at')
 
         # Histórico de Rotas Concluídas
-        my_closed_routes = Route.objects.filter(transporter=user, status='DELIVERED').prefetch_related('orders__requester', 'orders__culture').order_by('-created_at')
+        my_closed_routes = Route.objects.filter(
+            transporter=user, 
+            status='DELIVERED'
+        ).select_related('vehicle').prefetch_related('orders__requester', 'orders__culture', 'orders__harvest_origin__warehouse').order_by('-created_at')
 
-        # 1. Encomendas Individuais ACEITES pelo Transportador (sem rota) -> Planeamento
-        orders_to_plan = MarketplaceOrder.objects.filter(status='APPROVED', transport_status='ACCEPTED', route__isnull=True).select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')
+        # 1. Encomendas Individuais Prontas para Recolha (sem rota) -> Recolha / Início de Viagem
+        orders_ready_pickup = MarketplaceOrder.objects.filter(
+            status='APPROVED', 
+            transport_status__in=['ACCEPTED', 'PLANNED'], 
+            route__isnull=True
+        ).filter(vehicle__owner=user).select_related('requester', 'culture', 'fulfilled_by', 'harvest_origin', 'vehicle').order_by('-fulfilled_at')
         
-        # 2. Encomendas Individuais Planeadas (sem rota) -> Recolha
-        orders_ready_pickup = MarketplaceOrder.objects.filter(status='APPROVED', transport_status='PLANNED', route__isnull=True).select_related('requester', 'culture', 'fulfilled_by').order_by('planned_pickup_date')
-        
-        # 3. Encomendas Individuais Em Trânsito (sem rota) -> Entrega
-        orders_in_transit = MarketplaceOrder.objects.filter(status='APPROVED', transport_status='IN_TRANSIT', route__isnull=True).select_related('requester', 'culture', 'fulfilled_by').order_by('actual_pickup_date')
+        # 2. Encomendas Individuais Em Trânsito (sem rota) -> Entrega
+        orders_in_transit = MarketplaceOrder.objects.filter(
+            status='APPROVED', 
+            transport_status='IN_TRANSIT', 
+            route__isnull=True
+        ).filter(vehicle__owner=user).select_related('requester', 'culture', 'fulfilled_by', 'harvest_origin', 'vehicle').order_by('-actual_pickup_date')
 
-        # 4. Histórico de Entregas Individuais (sem rota)
-        closed_orders = MarketplaceOrder.objects.filter(status='APPROVED', transport_status='DELIVERED', route__isnull=True).select_related('requester', 'culture', 'fulfilled_by').order_by('-actual_delivery_date')
+        # 3. Histórico de Entregas - Contagem instantânea (evita carregar milhares de linhas e N+1 queries no arranque)
+        closed_orders_count = MarketplaceOrder.objects.filter(
+            status='APPROVED', 
+            transport_status='DELIVERED'
+        ).filter(
+            Q(vehicle__owner=user) | Q(route__transporter=user) | Q(role__in=['Producer', 'Processor'], vehicle__isnull=True, route__isnull=True)
+        ).count()
+        
+        # Preparar dados JSON consolidados para o Mapa Leaflet (Rotas Otimizadas + Cargas Aceites Individuais)
+        map_active_items = []
+        
+        # 1. Rotas Agrupadas
+        for r in my_active_routes:
+            r_orders = []
+            for o in r.orders.all():
+                o_lat, o_lon = _resolve_geo_coords(
+                    o.warehouse_location, 
+                    warehouse=o.harvest_origin.warehouse if o.harvest_origin else None
+                )
+                d_lat, d_lon = _resolve_geo_coords(
+                    f"Armazém {o.requester.username}", 
+                    user=o.requester
+                )
+                r_orders.append({
+                    'id': o.id,
+                    'origin': o.warehouse_location or f"Armazém Produtor ({o.fulfilled_by.username if o.fulfilled_by else 'Produtor'})",
+                    'dest': f"Armazém {o.requester.username}",
+                    'culture': o.culture.name if o.culture else "Produtos Hortícolas",
+                    'quantity': float(o.quantity_kg or 0.0),
+                    'pallets': o.total_pallets,
+                    'crates': o.total_crates,
+                    'origin_lat': o_lat,
+                    'origin_lon': o_lon,
+                    'dest_lat': d_lat,
+                    'dest_lon': d_lon,
+                })
+            
+            v_label = f"{r.vehicle.brand_model} ({r.vehicle.license_plate})" if r.vehicle else "Veículo Atribuído"
+            map_active_items.append({
+                'id': str(r.id),
+                'display_id': f"Rota #{r.id}",
+                'type': 'ROUTE',
+                'status': r.get_status_display(),
+                'status_code': r.status,
+                'vehicle': v_label,
+                'total_weight_kg': float(r.total_weight_kg),
+                'total_pallets': r.total_pallets,
+                'total_crates': r.total_crates,
+                'optimized_path': r.optimized_path or "",
+                'orders': r_orders
+            })
+            
+        # 2. Cargas Individuais Aceites (Ready Pickup ou In Transit)
+        for o in (list(orders_ready_pickup) + list(orders_in_transit)):
+            o_lat, o_lon = _resolve_geo_coords(
+                o.warehouse_location, 
+                warehouse=o.harvest_origin.warehouse if o.harvest_origin else None
+            )
+            d_lat, d_lon = _resolve_geo_coords(
+                f"Armazém {o.requester.username}", 
+                user=o.requester
+            )
+            v_label = f"{o.vehicle.brand_model} ({o.vehicle.license_plate})" if o.vehicle else "Veículo Atribuído"
+            map_active_items.append({
+                'id': f"job_{o.id}",
+                'display_id': f"Carga #{o.id}",
+                'type': 'INDIVIDUAL',
+                'status': o.get_transport_status_display(),
+                'status_code': o.transport_status,
+                'vehicle': v_label,
+                'total_weight_kg': float(o.quantity_kg or 0.0),
+                'total_pallets': o.total_pallets,
+                'total_crates': o.total_crates,
+                'optimized_path': f"{o.warehouse_location or 'Origem'} -> Armazém {o.requester.username}",
+                'orders': [{
+                    'id': o.id,
+                    'origin': o.warehouse_location or f"Armazém Produtor ({o.fulfilled_by.username if o.fulfilled_by else 'Produtor'})",
+                    'dest': f"Armazém {o.requester.username}",
+                    'culture': o.culture.name if o.culture else "Produtos Hortícolas",
+                    'quantity': float(o.quantity_kg or 0.0),
+                    'pallets': o.total_pallets,
+                    'crates': o.total_crates,
+                    'origin_lat': o_lat,
+                    'origin_lon': o_lon,
+                    'dest_lat': d_lat,
+                    'dest_lon': d_lon,
+                }]
+            })
+            
+        active_routes_json_data = json.dumps(map_active_items)
         
         try:
             user_profile = UserProfile.objects.get(user=user)
@@ -156,14 +335,16 @@ class TransporterDashboardView(View):
             
             # Listas segmentadas individuais
             'open_market_orders': open_orders,
-            'orders_to_plan': orders_to_plan,
             'orders_ready_pickup': orders_ready_pickup,
             'orders_in_transit': orders_in_transit,
-            'closed_market_orders': closed_orders, 
+            'closed_orders_count': closed_orders_count,
+            
+            # Dados de Mapa Leaflet
+            'active_routes_json_data': active_routes_json_data,
+            'map_active_items_count': len(map_active_items),
             
             # Formulários
             'market_order_form': MarketplaceOrderForm(initial={'role': 'Transporter', 'order_type': 'BUY'}),
-            'transport_plan_form': TransportPlanForm(),
             'transport_delivery_form': TransportDeliveryForm(),
         }
         return render(request, 'dashboard/transporterDash.html', context)
@@ -1641,32 +1822,70 @@ def market_accept_order(request):
 # 6. VIEWS DE LOGÍSTICA (TRANSPORTER)
 # ----------------------------------------------------------------------
 
-def check_and_create_optimal_route(order_date):
-    orders = MarketplaceOrder.objects.filter(
-        status='APPROVED',
-        transport_status='PENDING',
-        fulfilled_at__date=order_date,
-        route__isnull=True
-    )
-    if orders.count() >= 6:
+def _parse_or_now_dt(dt_str):
+    if dt_str:
+        try:
+            parsed = parse_datetime(dt_str)
+            if parsed:
+                if timezone.is_naive(parsed):
+                    parsed = timezone.make_aware(parsed)
+                return parsed
+        except Exception:
+            pass
+    return timezone.now()
+
+def _create_route_from_cluster(order_cluster, route_date):
+    with transaction.atomic():
         route = Route.objects.create(
-            route_date=order_date,
+            route_date=route_date or timezone.now().date(),
             status='PENDING'
         )
         locations = []
-        for order in orders:
-            order.route = route
-            order.save()
-            if order.warehouse_location not in locations:
-                locations.append(order.warehouse_location)
-            dest = f"Armazém {order.requester.username}"
+        for ord_obj in order_cluster:
+            ord_obj.route = route
+            ord_obj.save()
+            if ord_obj.warehouse_location and ord_obj.warehouse_location not in locations:
+                locations.append(ord_obj.warehouse_location)
+            dest = f"Armazém {ord_obj.requester.username}"
             if dest not in locations:
                 locations.append(dest)
                 
         route.optimized_path = " -> ".join(locations)
         route.save()
         return route
-    return None
+
+def check_and_create_optimal_route(order_date):
+    orders = MarketplaceOrder.objects.filter(
+        status='APPROVED',
+        transport_status='PENDING',
+        fulfilled_at__date=order_date,
+        route__isnull=True
+    ).order_by('created_at')
+    
+    if not orders.exists() or orders.count() < 3:
+        return None
+
+    created_routes = []
+    current_cluster = []
+    current_weight = 0.0
+    MAX_ROUTE_WEIGHT = 5000.0  # Capacidade padrão por rota/camião
+
+    for order in orders:
+        order_weight = float(order.quantity_kg or 0.0)
+        if current_cluster and (current_weight + order_weight > MAX_ROUTE_WEIGHT):
+            route = _create_route_from_cluster(current_cluster, order_date)
+            created_routes.append(route)
+            current_cluster = [order]
+            current_weight = order_weight
+        else:
+            current_cluster.append(order)
+            current_weight += order_weight
+
+    if current_cluster:
+        route = _create_route_from_cluster(current_cluster, order_date)
+        created_routes.append(route)
+
+    return created_routes
 
 @login_required
 @role_required(['Transporter'])
@@ -1677,7 +1896,7 @@ def transporter_register_vehicle(request):
             vehicle = form.save(commit=False)
             vehicle.owner = request.user
             vehicle.save()
-            messages.success(request, f"Veículo com matrícula {vehicle.license_plate} registado com sucesso!")
+            messages.success(request, f"Veículo {vehicle.brand_model} ({vehicle.license_plate}) registado com sucesso!")
         else:
             messages.error(request, f"Erro ao registar veículo: {form.errors}")
     return redirect('transporter_dashboard')
@@ -1745,12 +1964,13 @@ def transporter_route_pickup(request):
         route_id = request.POST.get('route_id')
         route = get_object_or_404(Route, pk=route_id, transporter=request.user)
         
-        now = timezone.now()
+        pickup_time = _parse_or_now_dt(request.POST.get('actual_pickup_date'))
+        
         with transaction.atomic():
             route.status = 'IN_TRANSIT'
             route.save()
             for order in route.orders.all():
-                order.actual_pickup_date = now
+                order.actual_pickup_date = pickup_time
                 order.transport_status = 'IN_TRANSIT'
                 order.save()
                 
@@ -1783,7 +2003,7 @@ def transporter_route_pickup(request):
                 except Exception as fe:
                     print(f"Erro fabric: {fe}")
                     
-        messages.success(request, f"Viagem da Rota #{route.pk} iniciada!")
+        messages.success(request, f"Viagem da Rota #{route.pk} iniciada com sucesso!")
     return redirect('transporter_dashboard')
 
 @login_required
@@ -1792,14 +2012,24 @@ def transporter_route_delivery(request):
     if request.method == "POST":
         route_id = request.POST.get('route_id')
         route = get_object_or_404(Route, pk=route_id, transporter=request.user)
-        sensor_data = request.POST.get('transport_sensor_data', 'No Data')
         
-        now = timezone.now()
+        sensor_data = "No Sensor Data Recorded"
+        if 'sensor_file' in request.FILES:
+            try:
+                uploaded_file = request.FILES['sensor_file']
+                sensor_data = uploaded_file.read().decode('utf-8')
+            except Exception as e:
+                sensor_data = f"File Read Error: {e}"
+        elif request.POST.get('transport_sensor_data'):
+            sensor_data = request.POST.get('transport_sensor_data')
+        
+        delivery_time = _parse_or_now_dt(request.POST.get('actual_delivery_date'))
+        
         with transaction.atomic():
             route.status = 'DELIVERED'
             route.save()
             for order in route.orders.all():
-                order.actual_delivery_date = now
+                order.actual_delivery_date = delivery_time
                 order.transport_sensor_data = sensor_data
                 order.transport_status = 'DELIVERED'
                 order.save()
@@ -1848,32 +2078,81 @@ def transporter_simulate_route_opt(request):
         status='APPROVED',
         transport_status='PENDING',
         route__isnull=True
-    )
+    ).order_by('created_at')
+    
     if not orders.exists():
         messages.error(request, "Não existem transações pendentes de transporte no mercado neste momento.")
         return redirect('transporter_dashboard')
         
-    with transaction.atomic():
-        selected_orders = orders[:10]
-        route = Route.objects.create(
-            route_date=timezone.now().date(),
-            status='PENDING'
-        )
-        locations = []
-        for order in selected_orders:
-            order.route = route
-            order.save()
-            if order.warehouse_location not in locations:
-                locations.append(order.warehouse_location)
-            dest = f"Armazém {order.requester.username}"
-            if dest not in locations:
-                locations.append(dest)
-                
-        route.optimized_path = " -> ".join(locations)
-        route.save()
-        
-    messages.success(request, f"Simulação Concluída! Rota #{route.pk} criada otimizando {len(selected_orders)} transações.")
+    selected_orders = list(orders[:15])
+    created_routes = []
+    current_cluster = []
+    current_weight = 0.0
+    MAX_ROUTE_WEIGHT = 5000.0  # Capacidade de 1 Camião Ligeiro padrão (5.000 Kg)
+
+    for order in selected_orders:
+        order_weight = float(order.quantity_kg or 0.0)
+        if current_cluster and (current_weight + order_weight > MAX_ROUTE_WEIGHT):
+            route = _create_route_from_cluster(current_cluster, timezone.now().date())
+            created_routes.append(route)
+            current_cluster = [order]
+            current_weight = order_weight
+        else:
+            current_cluster.append(order)
+            current_weight += order_weight
+
+    if current_cluster:
+        route = _create_route_from_cluster(current_cluster, timezone.now().date())
+        created_routes.append(route)
+
+    routes_str = ", ".join([f"#{r.pk}" for r in created_routes])
+    messages.success(request, f"Simulação Concluída! Foram geradas {len(created_routes)} rotas independentes ({routes_str}) para acomodar {len(selected_orders)} transações respeitando os limites dos veículos.")
     return redirect('transporter_dashboard')
+
+@login_required
+@role_required(['Transporter'])
+def transporter_job_history_api(request):
+    """
+    Endpoint AJAX para carregar o histórico de entregas de forma paginada e instantânea.
+    """
+    user = request.user
+    page_number = request.GET.get('page', 1)
+    
+    orders_qs = MarketplaceOrder.objects.filter(
+        status='APPROVED', 
+        transport_status='DELIVERED'
+    ).filter(
+        Q(vehicle__owner=user) | Q(route__transporter=user) | Q(role__in=['Producer', 'Processor'], vehicle__isnull=True, route__isnull=True)
+    ).select_related(
+        'requester', 'culture', 'fulfilled_by', 'harvest_origin', 'vehicle'
+    ).order_by('-actual_delivery_date')
+    
+    paginator = Paginator(orders_qs, 15)
+    page_obj = paginator.get_page(page_number)
+    
+    orders_data = []
+    for order in page_obj:
+        orders_data.append({
+            'pk': order.pk,
+            'actual_delivery_date': order.actual_delivery_date.strftime("%d/%m/%Y %H:%M") if order.actual_delivery_date else "-",
+            'culture_name': order.culture.name if order.culture else "N/A",
+            'quantity_kg': float(order.quantity_kg) if order.quantity_kg else 0.0,
+            'origin': order.warehouse_location or "N/A",
+            'requester': order.requester.username if order.requester else "N/A",
+            'vehicle': f"{order.vehicle.brand_model} ({order.vehicle.license_plate})" if order.vehicle else "-",
+            'harvest_id': order.harvest_origin.pk if order.harvest_origin else None,
+        })
+        
+    return JsonResponse({
+        'orders': orders_data,
+        'current_page': page_obj.number,
+        'total_pages': paginator.num_pages,
+        'total_count': paginator.count,
+        'has_next': page_obj.has_next(),
+        'has_previous': page_obj.has_previous(),
+        'next_page_number': page_obj.next_page_number() if page_obj.has_next() else None,
+        'previous_page_number': page_obj.previous_page_number() if page_obj.has_previous() else None,
+    })
 
 @login_required
 @role_required(['Transporter'])
@@ -1927,8 +2206,10 @@ def transporter_validate_pickup(request):
         order_id = request.POST.get('order_id')
         order = get_object_or_404(MarketplaceOrder, pk=order_id)
         
+        pickup_time = _parse_or_now_dt(request.POST.get('actual_pickup_date'))
+        
         # 1. Atualizar BD
-        order.actual_pickup_date = timezone.now()
+        order.actual_pickup_date = pickup_time
         order.transport_status = 'IN_TRANSIT'
         order.save()
         
@@ -1978,33 +2259,34 @@ def transporter_submit_delivery(request):
         order_id = request.POST.get('order_id')
         order = get_object_or_404(MarketplaceOrder, pk=order_id)
         
-        form = TransportDeliveryForm(request.POST, instance=order)
-        if form.is_valid():
+        sensor_data = "No Sensor Data Recorded"
+        if 'sensor_file' in request.FILES:
             try:
-                with transaction.atomic():
-                    # 1. Atualizar BD (Order)
-                    order.actual_delivery_date = timezone.now()
-                    order.transport_status = 'DELIVERED'
-                    order.save()
-                    
-                    # 2. Salvar dados do form (Sensores)
-                    # Nota: Como o form é um ModelForm, save() salva o order, 
-                    # mas precisamos garantir que os campos acima persistam.
-                    # O form.save() vai sobrepor se o form tiver esses campos, 
-                    # mas o TransportDeliveryForm só tem o sensor_data.
-                    form.save() 
-
-                    # 3. Atualizar Stock de "Delivered" no Lote de Origem (Harvest)
-                    if order.harvest_origin:
-                        harvest = order.harvest_origin
-                        # Incrementa o delivered com a quantidade desta entrega
-                        # Isto garante que a tabela "Stock Status" do Produtor 
-                        # reflita que esta quantidade saiu fisicamente.
-                        harvest.delivered_quantity_kg = (harvest.delivered_quantity_kg or 0) + order.quantity_kg
-                        harvest.save()
+                uploaded_file = request.FILES['sensor_file']
+                sensor_data = uploaded_file.read().decode('utf-8')
             except Exception as e:
-                messages.error(request, f"Erro ao processar entrega: {e}")
-                return redirect('transporter_dashboard')
+                sensor_data = f"File Read Error: {e}"
+        elif request.POST.get('transport_sensor_data'):
+            sensor_data = request.POST.get('transport_sensor_data')
+            
+        delivery_time = _parse_or_now_dt(request.POST.get('actual_delivery_date'))
+        
+        try:
+            with transaction.atomic():
+                # 1. Atualizar BD (Order)
+                order.actual_delivery_date = delivery_time
+                order.transport_sensor_data = sensor_data
+                order.transport_status = 'DELIVERED'
+                order.save()
+
+                # 2. Atualizar Stock de "Delivered" no Lote de Origem (Harvest)
+                if order.harvest_origin:
+                    harvest = order.harvest_origin
+                    harvest.delivered_quantity_kg = (harvest.delivered_quantity_kg or 0) + order.quantity_kg
+                    harvest.save()
+        except Exception as e:
+            messages.error(request, f"Erro ao processar entrega: {e}")
+            return redirect('transporter_dashboard')
             
             # 2. Blockchain Event (Proof of Delivery + Sensors)
             dossier = {
