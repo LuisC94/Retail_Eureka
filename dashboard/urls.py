@@ -95,5 +95,6 @@ urlpatterns = [
     path('api/lc-decay-data/', views.get_lc_decay_data, name='get_lc_decay_data'),
     
     path('accounts/register/', views.RegisterView.as_view(), name='register'),
+    path('accounts/update-profile/', views.update_profile, name='update_profile'),
     path('accounts/logout/', auth_views.LogoutView.as_view(), name='logout'),
 ]

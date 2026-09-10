@@ -30,12 +30,31 @@ from .forms import (
     FertilizerSyntheticForm, FertilizerOrganicForm, SoilCorrectiveForm, PestControlForm,
     MachineryForm, FuelForm, ElectricEnergyForm, IrrigationWaterForm, SoilCharacteristicForm, PlantationCropForm, MarketplaceOrderForm,
     MarketSellOrderForm,
-    TransportPlanForm, TransportDeliveryForm, ProcessorProcessingForm, VehicleForm
+    TransportPlanForm, TransportDeliveryForm, ProcessorProcessingForm, VehicleForm, UserProfileEditForm
 )
 
 # ----------------------------------------------------------------------
 # 1. VIEWS DE ADMIN E AUTENTICAÇÃO
 # ----------------------------------------------------------------------
+
+@login_required
+def update_profile(request):
+    try:
+        user_profile = request.user.userprofile
+    except UserProfile.DoesNotExist:
+        user_profile = UserProfile(user=request.user)
+
+    if request.method == 'POST':
+        form = UserProfileEditForm(request.POST, instance=user_profile)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Profile updated successfully.')
+            return redirect('admin_dashboard') # The intelligent redirector will send them to their dashboard
+    else:
+        form = UserProfileEditForm(instance=user_profile)
+
+    return render(request, 'dashboard/update_profile.html', {'form': form})
+
 
 @method_decorator(login_required, name='dispatch')
 class AdminDashboardView(View):

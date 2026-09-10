@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User, Group
 # Importar apenas os modelos necessários
-from .models import PlantationPlan, Product, Harvest, QUALITY_SCORE_CHOICES, Sensor, Warehouse, SENSOR_TYPE_CHOICES, SoilCharacteristic, PlantationEvent, FertilizerSyntheticData, FertilizerOrganicData, SoilCorrectiveData, PestControlData, MachineryData, FuelData, ElectricEnergyData, IrrigationWaterData, ProductSubFamily, PlantationCrop, MarketplaceOrder, Vehicle, Route
+from .models import PlantationPlan, Product, Harvest, QUALITY_SCORE_CHOICES, Sensor, UserProfile, Warehouse, SENSOR_TYPE_CHOICES, SoilCharacteristic, PlantationEvent, FertilizerSyntheticData, FertilizerOrganicData, SoilCorrectiveData, PestControlData, MachineryData, FuelData, ElectricEnergyData, IrrigationWaterData, ProductSubFamily, PlantationCrop, MarketplaceOrder, Vehicle, Route
 from django.forms import CheckboxSelectMultiple
 
 # Lista de Roles (mantida)
@@ -48,6 +48,15 @@ class UserRegisterForm(forms.ModelForm):
                 "The passwords do not match. Please try again."
             )
         return cleaned_data
+
+class UserProfileEditForm(forms.ModelForm):
+    class Meta:
+        model = UserProfile
+        fields = ['phone_number', 'address']
+        widgets = {
+            'phone_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: +351 912345678'}),
+            'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Full Address'}),
+        }
 
 # --- 1. Formulário de Produto (Registar um Produto) ---
 class ProductRegistrationForm(forms.ModelForm):
