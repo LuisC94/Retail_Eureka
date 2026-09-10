@@ -58,6 +58,23 @@ def fulfill_contract(contract):
                 warehouse_loc = f"{buyer_warehouse.location} (WH: {buyer_warehouse.warehouse_id})"
             else:
                 warehouse_loc = "Armazém Virtual do Comprador"
+        
+        # Check warehouse capacity before fulfilling
+        from dashboard.models import ConsolidatedStock
+        dest_warehouse = None
+        if ' (WH:' in warehouse_loc:
+            try:
+                wh_id = int(warehouse_loc.split(' (WH:')[-1].replace(')', '').strip())
+                dest_warehouse = Warehouse.objects.filter(pk=wh_id).first()
+            except Exception:
+                pass
+                
+        if dest_warehouse:
+            current_stock = sum(float(s.quantity) for s in ConsolidatedStock.objects.filter(warehouse_location=warehouse_loc))
+            if current_stock + float(contract.quantity_kg) > float(dest_warehouse.capacity):
+                available = float(dest_warehouse.capacity) - current_stock
+                raise ValueError(f"Warehouse {dest_warehouse.location} does not have enough capacity. (Available: {max(0.0, available):.2f}kg)")
+            
             
         order = MarketplaceOrder.objects.create(
             requester=contract.buyer,
@@ -185,6 +202,23 @@ def process_instant_purchase(buyer, producer, subfamily, quantity_kg, warehouse_
                 warehouse_loc = f"{buyer_warehouse.location} (WH: {buyer_warehouse.warehouse_id})"
             else:
                 warehouse_loc = "Armazém Virtual do Comprador"
+                
+        # Check warehouse capacity before fulfilling
+        from dashboard.models import ConsolidatedStock
+        dest_warehouse = None
+        if ' (WH:' in warehouse_loc:
+            try:
+                wh_id = int(warehouse_loc.split(' (WH:')[-1].replace(')', '').strip())
+                dest_warehouse = Warehouse.objects.filter(pk=wh_id).first()
+            except Exception:
+                pass
+                
+        if dest_warehouse:
+            current_stock = sum(float(s.quantity) for s in ConsolidatedStock.objects.filter(warehouse_location=warehouse_loc))
+            if current_stock + float(quantity_kg) > float(dest_warehouse.capacity):
+                available = float(dest_warehouse.capacity) - current_stock
+                raise ValueError(f"Warehouse {dest_warehouse.location} does not have enough capacity. (Available: {max(0.0, available):.2f}kg)")
+            
             
         order = MarketplaceOrder.objects.create(
             requester=buyer,

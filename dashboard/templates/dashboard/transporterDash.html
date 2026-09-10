@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
@@ -416,7 +416,7 @@
                     🤝 Marketplace
                 </a>
                 <a href="#" class="menu-item" onclick="switchSidebarTab('vehicles-view')">
-                    🚚 Veículos / Frota
+                    🚚 Vehicles / Fleet
                 </a>
             </nav>
         </div>
@@ -458,28 +458,28 @@
                 <!-- Banner Otimização Manual -->
                 <div style="background: #e0f2f1; padding: 20px; border-radius: 12px; margin-bottom: 25px; border-left: 5px solid #00796b; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
                     <div>
-                        <h4 style="color:#004d40; margin-bottom:5px; font-size:1.1em; font-weight:700;">🗺️ Simulação de Otimização de Rotas</h4>
-                        <p style="font-size:0.9em; margin:0; color:#00695c;">Quando houver 6 transações pendentes no mesmo dia, o sistema cria automaticamente uma rota ótima. Também pode forçar a simulação aqui para agrupar as cargas atuais.</p>
+                        <h4 style="color:#004d40; margin-bottom:5px; font-size:1.1em; font-weight:700;">🗺️ Route Optimization Simulation</h4>
+                        <p style="font-size:0.9em; margin:0; color:#00695c;">When there are 6 pending transactions on the same day, the system automatically creates an optimal route. You can also force the simulation here to group the current loads.</p>
                     </div>
                     <form method="POST" action="{% url 'transporter_simulate_route_opt' %}">
                         {% csrf_token %}
-                        <button type="submit" class="btn-action" style="background: #00796b; padding: 10px 20px; font-weight:bold; font-size:0.95em;">⚡ Simular Rota Ótima</button>
+                        <button type="submit" class="btn-action" style="background: #00796b; padding: 10px 20px; font-weight:bold; font-size:0.95em;">⚡ Simulate Optimal Route</button>
                     </form>
                 </div>
 
                 <!-- 0. OPTIMIZED ROUTES MARKET -->
                 <div class="data-table-container" style="border-left: 5px solid #00796b; margin-bottom: 30px;">
-                    <h3>🗺️ Rotas Ótimas Disponíveis</h3>
+                    <h3>🗺️ Available Optimal Routes</h3>
                     {% if open_routes %}
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Rota #</th>
-                                <th>Data da Rota</th>
-                                <th>Nº Encomendas</th>
-                                <th>Caminho Otimizado</th>
-                                <th>Peso Total</th>
-                                <th>Ação</th>
+                                <th>Route #</th>
+                                <th>Route Date</th>
+                                <th>No Orders</th>
+                                <th>Optimal Path</th>
+                                <th>Total Weight</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -495,14 +495,14 @@
                                         {% csrf_token %}
                                         <input type="hidden" name="route_id" value="{{ route.id }}">
                                         <select name="vehicle_id" required style="padding: 8px; border-radius: 6px; border: 1.5px solid #ccc; font-size: 0.85em; width:170px;">
-                                            <option value="" disabled selected>Escolher Veículo...</option>
+                                            <option value="" disabled selected>Choose Vehicle...</option>
                                             {% for vehicle in vehicles %}
                                                 <option value="{{ vehicle.id }}">{{ vehicle.brand_model }} ({{ vehicle.license_plate }})</option>
                                             {% empty %}
-                                                <option value="" disabled>Sem veículos registados!</option>
+                                                <option value="" disabled>No registered vehicles!</option>
                                             {% endfor %}
                                         </select>
-                                        <button type="submit" class="btn-action" style="background:#00796b;" {% if not vehicles %}disabled style="opacity:0.5; cursor:not-allowed;"{% endif %}>✅ Aceitar Rota</button>
+                                        <button type="submit" class="btn-action" style="background:#00796b;" {% if not vehicles %}disabled style="opacity:0.5; cursor:not-allowed;"{% endif %}>✅ Accept Route</button>
                                     </form>
                                 </td>
                             </tr>
@@ -510,7 +510,7 @@
                         </tbody>
                     </table>
                     {% else %}
-                    <p style="color:#666; padding:15px; font-style:italic;">Não existem rotas otimizadas pendentes de transporte no mercado.</p>
+                    <p style="color:#666; padding:15px; font-style:italic;">No optimized routes pending transport in the marketplace.</p>
                     {% endif %}
                 </div>
                 
@@ -542,11 +542,11 @@
                                         {% csrf_token %}
                                         <input type="hidden" name="order_id" value="{{ order.id }}">
                                         <select name="vehicle_id" required style="padding: 8px; border-radius: 6px; border: 1.5px solid #ccc; font-size: 0.85em; width:170px;">
-                                            <option value="" disabled selected>Escolher Veículo...</option>
+                                            <option value="" disabled selected>Choose Vehicle...</option>
                                             {% for vehicle in vehicles %}
                                                 <option value="{{ vehicle.id }}">{{ vehicle.brand_model }} ({{ vehicle.license_plate }})</option>
                                             {% empty %}
-                                                <option value="" disabled>Sem veículos registados!</option>
+                                                <option value="" disabled>No registered vehicles!</option>
                                             {% endfor %}
                                         </select>
                                         <button type="submit" class="btn-action" {% if not vehicles %}disabled style="opacity:0.5; cursor:not-allowed;"{% endif %}>✅ Accept Job</button>
@@ -563,28 +563,28 @@
 
                 <!-- 1.5 MINHAS ROTAS ATIVAS -->
                 <div class="data-table-container" style="border-left: 5px solid #00796b; margin-top: 30px; margin-bottom: 30px;">
-                    <h3>🚚 Minhas Rotas Ativas (Carga Otimizada)</h3>
+                    <h3>🚚 My Active Routes (Optimized Load)</h3>
                     {% if my_active_routes %}
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Rota #</th>
-                                <th>Veículo (Capacidade)</th>
-                                <th>Estado</th>
-                                <th>Ação / Próximo Passo</th>
+                                <th>Route #</th>
+                                <th>Vehicle (Capacidade)</th>
+                                <th>Status</th>
+                                <th>Action / Next Step</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for route in my_active_routes %}
                             <tr>
                                 <td>
-                                    <strong>Rota #{{ route.pk }}</strong><br>
-                                    <span style="font-size:0.85em; color:#666;">Data: {{ route.route_date|date:"d/m/Y" }}</span><br>
+                                    <strong>Route #{{ route.pk }}</strong><br>
+                                    <span style="font-size:0.85em; color:#666;">Date: {{ route.route_date|date:"d/m/Y" }}</span><br>
                                     <span style="font-size:0.85em; font-family:monospace; color:#888;">{{ route.optimized_path|default:"N/A" }}</span>
                                 </td>
                                 <td>
                                     <strong>{{ route.vehicle.brand_model }}</strong> ({{ route.vehicle.license_plate }})<br>
-                                    <span style="font-size:0.85em; color:#666;">Carga: {{ route.total_weight_kg }} / {{ route.vehicle.capacity_kg }} Kg</span><br>
+                                    <span style="font-size:0.85em; color:#666;">Load: {{ route.total_weight_kg }} / {{ route.vehicle.capacity_kg }} Kg</span><br>
                                     
                                     <!-- ProgressBar Capacidade Veiculo -->
                                     <div style="width: 100%; max-width: 250px; background: #e0e0e0; border-radius: 8px; overflow: hidden; height: 14px; margin-top: 5px;">
@@ -592,9 +592,9 @@
                                     </div>
                                     <span style="font-size: 0.8em; font-weight: bold; color: #004d40;">
                                         {% if route.vehicle.capacity_kg > 0 %}
-                                            {% widthratio route.total_weight_kg route.vehicle.capacity_kg 100 %}% Ocupação
+                                            {% widthratio route.total_weight_kg route.vehicle.capacity_kg 100 %}% Occupancy
                                         {% else %}
-                                            0% Ocupação
+                                            0% Occupancy
                                         {% endif %}
                                     </span>
                                 </td>
@@ -610,30 +610,30 @@
                                             {% csrf_token %}
                                             <input type="hidden" name="route_id" value="{{ route.id }}">
                                             <div style="display:flex; flex-direction:column; gap:2px;">
-                                                <label style="font-size:0.8em; font-weight:bold;">Data/Hora Recolha:</label>
+                                                <label style="font-size:0.8em; font-weight:bold;">Pickup Date/Time:</label>
                                                 <input type="datetime-local" name="planned_pickup_date" required style="padding: 4px; font-size:0.85em; border-radius:4px; border:1.5px solid #ccc;">
                                             </div>
                                             <div style="display:flex; flex-direction:column; gap:2px;">
-                                                <label style="font-size:0.8em; font-weight:bold;">Data/Hora Entrega:</label>
+                                                <label style="font-size:0.8em; font-weight:bold;">Delivery Date/Time:</label>
                                                 <input type="datetime-local" name="planned_delivery_date" required style="padding: 4px; font-size:0.85em; border-radius:4px; border:1.5px solid #ccc;">
                                             </div>
-                                            <button type="submit" class="btn-action" style="background:#ffa000; width:100%; padding:6px; font-size:0.85em;">📅 Registar Plano</button>
+                                            <button type="submit" class="btn-action" style="background:#ffa000; width:100%; padding:6px; font-size:0.85em;">📅 Register Plan</button>
                                         </form>
                                     {% elif route.status == 'PLANNED' %}
                                         <!-- Form to Pickup -->
                                         <form method="POST" action="{% url 'transporter_route_pickup' %}" style="margin:0;">
                                             {% csrf_token %}
                                             <input type="hidden" name="route_id" value="{{ route.id }}">
-                                            <button type="submit" class="btn-action" style="background:#1976D2;">⏱️ Iniciar Viagem (Recolhido)</button>
+                                            <button type="submit" class="btn-action" style="background:#1976D2;">⏱️ Start Trip (Picked Up)</button>
                                         </form>
                                     {% elif route.status == 'IN_TRANSIT' %}
                                         <!-- Form to Deliver (requires sensor data) -->
                                         <form method="POST" action="{% url 'transporter_route_delivery' %}" style="display:flex; flex-direction:column; gap:6px; width: 220px; border: 1px solid #c8e6c9; padding: 10px; border-radius: 8px; background: #f1f8e9; margin:0;">
                                             {% csrf_token %}
                                             <input type="hidden" name="route_id" value="{{ route.id }}">
-                                            <label style="font-size:0.8em; font-weight:bold;">Dados dos Sensores (JSON):</label>
-                                            <textarea name="transport_sensor_data" required placeholder="Cole o JSON dos sensores aqui..." rows="2" style="font-family:monospace; font-size:0.75em; padding: 4px; border-radius:4px; border:1.5px solid #ccc;"></textarea>
-                                            <button type="submit" class="btn-action" style="background:#388E3C; width:100%; padding:6px; font-size:0.85em;">🏁 Confirmar Entrega</button>
+                                            <label style="font-size:0.8em; font-weight:bold;">Sensor Data (JSON):</label>
+                                            <textarea name="transport_sensor_data" required placeholder="Paste sensor JSON here..." rows="2" style="font-family:monospace; font-size:0.75em; padding: 4px; border-radius:4px; border:1.5px solid #ccc;"></textarea>
+                                            <button type="submit" class="btn-action" style="background:#388E3C; width:100%; padding:6px; font-size:0.85em;">🏁 Confirm Delivery</button>
                                         </form>
                                     {% endif %}
                                 </td>
@@ -642,7 +642,7 @@
                         </tbody>
                     </table>
                     {% else %}
-                    <p style="color:#666; padding:15px; font-style:italic;">Não tem nenhuma rota de transporte ativa atribuída.</p>
+                    <p style="color:#666; padding:15px; font-style:italic;">No active transport routes assigned.</p>
                     {% endif %}
                 </div>
 
@@ -849,37 +849,37 @@
             <!-- VEHICLES VIEW (FLEET MANAGEMENT) -->
             <div id="vehicles-view" class="tab-content">
                 <div class="form-section">
-                    <h3>🚚 Registar Novo Veículo</h3>
+                    <h3>🚚 Register New Vehicle</h3>
                     <form method="POST" action="{% url 'transporter_register_vehicle' %}">
                         {% csrf_token %}
                         <div class="form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                             <div>
-                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Matrícula:</label>
+                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">License Plate:</label>
                                 {{ vehicle_form.license_plate }}
                             </div>
                             <div>
-                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Marca / Modelo:</label>
+                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Brand / Model:</label>
                                 {{ vehicle_form.brand_model }}
                             </div>
                         </div>
                         <div style="margin-top: 15px;">
-                            <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Capacidade Máxima (Kg):</label>
+                            <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Maximum Capacity (Kg):</label>
                             {{ vehicle_form.capacity_kg }}
                         </div>
-                        <button type="submit" class="submit-button">✓ Registar Veículo</button>
+                        <button type="submit" class="submit-button">✓ Register Vehicle</button>
                     </form>
                 </div>
 
                 <div class="data-table-container">
-                    <h3>📋 Veículos Registados</h3>
+                    <h3>📋 Registered Vehicles</h3>
                     {% if vehicles %}
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Marca/Modelo</th>
-                                <th>Matrícula</th>
-                                <th>Capacidade (Kg)</th>
-                                <th>Data de Registo</th>
+                                <th>Brand/Model</th>
+                                <th>License Plate</th>
+                                <th>Capacity (Kg)</th>
+                                <th>Registration Date</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -894,7 +894,7 @@
                         </tbody>
                     </table>
                     {% else %}
-                    <p style="text-align: center; color: #666; padding: 20px;">Nenhum veículo registado anteriormente.</p>
+                    <p style="text-align: center; color: #666; padding: 20px;">No vehicles registered previously.</p>
                     {% endif %}
                 </div>
             </div>
@@ -929,18 +929,18 @@
     <div id="pickupModal" class="modal" style="display:none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6);">
         <div class="modal-content" style="background: white; margin: 10% auto; padding: 30px; border-radius: 15px; width: 50%; max-width: 500px;">
             <span onclick="document.getElementById('pickupModal').style.display='none'" style="float:right; cursor:pointer; font-size:1.5em;">&times;</span>
-            <h3 style="color:#1976D2;">🚚 Iniciar Transporte</h3>
-            <p>Por favor, insira a matrícula do veículo.</p>
+            <h3 style="color:#1976D2;">🚚 Start Transport</h3>
+            <p>Please enter the vehicle license plate.</p>
             <form method="POST" action="{% url 'transporter_validate_pickup' %}">
                 {% csrf_token %}
                 <input type="hidden" name="order_id" id="pickup_order_id">
                 
                 <div style="margin-top:15px; margin-bottom:20px;">
-                    <label style="display:block; margin-bottom:5px; font-weight:600;">Matrícula (Ex: AA-11-BB):</label>
-                    <input type="text" name="license_plate" required placeholder="Inserir matrícula..." style="padding: 10px; width: 100%; border: 1px solid #ccc; border-radius: 8px;">
+                    <label style="display:block; margin-bottom:5px; font-weight:600;">License Plate (Ex: AA-11-BB):</label>
+                    <input type="text" name="license_plate" required placeholder="Enter License Plate..." style="padding: 10px; width: 100%; border: 1px solid #ccc; border-radius: 8px;">
                 </div>
                 
-                <button type="submit" class="submit-button" style="background: #1976D2;">Iniciar Viagem</button>
+                <button type="submit" class="submit-button" style="background: #1976D2;">Start Trip</button>
             </form>
         </div>
     </div>
@@ -1322,7 +1322,7 @@
     <div id="historyModal" class="modal" style="display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6);">
         <div class="modal-content" style="background-color: #fefefe; margin: 5% auto; padding: 0; border: 1px solid #888; width: 90%; max-width: 800px; border-radius: 10px; overflow: hidden;">
             <div id="historyModalContent" style="padding: 20px; text-align: center;">
-                <p>⏳ A carregar dados da Blockchain...</p>
+                <p>⏳ Loading Blockchain data...</p>
             </div>
         </div>
     </div>
@@ -1333,7 +1333,7 @@
             const contentDiv = document.getElementById('historyModalContent');
             
             modal.style.display = "block";
-            contentDiv.innerHTML = '<p style="padding:20px; text-align:center;">⏳ A carregar dados da Blockchain...</p>';
+            contentDiv.innerHTML = '<p style="padding:20px; text-align:center;">⏳ Loading Blockchain data...</p>';
             
             // Fetch Modal Content
             fetch(`/api/harvest-history/${harvestId}/`)
@@ -1360,15 +1360,94 @@
 
     <!-- ====================== DISCRETE TRANSLATOR WIDGET ====================== -->
     <div id="google_translate_element" style="display:none;"></div>
-    <div class="discrete-translator" style="position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.95); border: 1px solid #00796b; border-radius: 30px; padding: 6px 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); backdrop-filter: blur(5px); transition: all 0.3s ease;">
-        <span style="font-size: 1.1em; line-height: 1;">🌐</span>
-        <select id="lang-select" onchange="changeLanguage(this.value)" style="border: none; background: transparent; font-size: 0.85em; font-weight: 600; color: #004d40; cursor: pointer; outline: none; padding-right: 5px; font-family: inherit;">
-            <option value="pt">🇵🇹 PT</option>
-            <option value="en">🇬🇧 EN</option>
-            <option value="es">🇪🇸 ES</option>
-            <option value="tr">🇹🇷 TR</option>
-        </select>
+    <div class="discrete-translator" style="position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.95); border: 1px solid #00796b; border-radius: 30px; padding: 6px 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); backdrop-filter: blur(5px); transition: all 0.3s ease; font-family: inherit;">
+        
+        <!-- Custom Dropdown Container -->
+        <div id="custom-lang-dropdown" style="position: relative; user-select: none;">
+            
+            <!-- Selected Value Display -->
+            <div id="lang-selected" onclick="toggleLangDropdown()" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; font-size: 0.85em; font-weight: 600; color: #004d40; padding: 4px 8px; min-width: 60px;">
+                <div id="selected-lang-content" style="display: flex; align-items: center;">
+                    <svg width="20" height="15" viewBox="0 0 20 15" style="vertical-align: middle; margin-right: 6px; border: 0.5px solid #ccc; border-radius: 2px; overflow: hidden;">
+                        <rect width="20" height="15" fill="#012169"/>
+                        <path d="M0,0 L20,15 M20,0 L0,15" stroke="#FFF" stroke-width="2.5"/>
+                        <path d="M0,0 L20,15 M20,0 L0,15" stroke="#C8102E" stroke-width="1"/>
+                        <path d="M10,0 v15 M0,7.5 h20" stroke="#FFF" stroke-width="4.5"/>
+                        <path d="M10,0 v15 M0,7.5 h20" stroke="#C8102E" stroke-width="2.5"/>
+                    </svg>
+                    EN
+                </div>
+                <!-- Dropdown Arrow -->
+                <svg width="10" height="10" viewBox="0 0 24 24" style="margin-left: 6px; fill: #004d40;">
+                    <path d="M7 10l5 5 5-5z"/>
+                </svg>
+            </div>
+
+            <!-- Dropdown Options List -->
+            <div id="lang-options" style="display: none; position: absolute; bottom: 120%; right: 0; background: #ffffff; border: 1px solid #00796b; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15); overflow: hidden; min-width: 100px; z-index: 10001; margin-bottom: 5px;">
+                
+                <div onclick="selectCustomLang('pt', this.innerHTML)" style="display: flex; align-items: center; padding: 12px 16px; cursor: pointer; font-size: 0.85em; font-weight: 600; color: #004d40; border-bottom: 1px solid #f0f0f0;">
+                    <svg width="20" height="15" viewBox="0 0 20 15" style="vertical-align: middle; margin-right: 6px; border: 0.5px solid #ccc; border-radius: 2px;">
+                        <rect width="20" height="15" fill="#F00"/><rect width="7" height="15" fill="#094"/>
+                        <circle cx="7" cy="7.5" r="3" fill="#FC0"/><path d="M6,6.5 h2 v1.5 a1,1 0 0,1 -2,0 z" fill="#FFF"/>
+                    </svg>
+                    PT
+                </div>
+                
+                <div onclick="selectCustomLang('en', this.innerHTML)" style="display: flex; align-items: center; padding: 12px 16px; cursor: pointer; font-size: 0.85em; font-weight: 600; color: #004d40; border-bottom: 1px solid #f0f0f0;">
+                    <svg width="20" height="15" viewBox="0 0 20 15" style="vertical-align: middle; margin-right: 6px; border: 0.5px solid #ccc; border-radius: 2px; overflow: hidden;">
+                        <rect width="20" height="15" fill="#012169"/>
+                        <path d="M0,0 L20,15 M20,0 L0,15" stroke="#FFF" stroke-width="2.5"/>
+                        <path d="M0,0 L20,15 M20,0 L0,15" stroke="#C8102E" stroke-width="1"/>
+                        <path d="M10,0 v15 M0,7.5 h20" stroke="#FFF" stroke-width="4.5"/>
+                        <path d="M10,0 v15 M0,7.5 h20" stroke="#C8102E" stroke-width="2.5"/>
+                    </svg>
+                    EN
+                </div>
+                
+                <div onclick="selectCustomLang('es', this.innerHTML)" style="display: flex; align-items: center; padding: 12px 16px; cursor: pointer; font-size: 0.85em; font-weight: 600; color: #004d40; border-bottom: 1px solid #f0f0f0;">
+                    <svg width="20" height="15" viewBox="0 0 20 15" style="vertical-align: middle; margin-right: 6px; border: 0.5px solid #ccc; border-radius: 2px;">
+                        <rect width="20" height="15" fill="#AA151B"/>
+                        <rect width="20" height="7.5" y="3.75" fill="#F1BF00"/>
+                        <rect x="4.5" y="5.5" width="2.5" height="4" rx="0.5" fill="#AA151B"/>
+                    </svg>
+                    ES
+                </div>
+                
+                <div onclick="selectCustomLang('tr', this.innerHTML)" style="display: flex; align-items: center; padding: 12px 16px; cursor: pointer; font-size: 0.85em; font-weight: 600; color: #004d40;">
+                    <svg width="20" height="15" viewBox="0 0 20 15" style="vertical-align: middle; margin-right: 6px; border: 0.5px solid #ccc; border-radius: 2px;">
+                        <rect width="20" height="15" fill="#E30A17"/>
+                        <circle cx="8" cy="7.5" r="4.5" fill="#FFF"/>
+                        <circle cx="9.5" cy="7.5" r="3.5" fill="#E30A17"/>
+                        <polygon points="12.5,5.5 13,7 14.5,7 13.2,8 13.7,9.5 12.5,8.5 11.3,9.5 11.8,8 10.5,7 12,7" fill="#FFF"/>
+                    </svg>
+                    TR
+                </div>
+            </div>
+        </div>
     </div>
+
+    <script>
+        function toggleLangDropdown() {
+            var options = document.getElementById('lang-options');
+            options.style.display = options.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function selectCustomLang(langCode, htmlContent) {
+            document.getElementById('selected-lang-content').innerHTML = htmlContent;
+            document.getElementById('lang-options').style.display = 'none';
+            if (typeof changeLanguage === 'function') {
+                changeLanguage(langCode);
+            }
+        }
+
+        document.addEventListener('click', function(event) {
+            var dropdown = document.getElementById('custom-lang-dropdown');
+            if (!dropdown.contains(event.target)) {
+                document.getElementById('lang-options').style.display = 'none';
+            }
+        });
+    </script>
 
     <style>
         /* Google Translate Overrides */
@@ -1391,7 +1470,7 @@
     <script type="text/javascript">
         function googleTranslateElementInit() {
             new google.translate.TranslateElement({
-                pageLanguage: 'pt',
+                pageLanguage: 'en',
                 includedLanguages: 'pt,en,es,tr',
                 layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
                 autoDisplay: false

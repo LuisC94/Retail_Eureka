@@ -17,17 +17,17 @@ ROLE_CHOICES = [
 class UserRegisterForm(forms.ModelForm):
     # Campos existentes do User
     role = forms.ChoiceField(
-        label='Selecionar Role', 
+        label='Role', 
         choices=ROLE_CHOICES,
         widget=forms.Select(attrs={'class': 'form-control'}) 
     )
-    password = forms.CharField(label='Senha', widget=forms.PasswordInput)
-    password2 = forms.CharField(label='Confirmar Senha', widget=forms.PasswordInput)
+    password = forms.CharField(label='Password', widget=forms.PasswordInput)
+    password2 = forms.CharField(label='Confirm Password', widget=forms.PasswordInput)
     email = forms.EmailField(label='Email', required=True) 
     
     # NOVOS CAMPOS DO PERFIL
-    phone_number = forms.CharField(label='Telemóvel', max_length=20, required=False)
-    address = forms.CharField(label='Morada Completa', max_length=255, required=False, widget=forms.Textarea(attrs={'rows': 2}))
+    phone_number = forms.CharField(label='Mobile Phone', max_length=20, required=False)
+    address = forms.CharField(label='Full Address', max_length=255, required=False, widget=forms.Textarea(attrs={'rows': 2}))
 
     class Meta:
         model = User
@@ -45,7 +45,7 @@ class UserRegisterForm(forms.ModelForm):
 
         if password and password2 and password != password2:
             raise forms.ValidationError(
-                "As senhas não coincidem. Por favor, tente novamente."
+                "The passwords do not match. Please try again."
             )
         return cleaned_data
 
@@ -74,6 +74,38 @@ class SoilCharacteristicForm(forms.ModelForm):
 
 class PlantationPlanForm(forms.ModelForm):
     # Campos base, mantidos no formulário principal
+    plantation_name = forms.CharField(
+        required=True,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+
+    def clean_quantity_of_trees(self):
+        value = self.cleaned_data.get('quantity_of_trees')
+        if value is not None and value <= 0:
+            raise forms.ValidationError('Quantity of trees must be greater than 0.')
+        return value
+
+    def clean_area(self):
+        value = self.cleaned_data.get('area')
+        if value is not None and value <= 0:
+            raise forms.ValidationError('Area must be greater than 0.')
+        return value
+
+    def clean_plantation_name(self):
+        plantation_name = self.cleaned_data.get('plantation_name')
+        if plantation_name and self.user:
+            qs = PlantationPlan.objects.filter(
+                plantation_name=plantation_name,
+                producer=self.user
+            )
+            if self.instance and self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise forms.ValidationError('A plantation with this name already exists for your profile.')
+        return plantation_name
 
     class Meta:
         model = PlantationPlan
@@ -89,10 +121,10 @@ class PlantationPlanForm(forms.ModelForm):
         # Adicione os widgets aqui
         widgets = {
             'plantation_name': forms.TextInput(attrs={'class': 'form-control'}),
-            'quantity_of_trees': forms.NumberInput(attrs={'class': 'form-control'}),
+            'quantity_of_trees': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
             'production_type': forms.Select(attrs={'class': 'form-control'}),
             'chemical_use': forms.Select(attrs={'class': 'form-control'}),
-            'area': forms.NumberInput(attrs={'class': 'form-control'}),
+            'area': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
             'location': forms.TextInput(attrs={'class': 'form-control'}),
             'plantation_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
         }
@@ -159,12 +191,51 @@ class PlantationCropForm(forms.ModelForm):
         widgets = {
             'avg_plant_age_years': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
             'rootstock': forms.TextInput(attrs={'class': 'form-control'}),
-            'density_plants_ha': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'density_plants_ha': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': 0}),
             'irrigation_system': forms.Select(attrs={'class': 'form-control'}),
         }
 
 # --- Formulário de Detalhe: Fertilizantes (Sintéticos Minerais) ---
 class FertilizerSyntheticForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Add HTML5 min attribute to numeric fields for UI-level validation
+        self.fields['n_content'].widget = forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'max': '100', 'step': '0.01'})
+        self.fields['p2o5_content'].widget = forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'max': '100', 'step': '0.01'})
+        self.fields['k2o_content'].widget = forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'max': '100', 'step': '0.01'})
+        self.fields['total_dose_kg_ha_year'].widget = forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'max': '100', 'step': '0.01'})
+        self.fields['num_applications'].widget = forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'step': '1'})
+
+    def clean_n_content(self):
+        value = self.cleaned_data.get('n_content')
+        if value is not None and value < 0:
+            raise forms.ValidationError('N Content (%) cannot be negative.')
+        return value
+
+    def clean_p2o5_content(self):
+        value = self.cleaned_data.get('p2o5_content')
+        if value is not None and value < 0:
+            raise forms.ValidationError('P2O5 Content (%) cannot be negative.')
+        return value
+
+    def clean_k2o_content(self):
+        value = self.cleaned_data.get('k2o_content')
+        if value is not None and value < 0:
+            raise forms.ValidationError('K2O Content (%) cannot be negative.')
+        return value
+
+    def clean_total_dose_kg_ha_year(self):
+        value = self.cleaned_data.get('total_dose_kg_ha_year')
+        if value < 0:
+            raise forms.ValidationError('Total Dose (kg/ha/year) cannot be negative.')
+        return value
+
+    def clean_num_applications(self):
+        value = self.cleaned_data.get('num_applications')
+        if value is not None and value < 0:
+            raise forms.ValidationError('No. of Applications cannot be negative.')
+        return value
+
     class Meta:
         model = FertilizerSyntheticData
         # Lista todos os campos da Tabela 3
@@ -172,6 +243,11 @@ class FertilizerSyntheticForm(forms.ModelForm):
         
 # --- Formulário de Detalhe: Fertilizantes (Orgânicos) ---
 class FertilizerOrganicForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name in ['n_content_kgt', 'p_content_kgt', 'k_content_kgt', 'dose_tha_year']:
+            if field_name in self.fields:
+                self.fields[field_name].widget.attrs['min'] = '0'
     class Meta:
         model = FertilizerOrganicData
         # Lista todos os campos da Tabela 4
@@ -179,36 +255,138 @@ class FertilizerOrganicForm(forms.ModelForm):
 
 # --- Formulário de Detalhe: Corretivos do Solo ---
 class SoilCorrectiveForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Add widget-specific attributes if needed
+        self.fields['caco3_content'].widget.attrs.update({
+            'min': 0,
+            'max': 100,
+            'step': '0.01'
+        })
+        self.fields['dose_kg_ha_year'].widget.attrs.update({
+            'min': 0,
+            'step': '0.01'
+        })
+        self.fields['frequency_years'].widget.attrs.update({
+            'min': 0,
+            'step': 1
+        })
+    
+    def clean_caco3_content(self):
+        value = self.cleaned_data['caco3_content']
+        if value < 0 or value > 100:
+            raise forms.ValidationError('CaCO3 Equivalent Content must be between 0 and 100.')
+        return value
+    
+    def clean_dose_kg_ha_year(self):
+        value = self.cleaned_data['dose_kg_ha_year']
+        if value < 0:
+            raise forms.ValidationError('Dose cannot be negative.')
+        return value
+    
+    def clean_frequency_years(self):
+        value = self.cleaned_data['frequency_years']
+        if value < 0:
+            raise forms.ValidationError('Frequency cannot be negative.')
+        return value
     class Meta:
         model = SoilCorrectiveData
         fields = '__all__'
 
 # --- Formulário de Detalhe: Produtos Fitofarmacêuticos ---
 class PestControlForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Add HTML5 number input with min constraint
+        self.fields['num_applications_year'].widget = forms.NumberInput(
+            attrs={'min': '0', 'step': '1'}
+        )
     class Meta:
         model = PestControlData
         fields = '__all__'
 
 # --- Formulário de Detalhe: Maquinaria ---
 class MachineryForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Add HTML5 number input with min constraint for hours_per_year
+        self.fields['hours_per_year'].widget = forms.NumberInput(
+            attrs={'class': 'form-control', 'min': '0', 'step': '0.01'}
+        )
+        # Add pattern hint for power field
+        self.fields['power'].widget = forms.TextInput(
+            attrs={'class': 'form-control', 'placeholder': 'e.g., 15.5kW or 100 CV'}
+        )
+    def clean_hours_per_year(self):
+        value = self.cleaned_data.get('hours_per_year')
+        if value is not None and value < 0:
+            raise forms.ValidationError('Hours/Year cannot be negative.')
+        return value
+
+    def clean_power(self):
+        value = self.cleaned_data.get('power')
+        if value:
+            import re
+            if not re.match(r'^\d+(\.\d+)?\s*(kW|CV)$', value.strip()):
+                raise forms.ValidationError(
+                    "Power must be a positive number followed by 'kW' or 'CV' (e.g., '15.5kW', '100 CV')."
+                )
+        return value
     class Meta:
         model = MachineryData
         fields = '__all__'
 
 # --- Formulário de Detalhe: Combustíveis ---
 class FuelForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['annual_consumption'].widget = forms.NumberInput(
+            attrs={'class': 'form-control', 'min': '0', 'step': '0.01'}
+        )
     class Meta:
         model = FuelData
         fields = '__all__'
 
 # --- Formulário de Detalhe: Energia Elétrica ---
 class ElectricEnergyForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Total Consumption (kWh/year) - non-negative
+        self.fields['total_consumption_kwh_year'].widget = forms.NumberInput(
+            attrs={'class': 'form-control', 'min': '0', 'step': '0.01'}
+        )
+        # % Grid - between 0-100
+        self.fields['percent_grid'].widget = forms.NumberInput(
+            attrs={'class': 'form-control', 'min': '0', 'max': '100', 'step': '0.01'}
+        )
+        # % Photovoltaic (Self) - between 0-100
+        self.fields['percent_photovoltaic'].widget = forms.NumberInput(
+            attrs={'class': 'form-control', 'min': '0', 'max': '100', 'step': '0.01'}
+        )
+        # % Other Renewable - between 0-100
+        self.fields['percent_other_renewable'].widget = forms.NumberInput(
+            attrs={'class': 'form-control', 'min': '0', 'max': '100', 'step': '0.01'}
+        )
     class Meta:
         model = ElectricEnergyData
         fields = '__all__'
 
 # --- Formulário de Detalhe: Água de Rega ---
 class IrrigationWaterForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Volume (m3/year) - non-negative
+        self.fields['volume_m3_year'].widget = forms.NumberInput(
+            attrs={'class': 'form-control', 'min': '0', 'step': '0.01'}
+        )
+        # Pumping Height (m) - non-negative (nullable field)
+        self.fields['pumping_height_m'].widget = forms.NumberInput(
+            attrs={'class': 'form-control', 'min': '0', 'step': '0.01'}
+        )
+        # Estimated Efficiency (%) - between 0-100 (nullable field)
+        self.fields['estimated_efficiency'].widget = forms.NumberInput(
+            attrs={'class': 'form-control', 'min': '0', 'max': '100', 'step': '0.01'}
+        )
     class Meta:
         model = IrrigationWaterData
         fields = '__all__'
@@ -218,17 +396,17 @@ class PlantationEventForm(forms.ModelForm):
     
     # NOVO CAMPO CRÍTICO: Dropdown para selecionar a plantação à qual o evento pertence
     plantation = forms.ModelChoiceField(
-        queryset=PlantationPlan.objects.all(), # Será filtrado em views.py
-        label='Plano de Plantação',
-        empty_label="--- Selecione o Pomar ---",
+        queryset=PlantationPlan.objects.all(), # Will be filtered in views.py
+        label='Plantation Plan',
+        empty_label="--- Select Orchard ---",
         widget=forms.Select(attrs={'class': 'form-control', 'id': 'event_plantation_select'})
     )
 
     subfamily = forms.ModelChoiceField(
         queryset=ProductSubFamily.objects.all(),
-        label='Cultura',
-        empty_label="--- Selecione a Cultura ---",
-        required=True, # Obrigatório
+        label='Culture',
+        empty_label="--- Select Culture ---",
+        required=True, # Required
         widget=forms.Select(attrs={'class': 'form-control', 'id': 'event_subfamily_select'})
     )
     
@@ -251,6 +429,11 @@ class PlantationEventForm(forms.ModelForm):
 
 # --- 3. Formulário de Colheita (Registar Colheita) ---
 class HarvestForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'warehouse' in self.fields:
+            self.fields['warehouse'].required = True
+            self.fields['warehouse'].empty_label = "--- Select Warehouse ---"
     
     # 2 -> Dropdown para selecionar "Plantation ID - Product Name"
     # Este campo será filtrado na view para mostrar apenas planos ATIVOS do produtor.
@@ -276,7 +459,7 @@ class HarvestForm(forms.ModelForm):
         required=False,
         initial=0.0,
         label='Waste (Kg)',
-        widget=forms.NumberInput(attrs={'class': 'form-control'})
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'step': '0.01'})
     )
     
     avg_quality_score = forms.ChoiceField(
@@ -287,10 +470,30 @@ class HarvestForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-control'})
     )
 
+    def clean_harvest_quantity_kg(self):
+        val = self.cleaned_data.get('harvest_quantity_kg')
+        if val is not None and val < 0:
+            raise forms.ValidationError('Harvest Quantity (Kg) cannot be negative.')
+        return val
+
     def clean_utilized_quantity_kg(self):
         val = self.cleaned_data.get('utilized_quantity_kg')
         if val is None:
             return 0.0
+        if val < 0:
+            raise forms.ValidationError('Waste (Kg) cannot be negative.')
+        return val
+
+    def clean_caliber(self):
+        val = self.cleaned_data.get('caliber')
+        if val is not None and val < 0:
+            raise forms.ValidationError('Caliber (mm) cannot be negative.')
+        return val
+
+    def clean_soluble_solids(self):
+        val = self.cleaned_data.get('soluble_solids')
+        if val is not None and val < 0:
+            raise forms.ValidationError('Soluble Solids (Brix) cannot be negative.')
         return val
 
     def clean_avg_quality_score(self):
@@ -318,21 +521,19 @@ class HarvestForm(forms.ModelForm):
             'harvest_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'plantation': forms.Select(attrs={'class': 'form-control', 'id': 'harvest_plantation_select'}), # ID para JS
             'subfamily': forms.Select(attrs={'class': 'form-control', 'id': 'harvest_subfamily_select'}), # ID para JS
-            'harvest_quantity_kg': forms.NumberInput(attrs={'class': 'form-control'}),
+            'harvest_quantity_kg': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'step': '0.01'}),
             'avg_quality_score': forms.Select(attrs={'class': 'form-control'}),
-            'utilized_quantity_kg': forms.NumberInput(attrs={'class': 'form-control'}),
-            'caliber': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'mm'}),
-            'soluble_solids': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Brix'}),
+            'utilized_quantity_kg': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'step': '0.01'}),
+            'caliber': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'placeholder': 'mm'}),
+            'soluble_solids': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'placeholder': 'Brix'}),
             'warehouse': forms.Select(attrs={'class': 'form-control'}),
         }
 
 # --- 4. Formulário de Registo de Sensor (Para o Popup) ---
 class SensorRegistrationForm(forms.ModelForm):
-    
     class Meta:
         model = Sensor
         fields = ['sensor_id', 'brand', 'sensor_type']
-        # Adicione attrs para melhor estilo no seu frontend
         widgets = {
             'sensor_id': forms.TextInput(attrs={'class': 'form-control'}),
             'brand': forms.TextInput(attrs={'class': 'form-control'}),
@@ -363,7 +564,7 @@ class WarehouseRegistrationForm(forms.ModelForm):
         sensors = cleaned_data.get('sensors')
 
         if control_type == 'Controlled' and not sensors:
-            self.add_error('sensors', "Armazéns controlados devem ter pelo menos um sensor associado.")
+            self.add_error('sensors', "Controlled warehouses must have at least one associated sensor.")
         
         return cleaned_data
 
@@ -389,21 +590,21 @@ class MarketplaceOrderForm(forms.ModelForm):
         widgets = {
             'order_type': forms.Select(attrs={'class': 'form-control'}),
             'culture': forms.Select(attrs={'class': 'form-control'}),
-            'quantity_kg': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'price_per_kg': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'id': 'id_price_per_kg_dynamic'}),
+            'quantity_kg': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'step': '0.01'}),
+            'price_per_kg': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'step': '0.01', 'id': 'id_price_per_kg_dynamic'}),
             'warehouse_location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Armazém Norte / Sede'}),
             
             # Quality Filters (Buy)
-            'min_caliber': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Min mm'}),
-            'min_soluble_solids': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Min Brix'}),
+            'min_caliber': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'step': '0.01', 'placeholder': 'Min mm'}),
+            'min_soluble_solids': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'step': '0.01', 'placeholder': 'Min Brix'}),
             'min_quality_score': forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'max': '10', 'placeholder': 'Min Score (1-10)'}),
         }
         labels = {
-            'warehouse_location': 'Localização para Entrega/Recolha',
-            'min_caliber': 'Calibre Mínimo (> mm)',
-            'min_soluble_solids': 'Brix Mínimo (> Brix)',
-            'min_quality_score': 'Qualidade Mínima (> 0-10)',
-            'price_per_kg': 'Preço (€/kg)',
+            'warehouse_location': 'Delivery/Pickup Location',
+            'min_caliber': 'Minimum Caliber (> mm)',
+            'min_soluble_solids': 'Minimum Brix (> Brix)',
+            'min_quality_score': 'Minimum Quality (> 0-10)',
+            'price_per_kg': 'Price (€/kg)',
         }
 
 
@@ -433,8 +634,8 @@ class MarketSellOrderForm(forms.ModelForm):
                   'caliber', 'soluble_solids', 'quality_score']
         widgets = {
             'harvest_origin': forms.Select(attrs={'class': 'form-control', 'id': 'id_sell_harvest_origin'}),
-            'quantity_kg': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'id': 'id_sell_quantity_kg'}),
-            'price_per_kg': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'id': 'id_sell_price_per_kg'}),
+            'quantity_kg': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0.01', 'id': 'id_sell_quantity_kg'}),
+            'price_per_kg': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0.01', 'id': 'id_sell_price_per_kg'}),
             'warehouse_location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Armazém Central', 'id': 'id_sell_warehouse_location'}),
             
             # Read-only Auto-filled Quality Data
@@ -443,23 +644,37 @@ class MarketSellOrderForm(forms.ModelForm):
             'quality_score': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly', 'style': 'background-color: #e9ecef;', 'id': 'id_sell_quality_score'}),
         }
         labels = {
-            'harvest_origin': 'Lote de Origem (Stock Disponível)',
-            'quantity_kg': 'Quantidade a Vender (Kg)',
-            'price_per_kg': 'Preço de Venda (€/kg)',
-            'warehouse_location': 'Local de Recolha',
-            'caliber': 'Calibre (mm)',
+            'harvest_origin': 'Origin Batch (Available Stock)',
+            'quantity_kg': 'Selling Quantity (Kg)',
+            'price_per_kg': 'Selling Price (€/kg)',
+            'warehouse_location': 'Pickup Location',
+            'caliber': 'Caliber (mm)',
             'soluble_solids': 'Brix',
             'quality_score': 'Score',
         }
+
+    def clean_quantity_kg(self):
+        val = self.cleaned_data.get('quantity_kg')
+        if val is not None and val <= 0:
+            raise forms.ValidationError('Selling quantity must be greater than 0.')
+        return val
+
+    def clean_price_per_kg(self):
+        val = self.cleaned_data.get('price_per_kg')
+        if val is not None and val <= 0:
+            raise forms.ValidationError('Selling price must be greater than 0.')
+        return val
 
     def clean(self):
         cleaned_data = super().clean()
         harvest = cleaned_data.get('harvest_origin')
         qty = cleaned_data.get('quantity_kg')
+        price = cleaned_data.get('price_per_kg')
         
+        # Validate quantity does not exceed stock
         if harvest and qty:
             if qty > harvest.current_stock_kg:
-                raise forms.ValidationError(f"Quantidade excede o stock disponível ({harvest.current_stock_kg} kg).")
+                raise forms.ValidationError(f"Quantity exceeds available stock ({harvest.current_stock_kg} kg).")
             
             # Preencher automaticamente
             self.instance.culture = harvest.subfamily
@@ -480,8 +695,8 @@ class TransportPlanForm(forms.ModelForm):
             'planned_delivery_date': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
         }
         labels = {
-            'planned_pickup_date': 'ETA Recolha (Planeado)',
-            'planned_delivery_date': 'ETA Entrega (Planeado)',
+            'planned_pickup_date': 'ETA Pickup (Planned)',
+            'planned_delivery_date': 'ETA Delivery (Planned)',
         }
 
 class TransportDeliveryForm(forms.ModelForm):
@@ -492,7 +707,7 @@ class TransportDeliveryForm(forms.ModelForm):
             'transport_sensor_data': forms.Textarea(attrs={'class': 'form-control', 'rows': 5, 'placeholder': 'Cole aqui o JSON dos sensores...'})
         }
         labels = {
-            'transport_sensor_data': 'Relatório de Sensores (JSON)',
+            'transport_sensor_data': 'Sensor Report (JSON)',
         }
 
 # --- PROCESSOR FORMS ---
@@ -502,8 +717,8 @@ class ProcessorProcessingForm(forms.ModelForm):
         model = MarketplaceOrder
         fields = ['packaging_type', 'preservation_treatment']
         labels = {
-            'packaging_type': 'Tipo de Embalagem',
-            'preservation_treatment': 'Tratamento de Conservação',
+            'packaging_type': 'Packaging Type',
+            'preservation_treatment': 'Preservation Treatment',
         }
         widgets = {
             'packaging_type': forms.Select(attrs={'class': 'form-control'}),

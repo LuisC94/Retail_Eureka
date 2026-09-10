@@ -12,10 +12,12 @@ urlpatterns = [
     path('producer/', views.ProducerDashboardView.as_view(), name='producer_dashboard'),
     path('submit-warehouse/', views.producer_submit_warehouse, name='producer_submit_warehouse'),
     path('submit-sensor/', views.producer_submit_sensor, name='producer_submit_sensor'),
+    path('delete-warehouse/', views.delete_warehouse, name='delete_warehouse'),
     
     # NOVAS ROTAS DE SUBMISSÃO
 
     path('submit-plantation/', views.producer_submit_plantation, name='producer_submit_plantation'),
+    path('delete-plantation/', views.producer_delete_plantation, name='producer_delete_plantation'),
     path('submit-plantation-crop/', views.producer_submit_plantation_crop, name='producer_submit_plantation_crop'),
     path('submit-soil-characteristic/', views.producer_submit_soil_characteristic, name='producer_submit_soil_characteristic'),
     path('submit-harvest/', views.producer_submit_harvest, name='producer_submit_harvest'),
@@ -33,6 +35,9 @@ urlpatterns = [
     # MARKETPLACE URLS
     path('market/submit-order/', views.market_submit_order, name='market_submit_order'),
     path('market/accept-order/', views.market_accept_order, name='market_accept_order'),
+    path('market/cancel-order/', views.market_cancel_order, name='market_cancel_order'),
+    path('market/counterpropose/', views.market_counterpropose_order, name='market_counterpropose_order'),
+    path('market/respond-negotiation/', views.market_respond_negotiation, name='market_respond_negotiation'),
 
     path('transporter/', views.TransporterDashboardView.as_view(), name='transporter_dashboard'),
     path('transporter/accept-job/', views.transporter_accept_job, name='transporter_accept_job'),

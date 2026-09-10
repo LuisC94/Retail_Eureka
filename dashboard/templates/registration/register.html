@@ -98,19 +98,26 @@
         }
 
         .form-group input,
-        .form-group select {
+        .form-group select,
+        .form-group textarea {
             width: 100%;
             padding: 15px 18px;
             border: 2px solid #e0e0e0;
             border-radius: 12px;
             font-size: 1em;
-            transition: all 0.3s ease;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
             background: white;
             font-family: inherit;
         }
 
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
         .form-group input:focus,
-        .form-group select:focus {
+        .form-group select:focus,
+        .form-group textarea:focus {
             outline: none;
             border-color: #00796b;
             box-shadow: 0 0 0 4px rgba(0, 121, 107, 0.1);
@@ -325,14 +332,14 @@
                 </div>
             {% endfor %}
 
-            <button type="submit">✓ Criar Conta</button>
+            <button type="submit">✓ Register</button>
         </form>
 
         <div class="divider"></div>
 
         <div class="links-container">
             <div class="link">
-                Já tem uma conta? <a href="{% url 'login' %}">🔐 Fazer Login</a>
+                Do you already have an account? <a href="{% url 'login' %}">🔐 Login Instead</a>
             </div>
         </div>
     </div>

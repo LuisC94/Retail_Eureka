@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
@@ -310,6 +310,7 @@
             border-radius: 20px;
             margin-bottom: 30px;
             box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            overflow-x: auto;
         }
 
         .data-table-container h3 {
@@ -336,6 +337,7 @@
             padding: 15px;
             text-align: left;
             border-bottom: 1px solid #e0e0e0;
+            white-space: nowrap;
         }
 
         .data-table th {
@@ -536,6 +538,44 @@
                         });
                     </script>
                 </div>
+
+    <!-- COUNTERPROPOSE MODAL (Consumer) -->
+    <div id="counterproposeModal" class="modal"
+         style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(5px);">
+        <div class="modal-content"
+             style="background-color: #fefefe; margin: 10% auto; padding: 40px; border: 1px solid #888; width: 90%; max-width: 500px; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: slideDown 0.3s ease;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h3 style="margin:0; color:#f57c00;">💬 Counterpropose Price</h3>
+                <span onclick="closeCounterproposeModal()" style="color:#aaa; font-size:28px; font-weight:bold; cursor:pointer;">&times;</span>
+            </div>
+
+            <p style="color:#555; margin-bottom:20px;">
+                Submit a new price proposal for this order. The other party will need to review and accept it.
+            </p>
+
+            <form method="POST" action="{% url 'market_counterpropose_order' %}">
+                {% csrf_token %}
+                <input type="hidden" name="order_id" id="modalCounterproposeOrderId">
+                
+                <div style="margin-bottom:20px;">
+                    <label style="display:block; font-weight:600; margin-bottom:8px;">Proposed Price (€/Kg):</label>
+                    <input type="number" step="0.01" name="proposed_price" id="modalCounterproposePrice" required 
+                           style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;">
+                </div>
+
+                <div style="text-align:right;">
+                    <button type="button" onclick="closeCounterproposeModal()" 
+                            style="background:#ccc; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; margin-right:10px;">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                            style="background:#f57c00; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold;">
+                        Submit Counterproposal
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- CALCULATE MODAL (DEMO) -->
     <div id="calculateModal" class="modal"
@@ -787,21 +827,86 @@
                                     {% endif %}
                                 </td>
 
-                                <td>{{ order.price_per_kg|default_if_none:"-" }} €</td>
+                                <td>
+                                    {{ order.price_per_kg|default_if_none:"-" }} €
+                                    {% if order.status == 'NEGOTIATING' %}
+                                        {% with last_neg=order.negotiations.first %}
+                                            {% if last_neg and last_neg.status == 'PENDING' %}
+                                                <br><small style="color:#f57c00; font-weight:bold;">Proposed: {{ last_neg.proposed_price_per_kg }} €</small>
+                                            {% endif %}
+                                        {% endwith %}
+                                    {% endif %}
+                                </td>
 
                                 <td>{{ order.quantity_kg }}</td>
-                                <td>
+                                <td style="vertical-align: middle;">
+                                    <div style="display: flex; flex-direction: column; gap: 5px; align-items: center;">
                                     {% if order.requester != user %}
-                                    <div style="display:flex; gap:10px;">
-                                        <form method="POST" action="{% url 'market_accept_order' %}">
+                                        {% if order.status == 'NEGOTIATING' %}
+                                            {% with last_neg=order.negotiations.first %}
+                                                {% if last_neg and last_neg.status == 'PENDING' %}
+                                                    {% if last_neg.proposed_by == user %}
+                                                        <span style="color:#666; font-size:0.85em; text-align:center;">Waiting for seller</span>
+                                                    {% else %}
+                                                        <form method="POST" action="{% url 'market_respond_negotiation' %}" style="margin:0; width: 100%;">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="negotiation_id" value="{{ last_neg.pk }}">
+                                                            <input type="hidden" name="action" value="ACCEPT">
+                                                            <button type="submit" class="btn-action" style="background:#4CAF50; color:white; border:none; cursor:pointer; padding:4px 8px; border-radius:5px; width:100%; font-size:0.9em; justify-content: center;">Accept Offer</button>
+                                                        </form>
+                                                        <form method="POST" action="{% url 'market_respond_negotiation' %}" style="margin:0; width: 100%;">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="negotiation_id" value="{{ last_neg.pk }}">
+                                                            <input type="hidden" name="action" value="REJECT">
+                                                            <button type="submit" class="btn-action" style="background:#e53935; color:white; border:none; cursor:pointer; padding:4px 8px; border-radius:5px; width:100%; font-size:0.9em; justify-content: center;">Reject Offer</button>
+                                                        </form>
+                                                    {% endif %}
+                                                {% endif %}
+                                            {% endwith %}
+                                        {% else %}
+                                            <form method="POST" action="{% url 'market_accept_order' %}" style="margin:0; width: 100%;">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="order_id" value="{{ order.id }}">
+                                                <button type="submit" class="btn-action" style="background:#4CAF50; color:white; border:none; cursor:pointer; padding:4px 8px; border-radius:5px; width:100%; font-size:0.9em; justify-content: center;">Accept Deal</button>
+                                            </form>
+                                            <button type="button" class="btn-action"
+                                                onclick="openCounterproposeModal('{{ order.id }}', '{{ order.price_per_kg|default_if_none:0 }}')"
+                                                style="background:#f57c00; color:white; border:none; cursor:pointer; padding:4px 8px; border-radius:5px; width:100%; font-size:0.9em; justify-content: center;">
+                                                Counterpropose
+                                            </button>
+                                        {% endif %}
+                                    {% else %}
+                                        {% if order.status == 'NEGOTIATING' %}
+                                            {% with last_neg=order.negotiations.first %}
+                                                {% if last_neg and last_neg.status == 'PENDING' %}
+                                                    {% if last_neg.proposed_by == user %}
+                                                        <span style="color:#666; font-size:0.85em; text-align:center;">Waiting for buyer</span>
+                                                    {% else %}
+                                                        <form method="POST" action="{% url 'market_respond_negotiation' %}" style="margin:0; width: 100%;">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="negotiation_id" value="{{ last_neg.pk }}">
+                                                            <input type="hidden" name="action" value="ACCEPT">
+                                                            <button type="submit" class="btn-action" style="background:#4CAF50; color:white; border:none; cursor:pointer; padding:4px 8px; border-radius:5px; width:100%; font-size:0.9em; justify-content: center;">Accept Offer</button>
+                                                        </form>
+                                                        <form method="POST" action="{% url 'market_respond_negotiation' %}" style="margin:0; width: 100%;">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="negotiation_id" value="{{ last_neg.pk }}">
+                                                            <input type="hidden" name="action" value="REJECT">
+                                                            <button type="submit" class="btn-action" style="background:#e53935; color:white; border:none; cursor:pointer; padding:4px 8px; border-radius:5px; width:100%; font-size:0.9em; justify-content: center;">Reject Offer</button>
+                                                        </form>
+                                                    {% endif %}
+                                                {% endif %}
+                                            {% endwith %}
+                                        {% endif %}
+                                        <form method="POST" action="{% url 'market_cancel_order' %}" onsubmit="return confirm('Are you sure you want to cancel this order?');" style="margin:0; width: 100%;">
                                             {% csrf_token %}
                                             <input type="hidden" name="order_id" value="{{ order.id }}">
-                                            <button type="submit" class="btn-action">Accept</button>
+                                            <button type="submit" class="btn-action" style="background:#e53935; color:white; border:none; cursor:pointer; padding:4px 8px; border-radius:5px; width:100%; font-size:0.9em; justify-content: center;" title="Cancel this order">
+                                                ✕ Cancel
+                                            </button>
                                         </form>
-                                    </div>
-                                    {% else %}
-                                    <span style="color:gray;">Mine</span>
                                     {% endif %}
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -996,7 +1101,7 @@
         </div>
     </div>
 
-    <!-- ====================== MODAL DE DADOS PESSOAIS/PERFIL ====================== -->
+    <!-- ====================== PERSONAL DATA/PROFILE MODAL ====================== -->
     <div id="profileModal" class="modal"
         style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6);">
         <div class="modal-content"
@@ -1190,12 +1295,25 @@
         window.onclick = function (event) {
             let modalProfile = document.getElementById('profileModal');
             let modalSensor = document.getElementById('sensorModal');
+            let modalCounter = document.getElementById('counterproposeModal');
             if (event.target === modalProfile) { closeProfileModal(); }
             if (event.target === modalSensor) { closeSensorModal(); }
+            if (event.target === modalCounter) { closeCounterproposeModal(); }
             // Add click outside for calculate modal
             if (event.target === document.getElementById('calculateModal')) {
                 closeCalculateModal();
             }
+        }
+
+        var counterproposeModal = document.getElementById("counterproposeModal");
+        function openCounterproposeModal(orderId, currentPrice) {
+            document.getElementById('modalCounterproposeOrderId').value = orderId;
+            document.getElementById('modalCounterproposePrice').value = currentPrice;
+            if(counterproposeModal) counterproposeModal.style.display = "block";
+        }
+
+        function closeCounterproposeModal() {
+            if(counterproposeModal) counterproposeModal.style.display = "none";
         }
     </script>
     
@@ -1243,7 +1361,7 @@
                 if(btn) btn.click();
             }
 
-            // Inicializar filtros dinâmicos de stock comprado
+// Initialize purchased stock filters
             if (typeof initPurchasesFilters === 'function') {
                 initPurchasesFilters();
             }
@@ -1278,7 +1396,7 @@
     <div id="historyModal" class="modal" style="display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6);">
         <div class="modal-content" style="background-color: #fefefe; margin: 5% auto; padding: 0; border: 1px solid #888; width: 90%; max-width: 800px; border-radius: 10px; overflow: hidden;">
             <div id="historyModalContent" style="padding: 20px; text-align: center;">
-                <p>⏳ A carregar dados da Blockchain...</p>
+                <p>⏳ Loading Blockchain data...</p>
             </div>
         </div>
     </div>
@@ -1316,15 +1434,94 @@
 
     <!-- ====================== DISCRETE TRANSLATOR WIDGET ====================== -->
     <div id="google_translate_element" style="display:none;"></div>
-    <div class="discrete-translator" style="position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.95); border: 1px solid #00796b; border-radius: 30px; padding: 6px 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); backdrop-filter: blur(5px); transition: all 0.3s ease;">
-        <span style="font-size: 1.1em; line-height: 1;">🌐</span>
-        <select id="lang-select" onchange="changeLanguage(this.value)" style="border: none; background: transparent; font-size: 0.85em; font-weight: 600; color: #004d40; cursor: pointer; outline: none; padding-right: 5px; font-family: inherit;">
-            <option value="pt">🇵🇹 PT</option>
-            <option value="en">🇬🇧 EN</option>
-            <option value="es">🇪🇸 ES</option>
-            <option value="tr">🇹🇷 TR</option>
-        </select>
+    <div class="discrete-translator" style="position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.95); border: 1px solid #00796b; border-radius: 30px; padding: 6px 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); backdrop-filter: blur(5px); transition: all 0.3s ease; font-family: inherit;">
+        
+        <!-- Custom Dropdown Container -->
+        <div id="custom-lang-dropdown" style="position: relative; user-select: none;">
+            
+            <!-- Selected Value Display -->
+            <div id="lang-selected" onclick="toggleLangDropdown()" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; font-size: 0.85em; font-weight: 600; color: #004d40; padding: 4px 8px; min-width: 60px;">
+                <div id="selected-lang-content" style="display: flex; align-items: center;">
+                    <svg width="20" height="15" viewBox="0 0 20 15" style="vertical-align: middle; margin-right: 6px; border: 0.5px solid #ccc; border-radius: 2px; overflow: hidden;">
+                        <rect width="20" height="15" fill="#012169"/>
+                        <path d="M0,0 L20,15 M20,0 L0,15" stroke="#FFF" stroke-width="2.5"/>
+                        <path d="M0,0 L20,15 M20,0 L0,15" stroke="#C8102E" stroke-width="1"/>
+                        <path d="M10,0 v15 M0,7.5 h20" stroke="#FFF" stroke-width="4.5"/>
+                        <path d="M10,0 v15 M0,7.5 h20" stroke="#C8102E" stroke-width="2.5"/>
+                    </svg>
+                    EN
+                </div>
+                <!-- Dropdown Arrow -->
+                <svg width="10" height="10" viewBox="0 0 24 24" style="margin-left: 6px; fill: #004d40;">
+                    <path d="M7 10l5 5 5-5z"/>
+                </svg>
+            </div>
+
+            <!-- Dropdown Options List -->
+            <div id="lang-options" style="display: none; position: absolute; bottom: 120%; right: 0; background: #ffffff; border: 1px solid #00796b; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15); overflow: hidden; min-width: 100px; z-index: 10001; margin-bottom: 5px;">
+                
+                <div onclick="selectCustomLang('pt', this.innerHTML)" style="display: flex; align-items: center; padding: 12px 16px; cursor: pointer; font-size: 0.85em; font-weight: 600; color: #004d40; border-bottom: 1px solid #f0f0f0;">
+                    <svg width="20" height="15" viewBox="0 0 20 15" style="vertical-align: middle; margin-right: 6px; border: 0.5px solid #ccc; border-radius: 2px;">
+                        <rect width="20" height="15" fill="#F00"/><rect width="7" height="15" fill="#094"/>
+                        <circle cx="7" cy="7.5" r="3" fill="#FC0"/><path d="M6,6.5 h2 v1.5 a1,1 0 0,1 -2,0 z" fill="#FFF"/>
+                    </svg>
+                    PT
+                </div>
+                
+                <div onclick="selectCustomLang('en', this.innerHTML)" style="display: flex; align-items: center; padding: 12px 16px; cursor: pointer; font-size: 0.85em; font-weight: 600; color: #004d40; border-bottom: 1px solid #f0f0f0;">
+                    <svg width="20" height="15" viewBox="0 0 20 15" style="vertical-align: middle; margin-right: 6px; border: 0.5px solid #ccc; border-radius: 2px; overflow: hidden;">
+                        <rect width="20" height="15" fill="#012169"/>
+                        <path d="M0,0 L20,15 M20,0 L0,15" stroke="#FFF" stroke-width="2.5"/>
+                        <path d="M0,0 L20,15 M20,0 L0,15" stroke="#C8102E" stroke-width="1"/>
+                        <path d="M10,0 v15 M0,7.5 h20" stroke="#FFF" stroke-width="4.5"/>
+                        <path d="M10,0 v15 M0,7.5 h20" stroke="#C8102E" stroke-width="2.5"/>
+                    </svg>
+                    EN
+                </div>
+                
+                <div onclick="selectCustomLang('es', this.innerHTML)" style="display: flex; align-items: center; padding: 12px 16px; cursor: pointer; font-size: 0.85em; font-weight: 600; color: #004d40; border-bottom: 1px solid #f0f0f0;">
+                    <svg width="20" height="15" viewBox="0 0 20 15" style="vertical-align: middle; margin-right: 6px; border: 0.5px solid #ccc; border-radius: 2px;">
+                        <rect width="20" height="15" fill="#AA151B"/>
+                        <rect width="20" height="7.5" y="3.75" fill="#F1BF00"/>
+                        <rect x="4.5" y="5.5" width="2.5" height="4" rx="0.5" fill="#AA151B"/>
+                    </svg>
+                    ES
+                </div>
+                
+                <div onclick="selectCustomLang('tr', this.innerHTML)" style="display: flex; align-items: center; padding: 12px 16px; cursor: pointer; font-size: 0.85em; font-weight: 600; color: #004d40;">
+                    <svg width="20" height="15" viewBox="0 0 20 15" style="vertical-align: middle; margin-right: 6px; border: 0.5px solid #ccc; border-radius: 2px;">
+                        <rect width="20" height="15" fill="#E30A17"/>
+                        <circle cx="8" cy="7.5" r="4.5" fill="#FFF"/>
+                        <circle cx="9.5" cy="7.5" r="3.5" fill="#E30A17"/>
+                        <polygon points="12.5,5.5 13,7 14.5,7 13.2,8 13.7,9.5 12.5,8.5 11.3,9.5 11.8,8 10.5,7 12,7" fill="#FFF"/>
+                    </svg>
+                    TR
+                </div>
+            </div>
+        </div>
     </div>
+
+    <script>
+        function toggleLangDropdown() {
+            var options = document.getElementById('lang-options');
+            options.style.display = options.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function selectCustomLang(langCode, htmlContent) {
+            document.getElementById('selected-lang-content').innerHTML = htmlContent;
+            document.getElementById('lang-options').style.display = 'none';
+            if (typeof changeLanguage === 'function') {
+                changeLanguage(langCode);
+            }
+        }
+
+        document.addEventListener('click', function(event) {
+            var dropdown = document.getElementById('custom-lang-dropdown');
+            if (!dropdown.contains(event.target)) {
+                document.getElementById('lang-options').style.display = 'none';
+            }
+        });
+    </script>
 
     <style>
         /* Google Translate Overrides */
@@ -1347,7 +1544,7 @@
     <script type="text/javascript">
         function googleTranslateElementInit() {
             new google.translate.TranslateElement({
-                pageLanguage: 'pt',
+                pageLanguage: 'en',
                 includedLanguages: 'pt,en,es,tr',
                 layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
                 autoDisplay: false

@@ -174,7 +174,7 @@ class TransporterDashboardView(View):
 class ConsumerDashboardView(View):
     def get(self, request):
         user = request.user
-        open_orders = MarketplaceOrder.objects.filter(status='OPEN').select_related('requester', 'culture').order_by('-created_at')
+        open_orders = MarketplaceOrder.objects.filter(status__in=['OPEN', 'NEGOTIATING']).select_related('requester', 'culture').order_by('-created_at')
         closed_orders = MarketplaceOrder.objects.filter(Q(requester=user) | Q(fulfilled_by=user), status='APPROVED').select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')
 
         try:
@@ -210,7 +210,7 @@ class ProcessorDashboardView(View):
         contract_producers = User.objects.filter(groups__name='Producer', userprofile__producer_type='contract').order_by('username')
         contracts = SupplyContract.objects.filter(buyer=user).select_related('producer', 'subfamily').order_by('-created_at')
         
-        open_orders = MarketplaceOrder.objects.filter(status='OPEN').select_related('requester', 'culture').order_by('-created_at')
+        open_orders = MarketplaceOrder.objects.filter(status__in=['OPEN', 'NEGOTIATING']).select_related('requester', 'culture').order_by('-created_at')
         closed_orders = MarketplaceOrder.objects.filter(Q(requester=user) | Q(fulfilled_by=user), status='APPROVED').select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')
         
         # Filtrar encomendas aprovadas e entregues ao processador que ainda não foram processadas
@@ -348,7 +348,7 @@ class RetailerDashboardView(View):
         contract_producers = User.objects.filter(groups__name='Producer', userprofile__producer_type='contract').order_by('username')
         contracts = SupplyContract.objects.filter(buyer=user).select_related('producer', 'subfamily').order_by('-created_at')
 
-        open_orders = MarketplaceOrder.objects.filter(status='OPEN').select_related('requester', 'culture').order_by('-created_at')[:50]
+        open_orders = MarketplaceOrder.objects.filter(status__in=['OPEN', 'NEGOTIATING']).select_related('requester', 'culture').order_by('-created_at')[:50]
         closed_orders = MarketplaceOrder.objects.filter(Q(requester=user) | Q(fulfilled_by=user), status='APPROVED').select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')[:50]
 
         try:
@@ -523,11 +523,11 @@ class ProducerDashboardView(View):
         all_sensors = Sensor.objects.all().order_by('sensor_id')
 
         # 5. MARKETPLACE DATA
-        open_market_orders = MarketplaceOrder.objects.filter(status='OPEN').select_related('requester', 'culture').order_by('-created_at')
+        open_market_orders = MarketplaceOrder.objects.filter(status__in=['OPEN', 'NEGOTIATING']).select_related('requester', 'culture').order_by('-created_at')
         closed_market_orders = MarketplaceOrder.objects.filter(Q(requester=user) | Q(fulfilled_by=user), status='APPROVED').select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')
 
 
-        plantation_plan_form = PlantationPlanForm()
+        plantation_plan_form = PlantationPlanForm(user=request.user)
         plantation_detail_form = PlantationDetailForm()
         harvest_form = HarvestForm() 
 
@@ -540,14 +540,15 @@ class ProducerDashboardView(View):
 
         warehouse_form = WarehouseRegistrationForm()
         sensor_form = SensorRegistrationForm()
-        fertilizer_synthetic_form = FertilizerSyntheticForm() 
-        fertilizer_organic_form = FertilizerOrganicForm()
-        soil_corrective_form = SoilCorrectiveForm()
-        pest_control_form = PestControlForm()
-        machinery_form = MachineryForm()
-        fuel_form = FuelForm()
-        electric_energy_form = ElectricEnergyForm()
-        irrigation_water_form = IrrigationWaterForm()
+
+        fertilizer_synthetic_form = FertilizerSyntheticForm() #
+        fertilizer_organic_form = FertilizerOrganicForm()#
+        soil_corrective_form = SoilCorrectiveForm()#
+        pest_control_form = PestControlForm()#
+        machinery_form = MachineryForm()#
+        fuel_form = FuelForm()#
+        electric_energy_form = ElectricEnergyForm()#
+        irrigation_water_form = IrrigationWaterForm()#
         
         harvest_form.fields['plantation'].queryset = base_plantation_query 
         harvest_form.fields['warehouse'].queryset = producer_warehouses_qs
@@ -680,7 +681,7 @@ def producer_submit_plantation_crop(request):
                 # 1. Check if plantation belongs to user
                 plantation = form.cleaned_data['plantation']
                 if plantation.producer != request.user:
-                    raise IntegrityError("Não autorizado: Plantação não pertence ao utilizador.")
+                    raise IntegrityError("Unauthorized: Plantation does not belong to the user.")
                 
                 # 2. Save
                 form.save()
@@ -688,11 +689,11 @@ def producer_submit_plantation_crop(request):
                 
             except IntegrityError as e:
                 # e.g. duplicate entry (pair plantation-subfamily unique)
-                request.session['db_error'] = f"Erro ao adicionar cultura: {e}"
+                request.session['db_error'] = f"Error adding crop: {e}"
             except Exception as e:
-                request.session['db_error'] = f"Erro desconhecido: {e}"
+                request.session['db_error'] = f"Unknown error: {e}"
         else:
-             request.session['db_error'] = f"Formulário de Cultura Inválido: {form.errors}"
+             request.session['db_error'] = f"Invalid Crop Form: {form.errors}"
              
         return redirect('producer_dashboard')
     
@@ -704,7 +705,7 @@ def producer_submit_plantation(request):
     db_error = None
 
     if request.method == 'POST':
-        form = PlantationPlanForm(request.POST) 
+        form = PlantationPlanForm(request.POST, user=request.user) 
         detail_form = PlantationDetailForm(request.POST) 
         
         # Filtros de segurança e validação
@@ -766,14 +767,14 @@ def producer_submit_plantation(request):
                 
             except IntegrityError as e:
                 # Captura erros de DB e rolls back a transação
-                db_error = f"Erro de Integridade (Chave Duplicada/FK): {e}"
+                db_error = f"Integrity Error (Duplicate Key/FK): {e}"
             except ValueError as e:
                 # Captura erros de conversão de string para float/decimal
-                db_error = f"Erro de Conversão de Valor: Verifique se os valores do solo são números válidos. Detalhe: {e}"
+                db_error = f"Value Conversion Error: Check if soil values are valid numbers. Detail: {e}"
             except Exception as e:
                 # Captura qualquer outro erro inesperado (o verdadeiro causador do crash/hang)
-                db_error = f"ERRO CRÍTICO DESCONHECIDO: {e}"
-                print(f"ERRO CRÍTICO DURANTE A SUBMISSÃO: {e}") # <<<<<<<<< DEBUG AQUI
+                db_error = f"CRITICAL UNKNOWN ERROR: {e}"
+                print(f"CRITICAL ERROR DURING SUBMISSION: {e}") # <<<<<<<<< DEBUG AQUI
                 
         
         # 5. Tratamento de Erro e Redirecionamento Final
@@ -783,6 +784,57 @@ def producer_submit_plantation(request):
         return redirect(reverse('producer_dashboard')) # Garante que o fluxo HTTP termina
         
     return redirect(reverse('producer_dashboard')) # Bloquear acesso GET
+
+@login_required
+@role_required(['Producer'])
+def producer_delete_plantation(request):
+    if request.method == 'POST':
+        plantation_id = request.POST.get('plantation_id')
+        if not plantation_id:
+            messages.error(request, "Invalid request: Plantation ID is missing.")
+            return redirect('producer_dashboard')
+
+        plantation = get_object_or_404(PlantationPlan, pk=plantation_id)
+
+        # Security: ensure producers can only delete their own plantations
+        if plantation.producer != request.user:
+            messages.error(request, "You are not authorized to delete this plantation.")
+            return redirect('producer_dashboard')
+
+        try:
+            with transaction.atomic():
+                name = plantation.plantation_name or f"Plan #{plantation.plantation_id}"
+                plantation.delete()
+                messages.success(request, f"Plantation '{name}' was successfully removed.")
+        except Exception as e:
+            messages.error(request, f"Error removing plantation: {e}")
+
+    return redirect('producer_dashboard')
+
+@login_required
+def delete_warehouse(request):
+    if request.method == 'POST':
+        warehouse_id = request.POST.get('warehouse_id')
+        if not warehouse_id:
+            messages.error(request, "Invalid request: Warehouse ID is missing.")
+            return redirect(request.META.get('HTTP_REFERER', '/'))
+
+        warehouse = get_object_or_404(Warehouse, pk=warehouse_id)
+
+        # Security: ensure only the owner can delete their warehouse
+        if warehouse.owner != request.user:
+            messages.error(request, "You are not authorized to delete this warehouse.")
+            return redirect(request.META.get('HTTP_REFERER', '/'))
+
+        try:
+            with transaction.atomic():
+                name = warehouse.location or f"Warehouse #{warehouse.warehouse_id}"
+                warehouse.delete()
+                messages.success(request, f"Warehouse '{name}' was successfully removed.")
+        except Exception as e:
+            messages.error(request, f"Error removing warehouse: {e}")
+
+    return redirect(request.META.get('HTTP_REFERER', '/'))
 
 @login_required
 @role_required(['Producer'])
@@ -801,6 +853,15 @@ def producer_submit_harvest(request):
                 harvest_record = form.save(commit=False)
                 harvest_record.producer = request.user
                 
+                if harvest_record.warehouse:
+                    wh = harvest_record.warehouse
+                    wh_stock = ConsolidatedStock.objects.filter(
+                        Q(warehouse_location=wh.location) | Q(warehouse_location__contains=f"WH:{wh.warehouse_id}") | Q(warehouse_location__contains=f"WH: {wh.warehouse_id}")
+                    ).filter(owner=wh.owner).aggregate(total=Sum('quantity'))['total'] or 0
+                    if float(wh_stock) + float(harvest_record.harvest_quantity_kg) > float(wh.capacity):
+                        messages.error(request, f"Warehouse {wh.location} does not have enough capacity. (Available: {float(wh.capacity) - float(wh_stock)}kg)")
+                        return redirect('producer_dashboard')
+
                 harvest_record.save()
                 
                 # --- AUTO-GENESIS BLOCK ---
@@ -829,23 +890,23 @@ def producer_submit_harvest(request):
                             harvest_date=harvest_record.harvest_date.strftime("%Y-%m-%d"),
                             additional_data=dossier
                         )
-                        messages.success(request, f"Colheita registada e submetida na Blockchain Real! Hash: {result['tx_hash'][:10]}...")
+                        messages.success(request, f"Harvest registered and submitted to Real Blockchain! Hash: {result['tx_hash'][:10]}...")
                     except Exception as fe:
-                        messages.warning(request, f"Colheita registada localmente, mas erro ao gravar na Blockchain Real: {fe}")
+                        messages.warning(request, f"Harvest registered locally, but error writing to Real Blockchain: {fe}")
                 except Exception as e:
                     # Se falhar a blockchain, não invalida a colheita, mas avisa
-                    messages.warning(request, f"Colheita salva, mas erro ao gerar Bloco Blockchain: {e}")
+                    messages.warning(request, f"Harvest saved, but error generating Blockchain Block: {e}")
 
                 return redirect('producer_dashboard')
                 
             except IntegrityError as e:
-                db_error = f"Erro ao salvar Colheita: Detalhe: {e}"
+                db_error = f"Error saving Harvest: Detail: {e}"
                 request.session['db_error'] = db_error
             except Exception as e:
-                db_error = f"Erro desconhecido: {e}"
+                db_error = f"Unknown error: {e}"
                 request.session['db_error'] = db_error
         else:
-            messages.error(request, f"Erro de validação do formulário: {form.errors.as_text()}")
+            messages.error(request, f"Form validation error: {form.errors.as_text()}")
         
         # Redirecionamento após lógica/erro
         return redirect('producer_dashboard')
@@ -886,7 +947,7 @@ def producer_submit_warehouse(request):
                 return redirect('producer_dashboard')
                 
             except IntegrityError as e:
-                db_error = f"Erro ao salvar Armazém na DB: Detalhe: {e}"
+                db_error = f"Error saving Warehouse to DB: Detail: {e}"
                 print(f"[ERRO PRODUCER WAREHOUSE DB]: {e}")
                 request.session['db_error'] = db_error
 
@@ -915,7 +976,7 @@ def producer_submit_sensor(request):
                 
             except IntegrityError as e:
                 # Se o sensor_id for uma chave primária e já existir
-                db_error = f"Erro ao salvar Sensor na DB: O ID '{request.POST.get('sensor_id')}' já existe. Detalhe: {e}"
+                db_error = f"Error saving Sensor to DB: The ID '{request.POST.get('sensor_id')}' already exists. Detail: {e}"
                 request.session['db_error'] = db_error # Use sessions para passar o erro
         
         # Se houver erro de validação ou DB, redireciona de volta
@@ -945,7 +1006,7 @@ def processor_submit_warehouse(request):
                     
                 return redirect('processor_dashboard')
             except IntegrityError as e:
-                db_error = f"Erro ao salvar Armazém na DB: {e}"
+                db_error = f"Error saving Warehouse to DB: {e}"
                 print(f"[ERRO PROCESSOR WAREHOUSE DB]: {e}")
                 request.session['db_error'] = db_error
         else:
@@ -1042,11 +1103,11 @@ def processor_submit_processing(request):
                 except Exception as fe:
                     print(f"Erro ao atualizar na Blockchain Real: {fe}")
                 
-                messages.success(request, f"Processamento registado e Bloco '{new_batch_id}' minado!")
+                messages.success(request, f"Processing registered and Block '{new_batch_id}' mined!")
                 
             except Exception as e:
                 print(f"Erro na Blockchain: {e}")
-                messages.warning(request, f"Processado, mas erro na Blockchain: {e}")
+                messages.warning(request, f"Processed, but error on Blockchain: {e}")
 
             return redirect('processor_dashboard')
     
@@ -1061,11 +1122,18 @@ def processor_accept_order(request):
         
         try:
             # 1. Obter a encomenda
-            order = MarketplaceOrder.objects.get(pk=order_id, status='OPEN')
+            order = MarketplaceOrder.objects.get(pk=order_id, status__in=['OPEN', 'NEGOTIATING'])
             
             # 2. Obter o armazém selecionado e verificar posse
             warehouse = Warehouse.objects.get(pk=warehouse_id, owner=request.user)
             
+            wh_stock = ConsolidatedStock.objects.filter(
+                Q(warehouse_location=warehouse.location) | Q(warehouse_location__contains=f"WH:{warehouse.warehouse_id}") | Q(warehouse_location__contains=f"WH: {warehouse.warehouse_id}")
+            ).filter(owner=warehouse.owner).aggregate(total=Sum('quantity'))['total'] or 0
+            if float(wh_stock) + float(order.quantity_kg) > float(warehouse.capacity):
+                messages.error(request, f"Warehouse {warehouse.location} does not have enough capacity. (Available: {float(warehouse.capacity) - float(wh_stock)}kg)")
+                return redirect('processor_dashboard')
+
             # 3. Atualizar a encomenda
             order.status = 'APPROVED'
             order.fulfilled_by = request.user
@@ -1108,7 +1176,7 @@ def retailer_submit_warehouse(request):
                     
                 return redirect('retailer_dashboard')
             except IntegrityError as e:
-                db_error = f"Erro ao salvar Armazém na DB: {e}"
+                db_error = f"Error saving Warehouse to DB: {e}"
                 print(f"[ERRO RETAILER WAREHOUSE DB]: {e}")
                 request.session['db_error'] = db_error
         else:
@@ -1127,7 +1195,7 @@ def retailer_submit_sensor(request):
                 form.save()
                 return redirect('retailer_dashboard') 
             except IntegrityError as e:
-                db_error = f"Erro ao salvar Sensor: ID já existe. Detalhe: {e}"
+                db_error = f"Error saving Sensor: ID already exists. Detail: {e}"
                 request.session['db_error'] = db_error
         return redirect('retailer_dashboard')
     return redirect('retailer_dashboard')
@@ -1140,9 +1208,16 @@ def retailer_accept_order(request):
         warehouse_id = request.POST.get('warehouse_id')
         
         try:
-            order = MarketplaceOrder.objects.get(pk=order_id, status='OPEN')
+            order = MarketplaceOrder.objects.get(pk=order_id, status__in=['OPEN', 'NEGOTIATING'])
             warehouse = Warehouse.objects.get(pk=warehouse_id, owner=request.user)
             
+            wh_stock = ConsolidatedStock.objects.filter(
+                Q(warehouse_location=warehouse.location) | Q(warehouse_location__contains=f"WH:{warehouse.warehouse_id}") | Q(warehouse_location__contains=f"WH: {warehouse.warehouse_id}")
+            ).filter(owner=warehouse.owner).aggregate(total=Sum('quantity'))['total'] or 0
+            if float(wh_stock) + float(order.quantity_kg) > float(warehouse.capacity):
+                messages.error(request, f"Warehouse {warehouse.location} does not have enough capacity. (Available: {float(warehouse.capacity) - float(wh_stock)}kg)")
+                return redirect('retailer_dashboard')
+
             order.status = 'APPROVED'
             order.fulfilled_by = request.user
             order.fulfilled_at = timezone.now()
@@ -1220,9 +1295,9 @@ def producer_submit_fertilizer_synth(request):
                 return redirect(REDIRECT_URL) 
                 
             except IntegrityError as e:
-                db_error = f"Erro de Integridade na DB ao salvar Evento/Detalhe. Detalhe: {e}"
+                db_error = f"Database Integrity Error when saving Event/Detail. Detail: {e}"
             except Exception as e:
-                db_error = f"Erro desconhecido durante a transação: {e}"
+                db_error = f"Unknown error during transaction: {e}"
                 print(f"ERRO CRÍTICO NA TRANSAÇÃO: {e}") 
 
         # 4. Tratamento de Erro (Validação falhada ou Exceção capturada)
@@ -1277,10 +1352,10 @@ def producer_submit_fertilizer_org(request):
                 return redirect(REDIRECT_URL) 
                 
             except IntegrityError as e:
-                db_error = f"Erro de Integridade na DB ao salvar Evento/Detalhe. Detalhe: {e}"
+                db_error = f"Database Integrity Error when saving Event/Detail. Detail: {e}"
             except Exception as e:
                 # Captura qualquer outro erro que possa causar falha
-                db_error = f"Erro desconhecido durante a transação: {e}"
+                db_error = f"Unknown error during transaction: {e}"
                 print(f"ERRO CRÍTICO NA TRANSAÇÃO: {e}") 
 
         # 5. Tratamento de Erro (Validação falhada ou Exceção capturada)
@@ -1312,9 +1387,9 @@ def producer_submit_fertilizer_synth(request):
                     event_record.save()
                 return redirect(REDIRECT_URL) 
             except IntegrityError as e:
-                db_error = f"Erro de Integridade na DB ao salvar Evento/Detalhe. Detalhe: {e}"
+                db_error = f"Database Integrity Error when saving Event/Detail. Detail: {e}"
             except Exception as e:
-                db_error = f"Erro desconhecido durante a transação: {e}"
+                db_error = f"Unknown error during transaction: {e}"
                 print(f"ERRO CRÍTICO NA TRANSAÇÃO: {e}") 
 
         if db_error:
@@ -1340,9 +1415,9 @@ def producer_submit_fertilizer_org(request):
                     event_record.save()
                 return redirect(REDIRECT_URL) 
             except IntegrityError as e:
-                db_error = f"Erro de Integridade na DB ao salvar Evento/Detalhe. Detalhe: {e}"
+                db_error = f"Database Integrity Error when saving Event/Detail. Detail: {e}"
             except Exception as e:
-                db_error = f"Erro desconhecido durante a transação: {e}"
+                db_error = f"Unknown error during transaction: {e}"
                 print(f"ERRO CRÍTICO NA TRANSAÇÃO: {e}") 
 
         if db_error:
@@ -1368,9 +1443,9 @@ def producer_submit_soil_corrective(request):
                     event_record.save()
                 return redirect(REDIRECT_URL) 
             except IntegrityError as e:
-                db_error = f"Erro de Integridade na DB: {e}"
+                db_error = f"Database Integrity Error: {e}"
             except Exception as e:
-                db_error = f"Erro desconhecido: {e}"
+                db_error = f"Unknown error: {e}"
                 print(f"ERRO CRÍTICO: {e}") 
 
         if db_error:
@@ -1396,9 +1471,9 @@ def producer_submit_pest_control(request):
                     event_record.save()
                 return redirect(REDIRECT_URL) 
             except IntegrityError as e:
-                db_error = f"Erro de Integridade na DB: {e}"
+                db_error = f"Database Integrity Error: {e}"
             except Exception as e:
-                db_error = f"Erro desconhecido: {e}"
+                db_error = f"Unknown error: {e}"
                 print(f"ERRO CRÍTICO: {e}") 
 
         if db_error:
@@ -1424,9 +1499,9 @@ def producer_submit_machinery(request):
                     event_record.save()
                 return redirect(REDIRECT_URL) 
             except IntegrityError as e:
-                db_error = f"Erro de Integridade na DB: {e}"
+                db_error = f"Database Integrity Error: {e}"
             except Exception as e:
-                db_error = f"Erro desconhecido: {e}"
+                db_error = f"Unknown error: {e}"
                 print(f"ERRO CRÍTICO: {e}") 
 
         if db_error:
@@ -1452,9 +1527,9 @@ def producer_submit_fuel(request):
                     event_record.save()
                 return redirect(REDIRECT_URL) 
             except IntegrityError as e:
-                db_error = f"Erro de Integridade na DB: {e}"
+                db_error = f"Database Integrity Error: {e}"
             except Exception as e:
-                db_error = f"Erro desconhecido: {e}"
+                db_error = f"Unknown error: {e}"
                 print(f"ERRO CRÍTICO: {e}") 
 
         if db_error:
@@ -1480,9 +1555,9 @@ def producer_submit_electric(request):
                     event_record.save()
                 return redirect(REDIRECT_URL) 
             except IntegrityError as e:
-                db_error = f"Erro de Integridade na DB: {e}"
+                db_error = f"Database Integrity Error: {e}"
             except Exception as e:
-                db_error = f"Erro desconhecido: {e}"
+                db_error = f"Unknown error: {e}"
                 print(f"ERRO CRÍTICO: {e}") 
 
         if db_error:
@@ -1508,9 +1583,9 @@ def producer_submit_water(request):
                     event_record.save()
                 return redirect(REDIRECT_URL) 
             except IntegrityError as e:
-                db_error = f"Erro de Integridade na DB: {e}"
+                db_error = f"Database Integrity Error: {e}"
             except Exception as e:
-                db_error = f"Erro desconhecido: {e}"
+                db_error = f"Unknown error: {e}"
                 print(f"ERRO CRÍTICO: {e}") 
 
         if db_error:
@@ -1549,10 +1624,10 @@ def market_submit_order(request):
                     harvest.save()
                     
                     order.save()
-                    messages.success(request, f"Oferta de Venda criada! {order.quantity_kg}kg abatidos ao lote #{harvest.pk}.")
+                    messages.success(request, f"Sale offer created! {order.quantity_kg}kg deducted from batch #{harvest.pk}.")
                     return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
             else:
-                 messages.error(request, f"Erro ao criar oferta: {form.errors}")
+                 messages.error(request, f"Error creating offer: {form.errors}")
         
         else:
             # Lógica Genérica (Retalhista a comprar, etc.)
@@ -1577,10 +1652,10 @@ def market_submit_order(request):
                     order.min_quality_score = None
                 
                 order.save()
-                messages.success(request, "Pedido criado no Mercado!")
+                messages.success(request, "Order created in Marketplace!")
                 return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
             else:
-                messages.error(request, f"Erro ao criar pedido: {form.errors}")
+                messages.error(request, f"Error creating order: {form.errors}")
     
     return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
 
@@ -1596,13 +1671,13 @@ def market_accept_order(request):
             # Validação Extra: Se for Producer aceitando uma compra (BUY), DEVE ter um harvest_id
             if request.user.groups.filter(name='Producer').exists() and order.order_type == 'BUY':
                 if not harvest_id:
-                     messages.error(request, "Erro: Tens de selecionar um Lote (Harvest) para abastecer este pedido!")
+                     messages.error(request, "Error: You must select a Batch (Harvest) to fulfill this order!")
                      return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
                 
                 # Obter Lote e Validar Stock
                 harvest = get_object_or_404(Harvest, pk=harvest_id, producer=request.user)
                 if harvest.current_stock_kg < order.quantity_kg:
-                    messages.error(request, f"Stock insuficiente no Lote #{harvest.pk}. Disponível: {harvest.current_stock_kg}kg")
+                    messages.error(request, f"Insufficient stock in Batch #{harvest.pk}. Available: {harvest.current_stock_kg}kg")
                     return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
 
                 # Lógica de Dedução e Link
@@ -1624,7 +1699,7 @@ def market_accept_order(request):
                     order.save()
                     check_and_create_optimal_route(order.fulfilled_at.date())
                     
-                    messages.success(request, f"Pedido aceite! {order.quantity_kg}kg alocados do Lote #{harvest.pk}.")
+                    messages.success(request, f"Order accepted! {order.quantity_kg}kg allocated from Batch #{harvest.pk}.")
             
             else:
                 # Fallback para outros roles ou SELL orders (onde stock já foi abatido na criação)
@@ -1633,8 +1708,106 @@ def market_accept_order(request):
                 order.fulfilled_at = timezone.now()
                 order.save()
                 check_and_create_optimal_route(order.fulfilled_at.date())
-                messages.success(request, f"Pedido #{order.pk} aceite!")
+                messages.success(request, f"Order #{order.pk} accepted!")
             
+    return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
+
+@login_required
+def market_cancel_order(request):
+    if request.method == 'POST':
+        order_id = request.POST.get('order_id')
+        order = get_object_or_404(MarketplaceOrder, pk=order_id)
+        
+        # Validation: only requester can cancel
+        if order.requester != request.user:
+            messages.error(request, "You are not authorized to cancel this order.")
+            return redirect(request.META.get('HTTP_REFERER', 'admin_dashboard'))
+            
+        # Validation: only OPEN orders can be cancelled
+        if order.status != 'OPEN':
+            messages.error(request, f"Order #{order.pk} cannot be cancelled because its status is '{order.get_status_display()}'.")
+            return redirect(request.META.get('HTTP_REFERER', 'admin_dashboard'))
+            
+        with transaction.atomic():
+            order.status = 'CANCELLED'
+            
+            # If Producer SELL order from a Harvest batch, refund the utilized quantity
+            if order.order_type == 'SELL' and order.harvest_origin:
+                harvest = order.harvest_origin
+                harvest.utilized_quantity_kg = max(0, harvest.utilized_quantity_kg - order.quantity_kg)
+                harvest.save()
+                
+            order.save() # Triggers order_post_save signal, updating ConsolidatedStock for Retailer/Processor
+            
+        messages.success(request, f"Market order #{order.pk} ({order.get_order_type_display()}) was successfully cancelled.")
+        return redirect(request.META.get('HTTP_REFERER', 'admin_dashboard'))
+        
+    return redirect(request.META.get('HTTP_REFERER', 'admin_dashboard'))
+
+@login_required
+def market_counterpropose_order(request):
+    from .models import OrderNegotiation
+    if request.method == 'POST':
+        order_id = request.POST.get('order_id')
+        proposed_price = request.POST.get('proposed_price')
+        
+        order = get_object_or_404(MarketplaceOrder, pk=order_id)
+        
+        # Validation
+        if order.status not in ['OPEN', 'NEGOTIATING']:
+            messages.error(request, "This order is not open for negotiation.")
+            return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
+            
+        with transaction.atomic():
+            OrderNegotiation.objects.create(
+                order=order,
+                proposed_by=request.user,
+                proposed_price_per_kg=proposed_price,
+                status='PENDING'
+            )
+            order.status = 'NEGOTIATING'
+            order.save()
+            
+        messages.success(request, f"Counterproposal of {proposed_price}€/kg submitted for Order #{order.pk}.")
+    return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
+
+@login_required
+def market_respond_negotiation(request):
+    from .models import OrderNegotiation
+    if request.method == 'POST':
+        negotiation_id = request.POST.get('negotiation_id')
+        action = request.POST.get('action') # 'ACCEPT' or 'REJECT'
+        
+        negotiation = get_object_or_404(OrderNegotiation, pk=negotiation_id)
+        order = negotiation.order
+        
+        if negotiation.status != 'PENDING':
+            messages.error(request, "This negotiation is no longer pending.")
+            return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
+            
+        with transaction.atomic():
+            if action == 'ACCEPT':
+                negotiation.status = 'ACCEPTED'
+                negotiation.save()
+                
+                # Reject other pending negotiations for this order
+                OrderNegotiation.objects.filter(order=order, status='PENDING').update(status='REJECTED')
+                
+                order.price_per_kg = negotiation.proposed_price_per_kg
+                order.status = 'OPEN' 
+                order.save()
+                messages.success(request, f"Counterproposal accepted. New price is {negotiation.proposed_price_per_kg}€/kg.")
+            elif action == 'REJECT':
+                negotiation.status = 'REJECTED'
+                negotiation.save()
+                
+                # Check if there are other pending negotiations
+                if not OrderNegotiation.objects.filter(order=order, status='PENDING').exists():
+                    order.status = 'OPEN'
+                    order.save()
+                    
+                messages.success(request, "Counterproposal rejected.")
+                
     return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
 
 # ----------------------------------------------------------------------
@@ -1677,9 +1850,9 @@ def transporter_register_vehicle(request):
             vehicle = form.save(commit=False)
             vehicle.owner = request.user
             vehicle.save()
-            messages.success(request, f"Veículo com matrícula {vehicle.license_plate} registado com sucesso!")
+            messages.success(request, f"Vehicle with license plate {vehicle.license_plate} registered successfully!")
         else:
-            messages.error(request, f"Erro ao registar veículo: {form.errors}")
+            messages.error(request, f"Error registering vehicle: {form.errors}")
     return redirect('transporter_dashboard')
 
 @login_required
@@ -1691,7 +1864,7 @@ def transporter_accept_route(request):
         route = get_object_or_404(Route, pk=route_id)
         
         if not vehicle_id:
-            messages.error(request, "Tem de selecionar um veículo para esta rota.")
+            messages.error(request, "You must select a vehicle for this route.")
             return redirect('transporter_dashboard')
             
         vehicle = get_object_or_404(Vehicle, pk=vehicle_id, owner=request.user)
@@ -1709,9 +1882,9 @@ def transporter_accept_route(request):
                     order.vehicle = vehicle
                     order.save()
                     
-            messages.success(request, f"Rota #{route.pk} aceite com o veículo {vehicle.brand_model} ({vehicle.license_plate})!")
+            messages.success(request, f"Route #{route.pk} accepted with vehicle {vehicle.brand_model} ({vehicle.license_plate})!")
         else:
-            messages.error(request, "Esta rota já não está disponível.")
+            messages.error(request, "This route is no longer available.")
             
     return redirect('transporter_dashboard')
 
@@ -1733,9 +1906,9 @@ def transporter_route_plan(request):
                     order.planned_delivery_date = planned_delivery
                     order.transport_status = 'PLANNED'
                     order.save()
-            messages.success(request, f"Plano de transporte registado para a Rota #{route.pk}!")
+            messages.success(request, f"Transport plan registered for Route #{route.pk}!")
         else:
-            messages.error(request, "Datas de recolha e entrega inválidas.")
+            messages.error(request, "Invalid pickup and delivery dates.")
     return redirect('transporter_dashboard')
 
 @login_required
@@ -1783,7 +1956,7 @@ def transporter_route_pickup(request):
                 except Exception as fe:
                     print(f"Erro fabric: {fe}")
                     
-        messages.success(request, f"Viagem da Rota #{route.pk} iniciada!")
+        messages.success(request, f"Trip for Route #{route.pk} started!")
     return redirect('transporter_dashboard')
 
 @login_required
@@ -1838,7 +2011,7 @@ def transporter_route_delivery(request):
                 except Exception as fe:
                     print(f"Erro fabric: {fe}")
                     
-        messages.success(request, f"Entrega da Rota #{route.pk} concluída com sucesso!")
+        messages.success(request, f"Delivery for Route #{route.pk} completed successfully!")
     return redirect('transporter_dashboard')
 
 @login_required
@@ -1850,7 +2023,7 @@ def transporter_simulate_route_opt(request):
         route__isnull=True
     )
     if not orders.exists():
-        messages.error(request, "Não existem transações pendentes de transporte no mercado neste momento.")
+        messages.error(request, "There are no pending transport transactions in the marketplace at this moment.")
         return redirect('transporter_dashboard')
         
     with transaction.atomic():
@@ -1872,7 +2045,7 @@ def transporter_simulate_route_opt(request):
         route.optimized_path = " -> ".join(locations)
         route.save()
         
-    messages.success(request, f"Simulação Concluída! Rota #{route.pk} criada otimizando {len(selected_orders)} transações.")
+    messages.success(request, f"Simulation Completed! Route #{route.pk} created optimizing {len(selected_orders)} transactions.")
     return redirect('transporter_dashboard')
 
 @login_required
@@ -1887,7 +2060,7 @@ def transporter_accept_job(request):
         order = get_object_or_404(MarketplaceOrder, pk=order_id)
         
         if not vehicle_id:
-            messages.error(request, "Tem de selecionar um veículo para aceitar esta carga.")
+            messages.error(request, "You must select a vehicle to accept this cargo.")
             return redirect('transporter_dashboard')
             
         vehicle = get_object_or_404(Vehicle, pk=vehicle_id, owner=request.user)
@@ -1897,9 +2070,9 @@ def transporter_accept_job(request):
                 order.transport_status = 'ACCEPTED'
                 order.vehicle = vehicle
                 order.save()
-            messages.success(request, f"Trabalho aceite! Encomenda #{order.pk} movida para Planeamento com o veículo {vehicle.license_plate}.")
+            messages.success(request, f"Job accepted! Order #{order.pk} moved to Planning with vehicle {vehicle.license_plate}.")
         else:
-            messages.error(request, "Esta encomenda já não está disponível.")
+            messages.error(request, "This order is no longer available.")
             
     return redirect('transporter_dashboard')
 
@@ -1914,9 +2087,9 @@ def transporter_submit_plan(request):
         if form.is_valid():
             order.transport_status = 'PLANNED'
             form.save()
-            messages.success(request, f"Plano de transporte registado para Encomenda #{order.pk}!")
+            messages.success(request, f"Transport plan registered for Order #{order.pk}!")
         else:
-            messages.error(request, "Erro ao registar plano. Verifique as datas.")
+            messages.error(request, "Error registering plan. Check the dates.")
             
     return redirect('transporter_dashboard')
 
@@ -1967,7 +2140,7 @@ def transporter_validate_pickup(request):
         except Exception as fe:
             print(f"Erro ao atualizar na Blockchain Real: {fe}")
         
-        messages.success(request, f"Carga validada! Bloco de Custódia gerado para Encomenda #{order.pk}.")
+        messages.success(request, f"Cargo validated! Custody Block generated for Order #{order.pk}.")
         
     return redirect('transporter_dashboard')
 
@@ -2003,7 +2176,7 @@ def transporter_submit_delivery(request):
                         harvest.delivered_quantity_kg = (harvest.delivered_quantity_kg or 0) + order.quantity_kg
                         harvest.save()
             except Exception as e:
-                messages.error(request, f"Erro ao processar entrega: {e}")
+                messages.error(request, f"Error processing delivery: {e}")
                 return redirect('transporter_dashboard')
             
             # 2. Blockchain Event (Proof of Delivery + Sensors)
@@ -2040,11 +2213,11 @@ def transporter_submit_delivery(request):
                 except Exception as fe:
                     print(f"Erro ao atualizar na Blockchain Real: {fe}")
                     
-                messages.success(request, f"Entrega registada com sucesso! Bloco Final gerado. Hash: {result['tx_hash'][:10]}...")
+                messages.success(request, f"Delivery registered successfully! Final Block generated. Hash: {result['tx_hash'][:10]}...")
             except Exception as e:
-                messages.error(request, f"Erro Blockchain: {e}")
+                messages.error(request, f"Blockchain Error: {e}")
         else:
-            messages.error(request, "Erro ao registar entrega.")
+            messages.error(request, "Error registering delivery.")
             
     return redirect('transporter_dashboard')
 
@@ -2066,7 +2239,7 @@ def processor_request_association(request):
             assoc.status = 'PENDING'
             assoc.save()
             
-        messages.success(request, f"Pedido de associação enviado para a loja {retailer.username}!")
+        messages.success(request, f"Association request sent to store {retailer.username}!")
     return redirect('processor_dashboard')
 
 
@@ -2081,14 +2254,14 @@ def retailer_respond_association(request):
         if action == 'approve':
             assoc.status = 'APPROVED'
             assoc.save()
-            messages.success(request, f"Permissão concedida ao processador {assoc.processor.username}!")
+            messages.success(request, f"Permission granted to processor {assoc.processor.username}!")
         elif action == 'reject':
             assoc.status = 'REJECTED'
             assoc.save()
-            messages.warning(request, f"Pedido de associação do processador {assoc.processor.username} rejeitado.")
+            messages.warning(request, f"Association request from processor {assoc.processor.username} rejected.")
         elif action == 'revoke':
             assoc.delete()
-            messages.info(request, f"Acesso do processador {assoc.processor.username} revogado.")
+            messages.info(request, f"Access for processor {assoc.processor.username} revoked.")
             
     return redirect('retailer_dashboard')
 
@@ -2245,7 +2418,7 @@ def get_agent_recommendations(request):
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return JsonResponse({'status': 'error', 'message': f'Erro ao obter recomendações: {str(e)}'}, status=500)
+        return JsonResponse({'status': 'error', 'message': f'Error getting recommendations: {str(e)}'}, status=500)
 
 
 @login_required
@@ -2266,7 +2439,7 @@ def get_stock_recommendations(request):
         novos_dias_path = os.path.join(stock_management_path, 'datasets', 'NovosDias.xlsx')
         
         if not os.path.exists(novos_dias_path):
-            return JsonResponse({'status': 'error', 'message': f'Ficheiro {novos_dias_path} não encontrado.'}, status=404)
+            return JsonResponse({'status': 'error', 'message': f'File {novos_dias_path} not found.'}, status=404)
             
         df_novos = pd.read_excel(novos_dias_path)
         
@@ -2451,7 +2624,7 @@ def get_stock_recommendations(request):
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return JsonResponse({'status': 'error', 'message': f'Erro ao obter recomendações de pricing: {str(e)}'}, status=500)
+        return JsonResponse({'status': 'error', 'message': f'Error getting pricing recommendations: {str(e)}'}, status=500)
 
 
 @login_required
@@ -2462,7 +2635,7 @@ def get_sensor_data_from_sheet(request):
     from django.conf import settings
 
     if request.user.username != 'ProducerBraga':
-        return JsonResponse({'status': 'error', 'message': 'Não autorizado'}, status=403)
+        return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
 
     cache_path = os.path.join(settings.BASE_DIR, 'dashboard', 'sensor_cache.json')
     if os.path.exists(cache_path):
@@ -2471,7 +2644,7 @@ def get_sensor_data_from_sheet(request):
                 data = json.load(f)
             return JsonResponse(data)
         except Exception as e:
-            return JsonResponse({'status': 'error', 'message': f'Erro ao ler cache local: {str(e)}'}, status=500)
+            return JsonResponse({'status': 'error', 'message': f'Error reading local cache: {str(e)}'}, status=500)
     
     # Fallback caso o ficheiro de cache não exista ainda (ex: primeira inicialização)
     try:
@@ -2503,9 +2676,9 @@ def get_sensor_data_from_sheet(request):
                     json.dump(payload, f, indent=4)
                 
                 return JsonResponse(payload)
-        return JsonResponse({'status': 'error', 'message': 'Cache local indisponível e falha ao sincronizar.'}, status=500)
+        return JsonResponse({'status': 'error', 'message': 'Local cache unavailable and synchronization failed.'}, status=500)
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': f'Erro de sincronização direta: {str(e)}'}, status=500)
+        return JsonResponse({'status': 'error', 'message': f'Direct synchronization error: {str(e)}'}, status=500)
 
 
 @login_required
@@ -2514,7 +2687,7 @@ def producer_agent_simulation(request):
     from django.http import JsonResponse
 
     if request.method != 'POST':
-        return JsonResponse({'status': 'error', 'message': 'Método não permitido.'}, status=405)
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed.'}, status=405)
         
     try:
         from .services.agent_simulation import run_pricing_agent_simulation
@@ -2524,13 +2697,13 @@ def producer_agent_simulation(request):
         
         # Validar dados de entrada básicos
         if product_sku not in ['3_080', '3_090', '3_252', '3_586', '911753']:
-            return JsonResponse({'status': 'error', 'message': 'SKU inválido. Escolha 3_080, 3_090, 3_252, 3_586 ou 911753.'}, status=400)
+            return JsonResponse({'status': 'error', 'message': 'Invalid SKU. Choose 3_080, 3_090, 3_252, 3_586 or 911753.'}, status=400)
             
         if max_capacity < 50 or max_capacity > 2000:
-            return JsonResponse({'status': 'error', 'message': 'A capacidade do armazém deve estar entre 50 e 2000 caixas.'}, status=400)
+            return JsonResponse({'status': 'error', 'message': 'Warehouse capacity must be between 50 and 2000 crates.'}, status=400)
             
         if update_interval < 2 or update_interval > 100:
-            return JsonResponse({'status': 'error', 'message': 'O intervalo de fine-tuning deve estar entre 2 e 100 dias.'}, status=400)
+            return JsonResponse({'status': 'error', 'message': 'Fine-tuning interval must be between 2 and 100 days.'}, status=400)
 
         # Executar a simulação de pricing com fine-tuning
         payload = run_pricing_agent_simulation(
@@ -2545,7 +2718,7 @@ def producer_agent_simulation(request):
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return JsonResponse({'status': 'error', 'message': f'Erro crítico durante a simulação de pricing: {str(e)}'}, status=500)
+        return JsonResponse({'status': 'error', 'message': f'Critical error during pricing simulation: {str(e)}'}, status=500)
 
 
 @login_required
@@ -2553,7 +2726,7 @@ def agent_simulation(request):
     from django.http import JsonResponse
 
     if request.method != 'POST':
-        return JsonResponse({'status': 'error', 'message': 'Método não permitido.'}, status=405)
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed.'}, status=405)
         
     try:
         from .services.agent_simulation import run_buyer_agent_simulation
@@ -2565,7 +2738,7 @@ def agent_simulation(request):
         
         # Validar dados de entrada
         if product_sku not in ['3_080', '3_090', '3_252', '3_586', '911753']:
-            return JsonResponse({'status': 'error', 'message': 'SKU inválido.'}, status=400)
+            return JsonResponse({'status': 'error', 'message': 'Invalid SKU.'}, status=400)
             
         # Executar a simulação do Buyer Agent
         payload = run_buyer_agent_simulation(
@@ -2582,7 +2755,7 @@ def agent_simulation(request):
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return JsonResponse({'status': 'error', 'message': f'Erro crítico na simulação: {str(e)}'}, status=500)
+        return JsonResponse({'status': 'error', 'message': f'Critical error in simulation: {str(e)}'}, status=500)
 
 
 @login_required
@@ -2597,16 +2770,16 @@ def import_sensor_readings(request, warehouse_id):
     
     # Validação de permissões
     if warehouse.owner != request.user and not request.user.is_superuser:
-        messages.error(request, "Não tem permissão para gerir este armazém.")
+        messages.error(request, "You do not have permission to manage this warehouse.")
         return redirect('admin_dashboard')
         
     if request.method != 'POST':
-        messages.error(request, "Método não permitido.")
+        messages.error(request, "Method not allowed.")
         return redirect('admin_dashboard')
         
     file = request.FILES.get('sensor_file')
     if not file:
-        messages.error(request, "Por favor, selecione um ficheiro Excel/CSV.")
+        messages.error(request, "Please select an Excel/CSV file.")
         return redirect(request.META.get('HTTP_REFERER', 'admin_dashboard'))
         
     try:
@@ -2616,7 +2789,7 @@ def import_sensor_readings(request, warehouse_id):
         elif filename.endswith('.csv'):
             df = pd.read_csv(file)
         else:
-            messages.error(request, "Formato de ficheiro não suportado. Use Excel (.xlsx, .xls) ou CSV.")
+            messages.error(request, "Unsupported file format. Use Excel (.xlsx, .xls) or CSV.")
             return redirect(request.META.get('HTTP_REFERER', 'admin_dashboard'))
             
         # Normalizar nomes de colunas
@@ -2631,7 +2804,7 @@ def import_sensor_readings(request, warehouse_id):
         if not date_col or not temp_col or not hum_col or not eth_col:
             messages.error(
                 request, 
-                "Colunas em falta no ficheiro. Garanta que contém as colunas: 'Data', 'Temperatura', 'Humidade' e 'Etileno'."
+                "Missing columns in file. Ensure it contains the columns: 'Data' (or 'Date'), 'Temperatura' (or 'Temperature'), 'Humidade' (or 'Humidity') and 'Etileno' (or 'Ethylene')."
             )
             return redirect(request.META.get('HTTP_REFERER', 'admin_dashboard'))
             
@@ -2661,10 +2834,10 @@ def import_sensor_readings(request, warehouse_id):
                 )
                 count += 1
                 
-        messages.success(request, f"Importação concluída com sucesso! Registadas/atualizadas {count} leituras diárias.")
+        messages.success(request, f"Import completed successfully! Registered/updated {count} daily readings.")
         
     except Exception as e:
-        messages.error(request, f"Erro ao processar ficheiro: {str(e)}")
+        messages.error(request, f"Error processing file: {str(e)}")
         
     return redirect(request.META.get('HTTP_REFERER', 'admin_dashboard'))
 
@@ -2686,7 +2859,7 @@ def async_buyer_training(user_id, sku, excel_file_path, storage_dir):
             'progress': 10,
             'epoch': 0,
             'loss': 0.0,
-            'message': f'A ler ficheiro de histórico e a preparar dados para {sku}...'
+            'message': f'Reading history file and preparing data for {sku}...'
         }
         time.sleep(2)
         
@@ -2703,7 +2876,7 @@ def async_buyer_training(user_id, sku, excel_file_path, storage_dir):
             
         TRAINING_STATUS[user_id].update({
             'progress': 25,
-            'message': f'A treinar o modelo de Previsão de Procura (MLP) para {sku}...'
+            'message': f'Training Demand Forecasting model (MLP) for {sku}...'
         })
         time.sleep(2.5)
         
@@ -2725,7 +2898,7 @@ def async_buyer_training(user_id, sku, excel_file_path, storage_dir):
             'progress': 50,
             'epoch': 15,
             'loss': 0.082,
-            'message': f'Previsão de Procura gravada! A treinar Agente Comprador (PPO) para {sku}...'
+            'message': f'Demand Forecast saved! Training Buyer Agent (PPO) for {sku}...'
         })
         time.sleep(2)
         
@@ -2736,7 +2909,7 @@ def async_buyer_training(user_id, sku, excel_file_path, storage_dir):
                 'progress': 50 + (epoch * 10),
                 'epoch': epoch * 20,
                 'loss': round(0.04 / epoch, 4),
-                'message': f'Otimização do Agente Comprador (PPO) para {sku} - Época {epoch * 20}/100...'
+                'message': f'Optimizing Buyer Agent (PPO) for {sku} - Epoch {epoch * 20}/100...'
             })
             
         # Salvar pesos do Buyer Agent
@@ -2750,14 +2923,14 @@ def async_buyer_training(user_id, sku, excel_file_path, storage_dir):
         TRAINING_STATUS[user_id].update({
             'status': 'completed',
             'progress': 100,
-            'message': f'Treino do Buyer Agent e MLP para {sku} concluído com sucesso!'
+            'message': f'Training of Buyer Agent and MLP for {sku} completed successfully!'
         })
         
     except Exception as e:
         TRAINING_STATUS[user_id] = {
             'status': 'failed',
             'progress': 0,
-            'message': f'Erro no treino: {str(e)}'
+            'message': f'Training error: {str(e)}'
         }
 
 def async_stock_training(user_id, sku, excel_file_path, storage_dir):
@@ -2767,7 +2940,7 @@ def async_stock_training(user_id, sku, excel_file_path, storage_dir):
             'progress': 10,
             'epoch': 0,
             'loss': 0.0,
-            'message': f'A ler ficheiro de histórico de stocks e colheitas para {sku}...'
+            'message': f'Reading stock and harvest history file for {sku}...'
         }
         
         import os
@@ -2805,11 +2978,11 @@ def async_stock_training(user_id, sku, excel_file_path, storage_dir):
         ).first()
         
         if not model_record:
-            raise FileNotFoundError("Precisa de treinar primeiro o modelo de previsão de vendas (MLP) para esta cultura no menu 'Previsão de Vendas'.")
+            raise FileNotFoundError("You must first train the sales forecasting model (MLP) for this crop in the 'Sales Forecasting' menu.")
             
         TRAINING_STATUS[user_id].update({
             'progress': 20,
-            'message': 'A inicializar previsor de vendas e a processar dados...'
+            'message': 'Initializing sales forecaster and processing data...'
         })
         
         # Load excel file
@@ -2830,7 +3003,7 @@ def async_stock_training(user_id, sku, excel_file_path, storage_dir):
         }
         df = df.rename(columns=col_mapping)
         if 'date' not in df.columns or 'sales_quantity_kg' not in df.columns:
-            raise KeyError("O ficheiro deve conter as colunas de data ('Data' ou 'date') e de quantidade de vendas ('Vendas_Kg' ou 'sales_quantity_kg').")
+            raise KeyError("The file must contain date columns ('Data' or 'date') and sales quantity columns ('Vendas_Kg' or 'sales_quantity_kg').")
             
         df = df.sort_values(by='date').reset_index(drop=True)
         df['date'] = pd.to_datetime(df['date'])
@@ -2911,7 +3084,7 @@ def async_stock_training(user_id, sku, excel_file_path, storage_dir):
         
         TRAINING_STATUS[user_id].update({
             'progress': 30,
-            'message': 'A inicializar subprocesso de treino PPO para o Stock Agent...'
+            'message': 'Initializing PPO training subprocess for Stock Agent...'
         })
         
         # Launch subprocess
@@ -2950,7 +3123,7 @@ def async_stock_training(user_id, sku, excel_file_path, storage_dir):
                             'progress': progress,
                             'epoch': ep,
                             'loss': loss,
-                            'message': f"A treinar Stock Agent: {ep}/{tot} episódios | Lucro: {profit:.1f}€ | Loss: {loss:.4f}"
+                            'message': f"Training Stock Agent: {ep}/{tot} episodes | Profit: {profit:.1f}€ | Loss: {loss:.4f}"
                         })
                 elif "ERRO" in clean_line or "Error" in clean_line:
                     print(f"[Stock Training Subprocess Error] {clean_line}")
@@ -3002,29 +3175,29 @@ def async_stock_training(user_id, sku, excel_file_path, storage_dir):
             TRAINING_STATUS[user_id].update({
                 'status': 'completed',
                 'progress': 100,
-                'message': f'Treino do Stock Agent para {subfamily.name} concluído com sucesso!'
+                'message': f'Training of Stock Agent for {subfamily.name} completed successfully!'
             })
         else:
-            raise FileNotFoundError("Não foi possível gerar os pesos finais do modelo (PPO Actor/Critic).")
+            raise FileNotFoundError("Could not generate final model weights (PPO Actor/Critic).")
             
     except Exception as e:
         TRAINING_STATUS[user_id] = {
             'status': 'failed',
             'progress': 0,
-            'message': f'Erro no treino: {str(e)}'
+            'message': f'Training error: {str(e)}'
         }
 
 @login_required
 def submit_buyer_training(request):
     from django.http import JsonResponse
     if request.method != 'POST':
-        return JsonResponse({'status': 'error', 'message': 'Método não permitido.'}, status=405)
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed.'}, status=405)
         
     sku = request.POST.get('sku', '')
     file = request.FILES.get('history_file')
     
     if not file:
-        return JsonResponse({'status': 'error', 'message': 'Nenhum ficheiro carregado.'}, status=400)
+        return JsonResponse({'status': 'error', 'message': 'No file uploaded.'}, status=400)
         
     user_id = request.user.id
     
@@ -3060,20 +3233,20 @@ def submit_buyer_training(request):
     
     return JsonResponse({
         'status': 'success',
-        'message': f'Treino do Buyer Agent e Modelo de Previsões iniciado com sucesso para {sku_label}.'
+        'message': f'Training of Buyer Agent and Forecast Model successfully started for {sku_label}.'
     })
 
 @login_required
 def submit_stock_training(request):
     from django.http import JsonResponse
     if request.method != 'POST':
-        return JsonResponse({'status': 'error', 'message': 'Método não permitido.'}, status=405)
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed.'}, status=405)
         
     sku = request.POST.get('sku', '')
     file = request.FILES.get('history_file')
     
     if not file:
-        return JsonResponse({'status': 'error', 'message': 'Nenhum ficheiro carregado.'}, status=400)
+        return JsonResponse({'status': 'error', 'message': 'No file uploaded.'}, status=400)
         
     user_id = request.user.id
     
@@ -3109,7 +3282,7 @@ def submit_stock_training(request):
     
     return JsonResponse({
         'status': 'success',
-        'message': f'Treino do Stock Agent iniciado com sucesso para {sku_label}.'
+        'message': f'Training of Stock Agent successfully started for {sku_label}.'
     })
 
 @login_required
@@ -3121,7 +3294,7 @@ def get_training_status(request):
         'progress': 0,
         'epoch': 0,
         'loss': 0.0,
-        'message': 'Pronto para treinar.'
+        'message': 'Ready to train.'
     })
     return JsonResponse(status_data)
 
@@ -3129,7 +3302,7 @@ def get_training_status(request):
 def adjust_stock_manually(request):
     from django.http import JsonResponse
     if request.method != 'POST':
-        return JsonResponse({'status': 'error', 'message': 'Método não permitido.'}, status=405)
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed.'}, status=405)
         
     try:
         culture_id = request.POST.get('culture_id')
@@ -3138,7 +3311,7 @@ def adjust_stock_manually(request):
         adjustment_type = request.POST.get('adjustment_type', 'set')
         
         if not culture_id or not warehouse_location:
-            return JsonResponse({'status': 'error', 'message': 'Campos obrigatórios em falta.'}, status=400)
+            return JsonResponse({'status': 'error', 'message': 'Required fields are missing.'}, status=400)
             
         culture = get_object_or_404(ProductSubFamily, pk=culture_id)
         
@@ -3153,13 +3326,13 @@ def adjust_stock_manually(request):
         
         if adjustment_type == 'add':
             new_qty = current_qty + quantity
-            action_desc = f"adicionados {quantity} kg ao stock de"
+            action_desc = f"added {quantity} kg to stock of"
         elif adjustment_type == 'subtract':
             new_qty = max(0.0, current_qty - quantity)
-            action_desc = f"retirados {quantity} kg do stock de"
+            action_desc = f"removed {quantity} kg from stock of"
         else: # 'set'
             new_qty = quantity
-            action_desc = f"definidos exatos {quantity} kg de stock de"
+            action_desc = f"set exact {quantity} kg of stock for"
             
         stock.quantity = new_qty
         stock.save()
@@ -3265,7 +3438,7 @@ def adjust_stock_manually(request):
                         
         return JsonResponse({
             'status': 'success',
-            'message': f"Sucesso: Foram {action_desc} {culture.name} no armazém {warehouse_location}. Stock atual: {new_qty} kg.",
+            'message': f"Success: {action_desc} {culture.name} in warehouse {warehouse_location}. Current stock: {new_qty} kg.",
             'quantity': float(stock.quantity)
         })
     except Exception as e:
@@ -3367,7 +3540,7 @@ def buy_direct_makro(request):
             from dashboard.services.contract_service import process_instant_purchase
             
             if not producer_name or not producer_name.strip():
-                messages.error(request, "O nome do fornecedor não pode estar vazio.")
+                messages.error(request, "Supplier name cannot be empty.")
                 return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
                 
             producer_name = producer_name.strip()
@@ -3375,7 +3548,7 @@ def buy_direct_makro(request):
             qty = float(quantity_kg)
             
             if qty <= 0:
-                messages.error(request, "A quantidade deve ser superior a 0.")
+                messages.error(request, "Quantity must be greater than 0.")
                 return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
                 
             warehouse_loc = None
@@ -3408,9 +3581,9 @@ def buy_direct_makro(request):
             from dashboard.services.contract_service import get_culture_shelf_life
             days = get_culture_shelf_life(subfamily)
             
-            messages.success(request, f"Compra rápida efetuada com sucesso! Lote {order.harvest_origin.pk} adicionado ao stock. Fornecedor: {producer_user.username}. Validade: {days} dias.")
+            messages.success(request, f"Quick purchase completed successfully! Batch #{order.harvest_origin.pk} added to stock. Supplier: {producer_user.username}. Shelf life: {days} days.")
         except Exception as e:
-            messages.error(request, f"Erro ao processar compra rápida: {e}")
+            messages.error(request, f"Error processing quick purchase: {e}")
             
     return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
 
@@ -3431,7 +3604,7 @@ def create_supply_contract(request):
             import datetime
             
             if not producer_name or not producer_name.strip():
-                messages.error(request, "O nome do fornecedor não pode estar vazio.")
+                messages.error(request, "Supplier name cannot be empty.")
                 return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
                 
             producer_name = producer_name.strip()
@@ -3440,11 +3613,11 @@ def create_supply_contract(request):
             delivery_date = datetime.datetime.strptime(delivery_date_str, "%Y-%m-%d").date()
             
             if qty <= 0:
-                messages.error(request, "A quantidade deve ser superior a 0.")
+                messages.error(request, "Quantity must be greater than 0.")
                 return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
                 
             if delivery_date < timezone.now().date():
-                messages.error(request, "A data de entrega não pode ser no passado.")
+                messages.error(request, "Delivery date cannot be in the past.")
                 return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
                 
             warehouse_loc = None
@@ -3478,9 +3651,9 @@ def create_supply_contract(request):
                 status='pending'
             )
             
-            messages.success(request, f"Contrato de fornecimento celebrado com sucesso com {producer_user.username} para o dia {delivery_date_str}!")
+            messages.success(request, f"Supply contract successfully created with {producer_user.username} for {delivery_date_str}!")
         except Exception as e:
-            messages.error(request, f"Erro ao criar contrato: {e}")
+            messages.error(request, f"Error creating contract: {e}")
             
     return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
 
@@ -3520,7 +3693,7 @@ def upload_sales_history(request):
             df = df.rename(columns=col_mapping)
             
             if 'date' not in df.columns or 'sales_quantity_kg' not in df.columns:
-                messages.error(request, "O ficheiro deve conter as colunas de data ('Data' ou 'date') e de quantidade de vendas ('Vendas_Kg' ou 'sales_quantity_kg').")
+                messages.error(request, "The file must contain date columns ('Data' or 'date') and sales quantity columns ('Vendas_Kg' or 'sales_quantity_kg').")
                 return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
                 
             df['date'] = pd.to_datetime(df['date']).dt.date
@@ -3537,9 +3710,9 @@ def upload_sales_history(request):
             count = train_sales_forecaster(request.user, subfamily, df, model_type=model_type)
             
             model_display = "Autoformer" if model_type == "autoformer" else "MLP"
-            messages.success(request, f"Histórico de vendas e modelo preditivo de vendas ({model_display}) treinado com sucesso! {count} dias registados.")
+            messages.success(request, f"Sales history and predictive sales model ({model_display}) trained successfully! {count} days recorded.")
         except Exception as e:
-            messages.error(request, f"Erro ao processar ficheiro de histórico: {e}")
+            messages.error(request, f"Error processing history file: {e}")
             
     return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
 
@@ -3566,7 +3739,7 @@ def infer_sales_forecast(request):
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
             
-    return JsonResponse({'status': 'error', 'message': 'Método não permitido.'}, status=405)
+    return JsonResponse({'status': 'error', 'message': 'Method not allowed.'}, status=405)
 
 
 @login_required
@@ -3599,7 +3772,7 @@ def train_buyer_agent(request):
                 # Usar histórico já carregado
                 sales_qs = HistoricalSalesData.objects.filter(owner=request.user, culture=subfamily)
                 if not sales_qs.exists():
-                    messages.error(request, "Precisa primeiro de carregar o histórico de vendas para esta cultura.")
+                    messages.error(request, "You must first upload the sales history for this culture.")
                     return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
                 
                 df = pd.DataFrame(list(sales_qs.values('date', 'sales_quantity_kg', 'price_per_kg')))
@@ -3617,9 +3790,9 @@ def train_buyer_agent(request):
                 
             from dashboard.services.agent_service import train_buyer_agent_optimizer
             train_buyer_agent_optimizer(request.user, subfamily, df, max_episodes=max_episodes)
-            messages.success(request, f"O Buyer Agent para {subfamily.name} foi treinado com sucesso!")
+            messages.success(request, f"Buyer Agent for {subfamily.name} was successfully trained!")
         except Exception as e:
-            messages.error(request, f"Erro ao treinar Buyer Agent: {e}")
+            messages.error(request, f"Error training Buyer Agent: {e}")
             
     return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
 
@@ -3632,8 +3805,8 @@ def toggle_buyer_agent_status(request):
         profile.buyer_agent_active = not profile.buyer_agent_active
         profile.save()
         
-        status_str = "ATIVADO" if profile.buyer_agent_active else "DESATIVADO"
-        messages.success(request, f"Buyer Agent {status_str} com sucesso!")
+        status_str = "ACTIVATED" if profile.buyer_agent_active else "DEACTIVATED"
+        messages.success(request, f"Buyer Agent {status_str} successfully!")
         
     return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
 
@@ -3660,7 +3833,7 @@ def run_buyer_agent_action(request):
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
             
-    return JsonResponse({'status': 'error', 'message': 'Método não permitido.'}, status=405)
+    return JsonResponse({'status': 'error', 'message': 'Method not allowed.'}, status=405)
 
 
 @login_required
@@ -3670,11 +3843,11 @@ def get_lc_decay_data(request):
     Endpoint AJAX que retorna a curva de degradação da qualidade prevista pelo LC Agent.
     """
     if request.method != "GET":
-        return JsonResponse({'status': 'error', 'message': 'Método não permitido.'}, status=405)
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed.'}, status=405)
         
     stock_id = request.GET.get('stock_id')
     if not stock_id:
-        return JsonResponse({'status': 'error', 'message': 'Parâmetro stock_id em falta.'}, status=400)
+        return JsonResponse({'status': 'error', 'message': 'Missing stock_id parameter.'}, status=400)
         
     import datetime
     from django.http import JsonResponse
@@ -3758,4 +3931,4 @@ def get_lc_decay_data(request):
         'hum_today': hum_today,
         'eth_today': eth_today,
         'decay_curve': decay_curve
-    })
+    })

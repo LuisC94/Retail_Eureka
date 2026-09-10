@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Administrador Dashboard - Kiwi & Smart Chain</title>
@@ -156,7 +156,7 @@
         
         <div class="main-header">
             <div class="login-box" style="display: flex; align-items: center; gap: 10px;">
-                <span style="font-weight: bold; color: #4CAF50;">Bem-vindo, {{ username }} ({{ role }})</span>
+                <span style="font-weight: bold; color: #4CAF50;">Welcome, {{ username }} ({{ role }})</span>
 
                 <form action="{% url 'logout' %}" method="POST" style="margin: 0;">
                     {% csrf_token %} <button type="submit" ...>Logout</button>
@@ -166,7 +166,7 @@
         
         <h2>Global Supply Chain Map</h2>
         <div class="supply-map">
-             - Usar uma biblioteca como Leaflet ou Google Maps aqui.
+             - Use a library like Leaflet or Google Maps here.
         </div>
         
         <h2>Key Performance Indicators</h2>
@@ -188,11 +188,11 @@
             </div>
         </div>
 
-        <h2>AI Agem-Wide Alerts</h2>
+        <h2>AI Agent-Wide Alerts</h2>
         <div class="alert-section">
             <div class="report-card" style="flex: 1;">
-                <p>Receber stock de fornecedor incompleto/danificado (Resolver)</p>
-                <button style="background-color: #ff9800; color: white; border: none; padding: 8px; border-radius: 4px;">Ação Necessária</button>
+                <p>Receive incomplete/damaged stock from supplier (Resolve)</p>
+                <button style="background-color: #ff9800; color: white; border: none; padding: 8px; border-radius: 4px;">Action Required</button>
             </div>
             </div>
 
@@ -215,15 +215,94 @@
 
     <!-- ====================== DISCRETE TRANSLATOR WIDGET ====================== -->
     <div id="google_translate_element" style="display:none;"></div>
-    <div class="discrete-translator" style="position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.95); border: 1px solid #00796b; border-radius: 30px; padding: 6px 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); backdrop-filter: blur(5px); transition: all 0.3s ease;">
-        <span style="font-size: 1.1em; line-height: 1;">🌐</span>
-        <select id="lang-select" onchange="changeLanguage(this.value)" style="border: none; background: transparent; font-size: 0.85em; font-weight: 600; color: #004d40; cursor: pointer; outline: none; padding-right: 5px; font-family: inherit;">
-            <option value="pt">🇵🇹 PT</option>
-            <option value="en">🇬🇧 EN</option>
-            <option value="es">🇪🇸 ES</option>
-            <option value="tr">🇹🇷 TR</option>
-        </select>
+    <div class="discrete-translator" style="position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.95); border: 1px solid #00796b; border-radius: 30px; padding: 6px 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); backdrop-filter: blur(5px); transition: all 0.3s ease; font-family: inherit;">
+        
+        <!-- Custom Dropdown Container -->
+        <div id="custom-lang-dropdown" style="position: relative; user-select: none;">
+            
+            <!-- Selected Value Display -->
+            <div id="lang-selected" onclick="toggleLangDropdown()" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; font-size: 0.85em; font-weight: 600; color: #004d40; padding: 4px 8px; min-width: 60px;">
+                <div id="selected-lang-content" style="display: flex; align-items: center;">
+                    <svg width="20" height="15" viewBox="0 0 20 15" style="vertical-align: middle; margin-right: 6px; border: 0.5px solid #ccc; border-radius: 2px; overflow: hidden;">
+                        <rect width="20" height="15" fill="#012169"/>
+                        <path d="M0,0 L20,15 M20,0 L0,15" stroke="#FFF" stroke-width="2.5"/>
+                        <path d="M0,0 L20,15 M20,0 L0,15" stroke="#C8102E" stroke-width="1"/>
+                        <path d="M10,0 v15 M0,7.5 h20" stroke="#FFF" stroke-width="4.5"/>
+                        <path d="M10,0 v15 M0,7.5 h20" stroke="#C8102E" stroke-width="2.5"/>
+                    </svg>
+                    EN
+                </div>
+                <!-- Dropdown Arrow -->
+                <svg width="10" height="10" viewBox="0 0 24 24" style="margin-left: 6px; fill: #004d40;">
+                    <path d="M7 10l5 5 5-5z"/>
+                </svg>
+            </div>
+
+            <!-- Dropdown Options List -->
+            <div id="lang-options" style="display: none; position: absolute; bottom: 120%; right: 0; background: #ffffff; border: 1px solid #00796b; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15); overflow: hidden; min-width: 100px; z-index: 10001; margin-bottom: 5px;">
+                
+                <div onclick="selectCustomLang('pt', this.innerHTML)" style="display: flex; align-items: center; padding: 12px 16px; cursor: pointer; font-size: 0.85em; font-weight: 600; color: #004d40; border-bottom: 1px solid #f0f0f0;">
+                    <svg width="20" height="15" viewBox="0 0 20 15" style="vertical-align: middle; margin-right: 6px; border: 0.5px solid #ccc; border-radius: 2px;">
+                        <rect width="20" height="15" fill="#F00"/><rect width="7" height="15" fill="#094"/>
+                        <circle cx="7" cy="7.5" r="3" fill="#FC0"/><path d="M6,6.5 h2 v1.5 a1,1 0 0,1 -2,0 z" fill="#FFF"/>
+                    </svg>
+                    PT
+                </div>
+                
+                <div onclick="selectCustomLang('en', this.innerHTML)" style="display: flex; align-items: center; padding: 12px 16px; cursor: pointer; font-size: 0.85em; font-weight: 600; color: #004d40; border-bottom: 1px solid #f0f0f0;">
+                    <svg width="20" height="15" viewBox="0 0 20 15" style="vertical-align: middle; margin-right: 6px; border: 0.5px solid #ccc; border-radius: 2px; overflow: hidden;">
+                        <rect width="20" height="15" fill="#012169"/>
+                        <path d="M0,0 L20,15 M20,0 L0,15" stroke="#FFF" stroke-width="2.5"/>
+                        <path d="M0,0 L20,15 M20,0 L0,15" stroke="#C8102E" stroke-width="1"/>
+                        <path d="M10,0 v15 M0,7.5 h20" stroke="#FFF" stroke-width="4.5"/>
+                        <path d="M10,0 v15 M0,7.5 h20" stroke="#C8102E" stroke-width="2.5"/>
+                    </svg>
+                    EN
+                </div>
+                
+                <div onclick="selectCustomLang('es', this.innerHTML)" style="display: flex; align-items: center; padding: 12px 16px; cursor: pointer; font-size: 0.85em; font-weight: 600; color: #004d40; border-bottom: 1px solid #f0f0f0;">
+                    <svg width="20" height="15" viewBox="0 0 20 15" style="vertical-align: middle; margin-right: 6px; border: 0.5px solid #ccc; border-radius: 2px;">
+                        <rect width="20" height="15" fill="#AA151B"/>
+                        <rect width="20" height="7.5" y="3.75" fill="#F1BF00"/>
+                        <rect x="4.5" y="5.5" width="2.5" height="4" rx="0.5" fill="#AA151B"/>
+                    </svg>
+                    ES
+                </div>
+                
+                <div onclick="selectCustomLang('tr', this.innerHTML)" style="display: flex; align-items: center; padding: 12px 16px; cursor: pointer; font-size: 0.85em; font-weight: 600; color: #004d40;">
+                    <svg width="20" height="15" viewBox="0 0 20 15" style="vertical-align: middle; margin-right: 6px; border: 0.5px solid #ccc; border-radius: 2px;">
+                        <rect width="20" height="15" fill="#E30A17"/>
+                        <circle cx="8" cy="7.5" r="4.5" fill="#FFF"/>
+                        <circle cx="9.5" cy="7.5" r="3.5" fill="#E30A17"/>
+                        <polygon points="12.5,5.5 13,7 14.5,7 13.2,8 13.7,9.5 12.5,8.5 11.3,9.5 11.8,8 10.5,7 12,7" fill="#FFF"/>
+                    </svg>
+                    TR
+                </div>
+            </div>
+        </div>
     </div>
+
+    <script>
+        function toggleLangDropdown() {
+            var options = document.getElementById('lang-options');
+            options.style.display = options.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function selectCustomLang(langCode, htmlContent) {
+            document.getElementById('selected-lang-content').innerHTML = htmlContent;
+            document.getElementById('lang-options').style.display = 'none';
+            if (typeof changeLanguage === 'function') {
+                changeLanguage(langCode);
+            }
+        }
+
+        document.addEventListener('click', function(event) {
+            var dropdown = document.getElementById('custom-lang-dropdown');
+            if (!dropdown.contains(event.target)) {
+                document.getElementById('lang-options').style.display = 'none';
+            }
+        });
+    </script>
 
     <style>
         /* Google Translate Overrides */
@@ -246,7 +325,7 @@
     <script type="text/javascript">
         function googleTranslateElementInit() {
             new google.translate.TranslateElement({
-                pageLanguage: 'pt',
+                pageLanguage: 'en',
                 includedLanguages: 'pt,en,es,tr',
                 layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
                 autoDisplay: false

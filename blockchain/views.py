@@ -128,7 +128,7 @@ def generate_genesis_block(request, harvest_id):
     )
     
     # 4. Feedback
-    messages.success(request, f"Bloco Genesis criado com sucesso! Hash: {result['tx_hash'][:10]}... (Estrutura Otimizada)")
+    messages.success(request, f"Genesis Block created successfully! Hash: {result['tx_hash'][:10]}... (Optimized Structure)")
     
     return redirect('producer_dashboard')
 

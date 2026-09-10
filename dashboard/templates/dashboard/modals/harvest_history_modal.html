@@ -1,16 +1,18 @@
 {% load i18n %}
 
-<div class="modal-header" style="border-bottom: 2px solid #e0f2f1; padding-bottom: 15px; margin-bottom: 20px;">
-    <h3 class="modal-title" id="historyModalLabel" style="color: #00796b; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 10px;">
-        📜 {% trans "Rastreabilidade Blockchain" %} <span style="font-weight: 400; color: #555; font-size: 0.8em;">#{{ harvest_id }}</span>
+<!-- ==================== MODAL HEADER ==================== -->
+<div class="modal-header">
+    <h3 class="modal-title">
+        📜 {% trans "Rastreabilidade Blockchain" %} <span class="batch-badge">#{{ harvest_id }}</span>
     </h3>
     <button type="button" class="close-btn" onclick="document.getElementById('historyModal').style.display='none'" aria-label="Close">&times;</button>
 </div>
 
-<div class="modal-body" style="max-height: 60vh; overflow-y: auto; padding-right: 10px;">
+<!-- ==================== MODAL BODY ==================== -->
+<div class="modal-body">
     {% if error %}
-        <div class="alert alert-danger" style="background: #ffebee; color: #c62828; padding: 15px; border-radius: 8px; border: 1px solid #ffcdd2;">
-            <strong>⚠️ Erro:</strong> {{ error }}
+        <div class="alert alert-danger">
+            <strong>⚠️ {% trans "Erro" %}:</strong> {{ error }}
         </div>
     {% else %}
         <div class="timeline">
@@ -18,30 +20,39 @@
             <div class="timeline-item">
                 <div class="timeline-marker {% if forloop.first %}bg-success{% else %}bg-secondary{% endif %}"></div>
                 <div class="timeline-content">
-                    <h4 class="timeline-title">
-                        {% if forloop.last %} 
-                            🌱 {% trans "Criação do Lote (Origem)" %}
-                        {% else %} 
-                            🔄 {% trans "Atualização de Estado" %}
-                        {% endif %}
-                    </h4>
                     
-                    <span class="timeline-date">
-                        🕒 {{ event.timestamp }}
-                    </span>
-                    
-                    <div class="tx-info">
-                        <strong>TX ID:</strong> <code style="color: #e65100;">{{ event.txId|slice:":15" }}...</code>
+                    <div class="timeline-header-row">
+                        <h4 class="timeline-title">
+                            {% if forloop.last %} 
+                                🌱 {% trans "Criação do Lote (Origem)" %}
+                            {% else %} 
+                                🔄 {% trans "Atualização de Estado" %}
+                            {% endif %}
+                        </h4>
+                        <span class="timeline-date">
+                            🕒 {{ event.timestamp }}
+                        </span>
                     </div>
 
-                    <div class="json-box">
-                        <strong>📝 Dados do Bloco:</strong>
-                        <pre>{{ event.value }}</pre>
-                    </div>
+                    <!-- Collapsible technical details using original colors -->
+                    <details class="tech-details">
+                        <summary>🔍 {% trans "Ver dados técnicos e Hash Blockchain" %}</summary>
+                        <div class="tech-details-content">
+                            <div class="tx-info">
+                                <strong>TX ID:</strong> <code>{{ event.txId }}</code>
+                            </div>
+
+                            <div class="json-box">
+                                <strong>📝 {% trans "Dados do Bloco" %}:</strong>
+                                <pre>{{ event.value }}</pre>
+                            </div>
+                        </div>
+                    </details>
+
                 </div>
             </div>
             {% empty %}
-                <div class="alert alert-warning" style="text-align: center; color: #f57f17; background: #fff3e0; padding: 20px; border-radius: 10px;">
+                <div class="alert alert-warning">
                     🚫 {% trans "Ainda não existem registos na blockchain para este lote." %}
                 </div>
             {% endfor %}
@@ -49,14 +60,80 @@
     {% endif %}
 </div>
 
-<div class="modal-footer" style="border-top: 1px solid #eee; padding-top: 20px; text-align: right;">
+<!-- ==================== MODAL FOOTER ==================== -->
+<div class="modal-footer">
     <button type="button" class="btn-close-modal" onclick="document.getElementById('historyModal').style.display='none'">
         🔒 {% trans "Fechar" %}
     </button>
 </div>
 
+<!-- ==================== STYLES ==================== -->
 <style>
-    /* ==================== TIMELINE STYLES ==================== */
+    /* Modal Header (Original Teal & Border) */
+    .modal-header {
+        border-bottom: 2px solid #e0f2f1;
+        padding-bottom: 15px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-title {
+        color: #00796b;
+        font-weight: 700;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 1.25em;
+    }
+
+    .batch-badge {
+        font-weight: 400;
+        color: #555;
+        font-size: 0.8em;
+    }
+
+    /* Close Cross Button */
+    .close-btn {
+        background: none;
+        border: none;
+        font-size: 28px;
+        color: #aaa;
+        cursor: pointer;
+        transition: color 0.3s;
+        line-height: 1;
+        padding: 0 4px;
+    }
+
+    .close-btn:hover {
+        color: #e53935;
+    }
+
+    /* Modal Body & Custom Scrollbar */
+    .modal-body {
+        max-height: 60vh;
+        overflow-y: auto;
+        padding-right: 10px;
+    }
+
+    .modal-body::-webkit-scrollbar {
+        width: 8px;
+    }
+    .modal-body::-webkit-scrollbar-track {
+        background: #f1f1f1; 
+        border-radius: 4px;
+    }
+    .modal-body::-webkit-scrollbar-thumb {
+        background: #cfd8dc; 
+        border-radius: 4px;
+    }
+    .modal-body::-webkit-scrollbar-thumb:hover {
+        background: #b0bec5; 
+    }
+
+    /* Timeline & Items (Original Line, Margins & Radius) */
     .timeline {
         position: relative;
         padding-left: 30px;
@@ -65,7 +142,7 @@
     }
 
     .timeline-item {
-        margin-bottom: 40px;
+        margin-bottom: 30px;
         position: relative;
     }
 
@@ -73,28 +150,30 @@
         margin-bottom: 0;
     }
 
+    /* Markers (Original Shadows & Radiuses) */
     .timeline-marker {
         position: absolute;
-        left: -38px; /* Ajuste fino para centrar na linha */
-        top: 0;
+        left: -38px;
+        top: 2px;
         width: 16px;
         height: 16px;
         border-radius: 50%;
         border: 3px solid white;
         box-shadow: 0 0 0 3px #e0e0e0;
-        background-color: #bdbdbd; /* Default gray */
+        background-color: #bdbdbd;
     }
 
     .timeline-marker.bg-success {
-        background-color: #2e7d32; /* Green for Start */
+        background-color: #2e7d32;
         box-shadow: 0 0 0 3px #c8e6c9;
     }
     
     .timeline-marker.bg-secondary {
-        background-color: #0277bd; /* Blue for updates */
+        background-color: #0277bd;
         box-shadow: 0 0 0 3px #b3e5fc;
     }
 
+    /* Content Cards (Original #f8f9fa background, 12px radius & shadow) */
     .timeline-content {
         background: #f8f9fa;
         padding: 20px;
@@ -103,33 +182,70 @@
         border: 1px solid #eee;
     }
 
+    .timeline-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
     .timeline-title {
-        margin: 0 0 10px 0;
+        margin: 0;
         color: #2c3e50;
         font-size: 1.2em;
         font-weight: 700;
     }
 
+    /* Date Tag (Original Teal #e0f2f1 pill) */
     .timeline-date {
-        display: block;
+        display: inline-block;
         color: #666;
-        font-size: 0.9em;
-        margin-bottom: 15px;
+        font-size: 0.88em;
         font-weight: 500;
         background: #e0f2f1;
-        padding: 4px 10px;
+        padding: 4px 12px;
         border-radius: 20px;
-        width: fit-content;
+    }
+
+    /* Collapsible Tech Section */
+    .tech-details {
+        margin-top: 10px;
+        border-top: 1px dashed #e0e0e0;
+        padding-top: 10px;
+    }
+
+    .tech-details summary {
+        color: #00796b;
+        font-size: 0.9em;
+        font-weight: 600;
+        cursor: pointer;
+        outline: none;
+        user-select: none;
+    }
+
+    .tech-details summary:hover {
+        text-decoration: underline;
+    }
+
+    .tech-details-content {
+        margin-top: 12px;
     }
 
     .tx-info {
         font-size: 0.95em;
         margin-bottom: 10px;
         color: #444;
+        word-break: break-all;
+    }
+
+    .tx-info code {
+        color: #e65100;
     }
 
     .json-box {
-        margin-top: 15px;
+        margin-top: 10px;
     }
 
     .json-box strong {
@@ -138,6 +254,7 @@
         color: #00796b;
     }
 
+    /* Original Dark Block pre (#263238 with 8px radius) */
     pre {
         background: #263238;
         color: #eceff1;
@@ -145,23 +262,35 @@
         border-radius: 8px;
         overflow-x: auto;
         font-family: 'Consolas', 'Monaco', monospace;
-        font-size: 0.9em;
-        white-space: pre-wrap; /* Wrap text */
+        font-size: 0.88em;
+        white-space: pre-wrap;
         border: 1px solid #37474f;
+        margin: 0;
+        max-height: 220px;
     }
 
-    /* ==================== BUTTONS ==================== */
-    .close-btn {
-        background: none;
-        border: none;
-        font-size: 28px;
-        color: #aaa;
-        cursor: pointer;
-        transition: color 0.3s;
-        margin-left: auto;
+    /* Alerts (Original red & yellow alert styles) */
+    .alert-danger {
+        background: #ffebee;
+        color: #c62828;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #ffcdd2;
     }
-    .close-btn:hover {
-        color: #e53935;
+
+    .alert-warning {
+        text-align: center;
+        color: #f57f17;
+        background: #fff3e0;
+        padding: 20px;
+        border-radius: 10px;
+    }
+
+    /* Modal Footer & Close Button (Original Red Gradient & 8px Radius) */
+    .modal-footer {
+        border-top: 1px solid #eee;
+        padding-top: 20px;
+        text-align: right;
     }
 
     .btn-close-modal {
@@ -184,21 +313,5 @@
     
     .btn-close-modal:active {
         transform: translateY(0);
-    }
-
-    /* Scrollbar Styling for Modal Body */
-    .modal-body::-webkit-scrollbar {
-        width: 8px;
-    }
-    .modal-body::-webkit-scrollbar-track {
-        background: #f1f1f1; 
-        border-radius: 4px;
-    }
-    .modal-body::-webkit-scrollbar-thumb {
-        background: #cfd8dc; 
-        border-radius: 4px;
-    }
-    .modal-body::-webkit-scrollbar-thumb:hover {
-        background: #b0bec5; 
     }
 </style>

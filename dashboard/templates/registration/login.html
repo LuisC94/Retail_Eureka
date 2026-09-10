@@ -231,18 +231,18 @@
                 </div>
             {% endfor %}
 
-            <button type="submit">🔐 Entrar</button>
+            <button type="submit">🔐 Login</button>
         </form>
 
         <div class="divider"></div>
 
         <div class="links-container">
             <div class="link">
-                Não tem conta? <a href="{% url 'register' %}">✨ Criar conta</a>
+                Not registered yet? <a href="{% url 'register' %}">✨ Register now!</a>
             </div>
             
             <div class="link">
-                <a href="{% url 'password_reset' %}">🔑 Esqueceu-se da password?</a>
+                <a href="{% url 'password_reset' %}">🔑 Did you forgot your password?</a>
             </div>
         </div>
     </div>

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
@@ -350,6 +350,7 @@
             border-radius: 20px;
             margin-bottom: 30px;
             box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            overflow-x: auto;
         }
 
         .data-table-container h3 {
@@ -376,6 +377,7 @@
             padding: 15px;
             text-align: left;
             border-bottom: 1px solid #e0e0e0;
+            white-space: nowrap;
         }
 
         .data-table th {
@@ -464,16 +466,16 @@
                     📊 Stock Management
                 </a>
                 <a href="#" class="menu-item" onclick="switchSidebarTab('sales-forecasting')">
-                    📈 Previsão de Vendas
+                    📈 Sales Forecast
                 </a>
                 <a href="#" class="menu-item" onclick="switchSidebarTab('buyer-agent-training')">
-                    ⚙️ Treino do Agente
+                    ⚙️ Agent Training
                 </a>
                 <a href="#" class="menu-item" onclick="switchSidebarTab('ai-agent-control')">
                     🤖 Buyer Agent
                 </a>
                 <a href="#" class="menu-item" onclick="switchSidebarTab('lc-analysis')">
-                    ⏳ Ciclo de Vida (LC)
+                    ⏳ Life Cycle (LC)
                 </a>
             </nav>
         </div>
@@ -524,8 +526,8 @@
                 <h3 style="color: #00796b; margin-bottom: 20px;">System Alerts</h3>
                 <div class="alert-section">
                     <div class="report-card" style="display: flex; justify-content: space-between; align-items: center;">
-                        <p style="margin: 0; font-weight: 500;">Receber stock de fornecedor incompleto/danificado (Resolver)</p>
-                        <button class="alert-button">Ação Necessária</button>
+                         <p style="margin: 0; font-weight: 500;">Receive incomplete/damaged supplier stock (Resolve)</p>
+                        <button class="alert-button">Required Action</button>
                     </div>
                 </div>
 
@@ -621,34 +623,34 @@
                     
                     <!-- CARD 2: ENV VARIABLES -->
                     <div style="width: 320px; background: white; border: 2px solid #e0f2f1; border-radius: 20px; padding: 25px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); display: flex; flex-direction: column; flex-shrink: 0;">
-                        <h4 style="color: #00796b; font-weight: 700; margin-bottom: 15px; font-size: 1.1em; display: flex; align-items: center; gap: 8px;">
-                            <span>🧠</span> Variáveis do Estado (ENV)
-                        </h4>
+                         <h4 style="color: #00796b; font-weight: 700; margin-bottom: 15px; font-size: 1.1em; display: flex; align-items: center; gap: 8px;">
+                             <span>🧠</span> Environment Variables (ENV)
+                         </h4>
                         <ul style="font-size: 0.85em; color: #4a5568; padding-left: 18px; margin: 0; line-height: 1.7; list-style-type: square;">
-                            <li style="margin-bottom: 6px;"><strong>Previsão Procura:</strong> $T$ e $T+1$</li>
-                            <li style="margin-bottom: 6px;"><strong>Stock FIFO & Trânsito:</strong> G0 a G3 + Em trânsito</li>
-                            <li style="margin-bottom: 6px;"><strong>Histórico Procura:</strong> $T-1$ e $T-2$</li>
-                            <li style="margin-bottom: 6px;"><strong>Preço Relativo:</strong> Média/desvio móvel (15 dias)</li>
-                            <li style="margin-bottom: 6px;"><strong>Cobertura & Urgência:</strong> Stock/procura + Expirar amanhã</li>
-                            <li style="margin-bottom: 6px;"><strong>Erro Previsão:</strong> Desvio real vs previsto ($T-1$)</li>
+                            <li style="margin-bottom: 6px;"><strong>Demand Forecast:</strong> $T$ e $T+1$</li>
+                            <li style="margin-bottom: 6px;"><strong>FIFO Stock & Transit:</strong> G0 a G3 + Em trânsito</li>
+                            <li style="margin-bottom: 6px;"><strong>Demand History:</strong> $T-1$ e $T-2$</li>
+                            <li style="margin-bottom: 6px;"><strong>Preço Relativo:</strong> Moving average/std deviation (15 days)</li>
+                            <li style="margin-bottom: 6px;"><strong>Coverage & Urgency:</strong> Stock/demand + Expires tomorrow</li>
+                            <li style="margin-bottom: 6px;"><strong>Forecast Error:</strong> Actual vs predicted deviation ($T-1$)</li>
                         </ul>
                     </div>
 
                     <!-- CARD 3: REWARD VARIABLES -->
                     <div style="width: 320px; background: white; border: 2px solid #e0f2f1; border-radius: 20px; padding: 25px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); display: flex; flex-direction: column; flex-shrink: 0;">
-                        <h4 style="color: #00796b; font-weight: 700; margin-bottom: 12px; font-size: 1.1em; display: flex; align-items: center; gap: 8px;">
-                            <span>💰</span> Variáveis do Reward
-                        </h4>
+                         <h4 style="color: #00796b; font-weight: 700; margin-bottom: 12px; font-size: 1.1em; display: flex; align-items: center; gap: 8px;">
+                             <span>💰</span> Reward Variables
+                         </h4>
                         <div style="background: #edf2f7; padding: 8px 12px; border-radius: 8px; font-family: monospace; font-size: 0.75em; color: #2d3748; margin-bottom: 12px; border: 1px solid #e2e8f0; text-align: center; font-weight: bold;">
-                            Reward = Vendas - Custos - Penalizações
+                            Reward = Sales - Costs - Penalties
                         </div>
                         <ul style="font-size: 0.85em; color: #4a5568; padding-left: 18px; margin: 0; line-height: 1.6; list-style-type: square;">
-                            <li style="margin-bottom: 6px;"><strong>Vendas:</strong> Faturamento diário</li>
-                            <li style="margin-bottom: 6px;"><strong>Custo Armazenamento:</strong> Volumétrico final</li>
-                            <li style="margin-bottom: 6px;"><strong>Custo Transporte:</strong> Taxa fixa + Volumétrico</li>
-                            <li style="margin-bottom: 6px;"><strong>Penalização Rutura:</strong> Vendas perdidas ($-25\%$)</li>
-                            <li style="margin-bottom: 6px;"><strong>Penalização Quebra:</strong> Apodrecimento/Excesso ($-100\%$)</li>
-                            <li style="margin-bottom: 6px;"><strong>Penalização Stock Zero:</strong> Sem stock ($-500\%$)</li>
+                            <li style="margin-bottom: 6px;"><strong>Sales:</strong> Daily revenue</li>
+                            <li style="margin-bottom: 6px;"><strong>Storage Cost:</strong> Final volumetric</li>
+                            <li style="margin-bottom: 6px;"><strong>Transport Cost:</strong> Fixed rate + Volumetric</li>
+                            <li style="margin-bottom: 6px;"><strong>Stockout Penalty:</strong> Lost sales ($-25\%$)</li>
+                            <li style="margin-bottom: 6px;"><strong>Spoilage Penalty:</strong> Spoilage/Excess ($-100\%$)</li>
+                            <li style="margin-bottom: 6px;"><strong>Zero Stock Penalty:</strong> No stock ($-500\%$)</li>
                         </ul>
                     </div>
                     
@@ -1005,7 +1007,7 @@
                             },
                             scales: {
                                 x: { title: { display: true, text: 'Simulated Operating Days' } },
-                                y: { title: { display: true, text: 'Quantity (Unidades)' } }
+                                y: { title: { display: true, text: 'Quantity (Units)' } }
                             }
                         }
                     });
@@ -1082,26 +1084,26 @@
                 <!-- COMPRA RAPIDA & CONTRATOS SECTION -->
                 <div style="display: flex; gap: 15px; margin-bottom: 25px; margin-top: 25px;">
                     <button type="button" class="btn btn-primary" onclick="openMakroModal()" style="background-color: #10b981; border: none; padding: 12px 20px; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);">
-                        🛒 Compra Rápida
+                        🛒 Quick Purchase
                     </button>
                     <button type="button" class="btn btn-secondary" onclick="openContractModal()" style="background-color: #3b82f6; border: none; padding: 12px 20px; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2);">
-                        📜 Contrato de Fornecimento
+                        📜 Supply Contract
                     </button>
                 </div>
 
                 <!-- CONTRATOS DE FORNECIMENTO CARD -->
                 <div class="card" style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 25px;">
-                    <h3 style="margin-top: 0; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">📜 Meus Contratos de Fornecimento</h3>
+                    <h3 style="margin-top: 0; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">📜 My Supply Contracts</h3>
                     <div style="overflow-x: auto;">
                         <table class="table" style="width: 100%; border-collapse: collapse; text-align: left;">
                             <thead>
                                 <tr style="border-bottom: 2px solid #f3f4f6; color: #6b7280; font-weight: 600;">
                                     <th style="padding: 12px;">ID</th>
-                                    <th style="padding: 12px;">Fornecedor</th>
-                                    <th style="padding: 12px;">Cultura</th>
-                                    <th style="padding: 12px;">Quantidade</th>
-                                    <th style="padding: 12px;">Entrega Planeada</th>
-                                    <th style="padding: 12px;">Estado</th>
+                                    <th style="padding: 12px;">Supplier</th>
+                                    <th style="padding: 12px;">Culture</th>
+                                    <th style="padding: 12px;">Quantity</th>
+                                    <th style="padding: 12px;">Planned Delivery</th>
+                                    <th style="padding: 12px;">Status</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1114,17 +1116,17 @@
                                     <td style="padding: 12px;">{{ contract.delivery_date|date:"Y-m-d" }}</td>
                                     <td style="padding: 12px;">
                                         {% if contract.status == 'pending' %}
-                                            <span style="background-color: #fef3c7; color: #d97706; padding: 4px 8px; border-radius: 12px; font-size: 0.85em; font-weight: bold;">Pendente</span>
+                                            <span style="background-color: #fef3c7; color: #d97706; padding: 4px 8px; border-radius: 12px; font-size: 0.85em; font-weight: bold;">Pending</span>
                                         {% elif contract.status == 'fulfilled' %}
-                                            <span style="background-color: #d1fae5; color: #059669; padding: 4px 8px; border-radius: 12px; font-size: 0.85em; font-weight: bold;">Concluído</span>
+                                            <span style="background-color: #d1fae5; color: #059669; padding: 4px 8px; border-radius: 12px; font-size: 0.85em; font-weight: bold;">Completed</span>
                                         {% else %}
-                                            <span style="background-color: #fee2e2; color: #dc2626; padding: 4px 8px; border-radius: 12px; font-size: 0.85em; font-weight: bold;">Cancelado</span>
+                                            <span style="background-color: #fee2e2; color: #dc2626; padding: 4px 8px; border-radius: 12px; font-size: 0.85em; font-weight: bold;">Cancelled</span>
                                         {% endif %}
                                     </td>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="6" style="padding: 12px; text-align: center; color: #9ca3af;">Sem contratos de fornecimento ativos.</td>
+                                    <td colspan="6" style="padding: 12px; text-align: center; color: #9ca3af;">No active supply contracts.</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -1136,29 +1138,29 @@
                 <div class="form-section" style="margin-top: 30px;">
                     <h3>
                         <span style="display:inline-block; width:40px; height:40px; background:linear-gradient(135deg, #00796b, #004d40); color:white; border-radius:50%; text-align:center; line-height:40px; margin-right:15px; font-size:1.1em; box-shadow:0 3px 10px rgba(0,121,107,0.4);">⚙️</span>
-                        Ajuste Manual de Stock (Direct Database Insertion)
+                        Manual Stock Adjustment (Direct Database Insertion)
                     </h3>
                     <div class="info-box" style="background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%); padding: 18px 24px; border-radius: 12px; margin-bottom: 25px; color: #004d40; font-size: 0.95em; border-left: 5px solid #00796b; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 8px rgba(0,121,107,0.1);">
                         <span>ℹ️</span>
-                        Permite ajustar ou introduzir stock diretamente na base de dados para um produto e armazém específicos.
+                        Allows adjusting or entering stock directly in the database for a specific product and warehouse.
                     </div>
                     
                     <form id="adjust-stock-form" onsubmit="submitStockAdjustment(event)">
                         {% csrf_token %}
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 20px;">
                             <div class="form-group" style="margin-bottom: 20px;">
-                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Cultura / Produto</label>
+                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Culture / Product</label>
                                 <select name="culture_id" id="adj-culture-id" required style="padding: 14px; border: 2px solid #e0e0e0; border-radius: 10px; width: 100%;">
-                                    <option value="">-- Selecione a Cultura --</option>
+                                    <option value="">-- Select Culture --</option>
                                     {% for item in product_subfamilies %}
                                         <option value="{{ item.pk }}">{{ item.name }} ({{ item.fruit_type }})</option>
                                     {% endfor %}
                                 </select>
                             </div>
                             <div class="form-group" style="margin-bottom: 20px;">
-                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Armazém / Localização</label>
+                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Warehouse / Location</label>
                                 <select name="warehouse_location" id="adj-warehouse-location" required style="padding: 14px; border: 2px solid #e0e0e0; border-radius: 10px; width: 100%;">
-                                    <option value="">-- Selecione o Armazém --</option>
+                                    <option value="">-- Select Warehouse --</option>
                                     {% for w in retailer_warehouses %}
                                         <option value="{{ w.location }}">{{ w.location }}</option>
                                     {% endfor %}
@@ -1173,19 +1175,19 @@
                         </div>
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 20px;">
                             <div class="form-group" style="margin-bottom: 20px;">
-                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Quantidade (Kg)</label>
+                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Quantity (Kg)</label>
                                 <input type="number" step="0.01" name="quantity" id="adj-quantity" placeholder="Ex: 500.00" required style="padding: 14px; border: 2px solid #e0e0e0; border-radius: 10px; width: 100%;">
                             </div>
                             <div class="form-group" style="margin-bottom: 20px;">
-                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Tipo de Ajuste</label>
+                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Adjustment Type</label>
                                 <select name="adjustment_type" id="adj-adjustment-type" required style="padding: 14px; border: 2px solid #e0e0e0; border-radius: 10px; width: 100%;">
-                                    <option value="set" selected>⚙️ Definir Valor Fixo (Substituir)</option>
-                                    <option value="add">➕ Adicionar Quantidade (Somar)</option>
-                                    <option value="subtract">➖ Retirar Quantidade (Subtrair)</option>
+                                    <option value="set" selected>⚙️ Set Fixed Value (Replace)</option>
+                                    <option value="add">➕ Add Quantity (Add)</option>
+                                    <option value="subtract">➖ Remove Quantity (Subtract)</option>
                                 </select>
                             </div>
                         </div>
-                        <button type="submit" class="submit-button" style="margin-top: 10px;">✓ Gravar Stock na Base de Dados</button>
+                        <button type="submit" class="submit-button" style="margin-top: 10px;">✓ Save Stock to Database</button>
                     </form>
                 </div>
             </div>
@@ -1325,17 +1327,17 @@
                                                 <p><strong>Recommended Qty:</strong> ${rec.quantity} un</p>
                                                 <p><strong>Recommended Price:</strong> ${rec.price.toFixed(2)} €/Kg</p>
                                                 <p style="margin-top: 8px; font-size: 0.85em; color: #b45309; font-weight: 600; display: flex; align-items: center; gap: 4px;">
-                                                    <span>⚠️</span> Stock Lifespan: ${rec.stock_remaining_shelf_life} dias
+                                                    <span>⚠️</span> Stock Lifespan: ${rec.stock_remaining_shelf_life} days
                                                 </p>
                                                 ${rec.quantity > 0 ? `
                                                 <p style="font-size: 0.85em; color: #00796b; font-weight: 600; display: flex; align-items: center; gap: 4px; margin-top: 2px;">
-                                                    <span>🛡️</span> Min. Required RSL: ${rec.min_required_shelf_life} dias
+                                                    <span>🛡️</span> Min. Required RSL: ${rec.min_required_shelf_life} days
                                                 </p>
                                                 ` : ''}
                                             </div>
                                             <div class="ai-rec-actions" style="margin-top: auto;">
-                                                <button type="button" class="btn-rec-accept" onclick="acceptRecommendation('${rec.item_id}', '${rec.culture_id}', ${rec.quantity}, ${rec.price})">✅ Aceitar</button>
-                                                <button type="button" class="btn-rec-refuse" onclick="refuseRecommendation('${rec.item_id}')">❌ Recusar</button>
+                                                <button type="button" class="btn-rec-accept" onclick="acceptRecommendation('${rec.item_id}', '${rec.culture_id}', ${rec.quantity}, ${rec.price})">✅ Accept</button>
+                                                <button type="button" class="btn-rec-refuse" onclick="refuseRecommendation('${rec.item_id}')">❌ Decline</button>
                                             </div>
                                         `;
                                         list.appendChild(card);
@@ -1426,7 +1428,7 @@
                                 <small id="qty_hint" style="color:#666; font-style:italic; display:block; margin-top:5px;"></small>
                             </div>
                             <div>
-                                <label id="price_label" style="display:block; margin-bottom:5px; font-weight:600;">Preço Máx. Compra (€/Kg):</label>
+                                <label id="price_label" style="display:block; margin-bottom:5px; font-weight:600;">Max Purchase Price (€/Kg):</label>
                                 {{ market_order_form.price_per_kg }}
                             </div>
                             <input type="hidden" name="harvest_origin_id" id="hidden_harvest_origin_id">
@@ -1494,7 +1496,7 @@
                                         
                                         // 1. Label Update
                                         if (isSell) {
-                                            if (priceLbl) priceLbl.innerText = "Preço de Venda (€/Kg):";
+                                            if (priceLbl) priceLbl.innerText = "Selling Price (€/Kg):";
                                             whLabel.innerText = "Origin Warehouse (Based on Stock):";
                                             // Change Quality Labels
                                             const l1 = document.querySelector('label[for="id_min_caliber"]');
@@ -1504,7 +1506,7 @@
                                             if (l2) l2.innerText = "Avg Brix:";
                                             if (l3) l3.innerText = "Avg Score (1-10):";
                                         } else {
-                                            if (priceLbl) priceLbl.innerText = "Preço Máx. Compra (€/Kg):";
+                                            if (priceLbl) priceLbl.innerText = "Max Purchase Price (€/Kg):";
                                             whLabel.innerText = "Destination Warehouse (Store at):";
                                             // Restore Quality Labels
                                             const l1 = document.querySelector('label[for="id_min_caliber"]');
@@ -1856,21 +1858,86 @@
                                     {% endif %}
                                 </td>
 
-                                <td>{{ order.price_per_kg|default_if_none:"-" }} €</td>
+                                <td>
+                                    {{ order.price_per_kg|default_if_none:"-" }} €
+                                    {% if order.status == 'NEGOTIATING' %}
+                                        {% with last_neg=order.negotiations.first %}
+                                            {% if last_neg and last_neg.status == 'PENDING' %}
+                                                <br><small style="color:#f57c00; font-weight:bold;">Proposed: {{ last_neg.proposed_price_per_kg }} €</small>
+                                            {% endif %}
+                                        {% endwith %}
+                                    {% endif %}
+                                </td>
 
                                 <td>{{ order.quantity_kg }}</td>
-                                <td>
+                                <td style="vertical-align: middle;">
+                                    <div style="display: flex; flex-direction: column; gap: 5px; align-items: center;">
                                     {% if order.requester != user %}
-                                    <div style="display:flex; gap:10px;">
-                                        <!-- 2. BUTTON: ACCEPT -->
-                                        <button type="button" class="btn-action" 
-                                            onclick="openAcceptModal('{{ order.id }}', '{{ order.culture.name|escapejs }}', '{{ order.quantity_kg }}')">
-                                            Accept Deal
-                                        </button>
-                                    </div>
+                                        {% if order.status == 'NEGOTIATING' %}
+                                            {% with last_neg=order.negotiations.first %}
+                                                {% if last_neg and last_neg.status == 'PENDING' %}
+                                                    {% if last_neg.proposed_by == user %}
+                                                        <span style="color:#666; font-size:0.85em; text-align:center;">Waiting for seller</span>
+                                                    {% else %}
+                                                        <form method="POST" action="{% url 'market_respond_negotiation' %}" style="margin:0; width: 100%;">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="negotiation_id" value="{{ last_neg.pk }}">
+                                                            <input type="hidden" name="action" value="ACCEPT">
+                                                            <button type="submit" class="btn-action" style="background:#4CAF50; color:white; border:none; cursor:pointer; padding:4px 8px; border-radius:5px; width:100%; font-size:0.9em; justify-content: center;">Accept Offer</button>
+                                                        </form>
+                                                        <form method="POST" action="{% url 'market_respond_negotiation' %}" style="margin:0; width: 100%;">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="negotiation_id" value="{{ last_neg.pk }}">
+                                                            <input type="hidden" name="action" value="REJECT">
+                                                            <button type="submit" class="btn-action" style="background:#e53935; color:white; border:none; cursor:pointer; padding:4px 8px; border-radius:5px; width:100%; font-size:0.9em; justify-content: center;">Reject Offer</button>
+                                                        </form>
+                                                    {% endif %}
+                                                {% endif %}
+                                            {% endwith %}
+                                        {% else %}
+                                            <button type="button" class="btn-action" 
+                                                onclick="openAcceptModal('{{ order.id }}', '{{ order.culture.name|escapejs }}', '{{ order.quantity_kg }}')"
+                                                style="background:#4CAF50; color:white; border:none; cursor:pointer; padding:4px 8px; border-radius:5px; width:100%; font-size:0.9em; justify-content: center;">
+                                                Accept Deal
+                                            </button>
+                                            <button type="button" class="btn-action"
+                                                onclick="openCounterproposeModal('{{ order.id }}', '{{ order.price_per_kg|default_if_none:0 }}')"
+                                                style="background:#f57c00; color:white; border:none; cursor:pointer; padding:4px 8px; border-radius:5px; width:100%; font-size:0.9em; justify-content: center;">
+                                                Counterpropose
+                                            </button>
+                                        {% endif %}
                                     {% else %}
-                                    <span style="color:gray;">Mine</span>
+                                        {% if order.status == 'NEGOTIATING' %}
+                                            {% with last_neg=order.negotiations.first %}
+                                                {% if last_neg and last_neg.status == 'PENDING' %}
+                                                    {% if last_neg.proposed_by == user %}
+                                                        <span style="color:#666; font-size:0.85em; text-align:center;">Waiting for buyer</span>
+                                                    {% else %}
+                                                        <form method="POST" action="{% url 'market_respond_negotiation' %}" style="margin:0; width: 100%;">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="negotiation_id" value="{{ last_neg.pk }}">
+                                                            <input type="hidden" name="action" value="ACCEPT">
+                                                            <button type="submit" class="btn-action" style="background:#4CAF50; color:white; border:none; cursor:pointer; padding:4px 8px; border-radius:5px; width:100%; font-size:0.9em; justify-content: center;">Accept Offer</button>
+                                                        </form>
+                                                        <form method="POST" action="{% url 'market_respond_negotiation' %}" style="margin:0; width: 100%;">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="negotiation_id" value="{{ last_neg.pk }}">
+                                                            <input type="hidden" name="action" value="REJECT">
+                                                            <button type="submit" class="btn-action" style="background:#e53935; color:white; border:none; cursor:pointer; padding:4px 8px; border-radius:5px; width:100%; font-size:0.9em; justify-content: center;">Reject Offer</button>
+                                                        </form>
+                                                    {% endif %}
+                                                {% endif %}
+                                            {% endwith %}
+                                        {% endif %}
+                                        <form method="POST" action="{% url 'market_cancel_order' %}" onsubmit="return confirm('Are you sure you want to cancel this order?');" style="margin:0; width: 100%;">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="order_id" value="{{ order.id }}">
+                                            <button type="submit" class="btn-action" style="background:#e53935; color:white; border:none; cursor:pointer; padding:4px 8px; border-radius:5px; width:100%; font-size:0.9em; justify-content: center;" title="Cancel this order">
+                                                ✕ Cancel
+                                            </button>
+                                        </form>
                                     {% endif %}
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -1912,7 +1979,7 @@
                                     <!-- Use origin harvest ID for history -->
                                     {% if order.harvest_origin %}
                                     <button onclick="openHistoryModal('{{ order.harvest_origin.pk }}')" class="btn-action" style="background: #00796b; color: white; border: none; padding: 5px 10px; font-size: 0.8em; border-radius: 4px; cursor: pointer;">
-                                        📜 Ver Histórico
+                                        📜 View History
                                     </button>
                                     {% else %}
                                     -
@@ -2010,10 +2077,10 @@
                             {{ warehouse_form.region }}
                             <div style="margin-top: 10px;">
                                 <button type="button" onclick="toggleCityGuide(this)" style="background: none; border: none; color: #00796b; font-size: 0.85em; cursor: pointer; text-decoration: underline; font-weight: 600; padding: 0; display: flex; align-items: center; gap: 5px;">
-                                    💡 Guia de Cidades por Região
+                                    💡 City Guide by Region
                                 </button>
                                 <div class="city-guide-box" style="display: none; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px; margin-top: 10px; font-size: 0.8em; color: #166534; max-height: 200px; overflow-y: auto; line-height: 1.5;">
-                                    <p style="margin-top: 0; font-weight: 700; margin-bottom: 8px;">Correspondência de Regiões:</p>
+                                    <p style="margin-top: 0; font-weight: 700; margin-bottom: 8px;">Region Correspondence:</p>
                                     <ul style="padding-left: 15px; margin: 0; list-style-type: disc;">
                                         <li style="margin-bottom: 4px;"><strong>Norte Litoral (PT-NL):</strong> Porto, Viana do Castelo, Vila Nova de Gaia, Braga (Litoral), Matosinhos.</li>
                                         <li style="margin-bottom: 4px;"><strong>Norte Interior (PT-NI):</strong> Vila Real, Bragança, Chaves, Mirandela.</li>
@@ -2035,10 +2102,10 @@
                                 const box = btn.nextElementSibling;
                                 if (box.style.display === "none" || box.style.display === "") {
                                     box.style.display = "block";
-                                    btn.innerHTML = "💡 Ocultar Guia de Cidades";
+                                    btn.innerHTML = "💡 Hide City Guide";
                                 } else {
                                     box.style.display = "none";
-                                    btn.innerHTML = "💡 Guia de Cidades por Região";
+                                    btn.innerHTML = "💡 City Guide by Region";
                                 }
                             }
                         </script>
@@ -2055,11 +2122,11 @@
 
                         <div style="margin-bottom: 25px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                             <div>
-                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Latitude (Opcional):</label>
+                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Latitude (Optional):</label>
                                 {{ warehouse_form.latitude }}
                             </div>
                             <div>
-                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Longitude (Opcional):</label>
+                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Longitude (Optional):</label>
                                 {{ warehouse_form.longitude }}
                             </div>
                         </div>
@@ -2105,7 +2172,7 @@
                 </div>
 
                 <div class="data-table-container">
-                    <h3>🏭 My Warehouses ({{ processor_warehouses.count }})</h3>
+                    <h3>🏭 My Warehouses ({{ processor_warehouses|length }})</h3>
                     {% if processor_warehouses %}
                     <table class="data-table">
                         <thead>
@@ -2116,6 +2183,7 @@
                                 <th>Capacity</th>
                                 <th>Sensors</th>
                                 <th>Sensor Readings (Excel/CSV)</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -2153,7 +2221,16 @@
                                         {% csrf_token %}
                                         <input type="file" name="sensor_file" accept=".xlsx,.xls,.csv" required style="font-size:0.8em; max-width:180px;">
                                         <button type="submit" class="btn-action" style="padding: 6px 12px; font-size:0.8em; background:linear-gradient(135deg, #2e7d32, #1b5e20); color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600;">
-                                            📥 Importar
+                                            📥 Import
+                                        </button>
+                                    </form>
+                                </td>
+                                <td>
+                                    <form method="post" action="{% url 'delete_warehouse' %}" style="margin: 0; display: inline-block;" onsubmit="return confirm('Are you sure you want to delete this warehouse? This action cannot be undone.');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="warehouse_id" value="{{ warehouse.warehouse_id }}">
+                                        <button type="submit" class="btn-action" style="padding: 6px 12px; font-size:0.8em; background:linear-gradient(135deg, #d32f2f, #b71c1c); color:white; border:none; border-radius:6px; cursor:pointer; font-weight:600;">
+                                            🗑️ Delete
                                         </button>
                                     </form>
                                 </td>
@@ -2171,22 +2248,22 @@
             <!-- 1. SALES FORECASTING TAB -->
             <div id="sales-forecasting" class="tab-content" style="display: none;">
                 <h3 style="color: #00796b; margin-bottom: 25px; font-weight: 700; border-bottom: 3px solid #00796b; padding-bottom: 10px; display: flex; align-items: center; gap: 10px;">
-                    <span>📈</span> Previsão de Vendas (Treino MLP & Inferência)
+                    <span>📈</span> Sales Forecast (MLP Training & Inference)
                 </h3>
 
                 <div class="form-section" style="border-top: 4px solid #00796b;">
                     <p style="font-size: 0.95em; color: #555; margin-bottom: 20px;">
-                        Treine o modelo neuronal MLP de 3 camadas com o histórico de vendas para projetar a procura futura do mercado.
+                        Train the MLP neural network of 3 layers with sales history to project a future market demand.
                     </p>
 
                     <!-- Template download -->
                     <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center;">
                         <div>
-                            <strong style="color: #004d40; font-size: 0.95em; display: block;">Template Excel de Vendas</strong>
-                            <span style="font-size: 0.85em; color: #666;">Formato pré-definido para carregar dados históricos de vendas.</span>
+                            <strong style="color: #004d40; font-size: 0.95em; display: block;">Sales Excel Template</strong>
+                            <span style="font-size: 0.85em; color: #666;">Pre-defined format for uploading sales history data.</span>
                         </div>
                         <a href="{% url 'download_training_template' %}?type=buyer" style="background: #00796b; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.9em; box-shadow: 0 2px 5px rgba(0,121,107,0.1);">
-                            📥 Descarregar Template
+                            📥 Download Template
                         </a>
                     </div>
 
@@ -2195,40 +2272,40 @@
                         {% csrf_token %}
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 20px;">
                             <div class="form-group">
-                                <label style="display:block; font-weight:600; font-size:0.9em; margin-bottom:8px;">Cultura (Produto):</label>
+                                <label style="display:block; font-weight:600; font-size:0.9em; margin-bottom:8px;">Culture (Product):</label>
                                 <select name="culture_id" required class="form-control" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #d1d5db;">
                                     {% if processor_stock %}
                                         {% for item in processor_stock %}
                                             <option value="{{ item.culture_id }}">{{ item.culture }} ({{ item.quantity }} kg em {{ item.warehouse }})</option>
                                         {% endfor %}
                                     {% else %}
-                                        <option value="" disabled selected>Nenhuma cultura em stock. Registe/compre stock primeiro.</option>
+                                        <option value="" disabled selected>Nenhuma Culture em stock. Registe/compre stock primeiro.</option>
                                     {% endif %}
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label style="display:block; font-weight:600; font-size:0.9em; margin-bottom:8px;">Modelo Preditivo:</label>
+                                <label style="display:block; font-weight:600; font-size:0.9em; margin-bottom:8px;">Predictive Model:</label>
                                 <select name="model_type" required class="form-control" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #d1d5db; background-color: white;">
                                     <option value="mlp" selected>Rede MLP Simples (3 Camadas)</option>
                                     <option value="autoformer">Autoformer (Transformer Temporal)</option>
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label style="display:block; font-weight:600; font-size:0.9em; margin-bottom:8px;">Ficheiro Excel ou CSV:</label>
+                                <label style="display:block; font-weight:600; font-size:0.9em; margin-bottom:8px;">Excel or CSV File:</label>
                                 <input type="file" name="sales_file" accept=".xlsx,.csv" required style="padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 8px; width: 100%;">
                             </div>
                         </div>
-                        <button type="submit" class="submit-button" style="background-color: #00796b; padding: 12px 20px; font-size: 0.95em; width: auto; font-weight: 600;">🚀 Treinar Modelo Selecionado</button>
+                        <button type="submit" class="submit-button" style="background-color: #00796b; padding: 12px 20px; font-size: 0.95em; width: auto; font-weight: 600;">🚀 Train Selected Model</button>
                     </form>
 
                     <!-- Painel de Progresso do Treino MLP -->
                     <div class="form-section" id="mlp-progress-card" style="display: none; border-top: 4px solid #3b82f6; margin-top: 20px; background-color: #f0f9ff; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-radius: 8px;">
                         <h3 style="color: #1e3a8a; margin-top: 0; font-size: 1.1em; display: flex; align-items: center; gap: 8px;">
-                            <span>🔄</span> Treino da Rede MLP em Curso...
+                            <span>🔄</span> MLP Network Training in Progress...
                         </h3>
                         <div style="margin-bottom: 15px;">
                             <div style="display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 8px; font-size: 0.9em; color: #1e3a8a;">
-                                <span id="mlp-status-msg">A inicializar...</span>
+                                <span id="mlp-status-msg">Initializing...</span>
                                 <span id="mlp-pct">0%</span>
                             </div>
                             <div style="width: 100%; background: #dbeafe; height: 10px; border-radius: 5px; overflow: hidden;">
@@ -2236,17 +2313,17 @@
                             </div>
                         </div>
                         <div style="background: #1e293b; color: #38bdf8; font-family: monospace; padding: 12px; border-radius: 8px; font-size: 0.85em; max-height: 120px; overflow-y: auto; box-shadow: inset 0 2px 4px rgba(0,0,0,0.6);" id="mlp-logs-console">
-                            [LOG] A aguardar início...
+                            [LOG] Waiting to start...
                         </div>
                     </div>
 
                     <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 30px 0;">
 
                     <!-- Painel de Inferência -->
-                    <h3 style="margin-bottom: 15px; color: #004d40;">Projetar Vendas Futuras (Inferência)</h3>
+                    <h3 style="margin-bottom: 15px; color: #004d40;">Project Future Sales (Inference)</h3>
                     <div style="display: flex; gap: 15px; margin-bottom: 20px; align-items: flex-end;">
                         <div style="flex: 2;">
-                            <label style="display:block; font-weight:600; font-size:0.9em; margin-bottom:8px;">Cultura (Produto):</label>
+                            <label style="display:block; font-weight:600; font-size:0.9em; margin-bottom:8px;">Culture (Product):</label>
                             <select id="infer-culture-id" class="form-control" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #d1d5db;">
                                 {% for item in processor_stock %}
                                     {% if item.has_sales_model %}
@@ -2256,20 +2333,20 @@
                             </select>
                         </div>
                         <div style="flex: 1;">
-                            <label style="display:block; font-weight:600; font-size:0.9em; margin-bottom:8px;">Horizonte Temporal:</label>
+                            <label style="display:block; font-weight:600; font-size:0.9em; margin-bottom:8px;">Time Horizon:</label>
                             <select id="infer-horizon" class="form-control" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #d1d5db;">
                                 <option value="15">15 dias</option>
                                 <option value="30" selected>30 dias</option>
                             </select>
                         </div>
-                        <button type="button" onclick="runSalesForecast()" class="submit-button" style="background-color: #3b82f6; width: auto; padding: 11px 20px; font-size: 0.95em; font-weight: 600; height: fit-content; margin-top: 0;">📈 Inferir Procura</button>
+                        <button type="button" onclick="runSalesForecast()" class="submit-button" style="background-color: #3b82f6; width: auto; padding: 11px 20px; font-size: 0.95em; font-weight: 600; height: fit-content; margin-top: 0;">📈 Infer Demand</button>
                     </div>
 
                     <!-- Gráfico Canvas -->
                     <div style="background: #f8f9fa; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; min-height: 250px; display: flex; align-items: center; justify-content: center; position: relative;">
                         <canvas id="forecastChart" style="display: none; width: 100%; height: 250px;"></canvas>
                         <div id="forecast-placeholder" style="color: #a0aec0; font-size: 1em;">
-                            Selecione a cultura e clique em "Inferir Procura" para gerar a projeção das vendas.
+                            Select the Culture and click 'Infer demand' to generate sales projection.
                         </div>
                     </div>
                 </div>
@@ -2278,22 +2355,22 @@
             <!-- 2. BUYER AGENT TRAINING TAB -->
             <div id="buyer-agent-training" class="tab-content" style="display: none;">
                 <h3 style="color: #00796b; margin-bottom: 25px; font-weight: 700; border-bottom: 3px solid #00796b; padding-bottom: 10px; display: flex; align-items: center; gap: 10px;">
-                    <span>🤖</span> Treino e Automação do Buyer Agent (PPO Agent)
+                    <span>🤖</span> Buyer Agent Training and Automation (PPO Agent)
                 </h3>
 
                 <div class="form-section" style="border-top: 4px solid #10b981;">
                     <p style="font-size: 0.95em; color: #555; margin-bottom: 20px;">
-                        Treine o agente inteligente de compras para calcular e recomendar decisões diárias de compra com base em inteligência artificial.
+                        Train the intelligent purchasing agent to calculate and recommend daily purchasing decisions based on artificial intelligence.
                     </p>
 
                     <!-- Treinar Agente -->
                     <form id="ppo-training-form" method="POST" action="{% url 'train_buyer_agent' %}" enctype="multipart/form-data" style="margin-bottom: 35px;" onsubmit="submitPpoTraining(event)">
                         {% csrf_token %}
-                        <h3 style="margin-bottom: 15px; color: #065f46;">Treinar Inteligência do Agente</h3>
+                        <h3 style="margin-bottom: 15px; color: #065f46;">Train Agent Intelligence</h3>
                         
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 20px;">
                             <div class="form-group">
-                                <label style="display:block; font-weight:600; font-size:0.9em; margin-bottom:8px;">Cultura (Produto):</label>
+                                <label style="display:block; font-weight:600; font-size:0.9em; margin-bottom:8px;">Culture (Product):</label>
                                 <select name="culture_id" required class="form-control" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #d1d5db;">
                                     {% for item in processor_stock %}
                                         {% if item.has_sales_model %}
@@ -2303,27 +2380,27 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label style="display:block; font-weight:600; font-size:0.9em; margin-bottom:8px;">Histórico de Preços (Opcional - Excel/CSV):</label>
+                                <label style="display:block; font-weight:600; font-size:0.9em; margin-bottom:8px;">Price History (Optional - Excel/CSV):</label>
                                 <input type="file" name="market_file" accept=".xlsx,.csv" style="padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 8px; width: 100%;">
-                                <span style="font-size: 0.8em; color: #666; display: block; margin-top: 5px;">Se não carregar nenhum ficheiro, o modelo do agente utilizará o histórico de vendas já treinado nesta conta.</span>
+                                <span style="font-size: 0.8em; color: #666; display: block; margin-top: 5px;">If you do not upload any files, the agent model will use the sales history already trained on this account.</span>
                             </div>
                             <div class="form-group">
-                                <label style="display:block; font-weight:600; font-size:0.9em; margin-bottom:8px;">Número de Episódios de Treino:</label>
+                                <label style="display:block; font-weight:600; font-size:0.9em; margin-bottom:8px;">Number of Training Episodes:</label>
                                 <input type="number" name="max_episodes" min="64" max="100000" value="640" step="64" required style="padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; width: 100%;">
-                                <span style="font-size: 0.8em; color: #666; display: block; margin-top: 5px;">Mínimo 64. O treino rápido recomendado é de 640. O treino completo utiliza 20000.</span>
+                                <span style="font-size: 0.8em; color: #666; display: block; margin-top: 5px;">Minimum 64. The recommended quick workout is 640. The full workout uses 20,000.</span>
                             </div>
                         </div>
-                        <button type="submit" class="submit-button" style="background-color: #10b981; padding: 12px 20px; font-size: 0.95em; width: auto; font-weight: 600;">🚀 Treinar Buyer Agent</button>
+                        <button type="submit" class="submit-button" style="background-color: #10b981; padding: 12px 20px; font-size: 0.95em; width: auto; font-weight: 600;">🚀 Train Buyer Agent</button>
                     </form>
 
                     <!-- Painel de Progresso do Treino PPO -->
                     <div class="form-section" id="ppo-progress-card" style="display: none; border-top: 4px solid #10b981; margin-top: 20px; background-color: #f0fdf4; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-radius: 8px;">
                         <h3 style="color: #064e3b; margin-top: 0; font-size: 1.1em; display: flex; align-items: center; gap: 8px;">
-                            <span>🤖</span> Treino do PPO Agent em Curso...
+                            <span>🤖</span> PPO Agent Training in Progress
                         </h3>
                         <div style="margin-bottom: 15px;">
                             <div style="display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 8px; font-size: 0.9em; color: #064e3b;">
-                                <span id="ppo-status-msg">A inicializar...</span>
+                                <span id="ppo-status-msg">Initializing...</span>
                                 <span id="ppo-pct">0%</span>
                             </div>
                             <div style="width: 100%; background: #dcfce7; height: 10px; border-radius: 5px; overflow: hidden;">
@@ -2331,17 +2408,17 @@
                             </div>
                         </div>
                         <div style="background: #1e293b; color: #4ade80; font-family: monospace; padding: 12px; border-radius: 8px; font-size: 0.85em; max-height: 120px; overflow-y: auto; box-shadow: inset 0 2px 4px rgba(0,0,0,0.6);" id="ppo-logs-console">
-                            [LOG] A aguardar início...
+                            [LOG] Waiting to start...
                         </div>
                     </div>
 
                     <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 30px 0;">
 
                     <!-- Consultar Ação Diária Recomendada -->
-                    <h3 style="margin-bottom: 15px; color: #065f46;">Consultar Recomendação Diária (Inferência)</h3>
+                    <h3 style="margin-bottom: 15px; color: #065f46;">Query Recommended Daily Action (Inference)</h3>
                     <div style="display: flex; gap: 15px; margin-bottom: 20px; align-items: flex-end;">
                         <div style="flex: 2;">
-                            <label style="display:block; font-weight:600; font-size:0.9em; margin-bottom:8px;">Cultura (Produto):</label>
+                            <label style="display:block; font-weight:600; font-size:0.9em; margin-bottom:8px;">Culture (Product):</label>
                             <select id="action-culture-id" class="form-control" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #d1d5db;">
                                 {% for item in processor_stock %}
                                     {% if item.has_agent_model %}
@@ -2350,12 +2427,12 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <button type="button" onclick="runBuyerAgentAction()" class="submit-button" style="background-color: #8b5cf6; width: auto; padding: 11px 20px; font-size: 0.95em; font-weight: 600; height: fit-content; margin-top: 0;">🔍 Obter Decisão do Agente</button>
+                        <button type="button" onclick="runBuyerAgentAction()" class="submit-button" style="background-color: #8b5cf6; width: auto; padding: 11px 20px; font-size: 0.95em; font-weight: 600; height: fit-content; margin-top: 0;">🔍 Get Agent Decision</button>
                     </div>
 
                     <!-- Card de Resultado da Decisão -->
                     <div id="decision-result-card" style="display: none; padding: 20px; border-radius: 10px; border: 1px solid #c084fc; background-color: #faf5ff; color: #581c87; font-size: 1em; line-height: 1.5;">
-                        <strong style="font-size: 1.1em; display: block; margin-bottom: 5px;">Recomendação do Agente:</strong>
+                        <strong style="font-size: 1.1em; display: block; margin-bottom: 5px;">Agent Recommendation:</strong>
                         <p style="margin: 0;" id="decision-result-text"></p>
                     </div>
                 </div>
@@ -2364,15 +2441,15 @@
             <!-- LIFE CYCLE ANALYSIS TAB -->
             <div id="lc-analysis" class="tab-content" style="display: none;">
                 <h3 style="color: #00796b; margin-bottom: 25px; font-weight: 700; border-bottom: 3px solid #00796b; padding-bottom: 10px; display: flex; align-items: center; gap: 10px;">
-                    <span>⏳</span> Ciclo de Vida do Lote (LC Agent)
+                    <span>⏳</span> Batch Life Cycle (LC Agent)
                 </h3>
                 
                 <div style="background: white; border: 2px solid #e0f2f1; border-radius: 20px; padding: 25px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); margin-bottom: 25px;">
-                    <label style="display:block; font-weight:700; font-size:1em; margin-bottom:12px; color:#00796b;">Selecione o Lote de Stock Consolidado:</label>
+                    <label style="display:block; font-weight:700; font-size:1em; margin-bottom:12px; color:#00796b;">Select Consolidated Stock Batch:</label>
                     <select id="lc-stock-select" onchange="loadLcDecayData()" style="width: 100%; max-width: 500px; padding: 12px; border-radius: 10px; border: 2px solid #e0f2f1; font-weight: 600;">
-                        <option value="" disabled selected>--- Selecionar Lote ---</option>
+                        <option value="" disabled selected>--- Select Batch ---</option>
                         {% for item in processor_stock %}
-                            <option value="{{ item.pk }}">{{ item.culture }} (Lote em {{ item.warehouse }}) - {{ item.quantity }} kg</option>
+                            <option value="{{ item.pk }}">{{ item.culture }} (Batch in {{ item.warehouse }}) - {{ item.quantity }} kg</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -2383,30 +2460,30 @@
                         <div style="background: #e0f2f1; border-radius: 15px; padding: 20px; border: 2px solid #b2dfdb; text-align: center;">
                             <h4 style="margin: 0 0 10px 0; color: #00796b; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.5px;">Validade Prevista (RSL)</h4>
                             <div style="font-size: 2.2em; font-weight: 800; color: #004d40;" id="lc-rsl-value">-</div>
-                            <span style="font-size: 0.85em; color: #00796b; font-weight: 600;">dias restantes de qualidade</span>
+                            <span style="font-size: 0.85em; color: #00796b; font-weight: 600;">days of quality remaining</span>
                         </div>
                         <!-- INITIAL QUALITY CARD -->
                         <div style="background: #fff8e1; border-radius: 15px; padding: 20px; border: 2px solid #ffe082; text-align: center;">
-                            <h4 style="margin: 0 0 10px 0; color: #ff8f00; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.5px;">Qualidade Inicial</h4>
+                            <h4 style="margin: 0 0 10px 0; color: #ff8f00; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.5px;">Initial Quality</h4>
                             <div style="font-size: 1.1em; font-weight: 700; color: #ff6f00; line-height: 1.6;">
                                 Score: <span id="lc-score-value">-</span>/10<br>
-                                Brix: <span id="lc-brix-value">-</span> | Calibre: <span id="lc-caliber-value">-</span>
+                                Brix: <span id="lc-brix-value">-</span> | Caliber: <span id="lc-caliber-value">-</span>
                             </div>
                         </div>
                         <!-- SENSORS TODAY CARD -->
                         <div style="background: #e3f2fd; border-radius: 15px; padding: 20px; border: 2px solid #bbdefb; text-align: center;">
-                            <h4 style="margin: 0 0 10px 0; color: #1565c0; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.5px;">Sensores Hoje</h4>
+                            <h4 style="margin: 0 0 10px 0; color: #1565c0; font-size: 0.9em; text-transform: uppercase; letter-spacing: 0.5px;">Sensors Today</h4>
                             <div style="font-size: 1.1em; font-weight: 700; color: #0d47a1; line-height: 1.6;">
                                 Temp: <span id="lc-temp-value">-</span> ºC<br>
-                                Humidade: <span id="lc-hum-value">-</span> % | Etileno: <span id="lc-eth-value">-</span> ppm
+                                Humidity: <span id="lc-hum-value">-</span> % | Ethylene: <span id="lc-eth-value">-</span> ppm
                             </div>
                         </div>
                     </div>
 
                     <div style="background: white; border: 2px solid #e0f2f1; border-radius: 20px; padding: 25px; box-shadow: 0 5px 20px rgba(0,0,0,0.05);">
                         <h4 style="color: #00796b; font-weight: 700; margin-bottom: 20px; font-size: 1.1em; display: flex; align-items: center; justify-content: space-between;">
-                            <span>📈 Projeção da Curva de Qualidade</span>
-                            <span style="font-size: 0.85em; font-weight: normal; color: #666;">(Calculada pelo LC Agent baseado nas condições do armazém)</span>
+                            <span>📈 Quality Curve Projection</span>
+                            <span style="font-size: 0.85em; font-weight: normal; color: #666;">(Calculated by LC Agent based on storage conditions)</span>
                         </h4>
                         <div style="height: 380px; position: relative;">
                             <canvas id="lc-decay-chart"></canvas>
@@ -2415,7 +2492,7 @@
                 </div>
 
                 <div id="lc-empty-state" style="background: #f8f9fa; border: 2px dashed #cbd5e1; border-radius: 20px; padding: 40px; text-align: center; color: #64748b; font-weight: 600; font-size: 1.1em;">
-                    👋 Por favor, selecione um lote em stock acima para analisar o seu ciclo de vida.
+                    👋 Please, select a batch in stock above to analyze it's lifecycle.
                 </div>
             </div>
 
@@ -2447,7 +2524,7 @@
                     </form>
                 </div>
 
-                <!-- Pedidos Pendentes e Histórico de Associação -->
+                <!-- Pending Orders and Association History -->
                 <div class="data-table-container" style="margin-bottom:30px;">
                     <h3>📋 Status of My Association Requests</h3>
                     {% if my_associations %}
@@ -2478,7 +2555,7 @@
                     {% endif %}
                 </div>
 
-                <!-- DETALHES DE LOJAS APROVADAS -->
+                <!-- APPROVED STORE DETAILS -->
                 <div class="approved-stores-section">
                     <h3 style="color: #00796b; margin-bottom: 20px;">🏢 Consolidated Information of Authorized Stores</h3>
                     {% if approved_stores_data %}
@@ -2489,7 +2566,7 @@
                                 <span style="background:#e0f2f1; color:#00796b; padding:4px 12px; border-radius:8px; font-weight:bold; font-size:0.9em;">Authorized Access</span>
                             </div>
 
-                            <!-- Armazéns da Loja -->
+                            <!-- Store Warehouses -->
                             <div style="margin-bottom:25px;">
                                 <h5 style="color:#00796b; margin-bottom:10px; font-size:1em;">🏭 Physical Warehouses of the Store</h5>
                                 {% if store_data.warehouses %}
@@ -2499,7 +2576,7 @@
                                             <th>ID</th>
                                             <th>Location</th>
                                             <th>Type</th>
-                                            <th>Total / Occupied Capacity</th>
+                                            <th>Total / Longitude (Optional): Capacity</th>
                                             <th>Latest Sensors</th>
                                         </tr>
                                     </thead>
@@ -2516,7 +2593,7 @@
                                             <td>{{ wh.get_control_type_display }}</td>
                                             <td>
                                                 <strong>{{ wh.capacity }} Kg</strong><br>
-                                                <span style="font-size:0.85em; color:#666;">Occupied: {{ wh.current_stock }} Kg</span>
+                                                <span style="font-size:0.85em; color:#666;">Longitude (Optional):: {{ wh.current_stock }} Kg</span>
                                                 <!-- Barra Capacidade -->
                                                 <div style="width: 100%; min-width: 150px; background: #e0e0e0; border-radius: 8px; overflow: hidden; height: 10px; margin-top: 5px;">
                                                     <div style="height: 100%; width: {{ wh.occupancy_percentage }}%; background: {% if wh.occupancy_percentage > 90 %}#e53935{% elif wh.occupancy_percentage > 70 %}#fbc02d{% else %}#2e7d32{% endif %}; transition: width 0.3s;"></div>
@@ -2539,7 +2616,7 @@
                                 {% endif %}
                             </div>
 
-                            <!-- Stock Detalhado da Loja -->
+                            <!-- Detailed Store Stock -->
                             <div style="margin-bottom:25px;">
                                 <h5 style="color:#00796b; margin-bottom:10px; font-size:1em;">📊 Current Consolidated Stock of the Store</h5>
                                 {% if store_data.stock %}
@@ -2568,7 +2645,7 @@
                                 {% endif %}
                             </div>
 
-                            <!-- Encomendas do Retalhista -->
+                            <!-- Retailer Orders -->
                             <div>
                                 <h5 style="color:#00796b; margin-bottom:10px; font-size:1em;">📋 Store's Daily Orders</h5>
                                 {% if store_data.orders %}
@@ -2636,7 +2713,7 @@
                     })
                     .then(response => {
                         if (!response.ok) {
-                            throw new Error('Certifique-se de que o modelo de vendas já foi treinado.');
+                            throw new Error('Ensure that the sales model is trained');
                         }
                         return response.json();
                     })
@@ -2677,7 +2754,7 @@
                                             beginAtZero: true,
                                             title: {
                                                 display: true,
-                                                text: 'Quantidade (Kg)'
+                                                text: 'Quantity (Kg)'
                                             }
                                         }
                                     }
@@ -2686,7 +2763,7 @@
                         }
                     })
                     .catch(err => {
-                        alert('Erro ao inferir procura: ' + err.message);
+                        alert('Error inferring demand: ' + err.message);
                     });
                 }
 
@@ -2703,7 +2780,7 @@
                     })
                     .then(response => {
                         if (!response.ok) {
-                            throw new Error('Certifique-se de que o modelo do Buyer Agent está treinado para esta cultura.');
+                            throw new Error('Ensure that the Buyer Agent model is trained for this culture.');
                         }
                         return response.json();
                     })
@@ -2713,11 +2790,11 @@
                             const resultText = document.getElementById('decision-result-text');
                             
                             resultCard.style.display = 'block';
-                            resultText.innerHTML = `O Buyer Agent recomenda encomendar <strong>${data.recommended_qty_kg} Kg</strong> de <strong>${data.culture_name}</strong> para o dia de hoje.`;
+                            resultText.innerHTML = `The Buyer Agent advises to order <strong>${data.recommended_qty_kg} Kg</strong> of <strong>${data.culture_name}</strong> for today.`;
                         }
                     })
                     .catch(err => {
-                        alert('Erro ao consultar decisão: ' + err.message);
+                        alert('Error querying decision: ' + err.message);
                     });
                 }
 
@@ -2732,7 +2809,7 @@
                     progressCard.style.display = 'block';
                     const submitBtn = form.querySelector('button[type="submit"]');
                     submitBtn.disabled = true;
-                    submitBtn.innerHTML = '⏳ A treinar...';
+                    submitBtn.innerHTML = '⏳ Training...';
                     
                     const statusMsg = document.getElementById('mlp-status-msg');
                     const pctMsg = document.getElementById('mlp-pct');
@@ -2747,8 +2824,8 @@
                     }
                     
                     let currentPct = 0;
-                    addLog('A ler ficheiro de histórico carregado...');
-                    statusMsg.innerText = 'A processar ficheiro...';
+                    addLog('Reading uploaded history file...');
+                    statusMsg.innerText = 'Processing file...';
                     
                     const uploadPromise = fetch(form.action, {
                         method: 'POST',
@@ -2763,27 +2840,27 @@
                             progressBar.style.width = currentPct + '%';
                             
                             if (currentPct === 20) {
-                                statusMsg.innerText = 'A carregar dados para a BD...';
-                                addLog('Estrutura de dados validada. A criar registos em HistoricalSalesData...');
+                                statusMsg.innerText = 'Loading data into database...';
+                                addLog('Data structure validated. Creating records in HistoricalSalesData...');
                             } else if (currentPct === 45) {
-                                statusMsg.innerText = `A inicializar Modelo ${modelName}...`;
+                                statusMsg.innerText = `Initializing/training Model ${modelName}...`;
                                 if (modelType === 'autoformer') {
-                                    addLog('Modelo Autoformer inicializado: 2 Encoder Layers, 8 Attention Heads.');
+                                    addLog('Initialized Autoformer model: 2 encoder layers, 8 attention heads.');
                                 } else {
-                                    addLog('Modelo MLP inicializado: 3 Hidden Layers, learning_rate=0.01.');
+                                    addLog('Initialized MLP model: 3 hidden layers, learning_rate=0.01.');
                                 }
                             } else if (currentPct === 70) {
-                                statusMsg.innerText = `A treinar Modelo ${modelName}...`;
+                                statusMsg.innerText = `Saving model ${modelName}...`;
                                 if (modelType === 'autoformer') {
-                                    addLog('A otimizar pesos via AdamW (Tilted Loss & Lags)...');
-                                    addLog('Época 100/1000 completa - Loss: 0.1458');
-                                    addLog('Época 500/1000 completa - Loss: 0.0821');
-                                    addLog('Época 900/1000 completa - Loss: 0.0412');
+                                    addLog('Optimizing weights using AdamW (Tilted Loss & Lags)...');
+                                    addLog('Epoch 100/1000 complete - Loss: 0.1458');
+                                    addLog('Epoch 500/1000 complete - Loss: 0.0821');
+                                    addLog('Epoch 900/1000 complete - Loss: 0.0412');
                                 } else {
-                                    addLog('A otimizar pesos via gradiente descendente stocástico (SGD)...');
-                                    addLog('Época 1/3 completa - Loss: 0.0542');
-                                    addLog('Época 2/3 completa - Loss: 0.0211');
-                                    addLog('Época 3/3 completa - Loss: 0.0063');
+                                    addLog('Optimizing weights using stochastic gradient descent (SGD)...');
+                                    addLog('Epoch 1/3 complete - Loss: 0.0542');
+                                    addLog('Epoch 2/3 complete - Loss: 0.0211');
+                                    addLog('Epoch 3/3 complete - Loss: 0.0063');
                                 }
                             }
                         }
@@ -2791,10 +2868,10 @@
                     
                     uploadPromise
                     .then(res => {
-                        if (!res.ok) throw new Error('Falha no upload/treino.');
+                        if (!res.ok) throw new Error('Upload/training error.');
                         clearInterval(interval);
-                        statusMsg.innerText = 'A guardar modelo...';
-                        addLog(`Otimização concluída. A guardar binário na base de dados...`);
+                        statusMsg.innerText = 'Keeping the model...';
+                        addLog(`Optimization complete. Keeping binary on the database...`);
                         
                         let remainingPct = currentPct;
                         const finishInterval = setInterval(() => {
@@ -2805,8 +2882,8 @@
                                 progressBar.style.width = remainingPct + '%';
                             } else {
                                 clearInterval(finishInterval);
-                                addLog(`Sucesso: Modelo ${modelName} guardado com sucesso.`);
-                                statusMsg.innerText = 'Treino concluído!';
+                                addLog(`Success: Model ${modelName} kept with success.`);
+                                statusMsg.innerText = 'Training Completed!';
                                 setTimeout(() => {
                                     window.location.reload();
                                 }, 1000);
@@ -2815,10 +2892,10 @@
                     })
                     .catch(err => {
                         clearInterval(interval);
-                        addLog(`[ERRO] Ocorreu uma falha: ${err.message}`);
-                        statusMsg.innerText = 'Erro no treino.';
+                        addLog(`[ERROR] An unexpected error has happened: ${err.message}`);
+                        statusMsg.innerText = 'Training Error.';
                         submitBtn.disabled = false;
-                        submitBtn.innerHTML = '🚀 Treinar Modelo Selecionado';
+                        submitBtn.innerHTML = '🚀 Train Selected Model';
                     });
                 }
                 function submitPpoTraining(event) {
@@ -2845,8 +2922,8 @@
                     }
                     
                     let currentPct = 0;
-                    addLog('A iniciar subprocesso de treino (0_training_constrained.py)...');
-                    statusMsg.innerText = 'A inicializar...';
+                    addLog('Booting up the training subprocess (0_training_constrained.py)...');
+                    statusMsg.innerText = 'Initializing...';
                     
                     const uploadPromise = fetch(form.action, {
                         method: 'POST',
@@ -2865,19 +2942,19 @@
                             progressBar.style.width = currentPct + '%';
                             
                             if (currentPct === 15) {
-                                statusMsg.innerText = 'A inicializar 64 sub-ambientes...';
-                                addLog('StockEnvironment inicializados com sucesso em 2 cores reais.');
+                                statusMsg.innerText = 'Initializing 64 sub-environments...';
+                                addLog('StockEnvironment successfully initialized in 2 true colors.');
                             } else if (currentPct === 40) {
-                                statusMsg.innerText = 'A processar iterações PPO...';
-                                addLog('Sincronizando workers de multiprocessamento...');
+                                statusMsg.innerText = 'Processing PPO iterations...';
+                                addLog('Synchronizing multiprocessing workers...');
                             } else if (currentPct === 70) {
-                                statusMsg.innerText = 'Otimizando políticas Actor/Critic...';
+                                statusMsg.innerText = 'Optimizing Actor/Critic Policies...';
                             }
                         }
                     }, 500);                    uploadPromise
                     .then(response => {
                         clearInterval(interval);
-                        if (!response.ok) throw new Error('Falha na ligação com o servidor de treino.');
+                        if (!response.ok) throw new Error('Failed to connect to the training server.');
                         
                         const reader = response.body.getReader();
                         const decoder = new TextDecoder("utf-8");
@@ -2886,10 +2963,10 @@
                         function readChunk() {
                             reader.read().then(({ done, value }) => {
                                 if (done) {
-                                    statusMsg.innerText = 'Treino concluído!';
+                                    statusMsg.innerText = 'Train Completed!';
                                     progressBar.style.width = '100%';
                                     pctMsg.innerText = '100%';
-                                    addLog('Sucesso: Agente treinado e pesos salvos na base de dados.');
+                                    addLog('Success: Agent trained and weights saved to the database.');
                                     setTimeout(() => {
                                         window.location.reload();
                                     }, 2000);
@@ -2914,29 +2991,29 @@
                                                 const pct = Math.round((current / total) * 100);
                                                 pctMsg.innerText = pct + '%';
                                                 progressBar.style.width = pct + '%';
-                                                statusMsg.innerText = `A treinar: ${current}/${total} episódios...`;
+                                                statusMsg.innerText = `Training: ${current}/${total} episodes...`;
                                             }
-                                        } else if (cleanLine.includes("[ERRO]") || cleanLine.includes("FileNotFoundError")) {
+                                        } else if (cleanLine.includes("[ERROR]") || cleanLine.includes("FileNotFoundError")) {
                                             throw new Error(cleanLine);
                                         }
                                     }
                                 });
                                 readChunk();
                             }).catch(err => {
-                                addLog(`[ERRO] Falha no fluxo: ${err.message}`);
-                                statusMsg.innerText = 'Erro no treino.';
+                                addLog(`[ERROR] Flow error: ${err.message}`);
+                                statusMsg.innerText = 'Training error.';
                                 submitBtn.disabled = false;
-                                submitBtn.innerHTML = '🚀 Treinar Buyer Agent';
+                                submitBtn.innerHTML = '🚀 Training Buyer Agent';
                             });
                         }
                         readChunk();
                     })
                     .catch(err => {
                         clearInterval(interval);
-                        addLog(`[ERRO] Ocorreu uma falha ao iniciar o treino: ${err.message}`);
-                        statusMsg.innerText = 'Erro no treino.';
+                        addLog(`[ERROR] An error occurred while starting the workout: ${err.message}`);
+                        statusMsg.innerText = 'Workout Error.';
                         submitBtn.disabled = false;
-                        submitBtn.innerHTML = '🚀 Treinar Buyer Agent';
+                        submitBtn.innerHTML = '🚀 Training Buyer Agent';
                     });
                 }
 
@@ -2945,15 +3022,15 @@
                 document.addEventListener("DOMContentLoaded", () => {
                     const inferSelect = document.getElementById('infer-culture-id');
                     if (inferSelect && inferSelect.querySelectorAll('option').length === 0) {
-                        inferSelect.innerHTML = '<option value="" disabled selected>Nenhum lote com modelo treinado. Treine um lote primeiro acima.</option>';
+                        inferSelect.innerHTML = '<option value="" disabled selected>No batch with a trained model. Train a batch first as described above.</option>';
                     }
                     const agentTrainSelect = document.querySelector('#ppo-training-form select[name="culture_id"]');
                     if (agentTrainSelect && agentTrainSelect.querySelectorAll('option').length === 0) {
-                        agentTrainSelect.innerHTML = '<option value="" disabled selected>Nenhum lote com modelo treinado. Treine um lote primeiro no menu de previsões.</option>';
+                        agentTrainSelect.innerHTML = '<option value="" disabled selected>No batches with a trained model. Train a batch first in the predictions menu.</option>';
                     }
                     const actionSelect = document.getElementById('action-culture-id');
                     if (actionSelect && actionSelect.querySelectorAll('option').length === 0) {
-                        actionSelect.innerHTML = '<option value="" disabled selected>Nenhum lote com agente treinado. Treine o agente primeiro acima.</option>';
+                        actionSelect.innerHTML = '<option value="" disabled selected>No batch with a trained agent. Train the agent first as described above.</option>';
                     }
                 });
             </script>
@@ -3091,6 +3168,46 @@
         </div>
     </div>
 
+    </div>
+
+    <!-- COUNTERPROPOSE MODAL (Processor) -->
+    <div id="counterproposeModal" class="modal"
+         style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(5px);">
+        <div class="modal-content"
+             style="background-color: #fefefe; margin: 10% auto; padding: 40px; border: 1px solid #888; width: 90%; max-width: 500px; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: slideDown 0.3s ease;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h3 style="margin:0; color:#f57c00;">💬 Counterpropose Price</h3>
+                <span onclick="closeCounterproposeModal()" style="color:#aaa; font-size:28px; font-weight:bold; cursor:pointer;">&times;</span>
+            </div>
+
+            <p style="color:#555; margin-bottom:20px;">
+                Submit a new price proposal for this order. The other party will need to review and accept it.
+            </p>
+
+            <form method="POST" action="{% url 'market_counterpropose_order' %}">
+                {% csrf_token %}
+                <input type="hidden" name="order_id" id="modalCounterproposeOrderId">
+                
+                <div style="margin-bottom:20px;">
+                    <label style="display:block; font-weight:600; margin-bottom:8px;">Proposed Price (€/Kg):</label>
+                    <input type="number" step="0.01" name="proposed_price" id="modalCounterproposePrice" required 
+                           style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;">
+                </div>
+
+                <div style="text-align:right;">
+                    <button type="button" onclick="closeCounterproposeModal()" 
+                            style="background:#ccc; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; margin-right:10px;">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                            style="background:#f57c00; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold;">
+                        Submit Counterproposal
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- CALCULATE MODAL (DEMO) -->
     <div id="calculateModal" class="modal"
     style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(5px);">
@@ -3107,18 +3224,18 @@
                 </p>
 
                 <div style="margin-bottom: 25px;">
-                    <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Armazém de Destino:</label>
+                    <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Destination Warehouse:</label>
                     <select id="calcWarehouseId" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;">
                         {% for wh in processor_warehouses %}
                             <option value="{{ wh.warehouse_id }}">{{ wh.location }}</option>
                         {% empty %}
-                            <option value="" disabled selected>Sem armazéns registados!</option>
+                            <option value="" disabled selected>No registered warehouses!</option>
                         {% endfor %}
                     </select>
                 </div>
 
                 <div style="margin-bottom: 25px; display:none;" id="calc-spinner">
-                    <p style="text-align:center; color:#1565C0; font-weight:bold;">🔄 A calcular melhores rotas...</p>
+                    <p style="text-align:center; color:#1565C0; font-weight:bold;">🔄 Calculating best routes...</p>
                 </div>
 
                 <button type="button" class="submit-button" style="background:linear-gradient(135deg, #1976D2, #1565C0);" onclick="performCalculation()">
@@ -3134,27 +3251,27 @@
                 </div>
 
                 <div style="background:#e3f2fd; padding:15px; border-radius:10px; margin-bottom:10px; text-align:left;">
-                    <span style="display:block; font-size:0.85em; color:#1565C0;">⏱️ Prazo de Recolha</span>
+                    <span style="display:block; font-size:0.85em; color:#1565C0;">⏱️ Pickup Deadline</span>
                     <strong style="font-size:1.1em;">~ 1.5 Horas</strong>
                 </div>
 
                 <div style="background:#e3f2fd; padding:15px; border-radius:10px; margin-bottom:10px; text-align:left;">
-                    <span style="display:block; font-size:0.85em; color:#1565C0;">📅 Prazo de Entrega</span>
+                    <span style="display:block; font-size:0.85em; color:#1565C0;">📅 Delivery Deadline</span>
                     <strong style="font-size:1.1em;">Hoje, 18:00 PM</strong>
                 </div>
 
                 <div style="background:#fff3e0; padding:15px; border-radius:10px; margin-bottom:10px; text-align:left;">
-                    <span style="display:block; font-size:0.85em; color:#ef6c00;">🚚 Custo Estimado de Transporte</span>
+                    <span style="display:block; font-size:0.85em; color:#ef6c00;">🚚 Estimated Transport Cost</span>
                     <strong style="font-size:1.1em;">€ 32.50</strong>
                 </div>
 
                  <div style="background:#e8f5e9; padding:15px; border-radius:10px; margin-bottom:20px; text-align:left; border:1px solid #c8e6c9;">
-                    <span style="display:block; font-size:0.85em; color:#2e7d32;">🌱 Redução Pegada Carbónica (vs Standard)</span>
+                    <span style="display:block; font-size:0.85em; color:#2e7d32;">🌱 Carbon Footprint Reduction (vs Standard)</span>
                     <strong style="font-size:1.2em; color:#2e7d32;">22% ⬇️</strong>
                 </div>
 
                 <button type="button" class="btn-action" style="background:#757575; width:100%; padding:12px;" onclick="resetCalculateModal()">
-                    🔙 Voltar / Fechar
+                    🔙 Back / Close
                 </button>
             </div>
 
@@ -3185,7 +3302,7 @@
                 }
             })
             .catch(err => {
-                alert('Erro na comunicação com o servidor: ' + err);
+                alert('Error communicating with the server: ' + err);
             });
         }
 
@@ -3256,7 +3373,7 @@
                         btn.disabled = false;
                         btn.innerHTML = '🚀 Iniciar Novo Treino';
                     }
-                    alert('Treino concluído com sucesso!');
+                    alert('Treino Completed com sucesso!');
                 } else if (json.status === 'failed') {
                     clearInterval(trainingPollInterval);
                     const btn = document.getElementById('btn-start-training');
@@ -3420,8 +3537,22 @@
             const modalAccept = document.getElementById('acceptOrderModal');
             if (event.target === modalAccept) { closeAcceptModal(); }
             
+            const modalCounter = document.getElementById('counterproposeModal');
+            if (event.target === modalCounter) { closeCounterproposeModal(); }
+
             const modalCalc = document.getElementById('calculateModal');
             if (event.target === modalCalc) { closeCalculateModal(); }
+        }
+
+        var counterproposeModal = document.getElementById("counterproposeModal");
+        function openCounterproposeModal(orderId, currentPrice) {
+            document.getElementById('modalCounterproposeOrderId').value = orderId;
+            document.getElementById('modalCounterproposePrice').value = currentPrice;
+            if(counterproposeModal) counterproposeModal.style.display = "block";
+        }
+
+        function closeCounterproposeModal() {
+            if(counterproposeModal) counterproposeModal.style.display = "none";
         }
     </script>
     
@@ -3500,7 +3631,7 @@
     <div id="historyModal" class="modal" style="display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6);">
         <div class="modal-content" style="background-color: #fefefe; margin: 5% auto; padding: 0; border: 1px solid #888; width: 90%; max-width: 800px; border-radius: 10px; overflow: hidden;">
             <div id="historyModalContent" style="padding: 20px; text-align: center;">
-                <p>⏳ A carregar dados da Blockchain...</p>
+                <p>⏳ Loading Blockchain data...</p>
             </div>
         </div>
     </div>
@@ -3511,7 +3642,7 @@
             const contentDiv = document.getElementById('historyModalContent');
             
             modal.style.display = "block";
-            contentDiv.innerHTML = '<p style="padding:20px; text-align:center;">⏳ A carregar dados da Blockchain...</p>';
+            contentDiv.innerHTML = '<p style="padding:20px; text-align:center;">⏳ Loading Blockchain data...</p>';
             
             // Fetch Modal Content
             fetch(`/api/harvest-history/${harvestId}/`)
@@ -3538,15 +3669,94 @@
 
     <!-- ====================== DISCRETE TRANSLATOR WIDGET ====================== -->
     <div id="google_translate_element" style="display:none;"></div>
-    <div class="discrete-translator" style="position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.95); border: 1px solid #00796b; border-radius: 30px; padding: 6px 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); backdrop-filter: blur(5px); transition: all 0.3s ease;">
-        <span style="font-size: 1.1em; line-height: 1;">🌐</span>
-        <select id="lang-select" onchange="changeLanguage(this.value)" style="border: none; background: transparent; font-size: 0.85em; font-weight: 600; color: #004d40; cursor: pointer; outline: none; padding-right: 5px; font-family: inherit;">
-            <option value="pt">🇵🇹 PT</option>
-            <option value="en">🇬🇧 EN</option>
-            <option value="es">🇪🇸 ES</option>
-            <option value="tr">🇹🇷 TR</option>
-        </select>
+    <div class="discrete-translator" style="position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.95); border: 1px solid #00796b; border-radius: 30px; padding: 6px 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); backdrop-filter: blur(5px); transition: all 0.3s ease; font-family: inherit;">
+        
+        <!-- Custom Dropdown Container -->
+        <div id="custom-lang-dropdown" style="position: relative; user-select: none;">
+            
+            <!-- Selected Value Display -->
+            <div id="lang-selected" onclick="toggleLangDropdown()" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; font-size: 0.85em; font-weight: 600; color: #004d40; padding: 4px 8px; min-width: 60px;">
+                <div id="selected-lang-content" style="display: flex; align-items: center;">
+                    <svg width="20" height="15" viewBox="0 0 20 15" style="vertical-align: middle; margin-right: 6px; border: 0.5px solid #ccc; border-radius: 2px; overflow: hidden;">
+                        <rect width="20" height="15" fill="#012169"/>
+                        <path d="M0,0 L20,15 M20,0 L0,15" stroke="#FFF" stroke-width="2.5"/>
+                        <path d="M0,0 L20,15 M20,0 L0,15" stroke="#C8102E" stroke-width="1"/>
+                        <path d="M10,0 v15 M0,7.5 h20" stroke="#FFF" stroke-width="4.5"/>
+                        <path d="M10,0 v15 M0,7.5 h20" stroke="#C8102E" stroke-width="2.5"/>
+                    </svg>
+                    EN
+                </div>
+                <!-- Dropdown Arrow -->
+                <svg width="10" height="10" viewBox="0 0 24 24" style="margin-left: 6px; fill: #004d40;">
+                    <path d="M7 10l5 5 5-5z"/>
+                </svg>
+            </div>
+
+            <!-- Dropdown Options List -->
+            <div id="lang-options" style="display: none; position: absolute; bottom: 120%; right: 0; background: #ffffff; border: 1px solid #00796b; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15); overflow: hidden; min-width: 100px; z-index: 10001; margin-bottom: 5px;">
+                
+                <div onclick="selectCustomLang('pt', this.innerHTML)" style="display: flex; align-items: center; padding: 12px 16px; cursor: pointer; font-size: 0.85em; font-weight: 600; color: #004d40; border-bottom: 1px solid #f0f0f0;">
+                    <svg width="20" height="15" viewBox="0 0 20 15" style="vertical-align: middle; margin-right: 6px; border: 0.5px solid #ccc; border-radius: 2px;">
+                        <rect width="20" height="15" fill="#F00"/><rect width="7" height="15" fill="#094"/>
+                        <circle cx="7" cy="7.5" r="3" fill="#FC0"/><path d="M6,6.5 h2 v1.5 a1,1 0 0,1 -2,0 z" fill="#FFF"/>
+                    </svg>
+                    PT
+                </div>
+                
+                <div onclick="selectCustomLang('en', this.innerHTML)" style="display: flex; align-items: center; padding: 12px 16px; cursor: pointer; font-size: 0.85em; font-weight: 600; color: #004d40; border-bottom: 1px solid #f0f0f0;">
+                    <svg width="20" height="15" viewBox="0 0 20 15" style="vertical-align: middle; margin-right: 6px; border: 0.5px solid #ccc; border-radius: 2px; overflow: hidden;">
+                        <rect width="20" height="15" fill="#012169"/>
+                        <path d="M0,0 L20,15 M20,0 L0,15" stroke="#FFF" stroke-width="2.5"/>
+                        <path d="M0,0 L20,15 M20,0 L0,15" stroke="#C8102E" stroke-width="1"/>
+                        <path d="M10,0 v15 M0,7.5 h20" stroke="#FFF" stroke-width="4.5"/>
+                        <path d="M10,0 v15 M0,7.5 h20" stroke="#C8102E" stroke-width="2.5"/>
+                    </svg>
+                    EN
+                </div>
+                
+                <div onclick="selectCustomLang('es', this.innerHTML)" style="display: flex; align-items: center; padding: 12px 16px; cursor: pointer; font-size: 0.85em; font-weight: 600; color: #004d40; border-bottom: 1px solid #f0f0f0;">
+                    <svg width="20" height="15" viewBox="0 0 20 15" style="vertical-align: middle; margin-right: 6px; border: 0.5px solid #ccc; border-radius: 2px;">
+                        <rect width="20" height="15" fill="#AA151B"/>
+                        <rect width="20" height="7.5" y="3.75" fill="#F1BF00"/>
+                        <rect x="4.5" y="5.5" width="2.5" height="4" rx="0.5" fill="#AA151B"/>
+                    </svg>
+                    ES
+                </div>
+                
+                <div onclick="selectCustomLang('tr', this.innerHTML)" style="display: flex; align-items: center; padding: 12px 16px; cursor: pointer; font-size: 0.85em; font-weight: 600; color: #004d40;">
+                    <svg width="20" height="15" viewBox="0 0 20 15" style="vertical-align: middle; margin-right: 6px; border: 0.5px solid #ccc; border-radius: 2px;">
+                        <rect width="20" height="15" fill="#E30A17"/>
+                        <circle cx="8" cy="7.5" r="4.5" fill="#FFF"/>
+                        <circle cx="9.5" cy="7.5" r="3.5" fill="#E30A17"/>
+                        <polygon points="12.5,5.5 13,7 14.5,7 13.2,8 13.7,9.5 12.5,8.5 11.3,9.5 11.8,8 10.5,7 12,7" fill="#FFF"/>
+                    </svg>
+                    TR
+                </div>
+            </div>
+        </div>
     </div>
+
+    <script>
+        function toggleLangDropdown() {
+            var options = document.getElementById('lang-options');
+            options.style.display = options.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function selectCustomLang(langCode, htmlContent) {
+            document.getElementById('selected-lang-content').innerHTML = htmlContent;
+            document.getElementById('lang-options').style.display = 'none';
+            if (typeof changeLanguage === 'function') {
+                changeLanguage(langCode);
+            }
+        }
+
+        document.addEventListener('click', function(event) {
+            var dropdown = document.getElementById('custom-lang-dropdown');
+            if (!dropdown.contains(event.target)) {
+                document.getElementById('lang-options').style.display = 'none';
+            }
+        });
+    </script>
 
     <style>
         /* Google Translate Overrides */
@@ -3569,7 +3779,7 @@
     <script type="text/javascript">
         function googleTranslateElementInit() {
             new google.translate.TranslateElement({
-                pageLanguage: 'pt',
+                pageLanguage: 'en',
                 includedLanguages: 'pt,en,es,tr',
                 layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
                 autoDisplay: false
@@ -3637,29 +3847,29 @@
             <span class="close" onclick="closeMakroModal()"
                 style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
 
-            <h2 style="margin-top: 0; display: flex; align-items: center; gap: 8px;">🛒 Compra Rápida (Wholesale)</h2>
-            <p style="color: #6b7280; font-size: 0.9em; margin-bottom: 20px;">Compre stock diretamente a fornecedores instantâneos. O transporte é ignorado e o lote entra diretamente no seu armazém.</p>
+            <h2 style="margin-top: 0; display: flex; align-items: center; gap: 8px;">🛒 Quick Purchase (Wholesale)</h2>
+            <p style="color: #6b7280; font-size: 0.9em; margin-bottom: 20px;">Buy stock directly from instant suppliers. Transport is ignored and the batch goes directly into your warehouse.</p>
 
             <form method="POST" action="{% url 'buy_direct_makro' %}">
                 {% csrf_token %}
                 <div style="margin-bottom: 15px;">
-                    <label style="display:block; margin-bottom:5px; font-weight:600;">Fornecedor Instantâneo:</label>
+                    <label style="display:block; margin-bottom:5px; font-weight:600;">Instant Supplier:</label>
                     <input type="text" name="producer_name" class="form-control" placeholder="Ex: Makro, Mercadona, Pingo Doce..." required style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #d1d5db;">
                 </div>
 
                 <div style="margin-bottom: 15px;">
-                    <label style="display:block; margin-bottom:5px; font-weight:600;">Destinatário (Armazém):</label>
+                    <label style="display:block; margin-bottom:5px; font-weight:600;">Recipient (Warehouse):</label>
                     <select name="warehouse_id" class="form-control" required style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #d1d5db;">
                         {% for w in processor_warehouses %}
                             <option value="{{ w.pk }}">{{ w.location }} (WH: {{ w.warehouse_id }})</option>
                         {% empty %}
-                            <option value="">Sem armazéns registados</option>
+                            <option value="">No registered warehouses</option>
                         {% endfor %}
                     </select>
                 </div>
 
                 <div style="margin-bottom: 15px;">
-                    <label style="display:block; margin-bottom:5px; font-weight:600;">Cultura (Produto):</label>
+                    <label style="display:block; margin-bottom:5px; font-weight:600;">Culture (Product):</label>
                     <select name="culture_id" class="form-control" required style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #d1d5db;">
                         {% for sub in product_subfamilies %}
                             <option value="{{ sub.subfamily_id }}">{{ sub.name }} ({{ sub.fruit_type }})</option>
@@ -3668,13 +3878,13 @@
                 </div>
 
                 <div style="margin-bottom: 20px;">
-                    <label style="display:block; margin-bottom:5px; font-weight:600;">Quantidade (Kg):</label>
+                    <label style="display:block; margin-bottom:5px; font-weight:600;">Quantity (Kg):</label>
                     <input type="number" step="0.01" name="quantity_kg" class="form-control" required min="0.01" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #d1d5db;">
                 </div>
 
                 <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                    <button type="button" class="btn btn-secondary" onclick="closeMakroModal()" style="background-color: #e5e7eb; border: none; padding: 10px 15px; border-radius: 6px; color: #374151; font-weight: bold; cursor: pointer;">Cancelar</button>
-                    <button type="submit" class="btn btn-primary" style="background-color: #10b981; border: none; padding: 10px 15px; border-radius: 6px; color: white; font-weight: bold; cursor: pointer;">Confirmar Compra</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeMakroModal()" style="background-color: #e5e7eb; border: none; padding: 10px 15px; border-radius: 6px; color: #374151; font-weight: bold; cursor: pointer;">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="background-color: #10b981; border: none; padding: 10px 15px; border-radius: 6px; color: white; font-weight: bold; cursor: pointer;">Confirm Purchase</button>
                 </div>
             </form>
         </div>
@@ -3688,29 +3898,29 @@
             <span class="close" onclick="closeContractModal()"
                 style="color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
 
-            <h2 style="margin-top: 0; display: flex; align-items: center; gap: 8px;">📜 Novo Contrato de Fornecimento</h2>
-            <p style="color: #6b7280; font-size: 0.9em; margin-bottom: 20px;">Crie um compromisso de fornecimento futuro. Na data planeada (Dia X), o sistema colherá e entregará o lote automaticamente no seu armazém.</p>
+            <h2 style="margin-top: 0; display: flex; align-items: center; gap: 8px;">📜 New Supply Contract</h2>
+            <p style="color: #6b7280; font-size: 0.9em; margin-bottom: 20px;">Create a future supply commitment. On the planned date (Day X), the system will harvest and deliver the batch automatically to your warehouse.</p>
 
             <form method="POST" action="{% url 'create_supply_contract' %}">
                 {% csrf_token %}
                 <div style="margin-bottom: 15px;">
-                    <label style="display:block; margin-bottom:5px; font-weight:600;">Fornecedor Contratado:</label>
+                    <label style="display:block; margin-bottom:5px; font-weight:600;">Contracted Supplier:</label>
                     <input type="text" name="producer_name" class="form-control" placeholder="Ex: Leclerc, Carrefour..." required style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #d1d5db;">
                 </div>
 
                 <div style="margin-bottom: 15px;">
-                    <label style="display:block; margin-bottom:5px; font-weight:600;">Destinatário (Armazém):</label>
+                    <label style="display:block; margin-bottom:5px; font-weight:600;">Recipient (Warehouse):</label>
                     <select name="warehouse_id" class="form-control" required style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #d1d5db;">
                         {% for w in processor_warehouses %}
                             <option value="{{ w.pk }}">{{ w.location }} (WH: {{ w.warehouse_id }})</option>
                         {% empty %}
-                            <option value="">Sem armazéns registados</option>
+                            <option value="">No registered warehouses</option>
                         {% endfor %}
                     </select>
                 </div>
 
                 <div style="margin-bottom: 15px;">
-                    <label style="display:block; margin-bottom:5px; font-weight:600;">Cultura (Produto):</label>
+                    <label style="display:block; margin-bottom:5px; font-weight:600;">Culture (Product):</label>
                     <select name="culture_id" class="form-control" required style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #d1d5db;">
                         {% for sub in product_subfamilies %}
                             <option value="{{ sub.subfamily_id }}">{{ sub.name }} ({{ sub.fruit_type }})</option>
@@ -3719,18 +3929,18 @@
                 </div>
 
                 <div style="margin-bottom: 15px;">
-                    <label style="display:block; margin-bottom:5px; font-weight:600;">Quantidade (Kg):</label>
+                    <label style="display:block; margin-bottom:5px; font-weight:600;">Quantity (Kg):</label>
                     <input type="number" step="0.01" name="quantity_kg" class="form-control" required min="0.01" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #d1d5db;">
                 </div>
 
                 <div style="margin-bottom: 20px;">
-                    <label style="display:block; margin-bottom:5px; font-weight:600;">Data de Entrega Planeada (Dia X):</label>
+                    <label style="display:block; margin-bottom:5px; font-weight:600;">Planned Delivery Date (Day X):</label>
                     <input type="date" name="delivery_date" class="form-control" required style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #d1d5db;">
                 </div>
 
                 <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                    <button type="button" class="btn btn-secondary" onclick="closeContractModal()" style="background-color: #e5e7eb; border: none; padding: 10px 15px; border-radius: 6px; color: #374151; font-weight: bold; cursor: pointer;">Cancelar</button>
-                    <button type="submit" class="btn btn-primary" style="background-color: #3b82f6; border: none; padding: 10px 15px; border-radius: 6px; color: white; font-weight: bold; cursor: pointer;">Celebrar Contrato</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeContractModal()" style="background-color: #e5e7eb; border: none; padding: 10px 15px; border-radius: 6px; color: #374151; font-weight: bold; cursor: pointer;">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="background-color: #3b82f6; border: none; padding: 10px 15px; border-radius: 6px; color: white; font-weight: bold; cursor: pointer;">Sign Contract</button>
                 </div>
             </form>
         </div>
@@ -3765,7 +3975,7 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success') {
-                        // Atualizar textos
+                        // Update texts
                         document.getElementById('lc-rsl-value').textContent = data.rsl_days;
                         document.getElementById('lc-score-value').textContent = data.initial_score.toFixed(1);
                         document.getElementById('lc-brix-value').textContent = typeof data.brix === 'number' ? data.brix.toFixed(1) + 'º' : data.brix;
@@ -3774,7 +3984,7 @@
                         document.getElementById('lc-hum-value').textContent = data.hum_today.toFixed(1);
                         document.getElementById('lc-eth-value').textContent = data.eth_today.toFixed(3);
 
-                        // Desenhar gráfico
+                        // Draw chart
                         drawLcDecayChart(data.decay_curve);
                     } else {
                         alert('Erro ao carregar dados do ciclo de vida: ' + data.message);
@@ -3801,7 +4011,7 @@
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Qualidade Prevista (%)',
+                        label: 'Predicted Quality (%)',
                         data: qualityData,
                         borderColor: '#00796b',
                         backgroundColor: 'rgba(0, 121, 107, 0.1)',
@@ -3821,14 +4031,14 @@
                             max: 100,
                             title: {
                                 display: true,
-                                text: 'Qualidade (%)',
+                                text: 'Quality (%)',
                                 font: { weight: 'bold' }
                             }
                         },
                         x: {
                             title: {
                                 display: true,
-                                text: 'Data',
+                                text: 'Date',
                                 font: { weight: 'bold' }
                             }
                         }
@@ -3839,10 +4049,10 @@
                                 label: function(context) {
                                     const point = curve[context.dataIndex];
                                     return [
-                                        `Qualidade: ${point.quality}%`,
+                                        `Quality: ${point.quality}%`,
                                         `Temp: ${point.temperature.toFixed(1)} ºC`,
-                                        `Humidade: ${point.humidity.toFixed(1)}%`,
-                                        `Etileno: ${point.ethylene.toFixed(3)} ppm`
+                                        `Humidity: ${point.humidity.toFixed(1)}%`,
+                                        `Ethylene: ${point.ethylene.toFixed(3)} ppm`
                                     ];
                                 }
                             }
