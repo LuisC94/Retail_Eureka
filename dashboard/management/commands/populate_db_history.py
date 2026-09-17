@@ -12,9 +12,7 @@ from dashboard.models import (
     SoilCorrectiveData, PestControlData, MachineryData, FuelData, ElectricEnergyData, IrrigationWaterData,
     ConsolidatedStock
 )
-from blockchain.models import BlockchainBlock
-from blockchain.services import blockchain_service
-from blockchain.utils import create_genesis_dossier
+
 
 class Command(BaseCommand):
     help = "Limpa dados transacionais e popula a base de dados com 3 anos de histórico de sensores e transações."
@@ -113,7 +111,6 @@ class Command(BaseCommand):
                     TRUNCATE TABLE 
                         marketplace_orders, 
                         harvest_records, 
-                        blockchain_blocks, 
                         warehouse_sensor_readings, 
                         plantation_crops, 
                         plantation_events, 
@@ -296,16 +293,7 @@ class Command(BaseCommand):
                         plantation=plantation
                     )
                     
-                    # Registar bloco GENESIS na blockchain
-                    dossier = create_genesis_dossier(harvest)
-                    data_hash = blockchain_service.generate_dossier_hash(dossier)
-                    blockchain_service.sign_and_submit_block(
-                        user_role='Producer',
-                        batch_id=f"LOTE-{harvest.pk}",
-                        data_hash=data_hash,
-                        event_type="Genesis",
-                        data_payload=dossier
-                    )
+
                     
                     # 8.2 Compra pelo Processador com registo de Transporte e Bloco de Transporte
                     order_date = current_sim_date + datetime.timedelta(days=1)
@@ -337,27 +325,7 @@ class Command(BaseCommand):
                         ])
                     )
                     
-                    # Bloco de Transporte (Supplier Purchase)
-                    dossier_transport1 = {
-                        "event": "Supplier_Purchase_Transport",
-                        "order_id": order_proc.pk,
-                        "from_warehouse": wh_prod.location,
-                        "to_warehouse": wh_proc.location,
-                        "transporter": "Transportes",
-                        "planned_pickup": order_proc.planned_pickup_date.isoformat(),
-                        "planned_delivery": order_proc.planned_delivery_date.isoformat(),
-                        "actual_pickup": order_proc.actual_pickup_date.isoformat(),
-                        "actual_delivery": order_proc.actual_delivery_date.isoformat(),
-                        "sensor_summary": "Transit environment verified (T ~ 4.9 C, RH ~ 88.5 %)",
-                        "date": order_date.isoformat()
-                    }
-                    blockchain_service.sign_and_submit_block(
-                        user_role='Transporter',
-                        batch_id=f"LOTE-{harvest.pk}",
-                        data_hash=blockchain_service.generate_dossier_hash(dossier_transport1),
-                        event_type="Supplier_Purchase_Transport",
-                        data_payload=dossier_transport1
-                    )
+
                     
                     # 8.3 Processador processa o produto
                     process_date = current_sim_date + datetime.timedelta(days=2)
@@ -366,22 +334,7 @@ class Command(BaseCommand):
                     order_proc.preservation_treatment = 'Natural'
                     order_proc.save()
                     
-                    dossier_processing = {
-                        "event": "Batch_Processing",
-                        "order_id": order_proc.pk,
-                        "processor": proc_name,
-                        "packaging": "Cardboard",
-                        "treatment": "Natural",
-                        "date": process_date.isoformat()
-                    }
-                    blockchain_service.sign_and_submit_block(
-                        user_role='Processor',
-                        batch_id=f"LOTE-{harvest.pk}",
-                        data_hash=blockchain_service.generate_dossier_hash(dossier_processing),
-                        event_type="Batch_Processing",
-                        inputs=[f"LOTE-{harvest.pk}"],
-                        data_payload=dossier_processing
-                    )
+
                     
                     # 8.4 RetailStore compra o lote processado (MarketplaceOrder BUY)
                     retail_date = current_sim_date + datetime.timedelta(days=3)
@@ -416,27 +369,7 @@ class Command(BaseCommand):
                         preservation_treatment='Natural'
                     )
                     
-                    # Bloco de Transporte (Retail Purchase)
-                    dossier_transport2 = {
-                        "event": "Retail_Purchase_Transport",
-                        "order_id": order_retail.pk,
-                        "from_warehouse": wh_proc.location,
-                        "to_warehouse": warehouses['RetailStore'].location,
-                        "transporter": "Transportes",
-                        "planned_pickup": order_retail.planned_pickup_date.isoformat(),
-                        "planned_delivery": order_retail.planned_delivery_date.isoformat(),
-                        "actual_pickup": order_retail.actual_pickup_date.isoformat(),
-                        "actual_delivery": order_retail.actual_delivery_date.isoformat(),
-                        "sensor_summary": "Transit environment verified (T ~ 5.3 C, RH ~ 85.8 %)",
-                        "date": retail_date.isoformat()
-                    }
-                    blockchain_service.sign_and_submit_block(
-                        user_role='Transporter',
-                        batch_id=f"LOTE-{harvest.pk}",
-                        data_hash=blockchain_service.generate_dossier_hash(dossier_transport2),
-                        event_type="Retail_Purchase_Transport",
-                        data_payload=dossier_transport2
-                    )
+
 
                     # 8.5 Vendas diárias com sazonalidade e ruído para os 8 Consumidores
                     remaining_qty = harvest_qty

@@ -89,6 +89,7 @@ urlpatterns = [
     path('ai/toggle-buyer-agent/', views.toggle_buyer_agent_status, name='toggle_buyer_agent_status'),
     path('ai/run-buyer-agent/', views.run_buyer_agent_action, name='run_buyer_agent_action'),
     path('api/lc-decay-data/', views.get_lc_decay_data, name='get_lc_decay_data'),
+    path('api/lot-lifecycle-json/<int:lot_id>/', views.download_lot_lifecycle_json, name='download_lot_lifecycle_json'),
     
     path('accounts/register/', views.RegisterView.as_view(), name='register'),
     path('accounts/logout/', auth_views.LogoutView.as_view(), name='logout'),

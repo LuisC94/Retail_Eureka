@@ -5,10 +5,13 @@ import numpy as np
 import pandas as pd
 from django.conf import settings
 
-# Adicionar a pasta BuyerAgent ao sys.path dinamicamente para resolver imports relativos de agent.*
-buyer_agent_path = os.path.join(settings.BASE_DIR, 'BuyerAgent')
-if buyer_agent_path not in sys.path:
-    sys.path.append(buyer_agent_path)
+# Apontar para o motor do Web Service do Buyer Agent
+buyer_service_path = os.path.join(settings.BASE_DIR, 'Web Services', 'buyer_agent_service')
+if buyer_service_path not in sys.path:
+    sys.path.append(buyer_service_path)
+
+from engine.environment_constrained import StockEnvironment
+from engine.ppo_agent import ParallelPPOAgent
 
 # Hiperparâmetros de Fine-Tuning leves para CPU
 ONLINE_LR_ACTOR = 1e-5
@@ -77,35 +80,21 @@ def run_buyer_agent_simulation(product_sku, max_capacity=500, update_interval_da
     Compara o Lucro Acumulado do PPO Agent vs baseline Min-Max vs Oráculo Perfeito (God Mode)
     e aplica ciclos de Fine-Tuning (treino dinâmico online) a cada N dias de forma dinâmica.
     """
-    # Ensure BuyerAgent path takes precedence in sys.path
-    if buyer_agent_path in sys.path:
-        sys.path.remove(buyer_agent_path)
-    sys.path.insert(0, buyer_agent_path)
-    
-    # Force reload of agent packages to avoid collision with StockManagement
-    import sys as sys_module
-    for mod in ['agent.ppo_agent', 'agent.actor_critic', 'agent']:
-        if mod in sys_module.modules:
-            del sys_module.modules[mod]
-            
-    from environment_constrained import StockEnvironment
-    from agent.ppo_agent import ParallelPPOAgent
-
     # 1. Definir caminho do dataset excel
     excel_name = f"m5_foods_{product_sku}.xlsx"
     if product_sku == "911753":
         excel_name = "911753_151dias_com_real.xlsx"
-    excel_path = os.path.join(buyer_agent_path, 'datasets', excel_name)
+    excel_path = os.path.join(buyer_service_path, 'datasets', excel_name)
     if not os.path.exists(excel_path):
-        excel_path = os.path.join(buyer_agent_path, 'datasets', 'm5_foods_3_080.xlsx')
+        excel_path = os.path.join(buyer_service_path, 'datasets', 'm5_foods_3_080.xlsx')
 
     # 2. Inicializar os ambientes
-    env_test = StockEnvironment(excel_path=excel_path, is_training=False, train_split=0.6, max_capacity=max_capacity)
-    env_minmax = StockEnvironment(excel_path=excel_path, is_training=False, train_split=0.6, max_capacity=max_capacity)
+    env_test = StockEnvironment(data=excel_path, is_training=False, train_split=0.6, max_capacity=max_capacity)
+    env_minmax = StockEnvironment(data=excel_path, is_training=False, train_split=0.6, max_capacity=max_capacity)
     env_minmax.max_order_limit = float('inf') # Sem limite de encomenda para Min-Max
-    env_oracle = StockEnvironment(excel_path=excel_path, is_training=False, train_split=0.6, max_capacity=max_capacity)
+    env_oracle = StockEnvironment(data=excel_path, is_training=False, train_split=0.6, max_capacity=max_capacity)
     env_oracle.max_order_limit = float('inf') # Sem limite de encomenda para o Oráculo
-    env_train = StockEnvironment(excel_path=excel_path, is_training=True, train_split=0.6, max_capacity=max_capacity)
+    env_train = StockEnvironment(data=excel_path, is_training=True, train_split=0.6, max_capacity=max_capacity)
 
     # 3. Instanciar o Agente
     state_dim = 17
@@ -123,7 +112,7 @@ def run_buyer_agent_simulation(product_sku, max_capacity=500, update_interval_da
 
     # 4. Carregar os pesos pré-treinados
     sku_dir = "3_080" if product_sku not in ["3_080", "3_090", "3_252", "3_586"] else product_sku
-    checkpoint_dir = os.path.join(buyer_agent_path, 'modelos_producao_constrained', sku_dir)
+    checkpoint_dir = os.path.join(buyer_service_path, 'pretrained_benchmarks', sku_dir)
     checkpoint_path = os.path.join(checkpoint_dir, 'ppo_constrained_iter313')
 
     # Carregar actor e critic

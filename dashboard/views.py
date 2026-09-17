@@ -24,8 +24,8 @@ from .models import (
     MachineryData, FuelData, ElectricEnergyData, IrrigationWaterData, MarketplaceOrder,
     ConsolidatedStock, TrainedModel, Vehicle, Route, StoreProcessorAssociation
 )
-from blockchain.services import blockchain_service
-from blockchain.utils import create_genesis_dossier
+from dashboard.utils import create_genesis_dossier
+from dashboard.services.fabric_service import fabric_service
 
 from .forms import (
     UserRegisterForm, ProductRegistrationForm, PlantationPlanForm, PlantationDetailForm,
@@ -984,38 +984,23 @@ def producer_submit_harvest(request):
                 
                 harvest_record.save()
                 
-                # --- AUTO-GENESIS BLOCK ---
-                # Criar o dossier e submeter o Bloco #0 automaticamente
+                # --- AUTO-GENESIS BLOCK (Hyperledger Fabric) ---
                 try:
                     dossier = create_genesis_dossier(harvest_record)
-                    data_hash = blockchain_service.generate_dossier_hash(dossier)
-                    
-                    # 1. Simulação Local na BD (PostgreSQL)
-                    result = blockchain_service.sign_and_submit_block(
-                        user_role='Producer',
-                        batch_id=dossier['batch_id'],
-                        data_hash=data_hash,
-                        event_type='GENESIS',
-                        data_payload=dossier  # Pass full dossier content
+                    fabric_res = fabric_service.create_order(
+                        order_id=dossier['batch_id'],
+                        producer_id=harvest_record.producer.username,
+                        culture_type=harvest_record.plantation.production_type if harvest_record.plantation else "N/A",
+                        quantity=float(harvest_record.harvest_quantity_kg),
+                        harvest_date=harvest_record.harvest_date.strftime("%Y-%m-%d"),
+                        additional_data=dossier
                     )
-                    
-                    # 2. Blockchain Real (Hyperledger Fabric)
-                    try:
-                        from dashboard.services.fabric_service import fabric_service
-                        fabric_service.create_order(
-                            order_id=dossier['batch_id'],
-                            producer_id=harvest_record.producer.username,
-                            culture_type=harvest_record.plantation.production_type if harvest_record.plantation else "N/A",
-                            quantity=float(harvest_record.harvest_quantity_kg),
-                            harvest_date=harvest_record.harvest_date.strftime("%Y-%m-%d"),
-                            additional_data=dossier
-                        )
-                        messages.success(request, f"Colheita registada e submetida na Blockchain Real! Hash: {result['tx_hash'][:10]}...")
-                    except Exception as fe:
-                        messages.warning(request, f"Colheita registada localmente, mas erro ao gravar na Blockchain Real: {fe}")
+                    if fabric_res.get('status') == 'success':
+                        messages.success(request, "Colheita registada e submetida na Blockchain Real (Hyperledger Fabric)!")
+                    else:
+                        messages.warning(request, f"Colheita salva, mas aviso da Blockchain: {fabric_res.get('message')}")
                 except Exception as e:
-                    # Se falhar a blockchain, não invalida a colheita, mas avisa
-                    messages.warning(request, f"Colheita salva, mas erro ao gerar Bloco Blockchain: {e}")
+                    messages.warning(request, f"Colheita salva, mas erro ao comunicar com a Blockchain: {e}")
 
                 return redirect('producer_dashboard')
                 
@@ -1199,31 +1184,18 @@ def processor_submit_processing(request):
                     "output_quantity": float(order.quantity_kg) # Assumindo 1:1 para simplificação
                 }
                 
-                # 5. Minar o Bloco de Transformação
-                data_hash = blockchain_service.generate_dossier_hash(data_dict)
-                
-                blockchain_service.sign_and_submit_block(
-                    user_role='Processor',
-                    batch_id=new_batch_id,
-                    data_hash=data_hash,
-                    event_type='TRANSFORMATION',
-                    inputs=inputs, # <--- AQUI ESTÁ A AGREGAÇÃO
-                    data_payload=data_dict  # Pass full business data
-                )
-                
-                # 6. Blockchain Real (Hyperledger Fabric)
+                # Registo na Blockchain Real (Hyperledger Fabric)
                 try:
                     if order.harvest_origin:
-                        from dashboard.services.fabric_service import fabric_service
                         fabric_service.update_order(
-                            order_id=f"HARVEST-{order.harvest_origin.pk}",
+                            order_id=f"LOTE-{order.harvest_origin.pk}",
                             new_status="PROCESSED",
                             additional_data=data_dict
                         )
                 except Exception as fe:
                     print(f"Erro ao atualizar na Blockchain Real: {fe}")
                 
-                messages.success(request, f"Processamento registado e Bloco '{new_batch_id}' minado!")
+                messages.success(request, f"Processamento registado com sucesso para o Lote #{new_batch_id}!")
                 
             except Exception as e:
                 print(f"Erro na Blockchain: {e}")
@@ -1984,17 +1956,8 @@ def transporter_route_pickup(request):
                     "planned_pickup": order.planned_pickup_date.isoformat() if order.planned_pickup_date else "N/A",
                     "harvest_origin": order.harvest_origin.pk if order.harvest_origin else "N/A"
                 }
-                data_hash = blockchain_service.generate_dossier_hash(dossier)
-                blockchain_service.sign_and_submit_block(
-                    user_role='Transporter',
-                    batch_id=f"ORDER-{order.pk}",
-                    data_hash=data_hash,
-                    event_type='TRANSPORT_PICKUP',
-                    data_payload=dossier
-                )
                 try:
                     if order.harvest_origin:
-                        from dashboard.services.fabric_service import fabric_service
                         fabric_service.update_order(
                             order_id=f"LOTE-{order.harvest_origin.pk}",
                             new_status="IN_TRANSIT",
@@ -2049,17 +2012,8 @@ def transporter_route_delivery(request):
                     "sensor_data": sensor_data,
                     "harvest_origin": order.harvest_origin.pk if order.harvest_origin else "N/A"
                 }
-                data_hash = blockchain_service.generate_dossier_hash(dossier)
-                blockchain_service.sign_and_submit_block(
-                    user_role='Transporter',
-                    batch_id=f"ORDER-{order.pk}",
-                    data_hash=data_hash,
-                    event_type='TRANSPORT_DELIVERY',
-                    data_payload=dossier
-                )
                 try:
                     if order.harvest_origin:
-                        from dashboard.services.fabric_service import fabric_service
                         fabric_service.update_order(
                             order_id=f"LOTE-{order.harvest_origin.pk}",
                             new_status="DELIVERED",
@@ -2226,20 +2180,9 @@ def transporter_validate_pickup(request):
             "harvest_origin": order.harvest_origin.pk if order.harvest_origin else "N/A"
         }
         
-        data_hash = blockchain_service.generate_dossier_hash(dossier)
-        
-        blockchain_service.sign_and_submit_block(
-            user_role='Transporter',
-            batch_id=f"ORDER-{order.pk}",
-            data_hash=data_hash,
-            event_type='TRANSPORT_PICKUP',
-            data_payload=dossier  # Pass full dossier content
-        )
-        
         # Real Blockchain Call (Hyperledger Fabric)
         try:
             if order.harvest_origin:
-                from dashboard.services.fabric_service import fabric_service
                 fabric_service.update_order(
                     order_id=f"LOTE-{order.harvest_origin.pk}",
                     new_status="IN_TRANSIT",
@@ -2248,7 +2191,7 @@ def transporter_validate_pickup(request):
         except Exception as fe:
             print(f"Erro ao atualizar na Blockchain Real: {fe}")
         
-        messages.success(request, f"Carga validada! Bloco de Custódia gerado para Encomenda #{order.pk}.")
+        messages.success(request, f"Carga validada e estado atualizado na Blockchain para Encomenda #{order.pk}.")
         
     return redirect('transporter_dashboard')
 
@@ -2284,49 +2227,25 @@ def transporter_submit_delivery(request):
                     harvest = order.harvest_origin
                     harvest.delivered_quantity_kg = (harvest.delivered_quantity_kg or 0) + order.quantity_kg
                     harvest.save()
-        except Exception as e:
-            messages.error(request, f"Erro ao processar entrega: {e}")
-            return redirect('transporter_dashboard')
-            
-            # 2. Blockchain Event (Proof of Delivery + Sensors)
+
+            # 3. Real Blockchain Call (Hyperledger Fabric)
             dossier = {
                 "action": "TRANSPORT_DELIVERY",
                 "order_id": order.pk,
                 "transporter": request.user.username,
                 "delivery_time": order.actual_delivery_date.isoformat(),
                 "sensor_data": order.transport_sensor_data or "No Data",
-                # LINK CRÍTICO (REFORÇO NA ENTREGA)
                 "harvest_origin": order.harvest_origin.pk if order.harvest_origin else "N/A"
             }
-            
-            data_hash = blockchain_service.generate_dossier_hash(dossier)
-            
-            try:
-                result = blockchain_service.sign_and_submit_block(
-                    user_role='Transporter',
-                    batch_id=f"ORDER-{order.pk}",
-                    data_hash=data_hash,
-                    event_type='TRANSPORT_DELIVERY',
-                    data_payload=dossier  # Pass full dossier content
+            if order.harvest_origin:
+                fabric_service.update_order(
+                    order_id=f"LOTE-{order.harvest_origin.pk}",
+                    new_status="DELIVERED",
+                    additional_data=dossier
                 )
-                
-                # Real Blockchain Call (Hyperledger Fabric)
-                try:
-                    if order.harvest_origin:
-                        from dashboard.services.fabric_service import fabric_service
-                        fabric_service.update_order(
-                            order_id=f"LOTE-{order.harvest_origin.pk}",
-                            new_status="DELIVERED",
-                            additional_data=dossier
-                        )
-                except Exception as fe:
-                    print(f"Erro ao atualizar na Blockchain Real: {fe}")
-                    
-                messages.success(request, f"Entrega registada com sucesso! Bloco Final gerado. Hash: {result['tx_hash'][:10]}...")
-            except Exception as e:
-                messages.error(request, f"Erro Blockchain: {e}")
-        else:
-            messages.error(request, "Erro ao registar entrega.")
+            messages.success(request, "Entrega registada e atualizada na Blockchain Real com sucesso!")
+        except Exception as e:
+            messages.error(request, f"Erro ao processar entrega: {e}")
             
     return redirect('transporter_dashboard')
 
@@ -2437,27 +2356,13 @@ def get_agent_recommendations(request):
         # Obter os modelos de Buyer Agent treinados por este utilizador
         trained_models = TrainedModel.objects.filter(
             owner=request.user,
-            model_type='buyer_agent',
-            file_name='buyer_agent_actor.pth'
+            model_type='buyer_agent'
         ).select_related('culture')
         
         # Se não houver nenhum modelo treinado, não mostramos recomendações ainda
         if not trained_models.exists():
             return JsonResponse({'status': 'success', 'data': []})
             
-        # Adicionar o path do BuyerAgent com prioridade máxima e limpar cache do sys.modules
-        buyer_agent_path = os.path.join(settings.BASE_DIR, 'BuyerAgent')
-        if buyer_agent_path in sys.path:
-            sys.path.remove(buyer_agent_path)
-        sys.path.insert(0, buyer_agent_path)
-        
-        import sys as sys_module
-        for mod in ['agent.ppo_agent', 'agent.actor_critic', 'agent']:
-            if mod in sys_module.modules:
-                del sys_module.modules[mod]
-                
-        from environment_constrained import StockEnvironment
-        from agent.ppo_agent import ParallelPPOAgent
         from dashboard.services.agent_service import compute_daily_agent_decision
         from dashboard.services.lc_service import calculate_quality_decay_curve
 
@@ -2910,10 +2815,10 @@ def import_sensor_readings(request, warehouse_id):
         hum_col = next((c for c in df.columns if c in ['humidade', 'humidity', 'hum']), None)
         eth_col = next((c for c in df.columns if c in ['etileno', 'ethylene', 'eth']), None)
         
-        if not date_col or not temp_col or not hum_col or not eth_col:
+        if not date_col or not temp_col or not hum_col:
             messages.error(
                 request, 
-                "Colunas em falta no ficheiro. Garanta que contém as colunas: 'Data', 'Temperatura', 'Humidade' e 'Etileno'."
+                "Colunas em falta no ficheiro. Garanta que contém pelo menos as colunas: 'Data', 'Temperatura' e 'Humidade' (a coluna 'Etileno' é opcional)."
             )
             return redirect(request.META.get('HTTP_REFERER', 'admin_dashboard'))
             
@@ -2930,7 +2835,12 @@ def import_sensor_readings(request, warehouse_id):
                 
                 temp_val = float(row[temp_col]) if not pd.isna(row[temp_col]) else 0.0
                 hum_val = float(row[hum_col]) if not pd.isna(row[hum_col]) else 0.0
-                eth_val = float(row[eth_col]) if not pd.isna(row[eth_col]) else 0.0
+                eth_val = None
+                if eth_col and not pd.isna(row[eth_col]):
+                    try:
+                        eth_val = float(row[eth_col])
+                    except (ValueError, TypeError):
+                        eth_val = None
                 
                 WarehouseSensorReading.objects.update_or_create(
                     warehouse=warehouse,
@@ -3494,36 +3404,17 @@ def adjust_stock_manually(request):
                     
                     # --- SUBMETER À BLOCKCHAIN NO AJUSTE MANUAL ---
                     try:
-                        from blockchain.utils import create_genesis_dossier
-                        from blockchain.services import blockchain_service
-                        
                         dossier = create_genesis_dossier(new_harvest)
-                        data_hash = blockchain_service.generate_dossier_hash(dossier)
-                        
-                        # 1. Simulação Local na BD (PostgreSQL)
-                        blockchain_service.sign_and_submit_block(
-                            user_role='Producer',
-                            batch_id=dossier['batch_id'],
-                            data_hash=data_hash,
-                            event_type='GENESIS',
-                            data_payload=dossier
+                        fabric_service.create_order(
+                            order_id=dossier['batch_id'],
+                            producer_id=new_harvest.producer.username,
+                            culture_type="N/A",
+                            quantity=float(new_harvest.harvest_quantity_kg),
+                            harvest_date=new_harvest.harvest_date.strftime("%Y-%m-%d"),
+                            additional_data=dossier
                         )
-                        
-                        # 2. Blockchain Real (Hyperledger Fabric)
-                        try:
-                            from dashboard.services.fabric_service import fabric_service
-                            fabric_service.create_order(
-                                order_id=dossier['batch_id'],
-                                producer_id=new_harvest.producer.username,
-                                culture_type="N/A",
-                                quantity=float(new_harvest.harvest_quantity_kg),
-                                harvest_date=new_harvest.harvest_date.strftime("%Y-%m-%d"),
-                                additional_data=dossier
-                            )
-                        except Exception:
-                            pass
-                    except Exception:
-                        pass
+                    except Exception as fe:
+                        print(f"Erro ao submeter ajuste à Blockchain Real: {fe}")
             else:
                 # Apagamos todos os lotes manuais
                 Harvest.objects.filter(
@@ -4040,4 +3931,447 @@ def get_lc_decay_data(request):
         'hum_today': hum_today,
         'eth_today': eth_today,
         'decay_curve': decay_curve
-    })
+    })
+
+
+def build_lot_lifecycle_data(lot_id=None, stock_id=None, user=None):
+    """
+    Constrói o payload JSON padronizado e integral de um lote desde a colheita até ao dia atual,
+    incluindo eventos de blockchain, leituras diárias de sensores do armazém e regras de imputação meteorológica.
+    """
+    import datetime
+    import json
+    import logging
+    from django.db import models
+    from dashboard.services.fabric_service import fabric_service
+    from dashboard.models import Harvest, ConsolidatedStock, Warehouse, WarehouseSensorReading, MarketplaceOrder, PlantationEvent
+
+    logger = logging.getLogger(__name__)
+
+    today = datetime.date.today()
+    harvest = None
+    stock = None
+
+    if lot_id:
+        harvest = Harvest.objects.filter(pk=lot_id).select_related('plantation', 'subfamily', 'warehouse', 'producer').first()
+        if not harvest and not stock_id:
+            stock = ConsolidatedStock.objects.filter(pk=lot_id).select_related('culture', 'owner').first()
+    
+    if stock_id and not harvest and not stock:
+        stock = ConsolidatedStock.objects.filter(pk=stock_id).select_related('culture', 'owner').first()
+
+    if not harvest and not stock:
+        return None
+
+    # Se for colheita direta do produtor
+    if harvest:
+        lot_pk = harvest.pk
+        batch_id = f"LOTE-{harvest.pk}"
+        culture_name = harvest.subfamily.name if harvest.subfamily else "Desconhecida"
+        fruit_type = harvest.subfamily.fruit_type if harvest.subfamily else "N/A"
+        producer_name = harvest.producer.username if harvest.producer else "N/A"
+        owner_name = harvest.producer.username if harvest.producer else "N/A"
+        harvest_date = harvest.harvest_date
+        days_elapsed = max(0, (today - harvest_date).days)
+        initial_qty = float(harvest.harvest_quantity_kg)
+        current_qty = float(harvest.current_stock_kg)
+        delivered_qty = float(harvest.delivered_quantity_kg or 0.0)
+        
+        initial_metrics = {
+            "firmness_n": float(harvest.firmness) if hasattr(harvest, 'firmness') and harvest.firmness is not None else None,
+            "soluble_solids_brix": float(harvest.soluble_solids) if harvest.soluble_solids is not None else None,
+            "acidity_percent": float(harvest.acidity) if hasattr(harvest, 'acidity') and harvest.acidity is not None else None,
+            "caliber_mm": float(harvest.caliber) if harvest.caliber is not None else None,
+            "quality_score": float(harvest.avg_quality_score) if harvest.avg_quality_score is not None else 10.0,
+            "waste_kg": float(harvest.utilized_quantity_kg or 0.0),
+            "expiration_date": harvest.expiration_date.strftime("%Y-%m-%d") if harvest.expiration_date else None
+        }
+
+        # Armazém
+        warehouse = harvest.warehouse or Warehouse.objects.filter(owner=harvest.producer).first()
+
+        # Plantação
+        plantation = harvest.plantation
+        plantation_info = {
+            "plantation_id": plantation.pk if plantation else None,
+            "name": plantation.plantation_name if plantation else "N/A",
+            "location": plantation.location if plantation else "N/A",
+            "production_type": plantation.get_production_type_display() if plantation else "N/A",
+            "chemical_use": plantation.get_chemical_use_display() if plantation else "N/A",
+            "soil_type": plantation.get_soil_type_display() if plantation else "N/A",
+            "water_regime": plantation.get_water_regime_display() if plantation else "N/A",
+            "conduct_system": plantation.get_conduct_system_display() if plantation else "N/A",
+            "ph_soil": float(plantation.ph_soil) if plantation and plantation.ph_soil else None,
+            "organic_matter_percent": float(plantation.organic_matter_percent) if plantation and plantation.organic_matter_percent else None,
+        }
+
+        # Eventos agrícolas
+        plantation_events = []
+        if plantation:
+            for ev in plantation.events.all().order_by('event_date'):
+                plantation_events.append({
+                    "event_id": ev.pk,
+                    "date": ev.event_date.strftime("%Y-%m-%d"),
+                    "type": ev.get_event_type_display(),
+                    "notes": ev.notes or ""
+                })
+
+        # Ordens de transporte associadas
+        orders = list(MarketplaceOrder.objects.filter(harvest_origin=harvest).order_by('created_at'))
+
+    else: # ConsolidatedStock (Processor ou Retailer)
+        lot_pk = stock.pk
+        batch_id = f"STOCK-{stock.pk}"
+        culture_name = stock.culture.name if stock.culture else "Desconhecida"
+        fruit_type = stock.culture.fruit_type if stock.culture else "N/A"
+        owner_name = stock.owner.username if stock.owner else "N/A"
+        
+        clean_location = stock.warehouse_location.split(' (WH:')[0].strip() if stock.warehouse_location and ' (WH:' in stock.warehouse_location else stock.warehouse_location
+        warehouse = Warehouse.objects.filter(owner=stock.owner, location=clean_location).first() or Warehouse.objects.filter(owner=stock.owner).first()
+
+        orders = list(MarketplaceOrder.objects.filter(
+            culture=stock.culture,
+            warehouse_location=stock.warehouse_location
+        ).filter(
+            models.Q(requester=stock.owner) | models.Q(fulfilled_by=stock.owner)
+        ).order_by('created_at'))
+
+        earliest_harvest = None
+        producer_name = "Vários/Agregado"
+        for o in orders:
+            if o.harvest_origin:
+                producer_name = o.harvest_origin.producer.username
+                if not earliest_harvest or o.harvest_origin.harvest_date < earliest_harvest:
+                    earliest_harvest = o.harvest_origin.harvest_date
+        
+        harvest_date = earliest_harvest if earliest_harvest else (today - datetime.timedelta(days=10))
+        days_elapsed = max(0, (today - harvest_date).days)
+        initial_qty = float(stock.quantity)
+        current_qty = float(stock.quantity)
+        delivered_qty = 0.0
+
+        initial_metrics = {
+            "soluble_solids_brix": float(stock.avg_soluble_solids) if stock.avg_soluble_solids is not None else None,
+            "caliber_mm": float(stock.avg_caliber) if stock.avg_caliber is not None else None,
+            "quality_score": float(stock.avg_quality_score) if stock.avg_quality_score is not None else 10.0,
+            "waste_kg": 0.0,
+            "expiration_date": None
+        }
+        plantation_info = {"note": "Lote consolidado em armazém a jusante"}
+        plantation_events = []
+
+    # Informação e Estratégia Meteorológica do Armazém
+    if warehouse:
+        meteo_source = warehouse.meteo_source or 'FIXED'
+        json_fallback = warehouse.json_fallback_mode or 'FIXED'
+        fixed_t = float(warehouse.fixed_temperature if warehouse.fixed_temperature is not None else 4.0)
+        fixed_h = float(warehouse.fixed_humidity if warehouse.fixed_humidity is not None else 90.0)
+        wh_region = warehouse.region or 'PT-LVT'
+
+        warehouse_info = {
+            "id": warehouse.warehouse_id,
+            "location": warehouse.location,
+            "region": warehouse.region,
+            "region_display": warehouse.get_region_display(),
+            "control_type": warehouse.control_type,
+            "storage_unit": warehouse.storage_unit,
+            "capacity_kg": float(warehouse.capacity) if warehouse.capacity else None,
+            "latitude": float(warehouse.latitude) if warehouse.latitude else None,
+            "longitude": float(warehouse.longitude) if warehouse.longitude else None,
+            "has_installed_sensors": warehouse.sensors.exists(),
+        }
+    else:
+        meteo_source = 'FIXED'
+        json_fallback = 'FIXED'
+        fixed_t = 4.0
+        fixed_h = 90.0
+        wh_region = 'PT-LVT'
+        warehouse_info = {
+            "id": None,
+            "location": "Não atribuído",
+            "region": "PT-LVT",
+            "control_type": "Controlled",
+            "storage_unit": "PALLETS"
+        }
+
+    # Instruções de Imputação Meteorológica para o Web Service
+    if meteo_source == 'FIXED':
+        imputation_desc = f"Valores Fixos configurados: Temperatura constante a {fixed_t}°C e Humidade Relativa a {fixed_h}%."
+    elif meteo_source == 'IPMA':
+        imputation_desc = f"Fonte Meteorológica IPMA Regional ({wh_region}): Utilizar médias climáticas regionais sazonais do IPMA para o período."
+    elif meteo_source == 'JSON':
+        if json_fallback == 'FIXED':
+            imputation_desc = f"Fonte Primária: Ficheiro JSON de Sensores. Em caso de ausência de leituras ou falhas de datas, preencher (fallback) com Valores Fixos ({fixed_t}°C, {fixed_h}% RH)."
+        elif json_fallback == 'IPMA':
+            imputation_desc = f"Fonte Primária: Ficheiro JSON de Sensores. Em caso de ausência de leituras ou falhas de datas, preencher (fallback) com IPMA Regional ({wh_region})."
+        else:
+            imputation_desc = "Fonte Primária: Ficheiro JSON de Sensores sem preenchimento de falhas."
+    else:
+        imputation_desc = f"Valores padrão ({fixed_t}°C, {fixed_h}% RH)."
+
+    meteorology_strategy = {
+        "meteo_source": meteo_source,
+        "meteo_source_display": dict(Warehouse.METEO_SOURCE_CHOICES).get(meteo_source, meteo_source) if hasattr(Warehouse, 'METEO_SOURCE_CHOICES') else meteo_source,
+        "json_fallback_mode": json_fallback,
+        "json_fallback_display": dict(Warehouse.JSON_FALLBACK_CHOICES).get(json_fallback, json_fallback) if hasattr(Warehouse, 'JSON_FALLBACK_CHOICES') else json_fallback,
+        "fixed_temperature_celsius": fixed_t,
+        "fixed_humidity_percent": fixed_h,
+        "ipma_region_code": wh_region,
+        "imputation_instructions": imputation_desc
+    }
+
+    # Extrair Eventos da Blockchain Real (Hyperledger Fabric)
+    blockchain_events = []
+    try:
+        fabric_history = fabric_service.get_asset_history(batch_id)
+        if isinstance(fabric_history, list) and fabric_history:
+            for idx, h in enumerate(fabric_history):
+                val_data = h.get('value', {})
+                if isinstance(val_data, str):
+                    try:
+                        val_data = json.loads(val_data)
+                    except Exception:
+                        pass
+                blockchain_events.append({
+                    "tx_id": h.get('txId', f"tx-{idx}"),
+                    "timestamp": h.get('timestamp'),
+                    "is_delete": h.get('isDelete', False),
+                    "order_status": val_data.get('orderStatus') if isinstance(val_data, dict) else None,
+                    "data": val_data
+                })
+        else:
+            current_order = fabric_service.get_order(batch_id, caller_id=user.username if user else None)
+            if current_order:
+                blockchain_events.append({
+                    "tx_id": "current_state",
+                    "order_status": current_order.get('orderStatus'),
+                    "data": current_order
+                })
+    except Exception as e:
+        logger.warning(f"Could not retrieve blockchain history for {batch_id}: {e}")
+
+    # Histórico de Transporte e Logística
+    logistics_history = []
+    for o in orders:
+        logistics_history.append({
+            "order_id": o.pk,
+            "order_type": o.order_type,
+            "requester": o.requester.username if o.requester else None,
+            "fulfilled_by": o.fulfilled_by.username if o.fulfilled_by else None,
+            "status": o.status,
+            "transport_status": o.transport_status,
+            "transporter": o.transporter.username if hasattr(o, 'transporter') and o.transporter else None,
+            "vehicle": str(o.vehicle) if hasattr(o, 'vehicle') and o.vehicle else None,
+            "pickup_date": o.actual_pickup_date.isoformat() if o.actual_pickup_date else (o.planned_pickup_date.isoformat() if o.planned_pickup_date else None),
+            "delivery_date": o.actual_delivery_date.isoformat() if o.actual_delivery_date else (o.planned_delivery_date.isoformat() if o.planned_delivery_date else None),
+            "origin_warehouse": o.warehouse_location,
+            "destination_warehouse": o.destination_warehouse.location if hasattr(o, 'destination_warehouse') and o.destination_warehouse else o.warehouse_location,
+            "quantity_kg": float(o.quantity_kg) if o.quantity_kg else 0.0,
+            "transport_sensor_data": o.transport_sensor_data or "No sensor data recorded during transport"
+        })
+
+    # Construir Linha Temporal Cronológica de Armazéns sem Sobreposição
+    timeline_segments = []
+    
+    if harvest:
+        current_wh = harvest.warehouse or warehouse
+        current_start = harvest_date
+        
+        # Apenas ordens que foram efetivamente entregues transferem o fruto fisicamente para o próximo armazém
+        delivered_orders = [
+            o for o in orders 
+            if o.transport_status == 'DELIVERED' or (o.actual_delivery_date and o.actual_delivery_date.date() <= today)
+        ]
+        
+        if delivered_orders:
+            for o in delivered_orders:
+                dep_dt = o.actual_pickup_date or o.planned_pickup_date or o.created_at
+                dep_date = max(current_start, min(today, dep_dt.date()))
+                
+                arr_dt = o.actual_delivery_date or o.planned_delivery_date or o.fulfilled_at or dep_dt
+                arr_date = max(dep_date, min(today, arr_dt.date()))
+                
+                # Segmento no armazém de origem até à data de saída
+                if current_wh and dep_date >= current_start:
+                    timeline_segments.append({
+                        "warehouse": current_wh,
+                        "start_date": current_start,
+                        "end_date": dep_date
+                    })
+                
+                # O armazém de destino inicia após a saída/chegada (evitando duplicar o dia de transição)
+                dest_wh = o.destination_warehouse
+                current_wh = dest_wh
+                current_start = dep_date + datetime.timedelta(days=1) if arr_date <= dep_date else arr_date
+            
+            # Segmento final no último armazém até ao dia de hoje
+            if current_wh and current_start <= today:
+                timeline_segments.append({
+                    "warehouse": current_wh,
+                    "start_date": current_start,
+                    "end_date": today
+                })
+        else:
+            # Lote manteve-se no armazém de origem durante todo o período
+            if current_wh:
+                timeline_segments.append({
+                    "warehouse": current_wh,
+                    "start_date": harvest_date,
+                    "end_date": today
+                })
+                
+    else: # ConsolidatedStock (Processor ou Retailer)
+        stock_wh = warehouse
+        inbound_order = orders[0] if orders else None
+        
+        if inbound_order:
+            dep_dt = inbound_order.actual_pickup_date or inbound_order.planned_pickup_date or inbound_order.created_at
+            dep_date = max(harvest_date, min(today, dep_dt.date()))
+            
+            arr_dt = inbound_order.actual_delivery_date or inbound_order.planned_delivery_date or inbound_order.fulfilled_at or dep_dt
+            arr_date = max(dep_date, min(today, arr_dt.date()))
+            
+            orig_wh = getattr(inbound_order.harvest_origin, 'warehouse', None) if inbound_order.harvest_origin else None
+            
+            # Segmento no produtor de origem
+            if orig_wh and dep_date >= harvest_date:
+                timeline_segments.append({
+                    "warehouse": orig_wh,
+                    "start_date": harvest_date,
+                    "end_date": dep_date
+                })
+                
+            # Segmento no armazém atual do stock
+            stock_start = dep_date + datetime.timedelta(days=1) if arr_date <= dep_date else arr_date
+            if stock_wh and stock_start <= today:
+                timeline_segments.append({
+                    "warehouse": stock_wh,
+                    "start_date": stock_start,
+                    "end_date": today
+                })
+        else:
+            if stock_wh:
+                timeline_segments.append({
+                    "warehouse": stock_wh,
+                    "start_date": harvest_date,
+                    "end_date": today
+                })
+
+    # Extrair Leituras de Sensores para cada Segmento Cronológico
+    sensor_history_by_warehouse = []
+    has_any_real_ethylene = False
+
+    for seg in timeline_segments:
+        wh = seg["warehouse"]
+        seg_start = seg["start_date"]
+        seg_end = seg["end_date"]
+        
+        if not wh or seg_start > seg_end:
+            continue
+
+        if wh.sensor_readings.count() < 30:
+            try:
+                from dashboard.services.lc_service import generate_fallback_sensor_readings
+                generate_fallback_sensor_readings(wh)
+            except Exception:
+                pass
+
+        readings_qs = WarehouseSensorReading.objects.filter(
+            warehouse=wh,
+            date__gte=seg_start,
+            date__lte=seg_end
+        ).order_by('date')
+
+        daily_readings = []
+        wh_source = wh.meteo_source or 'FIXED'
+        for r in readings_qs:
+            eth_ppm = float(r.ethylene) if (wh_source == 'JSON' and r.ethylene is not None) else None
+            if eth_ppm is not None:
+                has_any_real_ethylene = True
+
+            daily_readings.append({
+                "date": r.date.strftime("%Y-%m-%d"),
+                "temperature_celsius": float(r.temperature),
+                "humidity_percent": float(r.humidity),
+                "ethylene_ppm": eth_ppm,
+                "source": "SENSOR_RECORDING" if wh_source == 'JSON' else ("IPMA_REGIONAL" if wh_source == 'IPMA' else "FIXED_PRESET")
+            })
+
+        sensor_history_by_warehouse.append({
+            "warehouse_id": wh.warehouse_id,
+            "warehouse_location": wh.location,
+            "region": wh.region,
+            "meteo_source": wh_source,
+            "period": {
+                "start_date": seg_start.strftime("%Y-%m-%d"),
+                "end_date": seg_end.strftime("%Y-%m-%d"),
+                "total_days": len(daily_readings)
+            },
+            "total_days_recorded": len(daily_readings),
+            "daily_readings": daily_readings
+        })
+
+    # Atualizar estratégia meteorológica com flag de sensor de etileno
+    meteorology_strategy["has_ethylene_sensor"] = has_any_real_ethylene
+
+    # Payload Final Completo
+    payload = {
+        "version": "1.0",
+        "export_metadata": {
+            "generated_at": datetime.datetime.now().isoformat(),
+            "target_service": "Lifecycle Decay Prediction Model Web Service",
+            "days_elapsed_total": days_elapsed,
+            "date_interval": {
+                "start_date": harvest_date.strftime("%Y-%m-%d"),
+                "end_date": today.strftime("%Y-%m-%d")
+            }
+        },
+        "lot_identification": {
+            "lot_id": lot_pk,
+            "batch_id": batch_id,
+            "culture_name": culture_name,
+            "fruit_type": fruit_type,
+            "producer": producer_name,
+            "current_owner": owner_name,
+            "harvest_date": harvest_date.strftime("%Y-%m-%d"),
+            "initial_quantity_kg": initial_qty,
+            "current_stock_kg": current_qty,
+            "delivered_quantity_kg": delivered_qty,
+            "initial_metrics": initial_metrics
+        },
+        "plantation_origin": plantation_info,
+        "plantation_agricultural_events": plantation_events,
+        "current_warehouse": warehouse_info,
+        "meteorology_and_imputation_strategy": meteorology_strategy,
+        "blockchain_ledger": {
+            "total_blocks_count": len(blockchain_events),
+            "blocks": blockchain_events
+        },
+        "transport_and_logistics": logistics_history,
+        "sensor_history_by_warehouse": sensor_history_by_warehouse
+    }
+
+    return payload
+
+
+@login_required
+def download_lot_lifecycle_json(request, lot_id):
+    """
+    Endpoint para exportar e descarregar o ficheiro JSON de ciclo de vida completo de um lote
+    com rastreabilidade Blockchain e Meteorologia.
+    """
+    import json
+    from django.http import HttpResponse, Http404
+
+    stock_id = request.GET.get('stock_id')
+    payload = build_lot_lifecycle_data(lot_id=lot_id, stock_id=stock_id, user=request.user)
+
+    if not payload:
+        raise Http404(f"Lote #{lot_id} não encontrado.")
+
+    response_data = json.dumps(payload, indent=2, ensure_ascii=False)
+    filename = f"lote_{lot_id}_lifecycle_data.json"
+    
+    response = HttpResponse(response_data, content_type="application/json; charset=utf-8")
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response

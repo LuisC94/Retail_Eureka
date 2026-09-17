@@ -252,12 +252,7 @@ class PlantationEventForm(forms.ModelForm):
 
 # --- 3. Formulário de Colheita (Registar Colheita) ---
 class HarvestForm(forms.ModelForm):
-    
-    # 2 -> Dropdown para selecionar "Plantation ID - Product Name"
-    # Este campo será filtrado na view para mostrar apenas planos ATIVOS do produtor.
-    # O queryset inicial é irrelevante, mas o ModelChoiceField é necessário.
     plantation = forms.ModelChoiceField(
-        # Será filtrado em views.py
         queryset=PlantationPlan.objects.all(), 
         label='Plantation',
         empty_label="--- Select Plantation ---",
@@ -267,9 +262,9 @@ class HarvestForm(forms.ModelForm):
     
     subfamily = forms.ModelChoiceField(
         queryset=ProductSubFamily.objects.all(),
-        label='Cultures',
+        label='Culture (Subfamily)',
         empty_label="--- Select Culture ---",
-        required=True, # Obrigatório
+        required=True,
         widget=forms.Select(attrs={'class': 'form-control', 'id': 'harvest_subfamily_select'})
     )
     
@@ -277,15 +272,51 @@ class HarvestForm(forms.ModelForm):
         required=False,
         initial=0.0,
         label='Waste (Kg)',
-        widget=forms.NumberInput(attrs={'class': 'form-control'})
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0.0'})
     )
     
-    avg_quality_score = forms.ChoiceField(
-        choices=QUALITY_SCORE_CHOICES,
+    firmness = forms.DecimalField(
         required=False,
-        initial=10,
-        label='Average Quality Score (1-10)',
-        widget=forms.Select(attrs={'class': 'form-control'})
+        label='Firmeza (N / kg/cm²)',
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control quality-input',
+            'step': '0.1',
+            'id': 'id_harvest_firmness',
+            'placeholder': 'Ex: 35.0 (N)'
+        })
+    )
+    
+    soluble_solids = forms.DecimalField(
+        required=False,
+        label='Teor de Açúcar / Brix (°Bx)',
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control quality-input',
+            'step': '0.1',
+            'id': 'id_harvest_brix',
+            'placeholder': 'Ex: 14.5 (°Bx)'
+        })
+    )
+    
+    acidity = forms.DecimalField(
+        required=False,
+        label='Acidez (g/L / %)',
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control quality-input',
+            'step': '0.01',
+            'id': 'id_harvest_acidity',
+            'placeholder': 'Ex: 0.45 (g/L)'
+        })
+    )
+    
+    caliber = forms.DecimalField(
+        required=False,
+        label='Calibre (mm)',
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.1',
+            'id': 'id_harvest_caliber',
+            'placeholder': 'Ex: 75.0 (mm)'
+        })
     )
 
     def clean_utilized_quantity_kg(self):
@@ -294,36 +325,42 @@ class HarvestForm(forms.ModelForm):
             return 0.0
         return val
 
-    def clean_avg_quality_score(self):
-        val = self.cleaned_data.get('avg_quality_score')
-        if val is None or val == '':
-            return 10
-        return int(val)
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        subfamily = self.cleaned_data.get('subfamily')
+        firmness = self.cleaned_data.get('firmness')
+        brix = self.cleaned_data.get('soluble_solids')
+        acidity = self.cleaned_data.get('acidity')
+        culture_name = subfamily.name if subfamily else ""
+        
+        from dashboard.services.lc_service import calculate_harvest_quality
+        quality_100 = calculate_harvest_quality(culture_name, firmness, brix, acidity)
+        # Escala 0.0 a 10.0
+        instance.avg_quality_score = round(quality_100 / 10.0, 2)
+        
+        if commit:
+            instance.save()
+        return instance
 
     class Meta:
         model = Harvest
-        # Campos a serem exibidos no formulário (o harvest_id é automático)
         fields = [
             'plantation', 
             'subfamily',
             'harvest_date', 
             'harvest_quantity_kg', 
-            'avg_quality_score', 
             'utilized_quantity_kg',
-            'caliber',
+            'firmness',
             'soluble_solids',
+            'acidity',
+            'caliber',
             'warehouse'
         ]
         widgets = {
-            # 3 -> Data de Colheita
             'harvest_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-            'plantation': forms.Select(attrs={'class': 'form-control', 'id': 'harvest_plantation_select'}), # ID para JS
-            'subfamily': forms.Select(attrs={'class': 'form-control', 'id': 'harvest_subfamily_select'}), # ID para JS
-            'harvest_quantity_kg': forms.NumberInput(attrs={'class': 'form-control'}),
-            'avg_quality_score': forms.Select(attrs={'class': 'form-control'}),
-            'utilized_quantity_kg': forms.NumberInput(attrs={'class': 'form-control'}),
-            'caliber': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'mm'}),
-            'soluble_solids': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Brix'}),
+            'plantation': forms.Select(attrs={'class': 'form-control', 'id': 'harvest_plantation_select'}),
+            'subfamily': forms.Select(attrs={'class': 'form-control', 'id': 'harvest_subfamily_select'}),
+            'harvest_quantity_kg': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ex: 500.0'}),
             'warehouse': forms.Select(attrs={'class': 'form-control'}),
         }
 
@@ -345,19 +382,26 @@ class WarehouseRegistrationForm(forms.ModelForm):
     
     class Meta:
         model = Warehouse
-        fields = ['location', 'region', 'control_type', 'storage_unit', 'max_vehicle_access', 'capacity', 'sensors', 'latitude', 'longitude']
+        fields = [
+            'location', 'region', 'control_type', 'storage_unit', 'max_vehicle_access', 
+            'capacity', 'sensors', 'latitude', 'longitude',
+            'meteo_source', 'json_fallback_mode', 'fixed_temperature', 'fixed_humidity'
+        ]
         
-        # Usar CheckboxSelectMultiple para facilitar a seleção de múltiplos sensores
         widgets = {
-            'location': forms.TextInput(attrs={'class': 'form-control'}),
+            'location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Armazém Central Lisboa'}),
             'region': forms.Select(attrs={'class': 'form-control'}),
             'control_type': forms.Select(attrs={'class': 'form-control'}),
             'storage_unit': forms.Select(attrs={'class': 'form-control'}),
             'max_vehicle_access': forms.Select(attrs={'class': 'form-control'}),
-            'capacity': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
-            'sensors': forms.CheckboxSelectMultiple(), # Renderiza checkboxes em vez de um seletor simples
+            'capacity': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'placeholder': 'Capacidade em Kg'}),
+            'sensors': forms.CheckboxSelectMultiple(),
             'latitude': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.000001', 'placeholder': 'Ex: 38.7223 (Opcional)'}),
             'longitude': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.000001', 'placeholder': 'Ex: -9.1393 (Opcional)'}),
+            'meteo_source': forms.Select(attrs={'class': 'form-control', 'id': 'id_meteo_source'}),
+            'json_fallback_mode': forms.Select(attrs={'class': 'form-control', 'id': 'id_json_fallback_mode'}),
+            'fixed_temperature': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1', 'placeholder': 'Ex: 4.0'}),
+            'fixed_humidity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1', 'placeholder': 'Ex: 90.0'}),
         }
 
     def clean(self):

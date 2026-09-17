@@ -1,6 +1,0 @@
-@NotificationManagement_HostAddress = http://localhost:5029
-
-GET {{NotificationManagement_HostAddress}}/NotificationManagement/
-Accept: application/json
-
-###

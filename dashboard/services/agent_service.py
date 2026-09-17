@@ -12,15 +12,7 @@ from django.db.models import Sum, Avg, Max
 from django.contrib.auth.models import User
 from dashboard.models import ProductSubFamily, HistoricalSalesData, DemandForecast, MarketplaceOrder, ConsolidatedStock, Warehouse, TrainedModel
 from sklearn.neural_network import MLPRegressor
-import sys
-import os
 
-# Adicionar o diretório BuyerAgent ao path para resolver importações internas do agente de reforço
-buyer_agent_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'BuyerAgent')
-if buyer_agent_dir not in sys.path:
-    sys.path.insert(0, buyer_agent_dir)
-
-from BuyerAgent.agent.ppo_agent import ParallelPPOAgent
 
 def get_user_stock_profile(user, subfamily):
     """
@@ -242,75 +234,62 @@ def get_buyer_agent_state(user, subfamily, max_capacity=500):
     final_state = np.concatenate([scaled_via1, via2_bypass])
     return final_state
 
+import requests
+from django.conf import settings
+
+FORECAST_SERVICE_URL = getattr(settings, 'FORECAST_SERVICE_URL', 'http://127.0.0.1:8001')
+BUYER_SERVICE_URL = getattr(settings, 'BUYER_SERVICE_URL', 'http://127.0.0.1:8002')
+
 def train_sales_forecaster(user, subfamily, df_data, model_type='mlp'):
     """
-    Treina a rede neuronal (MLP ou Autoformer) com base no DataFrame e guarda o modelo.
+    Envia os dados históricos para o Forecast Web Service treinar e guardar o modelo.
     """
-    # 1. Ordenar por data
     df_data = df_data.sort_values(by='date').reset_index(drop=True)
     
     if len(df_data) < 10:
         raise ValueError("São necessários pelo menos 10 dias de histórico para treinar o modelo de vendas.")
         
-    if model_type == 'autoformer':
-        # Importar a função de treino padrão do módulo Autoformer
-        from BuyerAgent.autoformer_forecaster import train_model as train_autoformer_model
+    sales_history = []
+    for _, row in df_data.iterrows():
+        dt_val = row['date']
+        dt_str = dt_val.strftime('%Y-%m-%d') if hasattr(dt_val, 'strftime') else str(dt_val)
+        sales_history.append({
+            "date": dt_str,
+            "sales_quantity_kg": float(row['sales_quantity_kg']),
+            "price_per_kg": float(row.get('price_per_kg', 2.0) or 2.0)
+        })
         
-        # Treinar o Autoformer (retorna bytes)
-        binary_data = train_autoformer_model(df_data)
-        
-        # Guardar na BD como sales_autoformer
-        TrainedModel.objects.update_or_create(
-            owner=user,
-            culture=subfamily,
-            model_type='sales_autoformer',
-            file_name='autoformer.pt',
-            defaults={'file_data': binary_data}
-        )
-        # Limpar modelo concorrente MLP anterior para evitar conflito
-        TrainedModel.objects.filter(owner=user, culture=subfamily, model_type='sales_mlp').delete()
-        
-    else:
-        # 2. Criar Lags e Variáveis Cíclicas para a MLP
-        df_data['day_of_week'] = df_data['date'].apply(lambda x: x.weekday() + 1)
-        df_data['month'] = df_data['date'].apply(lambda x: x.month)
-        
-        df_data['real_value_lag1'] = df_data['sales_quantity_kg'].shift(1)
-        df_data['real_value_lag7'] = df_data['sales_quantity_kg'].shift(7)
-        
-        # Limpar NaNs
-        df_data_mlp = df_data.dropna().reset_index(drop=True)
-        
-        if len(df_data_mlp) < 3:
-            raise ValueError("Histórico insuficiente após aplicação de lags temporais (mínimo 8 dias no total).")
-            
-        X = df_data_mlp[['real_value_lag1', 'real_value_lag7', 'price_per_kg', 'day_of_week', 'month']].values
-        y = df_data_mlp['sales_quantity_kg'].values
-        
-        # 3. Treinar MLP com 3 camadas ocultas
-        mlp = MLPRegressor(hidden_layer_sizes=(64, 32, 16), max_iter=10000, random_state=42)
-        mlp.fit(X, y)
-        
-        # 4. Guardar na Base de Dados (BLOB) como sales_mlp
-        buffer = io.BytesIO()
-        joblib.dump(mlp, buffer)
-        binary_data = buffer.getvalue()
-        
-        TrainedModel.objects.update_or_create(
-            owner=user,
-            culture=subfamily,
-            model_type='sales_mlp',
-            file_name='sales_mlp.joblib',
-            defaults={'file_data': binary_data}
-        )
-        # Limpar modelo concorrente Autoformer anterior para evitar conflito
-        TrainedModel.objects.filter(owner=user, culture=subfamily, model_type='sales_autoformer').delete()
+    payload = {
+        "user_id": user.id,
+        "culture_id": subfamily.pk,
+        "model_type": model_type.lower(),
+        "sales_history": sales_history
+    }
     
-    # Persistir também os dados no histórico de vendas da BD
+    try:
+        resp = requests.post(f"{FORECAST_SERVICE_URL}/api/forecast/train", json=payload, timeout=90)
+        if resp.status_code != 200:
+            error_detail = resp.json().get('detail', resp.text) if resp.headers.get('content-type') == 'application/json' else resp.text
+            raise RuntimeError(f"Erro no Forecast Web Service: {error_detail}")
+    except requests.exceptions.ConnectionError:
+        raise ConnectionError(f"Não foi possível contactar o Forecast Web Service em {FORECAST_SERVICE_URL}. Verifique se o serviço está ativo.")
+
+    # Guardar marcador na base de dados local indicando que o modelo existe no Web Service
+    TrainedModel.objects.update_or_create(
+        owner=user,
+        culture=subfamily,
+        model_type=f'sales_{model_type}',
+        file_name=f'culture_{subfamily.pk}_{model_type}',
+        defaults={'file_data': b'web_service_remote_model'}
+    )
+    
+    # Limpar modelo alternativo anterior para manter coerência local
+    alt_model = 'sales_autoformer' if model_type == 'mlp' else 'sales_mlp'
+    TrainedModel.objects.filter(owner=user, culture=subfamily, model_type=alt_model).delete()
+    
+    # Persistir também os dados no histórico de vendas da BD local
     with transaction.atomic():
-        # Limpar histórico anterior desta cultura para este user
         HistoricalSalesData.objects.filter(owner=user, culture=subfamily).delete()
-        
         objs = []
         for idx, row in df_data.iterrows():
             objs.append(HistoricalSalesData(
@@ -326,87 +305,49 @@ def train_sales_forecaster(user, subfamily, df_data, model_type='mlp'):
 
 def run_sales_inference(user, subfamily, horizon_days=30):
     """
-    Executa a inferência autoregressiva (MLP ou Autoformer) e grava previsões na BD.
+    Pede ao Forecast Web Service a previsão recursiva para os próximos N dias e persiste na BD local.
     """
-    # 1. Verificar se existe o modelo do Autoformer
-    model_record = TrainedModel.objects.filter(
-        owner=user,
-        culture=subfamily,
-        model_type='sales_autoformer',
-        file_name='autoformer.pt'
-    ).first()
+    last_sales = list(HistoricalSalesData.objects.filter(owner=user, culture=subfamily).order_by('-date')[:30])
+    if len(last_sales) < 7:
+        raise ValueError("É necessário ter pelo menos 7 dias de histórico real guardado para iniciar as previsões.")
+        
+    running_history = [float(x.sales_quantity_kg) for x in reversed(last_sales)]
+    avg_price = float(HistoricalSalesData.objects.filter(owner=user, culture=subfamily).aggregate(avg=Avg('price_per_kg'))['avg'] or 2.0)
     
+    # Detetar preferência de modelo treinada
+    has_autoformer = TrainedModel.objects.filter(owner=user, culture=subfamily, model_type='sales_autoformer').exists()
+    model_type = 'autoformer' if has_autoformer else 'mlp'
+    
+    start_date_str = timezone.now().date().strftime('%Y-%m-%d')
+    
+    payload = {
+        "user_id": user.id,
+        "culture_id": subfamily.pk,
+        "model_type": model_type,
+        "horizon_days": horizon_days,
+        "start_date": start_date_str,
+        "recent_sales_lags": running_history,
+        "avg_price": avg_price
+    }
+    
+    try:
+        resp = requests.post(f"{FORECAST_SERVICE_URL}/api/forecast/predict", json=payload, timeout=30)
+        if resp.status_code != 200:
+            error_detail = resp.json().get('detail', resp.text) if resp.headers.get('content-type') == 'application/json' else resp.text
+            raise RuntimeError(f"Erro no Forecast Web Service: {error_detail}")
+        data = resp.json()
+    except requests.exceptions.ConnectionError:
+        raise ConnectionError(f"Não foi possível contactar o Forecast Web Service em {FORECAST_SERVICE_URL}. Verifique se o serviço está ativo.")
+
     predictions = []
-    start_date = timezone.now().date()
-    
-    if model_record:
-        # --- INFERÊNCIA DO AUTOFORMER ---
-        from BuyerAgent.autoformer_forecaster import predict_horizon
+    for item in data.get('predictions', []):
+        dt = datetime.datetime.strptime(item['date'], '%Y-%m-%d').date()
+        val = max(0.0, float(item['predicted_kg']))
+        predictions.append((dt, val))
         
-        # Obter os últimos 30 dias reais para lags (o Autoformer usa lags até 30)
-        last_sales = list(HistoricalSalesData.objects.filter(owner=user, culture=subfamily).order_by('-date')[:30])
-        running_history = [float(x.sales_quantity_kg) for x in reversed(last_sales)]
-        
-        # Garantir tamanho mínimo de 30 com preenchimento (padding)
-        if len(running_history) < 30:
-            pad_size = 30 - len(running_history)
-            if len(running_history) == 0:
-                running_history = [10.0] * 30
-            else:
-                running_history = [running_history[0]] * pad_size + running_history
-                
-        avg_price = float(HistoricalSalesData.objects.filter(owner=user, culture=subfamily).aggregate(avg=Avg('price_per_kg'))['avg'] or 2.0)
-        
-        # Executar previsão do Autoformer
-        preds_list = predict_horizon(model_record.file_data, running_history, avg_price, horizon_days)
-        
-        for step in range(horizon_days):
-            current_date = start_date + datetime.timedelta(days=step)
-            val = max(0.0, float(preds_list[step]))
-            predictions.append((current_date, val))
-            
-    else:
-        # --- INFERÊNCIA DA MLP ---
-        model_record = TrainedModel.objects.filter(
-            owner=user,
-            culture=subfamily,
-            model_type='sales_mlp',
-            file_name='sales_mlp.joblib'
-        ).first()
-        
-        if not model_record:
-            raise FileNotFoundError("Nenhum modelo preditivo de vendas (MLP ou Autoformer) foi treinado para esta cultura.")
-            
-        mlp = joblib.load(io.BytesIO(model_record.file_data))
-        
-        # Obter os últimos 7 dias reais para lags
-        last_sales = list(HistoricalSalesData.objects.filter(owner=user, culture=subfamily).order_by('-date')[:7])
-        if len(last_sales) < 7:
-            raise ValueError("É necessário ter pelo menos 7 dias de histórico real guardado para iniciar as previsões.")
-            
-        running_history = [float(x.sales_quantity_kg) for x in reversed(last_sales)]
-        avg_price = float(HistoricalSalesData.objects.filter(owner=user, culture=subfamily).aggregate(avg=Avg('price_per_kg'))['avg'] or 2.0)
-        
-        for step in range(horizon_days):
-            current_date = start_date + datetime.timedelta(days=step)
-            day_of_week = current_date.weekday() + 1
-            month = current_date.month
-            
-            lag1 = running_history[-1]
-            lag7 = running_history[-7]
-            
-            X_pred = np.array([[lag1, lag7, avg_price, day_of_week, month]])
-            y_pred = float(mlp.predict(X_pred)[0])
-            y_pred = max(0.0, y_pred) # Evitar previsões negativas
-            
-            predictions.append((current_date, y_pred))
-            running_history.append(y_pred)
-        
-    # Gravar as previsões na base de dados
+    # Gravar as previsões recebidas na base de dados local para desenhar nos gráficos
     with transaction.atomic():
-        # Limpar previsões anteriores
         DemandForecast.objects.filter(owner=user, culture=subfamily).delete()
-        
         objs = []
         for dt, val in predictions:
             objs.append(DemandForecast(
@@ -419,252 +360,211 @@ def run_sales_inference(user, subfamily, horizon_days=30):
         
     return predictions
 
-def train_buyer_agent_optimizer_generator(user, subfamily, df_market_data, max_episodes="640"):
+
+def train_buyer_agent_optimizer_generator(user, subfamily, df_market_data, max_episodes="300"):
     """
-    Treina o PPO chamando o script '0_training_constrained.py' como um subprocesso
-    e fazendo yield de cada linha de log em tempo real.
+    Treina a política PPO do Buyer Agent comunicando com o Buyer Agent Web Service via REST.
+    Envia a série histórica com vendas reais e previsões geradas pelo Forecast Service (Opção 1).
     """
-    import subprocess
+    yield f"[Django] A preparar dados de treino para a cultura {subfamily.name}...\n"
     
-    # 1. Salvar os dados de treino num ficheiro Excel temporário dentro de BuyerAgent/Dados
-    buyer_agent_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'BuyerAgent')
-    dados_dir = os.path.join(buyer_agent_dir, 'Dados')
-    os.makedirs(dados_dir, exist_ok=True)
-    
-    temp_filename = f"temp_market_user_{user.id}_cult_{subfamily.pk}.xlsx"
-    temp_excel_path = os.path.join(dados_dir, temp_filename)
-    
-    # Renomear as colunas para o formato esperado pelo ambiente
     df_save = df_market_data.copy()
     rename_dict = {
         'sales_quantity_kg': 'real_value',
-        'price_per_kg': 'price',
-        'date': 'day'
+        'price_per_kg': 'price'
     }
     df_save = df_save.rename(columns=rename_dict)
     
-    # Adicionar colunas default se estiverem em falta
     if 'real_value' not in df_save.columns:
         df_save['real_value'] = 100.0
     if 'price' not in df_save.columns:
         df_save['price'] = 2.0
     if 'volume' not in df_save.columns:
         df_save['volume'] = 0.002
-    if 'prediction' not in df_save.columns:
-        df_save['prediction'] = df_save['real_value'] # Fallback default
         
-        # Tentar carregar o modelo MLP treinado para o utilizador e cultura
-        model_record = TrainedModel.objects.filter(
-            owner=user,
-            culture=subfamily,
-            model_type='sales_mlp',
-            file_name='sales_mlp.joblib'
-        ).first()
-        
-        if model_record:
-            try:
-                import io
-                import joblib
-                mlp = joblib.load(io.BytesIO(model_record.file_data))
-                for i in range(len(df_save)):
-                    if i >= 7:
-                        lag1 = float(df_save.loc[i-1, 'real_value'])
-                        lag7 = float(df_save.loc[i-7, 'real_value'])
-                        price_val = float(df_save.loc[i, 'price'])
-                        dt_val = df_save.loc[i, 'day']
-                        if isinstance(dt_val, str):
-                            dt = pd.to_datetime(dt_val)
-                        else:
-                            dt = dt_val
-                        day_of_week = dt.weekday() + 1
-                        month = dt.month
-                        X_pred = np.array([[lag1, lag7, price_val, day_of_week, month]])
-                        y_pred = max(0.0, float(mlp.predict(X_pred)[0]))
-                        df_save.loc[i, 'prediction'] = y_pred
-            except Exception as e:
-                print(f"[BuyerAgent Training] Falha ao prever historico com MLP: {e}")
-        else:
-            # Tentar Autoformer
-            model_record_auto = TrainedModel.objects.filter(
-                owner=user,
-                culture=subfamily,
-                model_type='sales_autoformer',
-                file_name='autoformer.pt'
-            ).first()
-            if model_record_auto:
-                try:
-                    from BuyerAgent.autoformer_forecaster import predict_horizon
-                    for i in range(len(df_save)):
-                        if i >= 30:
-                            running_history = [float(x) for x in df_save.iloc[i-30:i]['real_value']]
-                            avg_price = float(df_save.iloc[i-30:i]['price'].mean())
-                            preds_list = predict_horizon(model_record_auto.file_data, running_history, avg_price, 1)
-                            df_save.loc[i, 'prediction'] = max(0.0, float(preds_list[0]))
-                except Exception as e:
-                    print(f"[BuyerAgent Training] Falha ao prever historico com Autoformer: {e}")
-        
-    df_save.to_excel(temp_excel_path, index=False)
-    
-    # 2. Configurar variáveis de ambiente para rodar o subprocesso
-    env = os.environ.copy()
-    env["EXCEL_PATH"] = os.path.join('Dados', temp_filename)
-    env["MAX_EPISODES_TOTAL"] = str(max_episodes) 
-    env["SINGLE_SEED"] = "1337"
-    env["NUM_WORKERS"] = os.environ.get("NUM_WORKERS", "4")
-    
-    # 3. Invocar o script 0_training_constrained.py
-    cmd = [sys.executable, '-u', '0_training_constrained.py']
-    
-    yield "[Django] A iniciar subprocesso de treino (0_training_constrained.py)...\n"
-    
-    logs = []
-    try:
-        process = subprocess.Popen(
-            cmd,
-            cwd=buyer_agent_dir,
-            env=env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1
-        )
-        
-        # Capturar o stdout em tempo real
-        for line in process.stdout:
-            clean_line = line.strip()
-            if clean_line:
-                logs.append(clean_line)
-                yield clean_line + "\n"
-                    
-        process.wait()
-    except Exception as run_err:
-        yield f"[ERRO] Falha ao executar 0_training_constrained.py: {run_err}\n"
-        return
-        
-    # 4. Carregar os pesos gerados para a base de dados como BLOB
-    final_actor_path = os.path.join(buyer_agent_dir, 'modelos_producao_constrained', 'ppo_constrained_final_actor.pth')
-    final_critic_path = os.path.join(buyer_agent_dir, 'modelos_producao_constrained', 'ppo_constrained_final_critic.pth')
-    final_scaler_path = os.path.join(buyer_agent_dir, 'modelos_producao_constrained', 'ppo_constrained_final_scaler.pth')
-    
-    if os.path.exists(final_actor_path) and os.path.exists(final_critic_path):
-        with open(final_actor_path, 'rb') as f:
-            actor_data = f.read()
-        TrainedModel.objects.update_or_create(
-            owner=user,
-            culture=subfamily,
-            model_type='buyer_agent',
-            file_name='buyer_agent_actor.pth',
-            defaults={'file_data': actor_data}
-        )
-        
-        with open(final_critic_path, 'rb') as f:
-            critic_data = f.read()
-        TrainedModel.objects.update_or_create(
-            owner=user,
-            culture=subfamily,
-            model_type='buyer_agent',
-            file_name='buyer_agent_critic.pth',
-            defaults={'file_data': critic_data}
-        )
-        
-        if os.path.exists(final_scaler_path):
-            with open(final_scaler_path, 'rb') as f:
-                scaler_data = f.read()
-            TrainedModel.objects.update_or_create(
-                owner=user,
-                culture=subfamily,
-                model_type='buyer_agent',
-                file_name='buyer_agent_scaler.pth',
-                defaults={'file_data': scaler_data}
-            )
-            
-        yield "[Django] [Sucesso] Modelos e pesos PPO carregados para a base de dados com segurança.\n"
-    else:
-        error_msg = "[Django] [ERRO] O script de treino PPO falhou a criar os ficheiros finais de pesos."
-        if logs:
-            error_msg += "\n\nLogs do subprocesso:\n" + "\n".join(logs)
-        yield error_msg + "\n"
-        raise FileNotFoundError(error_msg)
-        
-    # 5. Limpar os ficheiros do disco para manter o servidor limpo
-    try:
-        if os.path.exists(temp_excel_path):
-            os.remove(temp_excel_path)
-        if os.path.exists(final_actor_path):
-            os.remove(final_actor_path)
-        if os.path.exists(final_critic_path):
-            os.remove(final_critic_path)
-        if os.path.exists(final_scaler_path):
-            os.remove(final_scaler_path)
-        final_econ_stat = os.path.join(buyer_agent_dir, 'modelos_producao_constrained', 'ppo_constrained_final_econ_stat.pth')
-        if os.path.exists(final_econ_stat):
-            os.remove(final_econ_stat)
-    except Exception as cleanup_err:
-        yield f"[Django] [Aviso] Falha na limpeza de ficheiros locais: {cleanup_err}\n"
+    # Enriquecimento com previsões da BD ou aproximação local (Opção 1)
+    if 'prediction' not in df_save.columns or df_save['prediction'].isna().all():
+        db_forecasts = {f.date: float(f.predicted_quantity_kg) for f in DemandForecast.objects.filter(owner=user, culture=subfamily)}
+        predictions = []
+        for _, row in df_save.iterrows():
+            d = row['date'] if hasattr(row['date'], 'strftime') else row['date']
+            if d in db_forecasts:
+                predictions.append(db_forecasts[d])
+            else:
+                predictions.append(float(row['real_value']))
+        df_save['prediction'] = predictions
 
-def train_buyer_agent_optimizer(user, subfamily, df_market_data, max_episodes="640"):
+    # Mapeamento do preset biológico da cultura
+    name_lower = subfamily.name.lower()
+    if "gala" in name_lower or "maca" in name_lower or "maçã" in name_lower:
+        fruit_key = "maca_gala"
+    elif "fuji" in name_lower:
+        fruit_key = "maca_fuji"
+    elif "kiwi" in name_lower or "hayward" in name_lower:
+        fruit_key = "kiwi_hayward"
+    elif "golden" in name_lower:
+        fruit_key = "maca_golden"
+    elif "reineta" in name_lower:
+        fruit_key = "maca_reineta"
+    else:
+        fruit_key = "maca_gala"
+        
+    train_records = []
+    for _, row in df_save.iterrows():
+        dt_val = row['date']
+        dt_str = dt_val.strftime('%Y-%m-%d') if hasattr(dt_val, 'strftime') else str(dt_val)
+        train_records.append({
+            "date": dt_str,
+            "real_value": float(row['real_value']),
+            "prediction": float(row['prediction']),
+            "price": float(row.get('price', 2.0) or 2.0),
+            "temperature": float(row.get('temperature', 1.5) or 1.5),
+            "humidity": float(row.get('humidity', 92.0) or 92.0),
+            "ethylene": float(row.get('ethylene', 0.05) or 0.05),
+            "volume": float(row.get('volume', 0.002) or 0.002)
+        })
+        
+    num_episodes = int(max_episodes) if str(max_episodes).isdigit() else 300
+    
+    payload = {
+        "user_id": user.id,
+        "culture_id": subfamily.pk,
+        "fruit_key": fruit_key,
+        "max_capacity": 500.0,
+        "episodes": num_episodes,
+        "train_data": train_records
+    }
+    
+    yield f"[Django] A contactar o Buyer Agent Web Service ({BUYER_SERVICE_URL}/api/buyer/train)...\n"
+    yield f"[Django] A treinar política PPO ({num_episodes} episódios, {len(train_records)} amostras, preset: {fruit_key})...\n"
+    
+    try:
+        resp = requests.post(f"{BUYER_SERVICE_URL}/api/buyer/train", json=payload, timeout=180)
+        if resp.status_code != 200:
+            err = resp.json().get('detail', resp.text) if resp.headers.get('content-type') == 'application/json' else resp.text
+            yield f"[Django] [ERRO] Falha no Buyer Agent Web Service: {err}\n"
+            raise RuntimeError(f"Erro no Buyer Agent Web Service: {err}")
+            
+        data = resp.json()
+        yield f"[Django] [Sucesso] {data.get('message', 'Modelo PPO treinado com sucesso.')}\n"
+        yield f"[Django] Lucro Médio de Simulação: {data.get('avg_profit')} € | Limite Máximo Diário: {data.get('max_order_limit')} Kg\n"
+        
+        # Criar/atualizar marcador de modelo treinado na BD
+        TrainedModel.objects.update_or_create(
+            owner=user,
+            culture=subfamily,
+            model_type='buyer_agent',
+            file_name='buyer_agent_policy',
+            defaults={'file_data': b'web_service_remote_model'}
+        )
+        yield "[Django] Marcador de modelo atualizado na base de dados com sucesso.\n"
+    except requests.exceptions.ConnectionError:
+        err_msg = f"[Django] [ERRO] Não foi possível ligar ao Buyer Agent Web Service em {BUYER_SERVICE_URL}. Verifique se o serviço está ativo."
+        yield err_msg + "\n"
+        raise ConnectionError(err_msg)
+
+
+def train_buyer_agent_optimizer(user, subfamily, df_market_data, max_episodes="300"):
     """
-    Wrapper compatível com testes para consumir o generator de treino PPO e retornar a lista de logs.
+    Wrapper compatível para treinar o Buyer Agent e retornar a lista de logs.
     """
     return list(train_buyer_agent_optimizer_generator(user, subfamily, df_market_data, max_episodes=max_episodes))
 
+
 def compute_daily_agent_decision(user, subfamily, max_capacity=500):
     """
-    Lê o estado atual de 17 variáveis e decide a quantidade ótima a comprar hoje.
+    Gera a recomendação ótima de compra diária contactando o Buyer Agent Web Service (/api/buyer/decide).
     """
-    # 1. Carregar weights: tentar do banco de dados primeiro
-    actor_record = TrainedModel.objects.filter(owner=user, culture=subfamily, model_type='buyer_agent', file_name='buyer_agent_actor.pth').first()
-    critic_record = TrainedModel.objects.filter(owner=user, culture=subfamily, model_type='buyer_agent', file_name='buyer_agent_critic.pth').first()
-    scaler_record = TrainedModel.objects.filter(owner=user, culture=subfamily, model_type='buyer_agent', file_name='buyer_agent_scaler.pth').first()
+    today = timezone.now().date()
     
-    # Determinar max_action (máximo histórico de vendas do utilizador)
-    sales = HistoricalSalesData.objects.filter(owner=user, culture=subfamily)
-    max_demand = float(sales.aggregate(max_val=Max('sales_quantity_kg'))['max_val'] or 150.0)
-    if max_demand <= 0:
-        max_demand = 150.0
-        
-    # Inicializar e carregar agente
-    agent = ParallelPPOAgent(state_dim=17, action_dim=1, max_action=max_demand)
+    # 1. Garantir que existem previsões de procura recentes
+    try:
+        future_forecast_count = DemandForecast.objects.filter(owner=user, culture=subfamily, date__gte=today).count()
+        if future_forecast_count < 2:
+            has_model = TrainedModel.objects.filter(owner=user, culture=subfamily, model_type__in=['sales_mlp', 'sales_autoformer']).exists()
+            if has_model:
+                run_sales_inference(user, subfamily, horizon_days=30)
+    except Exception as e:
+        print(f"[Auto-Refresh Forecast] Erro: {e}")
+
+    # 2. Perfil de stock [G0, G1, G2, G3]
+    stock_profile = get_user_stock_profile(user, subfamily)
     
-    if actor_record and critic_record:
-        agent.policy_actor.load_state_dict(torch.load(io.BytesIO(actor_record.file_data), map_location=agent.device, weights_only=False))
-        agent.policy_critic.load_state_dict(torch.load(io.BytesIO(critic_record.file_data), map_location=agent.device, weights_only=False))
-        agent.policy_old_actor.load_state_dict(agent.policy_actor.state_dict())
-        agent.policy_old_critic.load_state_dict(agent.policy_critic.state_dict())
-        if scaler_record:
-            scaler_state = torch.load(io.BytesIO(scaler_record.file_data), map_location='cpu', weights_only=False)
-            agent.reward_scaler.n = scaler_state['n']
-            agent.reward_scaler.mean = scaler_state['mean']
-            agent.reward_scaler.S = scaler_state['S']
+    # Encomendas em trânsito
+    total_in_transit = float(MarketplaceOrder.objects.filter(
+        requester=user,
+        culture=subfamily,
+        status='APPROVED'
+    ).exclude(transport_status='DELIVERED').aggregate(total=Sum('quantity_kg'))['total'] or 0.0)
+    
+    # Previsão para hoje e amanhã
+    pred_today_obj = DemandForecast.objects.filter(owner=user, culture=subfamily, date=today).first()
+    prediction_today = float(pred_today_obj.predicted_quantity_kg) if pred_today_obj else 10.0
+    
+    tomorrow = today + datetime.timedelta(days=1)
+    pred_tomorrow_obj = DemandForecast.objects.filter(owner=user, culture=subfamily, date=tomorrow).first()
+    prediction_tomorrow = float(pred_tomorrow_obj.predicted_quantity_kg) if pred_tomorrow_obj else prediction_today
+    
+    # Vendas reais passadas (t-1 e t-2)
+    yesterday = today - datetime.timedelta(days=1)
+    t_minus_2 = today - datetime.timedelta(days=2)
+    
+    sale_yesterday = HistoricalSalesData.objects.filter(owner=user, culture=subfamily, date=yesterday).first()
+    real_t_minus_1 = float(sale_yesterday.sales_quantity_kg) if sale_yesterday else prediction_today
+    
+    sale_t_minus_2 = HistoricalSalesData.objects.filter(owner=user, culture=subfamily, date=t_minus_2).first()
+    real_t_minus_2 = float(sale_t_minus_2.sales_quantity_kg) if sale_t_minus_2 else real_t_minus_1
+    
+    # Preço de mercado
+    active_sell_orders = MarketplaceOrder.objects.filter(culture=subfamily, order_type='SELL', status='OPEN')
+    avg_price = active_sell_orders.aggregate(avg=Avg('price_per_kg'))['avg']
+    if avg_price is not None:
+        price_today = float(avg_price)
     else:
-        # Fallback: tentar usar o modelo base do repositório
-        sku_map = {
-            "morango": "3_080",
-            "maca": "3_090",
-            "kiwi": "3_252",
-            "uva": "3_586"
-        }
-        base_sku = "3_252"
-        for k, v in sku_map.items():
-            if k in subfamily.name.lower():
-                base_sku = v
-                break
-        checkpoint_prefix = os.path.join('BuyerAgent', 'modelos_producao_constrained', base_sku, 'ppo_constrained_iter313')
-        
-        if not os.path.exists(checkpoint_prefix + '_actor.pth'):
-            raise FileNotFoundError("Não foi encontrado nenhum modelo treinado ou base do Buyer Agent para esta cultura.")
-        agent.load(checkpoint_prefix)
-        
-    # Construir vetor de estado
-    state = get_buyer_agent_state(user, subfamily, max_capacity=max_capacity)
-    
-    # Correr o Actor para obter a percentagem recomendada
-    state_tensor = torch.FloatTensor(state).unsqueeze(0).to(agent.device)
-    agent.policy_old_actor.eval()
-    with torch.no_grad():
-        action_mean, _ = agent.policy_old_actor(state_tensor)
-        action_percent = float(action_mean.cpu().numpy().flatten()[0])
-        
-    # Calcular quantidade em Kg
-    recommended_qty_kg = round(action_percent * max_demand, 2)
-    return recommended_qty_kg
+        default_price = 2.0
+        name_lower = subfamily.name.lower()
+        if "morango" in name_lower:
+            default_price = 4.5
+        elif any(x in name_lower for x in ["maca", "maçã", "gala", "fuji", "reineta"]):
+            default_price = 1.8
+        elif any(x in name_lower for x in ["kiwi", "hayward"]):
+            default_price = 3.2
+        elif "uva" in name_lower:
+            default_price = 2.5
+        price_today = default_price
+
+    past_sales = HistoricalSalesData.objects.filter(owner=user, culture=subfamily).order_by('-date')[:15]
+    recent_prices = [float(s.price_per_kg or price_today) for s in past_sales] if past_sales.exists() else [price_today] * 15
+
+    # 3. Contactar Buyer Agent Web Service
+    payload = {
+        "user_id": user.id,
+        "culture_id": subfamily.pk,
+        "date": today.isoformat(),
+        "current_stock_profile": stock_profile,
+        "in_transit_kg": total_in_transit,
+        "prediction_today_kg": prediction_today,
+        "prediction_tomorrow_kg": prediction_tomorrow,
+        "recent_sales_lags": [real_t_minus_1, real_t_minus_2],
+        "price_today": price_today,
+        "recent_prices": recent_prices,
+        "max_capacity": float(max_capacity)
+    }
+
+    try:
+        resp = requests.post(f"{BUYER_SERVICE_URL}/api/buyer/decide", json=payload, timeout=30)
+        if resp.status_code == 200:
+            data = resp.json()
+            return float(data.get('recommended_order_kg', 0.0))
+        else:
+            err = resp.json().get('detail', resp.text) if resp.headers.get('content-type') == 'application/json' else resp.text
+            print(f"[Buyer Service Decide Warning] {err}")
+    except Exception as e:
+        print(f"[Buyer Service Connection Error] {e}")
+
+    # Fallback Heurístico DOS-3D caso o serviço não esteja disponível
+    current_available = sum(stock_profile) + total_in_transit
+    demand_need = (prediction_today + prediction_tomorrow) - current_available
+    fallback_qty = max(0.0, min(demand_need, float(max_capacity) - sum(stock_profile)))
+    return round(fallback_qty, 2)
+

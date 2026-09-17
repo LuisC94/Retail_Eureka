@@ -1,0 +1,35 @@
+{
+    "user_id": 1,
+    "culture_id": 3,
+    "fruit_key": "maca_gala",
+    "max_capacity": 500.0,
+    "max_order_limit": 167.9,
+    "scaler_min": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+    ],
+    "scaler_max": [
+        500.0,
+        500.0,
+        500.0,
+        500.0,
+        500.0,
+        251.85000000000002,
+        251.85000000000002,
+        251.85000000000002,
+        251.85000000000002
+    ],
+    "episodes_trained": 64,
+    "training_time_seconds": 22.61,
+    "avg_profit": 198.36,
+    "trained_at": "2026-09-15T16:54:57.813078",
+    "state_dim": 17,
+    "action_dim": 1
+}

@@ -54,7 +54,6 @@ INSTALLED_APPS = [
     'dashboard',
     'rest_framework',
     'django_extensions',
-    'blockchain',
 ]
 
 MIDDLEWARE = [
@@ -156,3 +155,12 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Web Services URLs
+FORECAST_SERVICE_URL = os.getenv('FORECAST_SERVICE_URL', 'http://127.0.0.1:8001')
+BUYER_SERVICE_URL = os.getenv('BUYER_SERVICE_URL', 'http://127.0.0.1:8002')
+LIFECYCLE_SERVICE_URL = os.getenv('LIFECYCLE_SERVICE_URL', 'http://127.0.0.1:8003')
+MARKETPLACE_API_URL = os.getenv('MARKETPLACE_API_URL', 'http://127.0.0.1:8004')
+FABRIC_API_URL = os.getenv('FABRIC_API_URL', 'http://127.0.0.1:3000')
+
+

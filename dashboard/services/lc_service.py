@@ -59,7 +59,83 @@ def get_culture_params(culture_name):
         "default_rsl": 7
     }
 
-def calculate_quality_decay_curve(culture_name, initial_score=10.0, sensor_readings=None):
+
+# ----------------------------------------------------------------------
+# Presets de Qualidade Físico-Química por Subfamília (Colheita)
+# ----------------------------------------------------------------------
+CULTURE_QUALITY_PRESETS = {
+    "gala": {"qual_firm_threshold": 28.0, "qual_brix_target": 14.5, "qual_acidez_target": 0.45},
+    "fuji": {"qual_firm_threshold": 40.0, "qual_brix_target": 16.0, "qual_acidez_target": 0.40},
+    "golden": {"qual_firm_threshold": 35.0, "qual_brix_target": 13.5, "qual_acidez_target": 0.50},
+    "golden delicious": {"qual_firm_threshold": 35.0, "qual_brix_target": 13.5, "qual_acidez_target": 0.50},
+    "reineta": {"qual_firm_threshold": 30.0, "qual_brix_target": 12.5, "qual_acidez_target": 0.65},
+    "granny": {"qual_firm_threshold": 42.0, "qual_brix_target": 12.2, "qual_acidez_target": 0.85},
+    "granny smith": {"qual_firm_threshold": 42.0, "qual_brix_target": 12.2, "qual_acidez_target": 0.85},
+    "hayward": {"qual_firm_threshold": 8.0, "qual_brix_target": 15.0, "qual_acidez_target": 1.20},
+    "green": {"qual_firm_threshold": 8.0, "qual_brix_target": 15.0, "qual_acidez_target": 1.20},
+    "gold": {"qual_firm_threshold": 6.0, "qual_brix_target": 17.0, "qual_acidez_target": 1.00},
+    "red": {"qual_firm_threshold": 6.0, "qual_brix_target": 16.5, "qual_acidez_target": 0.95},
+}
+
+def get_culture_quality_preset(culture_name):
+    """
+    Retorna o dicionário com os coeficientes de qualidade para uma determinada cultura/variedade.
+    """
+    if not culture_name:
+        return {"qual_firm_threshold": 28.0, "qual_brix_target": 14.0, "qual_acidez_target": 0.50}
+    name_lower = str(culture_name).lower()
+    for key, val in CULTURE_QUALITY_PRESETS.items():
+        if key in name_lower:
+            return val
+    if "kiwi" in name_lower:
+        return {"qual_firm_threshold": 8.0, "qual_brix_target": 15.0, "qual_acidez_target": 1.20}
+    return {"qual_firm_threshold": 30.0, "qual_brix_target": 14.0, "qual_acidez_target": 0.50}
+
+def calculate_harvest_quality(culture_name, firmness, brix, acidity):
+    """
+    Calcula a qualidade base de um lote de colheita com base na fórmula biológica:
+    - firm_score = 1 / (1 + exp(-0.35 * (firmeza - qual_firm_threshold)))
+    - brix_score = exp(-((brix - qual_brix_target)**2) / 2)
+    - acidez_score = exp(-((acidez - qual_acidez_target)**2) / 0.5)
+    - target_ratio = qual_brix_target / qual_acidez_target
+    - ratio_score = exp(-(((brix / acidez) - target_ratio)**2) / 25.0)
+    - quality_base = 100 * (0.35 * firm_score + 0.35 * ratio_score + 0.15 * brix_score + 0.15 * acidez_score)
+
+    Retorna a pontuação de qualidade na escala de 0 a 100 (float).
+    """
+    p = get_culture_quality_preset(culture_name)
+    
+    try:
+        firmeza = float(firmness) if firmness is not None and str(firmness).strip() != "" else float(p["qual_firm_threshold"])
+        brix_val = float(brix) if brix is not None and str(brix).strip() != "" else float(p["qual_brix_target"])
+        acidez_val = float(acidity) if acidity is not None and str(acidity).strip() != "" else float(p["qual_acidez_target"])
+        
+        if acidez_val <= 0:
+            acidez_val = 0.01
+            
+        firm_threshold = float(p["qual_firm_threshold"])
+        brix_target = float(p["qual_brix_target"])
+        acidez_target = float(p["qual_acidez_target"])
+        
+        # 1. Firm Score
+        firm_score = 1.0 / (1.0 + math.exp(-0.35 * (firmeza - firm_threshold)))
+        
+        # 2. Brix Score
+        brix_score = math.exp(-((brix_val - brix_target) ** 2) / 2.0)
+        
+        # 3. Acidez Score
+        acidez_score = math.exp(-((acidez_val - acidez_target) ** 2) / 0.5)
+        
+        # 4. Ratio Score
+        target_ratio = brix_target / acidez_target
+        ratio = brix_val / acidez_val
+        ratio_score = math.exp(-((ratio - target_ratio) ** 2) / 25.0)
+        
+        # Qualidade Base (0 - 100)
+        quality_base = 100.0 * (0.35 * firm_score + 0.35 * ratio_score + 0.15 * brix_score + 0.15 * acidez_score)
+        return max(0.0, min(100.0, round(quality_base, 2)))
+    except Exception as e:
+        return 100.0
     """
     Calcula a projeção da curva de degradação da qualidade (% de 0 a 100)
     ao longo dos próximos 15 dias com base nos sensores.
@@ -95,14 +171,15 @@ def calculate_quality_decay_curve(culture_name, initial_score=10.0, sensor_readi
     # Fallbacks padrão de condições do armazém se não houver sensores
     fallback_temp = 4.0
     fallback_humidity = 90.0
-    fallback_ethylene = 0.01
+    fallback_ethylene = None
     
     # Se houver leituras reais de sensores, usar a mais recente (última da lista) como a projeção para o futuro
     if sensor_readings:
         latest = sensor_readings[-1]
         fallback_temp = float(latest.temperature if hasattr(latest, 'temperature') else latest.get('temperature', fallback_temp))
         fallback_humidity = float(latest.humidity if hasattr(latest, 'humidity') else latest.get('humidity', fallback_humidity))
-        fallback_ethylene = float(latest.ethylene if hasattr(latest, 'ethylene') else latest.get('ethylene', fallback_ethylene))
+        raw_eth = latest.ethylene if hasattr(latest, 'ethylene') else latest.get('ethylene', None)
+        fallback_ethylene = float(raw_eth) if raw_eth is not None else None
     
     # Projeção de até 120 dias para encontrar a validade real do lote
     full_curve = []
@@ -114,7 +191,8 @@ def calculate_quality_decay_curve(culture_name, initial_score=10.0, sensor_readi
         if reading:
             temp = float(reading.temperature if hasattr(reading, 'temperature') else reading.get('temperature', fallback_temp))
             humidity = float(reading.humidity if hasattr(reading, 'humidity') else reading.get('humidity', fallback_humidity))
-            ethylene = float(reading.ethylene if hasattr(reading, 'ethylene') else reading.get('ethylene', fallback_ethylene))
+            raw_eth = reading.ethylene if hasattr(reading, 'ethylene') else reading.get('ethylene', None)
+            ethylene = float(raw_eth) if raw_eth is not None else fallback_ethylene
         else:
             temp = fallback_temp
             humidity = fallback_humidity
@@ -124,8 +202,11 @@ def calculate_quality_decay_curve(culture_name, initial_score=10.0, sensor_readi
         temp_diff = max(0.0, temp - ideal_temp)
         temp_multiplier = math.pow(2.0, temp_diff / 10.0)
         
-        # 2. Multiplicador de Etileno
-        ethylene_multiplier = 1.0 + max(0.0, ethylene * 8.0)
+        # 2. Multiplicador de Etileno (Neutro 1.0 quando não há medição de etileno)
+        if ethylene is not None:
+            ethylene_multiplier = 1.0 + max(0.0, float(ethylene) * 8.0)
+        else:
+            ethylene_multiplier = 1.0
         
         # 3. Multiplicador de Humidade
         humidity_diff = max(0.0, ideal_humidity - humidity)
@@ -141,7 +222,7 @@ def calculate_quality_decay_curve(culture_name, initial_score=10.0, sensor_readi
             "quality": round(current_quality, 1),
             "temperature": temp,
             "humidity": humidity,
-            "ethylene": ethylene
+            "ethylene": round(ethylene, 3) if ethylene is not None else None
         })
         
         # Reduzir a qualidade para o dia seguinte
@@ -158,15 +239,18 @@ def calculate_quality_decay_curve(culture_name, initial_score=10.0, sensor_readi
         rsl_days = 120
 
     # Simplificar a curva se tiver muitos pontos para manter a renderização do gráfico rápida e limpa
-    total_points = len(full_curve)
-    if total_points <= 50:
-        decay_curve = full_curve
-    else:
-        # Downsampling para ~25 pontos intermédios
-        step = math.ceil(total_points / 25.0)
-        decay_curve = []
-        for idx, point in enumerate(full_curve):
-            if idx == 0 or idx == total_points - 1 or idx % step == 0:
+    decay_curve = []
+    if full_curve:
+        step = 1 if len(full_curve) <= 15 else max(1, len(full_curve) // 15)
+        for i in range(0, len(full_curve), step):
+            decay_curve.append(full_curve[i])
+        if full_curve[-1] not in decay_curve:
+            decay_curve.append(full_curve[-1])
+            
+        # Garantir pelo menos 7 a 15 pontos
+        if len(decay_curve) < 7:
+            decay_curve = []
+            for point in full_curve[:15]:
                 decay_curve.append(point)
         
     return decay_curve, rsl_days
@@ -174,17 +258,29 @@ def calculate_quality_decay_curve(culture_name, initial_score=10.0, sensor_readi
 
 def generate_fallback_sensor_readings(warehouse):
     """
-    Gera procedimentalmente um conjunto completo de 365 dias de leituras climáticas (180 dias passados e 184 dias futuros)
-    para o armazém com base no seu perfil regional (PT-NL, PT-NI, PT-CL, PT-CI, PT-LVT, PT-AL, PT-ALG, PT-SM, PT-MAD, PT-ACO).
+    Gera leituras climáticas (180 dias passados e 184 dias futuros)
+    para o armazém com base na sua estratégia meteorológica configurada (FIXED, IPMA, JSON).
+    Etileno só é gerado se o armazém tiver sensores de etileno reais registados.
     """
     import random
     import datetime
     from django.db import transaction
     from dashboard.models import WarehouseSensorReading
     
+    meteo_source = getattr(warehouse, 'meteo_source', 'FIXED') or 'FIXED'
+    json_fallback = getattr(warehouse, 'json_fallback_mode', 'FIXED') or 'FIXED'
+    fixed_t = float(warehouse.fixed_temperature if warehouse.fixed_temperature is not None else 4.0)
+    fixed_h = float(warehouse.fixed_humidity if warehouse.fixed_humidity is not None else 90.0)
+    
     reg = str(warehouse.region).upper()
     
-    # Perfis: (Temp_Média, Temp_Amplitude, Humidade_Média, Humidade_Amplitude)
+    # Verificar se o armazém possui histórico com etileno real
+    has_real_ethylene = WarehouseSensorReading.objects.filter(
+        warehouse=warehouse,
+        ethylene__isnull=False
+    ).exists()
+    
+    # Perfis Regionais IPMA: (Temp_Média, Temp_Amplitude, Humidade_Média, Humidade_Amplitude)
     profiles = {
         'PT-NL': (14.5, 5.0, 83.0, 5.0),   # Norte Litoral: húmido, moderado
         'PT-NI': (13.5, 10.0, 72.0, 12.0), # Norte Interior: grande amplitude, frio/quente
@@ -198,9 +294,7 @@ def generate_fallback_sensor_readings(warehouse):
         'PT-ACO': (17.5, 3.0, 85.0, 4.0),  # Açores: oceânico muito húmido, estável
     }
     
-    # Fallback se não encontrar perfil
     base_temp, temp_amp, base_hum, hum_amp = profiles.get(reg, (16.0, 7.0, 75.0, 8.0))
-    
     is_controlled = (warehouse.control_type == 'Controlled')
     today = datetime.date.today()
     start_date = today - datetime.timedelta(days=180)
@@ -208,24 +302,48 @@ def generate_fallback_sensor_readings(warehouse):
     readings = []
     for day_offset in range(365):
         current_date = start_date + datetime.timedelta(days=day_offset)
-        
-        # Sazonalidade via curva senoidal
         day_of_year = current_date.timetuple().tm_yday
-        # Pico no dia 200 (Julho)
         seasonal_factor = math.sin(2 * math.pi * (day_of_year - 110) / 365)
         
-        if is_controlled:
-            # Armazém controlado (câmara de frio): ignora condições exteriores
-            temp = round(3.5 + random.uniform(-0.5, 0.5), 1)
-            hum = round(91.0 + random.uniform(-1.5, 1.5), 1)
-            ethylene = round(0.02 + random.uniform(-0.005, 0.005), 3)
+        # Determinar valores com base na estratégia meteorológica
+        ethylene = None
+        if meteo_source == 'FIXED':
+            temp = round(fixed_t + random.uniform(-0.3, 0.3), 1)
+            hum = round(min(100.0, max(10.0, fixed_h + random.uniform(-1.0, 1.0))), 1)
+            ethylene = None
+        elif meteo_source == 'IPMA':
+            if is_controlled:
+                temp = round(3.5 + random.uniform(-0.5, 0.5), 1)
+                hum = round(91.0 + random.uniform(-1.5, 1.5), 1)
+            else:
+                temp = round(base_temp + temp_amp * seasonal_factor + random.uniform(-1.2, 1.2), 1)
+                hum = round(max(20.0, min(100.0, base_hum - hum_amp * seasonal_factor + random.uniform(-2.5, 2.5))), 1)
+            ethylene = None
+        elif meteo_source == 'JSON':
+            # Modo JSON: usa fallback configurado para os dias sem sensor manual
+            if json_fallback == 'FIXED':
+                temp = round(fixed_t + random.uniform(-0.3, 0.3), 1)
+                hum = round(min(100.0, max(10.0, fixed_h + random.uniform(-1.0, 1.0))), 1)
+            elif json_fallback == 'IPMA':
+                if is_controlled:
+                    temp = round(3.5 + random.uniform(-0.5, 0.5), 1)
+                    hum = round(91.0 + random.uniform(-1.5, 1.5), 1)
+                else:
+                    temp = round(base_temp + temp_amp * seasonal_factor + random.uniform(-1.2, 1.2), 1)
+                    hum = round(max(20.0, min(100.0, base_hum - hum_amp * seasonal_factor + random.uniform(-2.5, 2.5))), 1)
+            else: # NONE
+                temp = 4.0
+                hum = 90.0
+                
+            # Apenas gera etileno interpolado se o armazém possuir sensores de etileno reais
+            if has_real_ethylene:
+                ethylene = round(0.015 + random.uniform(-0.003, 0.003), 3)
+            else:
+                ethylene = None
         else:
-            # Armazém ambiente
-            temp = round(base_temp + temp_amp * seasonal_factor + random.uniform(-1.2, 1.2), 1)
-            # Humidade inverte a temperatura (mais quente = mais seco)
-            hum = round(base_hum - hum_amp * seasonal_factor + random.uniform(-2.5, 2.5), 1)
-            # Etileno flutua ligeiramente com o calor/maturação
-            ethylene = round(0.05 + 0.02 * seasonal_factor + random.uniform(-0.01, 0.01), 3)
+            temp = round(fixed_t, 1)
+            hum = round(fixed_h, 1)
+            ethylene = None
             
         readings.append(WarehouseSensorReading(
             warehouse=warehouse,
@@ -236,7 +354,6 @@ def generate_fallback_sensor_readings(warehouse):
         ))
         
     with transaction.atomic():
-        # Limpar leituras antigas deste armazém para evitar violação de unique_together
         WarehouseSensorReading.objects.filter(warehouse=warehouse).delete()
         WarehouseSensorReading.objects.bulk_create(readings)
         

@@ -1837,12 +1837,72 @@
                             </div>
                         </div>
 
+                        <!-- CONFIGURAÇÃO METEOROLÓGICA E SENSORES -->
+                        <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 18px; margin-bottom: 25px;">
+                            <div style="margin-bottom: 12px; font-weight: 700; color: #00796b; font-size: 1em; display: flex; align-items: center; gap: 8px;">
+                                <span>🌤️</span> Configuração Meteorológica e Sensores (Lifecycle)
+                            </div>
+
+                            <div style="margin-bottom: 15px;">
+                                <label style="display:block; margin-bottom:6px; font-weight:600; color:#334155;">Fonte Meteorológica / Sensores:</label>
+                                {{ warehouse_form.meteo_source }}
+                            </div>
+
+                            <div id="retailer-wh-fallback-box" style="display: none; background: #e0f2f1; padding: 12px 15px; border-radius: 8px; border: 1px solid #b2dfdb; margin-bottom: 15px;">
+                                <label style="display:block; margin-bottom:6px; font-weight:600; color: #004d40;">Modo de Preenchimento de Falhas (Fallback):</label>
+                                {{ warehouse_form.json_fallback_mode }}
+                                <small style="color: #00695c; display: block; margin-top: 4px;">Utilizado para preencher dias sem leituras no ficheiro JSON de sensores.</small>
+                            </div>
+
+                            <div id="retailer-wh-fixed-box" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; background: #f0fdf4; padding: 12px 15px; border-radius: 8px; border: 1px solid #bbf7d0; margin-bottom: 0;">
+                                <div>
+                                    <label style="display:block; margin-bottom:6px; font-weight:600; color: #166534;">Temperatura Fixa (°C):</label>
+                                    {{ warehouse_form.fixed_temperature }}
+                                </div>
+                                <div>
+                                    <label style="display:block; margin-bottom:6px; font-weight:600; color: #166534;">Humidade Fixa (%):</label>
+                                    {{ warehouse_form.fixed_humidity }}
+                                </div>
+                            </div>
+                        </div>
+
                         <style>
                             .sensor-list-style ul { list-style-type: none; padding: 0; }
                             .sensor-list-style li { display: flex; align-items: center; margin-bottom: 8px; }
                             .sensor-list-style label { display: flex !important; align-items: center; font-weight: normal !important; width: 100%; }
                             .sensor-list-style input[type="checkbox"] { width: auto !important; margin-right: 10px !important; margin-top: 0; }
                         </style>
+
+                        <script>
+                            document.addEventListener('DOMContentLoaded', function() {
+                                const meteoSelect = document.querySelector('#warehouse-management [name="meteo_source"]');
+                                const fallbackBox = document.getElementById('retailer-wh-fallback-box');
+                                const fixedBox = document.getElementById('retailer-wh-fixed-box');
+
+                                function updateRetailerMeteo() {
+                                    if (!meteoSelect) return;
+                                    const val = meteoSelect.value;
+                                    if (val === 'FIXED') {
+                                        if (fixedBox) fixedBox.style.display = 'grid';
+                                        if (fallbackBox) fallbackBox.style.display = 'none';
+                                    } else if (val === 'JSON') {
+                                        if (fixedBox) fixedBox.style.display = 'grid';
+                                        if (fallbackBox) fallbackBox.style.display = 'block';
+                                    } else if (val === 'IPMA') {
+                                        if (fixedBox) fixedBox.style.display = 'none';
+                                        if (fallbackBox) fallbackBox.style.display = 'none';
+                                    } else {
+                                        if (fixedBox) fixedBox.style.display = 'none';
+                                        if (fallbackBox) fallbackBox.style.display = 'none';
+                                    }
+                                }
+
+                                if (meteoSelect) {
+                                    meteoSelect.addEventListener('change', updateRetailerMeteo);
+                                    updateRetailerMeteo();
+                                }
+                            });
+                        </script>
 
                         <button type="submit" class="submit-button">✓ Register Warehouse</button>
                     </form>
@@ -1859,6 +1919,7 @@
                                 <th>Type</th>
                                 <th>Capacity</th>
                                 <th>Sensors</th>
+                                <th>🌤️ Meteorologia</th>
                                 <th>Sensor Readings (Excel/CSV)</th>
                             </tr>
                         </thead>
@@ -1893,6 +1954,25 @@
                                     {% endfor %}
                                 </td>
                                 <td>
+                                    {% if warehouse.meteo_source == 'FIXED' %}
+                                        <span class="badge" style="background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 6px; font-weight: 600; font-size: 0.8em; display: inline-block;">
+                                            🔒 Fixos: {{ warehouse.fixed_temperature|default:"4.0" }}°C, {{ warehouse.fixed_humidity|default:"90.0" }}%
+                                        </span>
+                                    {% elif warehouse.meteo_source == 'IPMA' %}
+                                        <span class="badge" style="background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 6px; font-weight: 600; font-size: 0.8em; display: inline-block;">
+                                            🌦️ IPMA ({{ warehouse.region }})
+                                        </span>
+                                    {% elif warehouse.meteo_source == 'JSON' %}
+                                        <span class="badge" style="background: #f3e8ff; color: #6b21a8; padding: 4px 8px; border-radius: 6px; font-weight: 600; font-size: 0.8em; display: inline-block;">
+                                            📊 JSON ({% if warehouse.json_fallback_mode == 'FIXED' %}Fallback: {{ warehouse.fixed_temperature|default:"4.0" }}°C{% elif warehouse.json_fallback_mode == 'IPMA' %}Fallback: IPMA{% else %}Sem Fallback{% endif %})
+                                        </span>
+                                    {% else %}
+                                        <span class="badge" style="background: #f1f5f9; color: #475569; padding: 4px 8px; border-radius: 6px; font-size: 0.8em;">
+                                            Valores Padrão
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
                                     <form method="post" action="{% url 'import_sensor_readings' warehouse.warehouse_id %}" enctype="multipart/form-data" style="display:flex; align-items:center; gap:8px; margin:0;">
                                         {% csrf_token %}
                                         <input type="file" name="sensor_file" accept=".xlsx,.xls,.csv" required style="font-size:0.8em; max-width:180px;">
@@ -1922,6 +2002,7 @@
                                 <th>Item (Culture)</th>
                                 <th>Quantity (Kg)</th>
                                 <th>Warehouse Location</th>
+                                <th>Ação / Lifecycle</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1930,6 +2011,11 @@
                                 <td>{{ item.culture }}</td>
                                 <td style="font-weight: bold; color: #00796b;">{{ item.quantity }} Kg</td>
                                 <td>{{ item.warehouse }}</td>
+                                <td>
+                                    <a href="{% url 'download_lot_lifecycle_json' item.pk %}" class="btn-action" style="padding: 5px 10px; font-size: 0.8em; text-decoration: none; background: linear-gradient(135deg, #0288d1 0%, #01579b 100%); color: white; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px;">
+                                        📥 JSON Lifecycle
+                                    </a>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -2287,6 +2373,12 @@
                         <div style="height: 380px; position: relative;">
                             <canvas id="lc-decay-chart"></canvas>
                         </div>
+                    </div>
+
+                    <div style="margin-top: 25px; display: flex; justify-content: flex-end;">
+                        <a id="retailer-lc-json-download" href="#" target="_blank" class="btn-action" style="background: linear-gradient(135deg, #0288d1, #01579b); color: white; padding: 12px 24px; border-radius: 10px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 4px 15px rgba(2, 136, 209, 0.3); font-size: 0.95em;">
+                            <span>📥</span> Descarregar JSON Completo do Ciclo de Vida (Blockchain + Meteorologia)
+                        </a>
                     </div>
                 </div>
 
@@ -3451,6 +3543,12 @@
             // Mostrar container e esconder empty state
             document.getElementById('lc-details-container').style.display = 'block';
             document.getElementById('lc-empty-state').style.display = 'none';
+
+            // Configurar link do botão de download de JSON
+            const dlBtn = document.getElementById('retailer-lc-json-download');
+            if (dlBtn) {
+                dlBtn.href = `/api/lot-lifecycle-json/${stockId}/`;
+            }
 
             fetch(`/api/lc-decay-data/?stock_id=${stockId}`)
                 .then(response => response.json())

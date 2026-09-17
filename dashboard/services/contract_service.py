@@ -80,27 +80,17 @@ def fulfill_contract(contract):
         contract.status = 'fulfilled'
         contract.save()
         
-        # 6. Gravar na Blockchain (Simulação e Rede Real)
+        # 6. Gravar na Blockchain Real (Hyperledger Fabric)
         try:
             from dashboard.services.fabric_service import fabric_service
-            from blockchain.services import blockchain_service
-            from blockchain.utils import create_genesis_dossier
+            from dashboard.utils import create_genesis_dossier
             
             # Bloco 0 (Genesis)
             dossier = create_genesis_dossier(harvest)
-            data_hash = blockchain_service.generate_dossier_hash(dossier)
-            blockchain_service.sign_and_submit_block(
-                user_role='Producer',
-                batch_id=dossier['batch_id'],
-                data_hash=data_hash,
-                event_type='GENESIS',
-                data_payload=dossier
-            )
-            
             fabric_service.create_order(
                 order_id=dossier['batch_id'],
                 producer_id=harvest.producer.username,
-                culture_type=harvest.subfamily.name,
+                culture_type=harvest.subfamily.name if harvest.subfamily else "N/A",
                 quantity=float(harvest.harvest_quantity_kg),
                 harvest_date=harvest.harvest_date.strftime("%Y-%m-%d"),
                 additional_data=dossier
@@ -115,15 +105,6 @@ def fulfill_contract(contract):
                 "sensor_data": "Automated delivery for contract",
                 "harvest_origin": harvest.pk
             }
-            data_hash_del = blockchain_service.generate_dossier_hash(dossier_del)
-            blockchain_service.sign_and_submit_block(
-                user_role='Transporter',
-                batch_id=f"ORDER-{order.pk}",
-                data_hash=data_hash_del,
-                event_type='TRANSPORT_DELIVERY',
-                data_payload=dossier_del
-            )
-            
             fabric_service.update_order(
                 order_id=f"LOTE-{harvest.pk}",
                 new_status="DELIVERED",
@@ -203,27 +184,17 @@ def process_instant_purchase(buyer, producer, subfamily, quantity_kg, warehouse_
             is_processed=True if buyer_role == 'Processor' else False
         )
         
-        # 5. Gravar na Blockchain (Simulação e Rede Real)
+        # 5. Gravar na Blockchain Real (Hyperledger Fabric)
         try:
             from dashboard.services.fabric_service import fabric_service
-            from blockchain.services import blockchain_service
-            from blockchain.utils import create_genesis_dossier
+            from dashboard.utils import create_genesis_dossier
             
             # Bloco 0 (Genesis)
             dossier = create_genesis_dossier(harvest)
-            data_hash = blockchain_service.generate_dossier_hash(dossier)
-            blockchain_service.sign_and_submit_block(
-                user_role='Producer',
-                batch_id=dossier['batch_id'],
-                data_hash=data_hash,
-                event_type='GENESIS',
-                data_payload=dossier
-            )
-            
             fabric_service.create_order(
                 order_id=dossier['batch_id'],
                 producer_id=harvest.producer.username,
-                culture_type=harvest.subfamily.name,
+                culture_type=harvest.subfamily.name if harvest.subfamily else "N/A",
                 quantity=float(harvest.harvest_quantity_kg),
                 harvest_date=harvest.harvest_date.strftime("%Y-%m-%d"),
                 additional_data=dossier
@@ -238,15 +209,6 @@ def process_instant_purchase(buyer, producer, subfamily, quantity_kg, warehouse_
                 "sensor_data": "Direct purchase from wholesaler",
                 "harvest_origin": harvest.pk
             }
-            data_hash_del = blockchain_service.generate_dossier_hash(dossier_del)
-            blockchain_service.sign_and_submit_block(
-                user_role='Transporter',
-                batch_id=f"ORDER-{order.pk}",
-                data_hash=data_hash_del,
-                event_type='TRANSPORT_DELIVERY',
-                data_payload=dossier_del
-            )
-            
             fabric_service.update_order(
                 order_id=f"LOTE-{harvest.pk}",
                 new_status="DELIVERED",

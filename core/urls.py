@@ -25,5 +25,4 @@ urlpatterns = [
     path('accounts/', include('django.contrib.auth.urls')), 
     
     path('', include('dashboard.urls')),
-    path('blockchain/', include('blockchain.urls')), 
 ]

@@ -1,0 +1,6 @@
+Day,Cultivar,Temperature_C,Relative_Humidity_Percent,RipeningStage,Firmness_N,BRIX,QualityIndexPercent,DataSource
+1,Cavendish,17,85-88,1,76.53,7.8,100.0,Firmness: paper-reported linear trend/endpoints; SSC: approximate from Fig. 4
+2,Cavendish,17,85-88,2,63.2,9.8,82.6,Firmness: paper-reported linear trend/endpoints; SSC: approximate from Fig. 4
+3,Cavendish,17,85-88,3,49.88,12.6,65.2,Firmness: paper-reported linear trend/endpoints; SSC: approximate from Fig. 4
+4,Cavendish,17,85-88,4,36.55,15.8,47.8,Firmness: paper-reported linear trend/endpoints; SSC: approximate from Fig. 4
+5,Cavendish,17,85-88,6,23.22,18.6,30.3,Firmness: paper-reported linear trend/endpoints; SSC: approximate from Fig. 4

@@ -1214,7 +1214,75 @@
                         </h3>
                         <form method="POST" action="{% url 'producer_submit_harvest' %}">
                             {% csrf_token %}
-                            {{ harvest_form.as_p }}
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                                <div>
+                                    <label style="display:block; margin-bottom:5px; font-weight:600;">Plano de Plantação:</label>
+                                    {{ harvest_form.plantation }}
+                                </div>
+                                <div>
+                                    <label style="display:block; margin-bottom:5px; font-weight:600;">Cultura / Variedade:</label>
+                                    {{ harvest_form.subfamily }}
+                                </div>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                                <div>
+                                    <label style="display:block; margin-bottom:5px; font-weight:600;">Data da Colheita:</label>
+                                    {{ harvest_form.harvest_date }}
+                                </div>
+                                <div>
+                                    <label style="display:block; margin-bottom:5px; font-weight:600;">Quantidade Colhida (Kg):</label>
+                                    {{ harvest_form.harvest_quantity_kg }}
+                                </div>
+                                <div>
+                                    <label style="display:block; margin-bottom:5px; font-weight:600;">Desperdício / Waste (Kg):</label>
+                                    {{ harvest_form.utilized_quantity_kg }}
+                                </div>
+                            </div>
+
+                            <!-- MEDIÇÕES FÍSICO-QUÍMICAS & CÁLCULO DE QUALIDADE AUTOMÁTICO -->
+                            <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 18px; margin-bottom: 20px;">
+                                <div style="margin-bottom: 12px; font-weight: 700; color: #00796b; font-size: 1em; display: flex; align-items: center; gap: 8px;">
+                                    <span>🔬</span> Medições Físico-Químicas & Qualidade Automática
+                                </div>
+
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                                    <div>
+                                        <label style="display:block; margin-bottom:5px; font-weight:600; color:#1e293b;">Firmeza (N / kg/cm²):</label>
+                                        {{ harvest_form.firmness }}
+                                    </div>
+                                    <div>
+                                        <label style="display:block; margin-bottom:5px; font-weight:600; color:#1e293b;">Brix (°Bx):</label>
+                                        {{ harvest_form.soluble_solids }}
+                                    </div>
+                                    <div>
+                                        <label style="display:block; margin-bottom:5px; font-weight:600; color:#1e293b;">Acidez (g/L / %):</label>
+                                        {{ harvest_form.acidity }}
+                                    </div>
+                                    <div>
+                                        <label style="display:block; margin-bottom:5px; font-weight:600; color:#1e293b;">Calibre (mm):</label>
+                                        {{ harvest_form.caliber }}
+                                    </div>
+                                </div>
+
+                                <!-- Live Quality Indicator Banner -->
+                                <div id="live-quality-badge" style="background: #e8f5e9; border: 1px solid #81c784; border-radius: 10px; padding: 12px 16px; display: flex; flex-direction: column; gap: 6px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <span style="font-weight: 700; color: #1e293b; font-size: 0.95em;">⭐ Qualidade Estimada Automática:</span>
+                                        <span id="live-quality-text" style="font-weight: 800; font-size: 1.05em; color: #2e7d32;">100.0% (10.0 / 10 ⭐)</span>
+                                    </div>
+                                    <div style="background: #e0e0e0; border-radius: 6px; height: 10px; overflow: hidden; width: 100%;">
+                                        <div id="live-quality-bar" style="background: #2e7d32; height: 100%; width: 100%; transition: width 0.3s ease, background 0.3s ease;"></div>
+                                    </div>
+                                    <small style="color: #64748b; font-size: 0.8em;">Calculado dinamicamente com base na firmeza, brix e acidez em relação aos limiares da variedade.</small>
+                                </div>
+                            </div>
+
+                            <div class="form-group" style="margin-bottom: 20px;">
+                                <label style="display:block; margin-bottom:5px; font-weight:600;">Armazém de Destino:</label>
+                                {{ harvest_form.warehouse }}
+                            </div>
                 
                             <button type="submit" class="submit-button">✓ Register Harvest</button>
                         </form>
@@ -1348,15 +1416,17 @@
                                     <th>Culture</th>
                                     <th>Qt (Kg)</th>
                                     <th>Waste (Kg)</th>
-                                    <th>Quality</th>
-                                    <th>Caliber (mm)</th>
-                                    <th>Brix</th>
+                                    <th>Firmeza (N)</th>
+                                    <th>Brix (°Bx)</th>
+                                    <th>Acidez</th>
+                                    <th>Calibre (mm)</th>
+                                    <th>Quality Score</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for record in harvest_records %}
                                 <tr>
-                                    <td>{{ record.harvest_date |date:"d-m-Y" }}</td>
+                                    <td>{{ record.harvest_date|date:"d-m-Y" }}</td>
                                     <td>
                                         {% if record.plantation %}
                                         {{ record.plantation.plantation_name }}
@@ -1373,9 +1443,15 @@
                                     </td>
                                     <td>{{ record.harvest_quantity_kg }}</td>
                                     <td>{{ record.utilized_quantity_kg }}</td>
-                                    <td>{{ record.avg_quality_score }}</td>
-                                    <td>{{ record.caliber|default:"-" }}</td>
+                                    <td>{{ record.firmness|default:"-" }}</td>
                                     <td>{{ record.soluble_solids|default:"-" }}</td>
+                                    <td>{{ record.acidity|default:"-" }}</td>
+                                    <td>{{ record.caliber|default:"-" }}</td>
+                                    <td>
+                                        <span style="font-weight: 700; color: {% if record.avg_quality_score >= 7.5 %}#2e7d32{% elif record.avg_quality_score >= 5.0 %}#f57c00{% else %}#d32f2f{% endif %};">
+                                            {{ record.avg_quality_score }} ⭐
+                                        </span>
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -1488,6 +1564,35 @@
                             {% endif %}
                         </div>
 
+                        <!-- CONFIGURAÇÃO METEOROLÓGICA E SENSORES -->
+                        <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 18px; margin-bottom: 20px;">
+                            <div style="margin-bottom: 12px; font-weight: 700; color: #00796b; font-size: 1em; display: flex; align-items: center; gap: 8px;">
+                                <span>🌤️</span> Configuração Meteorológica e Sensores (Lifecycle)
+                            </div>
+
+                            <div class="form-group" style="margin-bottom: 15px;">
+                                <label style="display:block; margin-bottom:6px; font-weight:600; color:#334155;">Fonte Meteorológica / Sensores:</label>
+                                {{ warehouse_form.meteo_source }}
+                            </div>
+
+                            <div id="producer-wh-fallback-box" class="form-group" style="display: none; background: #e0f2f1; padding: 12px 15px; border-radius: 8px; border: 1px solid #b2dfdb; margin-bottom: 15px;">
+                                <label style="display:block; margin-bottom:6px; font-weight:600; color: #004d40;">Modo de Preenchimento de Falhas (Fallback):</label>
+                                {{ warehouse_form.json_fallback_mode }}
+                                <small style="color: #00695c; display: block; margin-top: 4px;">Utilizado para preencher dias sem leituras no ficheiro JSON de sensores.</small>
+                            </div>
+
+                            <div id="producer-wh-fixed-box" class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; background: #f0fdf4; padding: 12px 15px; border-radius: 8px; border: 1px solid #bbf7d0; margin-bottom: 0;">
+                                <div>
+                                    <label style="display:block; margin-bottom:6px; font-weight:600; color: #166534;">Temperatura Fixa (°C):</label>
+                                    {{ warehouse_form.fixed_temperature }}
+                                </div>
+                                <div>
+                                    <label style="display:block; margin-bottom:6px; font-weight:600; color: #166534;">Humidade Fixa (%):</label>
+                                    {{ warehouse_form.fixed_humidity }}
+                                </div>
+                            </div>
+                        </div>
+
                         <button type="submit" class="submit-button">✓ Register Warehouse</button>
                     </form>
                 </div>
@@ -1503,6 +1608,7 @@
                                 <th>Type</th>
                                 <th>Capacity</th>
                                 <th>Sensors</th>
+                                <th>🌤️ Meteorologia</th>
                                 <th>Sensor Readings (Excel/CSV)</th>
                             </tr>
                         </thead>
@@ -1533,6 +1639,25 @@
                                     {% empty %}
                                     <span style="color:#999;font-style:italic;">None</span>
                                     {% endfor %}
+                                </td>
+                                <td>
+                                    {% if warehouse.meteo_source == 'FIXED' %}
+                                        <span class="badge" style="background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 6px; font-weight: 600; font-size: 0.8em; display: inline-block;">
+                                            🔒 Fixos: {{ warehouse.fixed_temperature|default:"4.0" }}°C, {{ warehouse.fixed_humidity|default:"90.0" }}%
+                                        </span>
+                                    {% elif warehouse.meteo_source == 'IPMA' %}
+                                        <span class="badge" style="background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 6px; font-weight: 600; font-size: 0.8em; display: inline-block;">
+                                            🌦️ IPMA ({{ warehouse.region }})
+                                        </span>
+                                    {% elif warehouse.meteo_source == 'JSON' %}
+                                        <span class="badge" style="background: #f3e8ff; color: #6b21a8; padding: 4px 8px; border-radius: 6px; font-weight: 600; font-size: 0.8em; display: inline-block;">
+                                            📊 JSON ({% if warehouse.json_fallback_mode == 'FIXED' %}Fallback: {{ warehouse.fixed_temperature|default:"4.0" }}°C{% elif warehouse.json_fallback_mode == 'IPMA' %}Fallback: IPMA{% else %}Sem Fallback{% endif %})
+                                        </span>
+                                    {% else %}
+                                        <span class="badge" style="background: #f1f5f9; color: #475569; padding: 4px 8px; border-radius: 6px; font-size: 0.8em;">
+                                            Valores Padrão
+                                        </span>
+                                    {% endif %}
                                 </td>
                                 <td>
                                     <form method="post" action="{% url 'import_sensor_readings' warehouse.warehouse_id %}" enctype="multipart/form-data" style="display:flex; align-items:center; gap:8px; margin:0;">
@@ -2130,9 +2255,14 @@
                                 <td>{{ record.harvest_quantity_kg }}</td>
                                 <td>{{ record.delivered_quantity_kg|default:"0" }}</td>
                                 <td>
-                                    <button onclick="openHistoryModal('{{ record.pk }}')" class="submit-button" style="padding: 5px 10px; font-size: 0.8em; text-decoration: none; background: linear-gradient(135deg, #00796b 0%, #004d40 100%); width: 100%; text-align: center; display: block; border: none; color: white;">
-                                        📜 Ver Histórico
-                                    </button>
+                                    <div style="display: flex; flex-direction: column; gap: 5px;">
+                                        <button onclick="openHistoryModal('{{ record.pk }}')" class="submit-button" style="padding: 5px 8px; font-size: 0.78em; text-decoration: none; background: linear-gradient(135deg, #00796b 0%, #004d40 100%); width: 100%; text-align: center; display: block; border: none; color: white; border-radius: 6px; cursor: pointer;">
+                                            📜 Ver Histórico
+                                        </button>
+                                        <a href="{% url 'download_lot_lifecycle_json' record.pk %}" class="btn-action" style="padding: 5px 8px; font-size: 0.78em; text-decoration: none; background: linear-gradient(135deg, #0288d1 0%, #01579b 100%); width: 100%; text-align: center; display: block; border: none; color: white; border-radius: 6px; font-weight: 600; box-sizing: border-box;">
+                                            📥 JSON Lifecycle
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -2705,6 +2835,12 @@
                         <div style="height: 380px; position: relative;">
                             <canvas id="lc-decay-chart"></canvas>
                         </div>
+                    </div>
+
+                    <div style="margin-top: 25px; display: flex; justify-content: flex-end;">
+                        <a id="producer-lc-json-download" href="#" target="_blank" class="btn-action" style="background: linear-gradient(135deg, #0288d1, #01579b); color: white; padding: 12px 24px; border-radius: 10px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 4px 15px rgba(2, 136, 209, 0.3); font-size: 0.95em;">
+                            <span>📥</span> Descarregar JSON Completo do Ciclo de Vida (Blockchain + Meteorologia)
+                        </a>
                     </div>
                 </div>
 
@@ -4306,6 +4442,12 @@
             document.getElementById('lc-details-container').style.display = 'block';
             document.getElementById('lc-empty-state').style.display = 'none';
 
+            // Configurar link do botão de download de JSON
+            const dlBtn = document.getElementById('producer-lc-json-download');
+            if (dlBtn) {
+                dlBtn.href = `/api/lot-lifecycle-json/${stockId}/`;
+            }
+
             fetch(`/api/lc-decay-data/?stock_id=${stockId}`)
                 .then(response => response.json())
                 .then(data => {
@@ -4329,6 +4471,31 @@
                     console.error('Erro no LC Agent:', err);
                     alert('Erro de comunicação com o LC Agent.');
                 });
+        }
+
+        function updateProducerMeteoVisibility() {
+            const sourceSelect = document.getElementById('id_meteo_source');
+            const fallbackBox = document.getElementById('producer-wh-fallback-box');
+            const fixedBox = document.getElementById('producer-wh-fixed-box');
+            const fallbackSelect = document.getElementById('id_json_fallback_mode');
+
+            if (!sourceSelect) return;
+
+            const sourceVal = sourceSelect.value;
+            const fallbackVal = fallbackSelect ? fallbackSelect.value : 'FIXED';
+
+            if (sourceVal === 'JSON') {
+                if (fallbackBox) fallbackBox.style.display = 'block';
+                if (fixedBox) {
+                    fixedBox.style.display = (fallbackVal === 'FIXED') ? 'grid' : 'none';
+                }
+            } else if (sourceVal === 'FIXED') {
+                if (fallbackBox) fallbackBox.style.display = 'none';
+                if (fixedBox) fixedBox.style.display = 'grid';
+            } else { // IPMA
+                if (fallbackBox) fallbackBox.style.display = 'none';
+                if (fixedBox) fixedBox.style.display = 'none';
+            }
         }
 
         function drawLcDecayChart(curve) {
@@ -4397,6 +4564,92 @@
             });
         }
 
+        // --- Cálculo de Qualidade Automático em Tempo Real (Colheita) ---
+        const CULTURE_QUALITY_PRESETS = {
+            "gala": { qual_firm_threshold: 28.0, qual_brix_target: 14.5, qual_acidez_target: 0.45 },
+            "fuji": { qual_firm_threshold: 40.0, qual_brix_target: 16.0, qual_acidez_target: 0.40 },
+            "golden": { qual_firm_threshold: 35.0, qual_brix_target: 13.5, qual_acidez_target: 0.50 },
+            "golden delicious": { qual_firm_threshold: 35.0, qual_brix_target: 13.5, qual_acidez_target: 0.50 },
+            "reineta": { qual_firm_threshold: 30.0, qual_brix_target: 12.5, qual_acidez_target: 0.65 },
+            "granny": { qual_firm_threshold: 42.0, qual_brix_target: 12.2, qual_acidez_target: 0.85 },
+            "granny smith": { qual_firm_threshold: 42.0, qual_brix_target: 12.2, qual_acidez_target: 0.85 },
+            "hayward": { qual_firm_threshold: 8.0, qual_brix_target: 15.0, qual_acidez_target: 1.20 },
+            "green": { qual_firm_threshold: 8.0, qual_brix_target: 15.0, qual_acidez_target: 1.20 },
+            "gold": { qual_firm_threshold: 6.0, qual_brix_target: 17.0, qual_acidez_target: 1.00 },
+            "red": { qual_firm_threshold: 6.0, qual_brix_target: 16.5, qual_acidez_target: 0.95 }
+        };
+
+        function getCulturePreset(cultureName) {
+            if (!cultureName) return { qual_firm_threshold: 28.0, qual_brix_target: 14.0, qual_acidez_target: 0.50 };
+            const lower = cultureName.toLowerCase();
+            for (const [key, preset] of Object.entries(CULTURE_QUALITY_PRESETS)) {
+                if (lower.includes(key)) return preset;
+            }
+            if (lower.includes("kiwi")) return { qual_firm_threshold: 8.0, qual_brix_target: 15.0, qual_acidez_target: 1.20 };
+            return { qual_firm_threshold: 30.0, qual_brix_target: 14.0, qual_acidez_target: 0.50 };
+        }
+
+        function calculateLiveQualityScore() {
+            const subfamSelect = document.getElementById('harvest_subfamily_select');
+            const cultureName = subfamSelect && subfamSelect.selectedIndex >= 0 ? subfamSelect.options[subfamSelect.selectedIndex].text : '';
+            const preset = getCulturePreset(cultureName);
+
+            const firmInput = document.getElementById('id_harvest_firmness');
+            const brixInput = document.getElementById('id_harvest_brix');
+            const acidInput = document.getElementById('id_harvest_acidity');
+
+            const firmness = firmInput && firmInput.value !== '' ? parseFloat(firmInput.value) : preset.qual_firm_threshold;
+            const brix = brixInput && brixInput.value !== '' ? parseFloat(brixInput.value) : preset.qual_brix_target;
+            let acidity = acidInput && acidInput.value !== '' ? parseFloat(acidInput.value) : preset.qual_acidez_target;
+            if (isNaN(acidity) || acidity <= 0) acidity = 0.01;
+            const firmVal = isNaN(firmness) ? preset.qual_firm_threshold : firmness;
+            const brixVal = isNaN(brix) ? preset.qual_brix_target : brix;
+
+            // Fórmula biológica
+            const firm_score = 1.0 / (1.0 + Math.exp(-0.35 * (firmVal - preset.qual_firm_threshold)));
+            const brix_score = Math.exp(-Math.pow(brixVal - preset.qual_brix_target, 2) / 2.0);
+            const acidez_score = Math.exp(-Math.pow(acidity - preset.qual_acidez_target, 2) / 0.5);
+            const target_ratio = preset.qual_brix_target / preset.qual_acidez_target;
+            const ratio = brixVal / acidity;
+            const ratio_score = Math.exp(-Math.pow(ratio - target_ratio, 2) / 25.0);
+
+            const qualityBase = Math.min(100.0, Math.max(0.0, 100.0 * (0.35 * firm_score + 0.35 * ratio_score + 0.15 * brix_score + 0.15 * acidez_score)));
+            const qualityScale10 = (qualityBase / 10.0).toFixed(1);
+
+            const badge = document.getElementById('live-quality-badge');
+            const textEl = document.getElementById('live-quality-text');
+            const barEl = document.getElementById('live-quality-bar');
+
+            if (textEl) {
+                textEl.textContent = `${qualityBase.toFixed(1)}% (${qualityScale10} / 10 ⭐)`;
+            }
+            if (barEl) {
+                barEl.style.width = `${qualityBase.toFixed(1)}%`;
+                if (qualityBase >= 80) {
+                    barEl.style.backgroundColor = '#2e7d32';
+                    if (badge) {
+                        badge.style.background = '#e8f5e9';
+                        badge.style.borderColor = '#81c784';
+                    }
+                    if (textEl) textEl.style.color = '#2e7d32';
+                } else if (qualityBase >= 60) {
+                    barEl.style.backgroundColor = '#f57f17';
+                    if (badge) {
+                        badge.style.background = '#fffde7';
+                        badge.style.borderColor = '#fff59d';
+                    }
+                    if (textEl) textEl.style.color = '#f57f17';
+                } else {
+                    barEl.style.backgroundColor = '#c62828';
+                    if (badge) {
+                        badge.style.background = '#ffebee';
+                        badge.style.borderColor = '#ef9a9a';
+                    }
+                    if (textEl) textEl.style.color = '#c62828';
+                }
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             let savedLang = localStorage.getItem('selectedLanguage') || 'pt';
             const cookieLang = getGoogtransLanguage();
@@ -4413,6 +4666,38 @@
             
             const selectWidget = document.getElementById('lang-select');
             if (selectWidget) selectWidget.value = savedLang;
+
+            // Inicializar visibilidade meteorológica
+            const sourceSelect = document.getElementById('id_meteo_source');
+            const fallbackSelect = document.getElementById('id_json_fallback_mode');
+            if (sourceSelect) {
+                sourceSelect.addEventListener('change', updateProducerMeteoVisibility);
+            }
+            if (fallbackSelect) {
+                fallbackSelect.addEventListener('change', updateProducerMeteoVisibility);
+            }
+            updateProducerMeteoVisibility();
+
+            // Listeners para cálculo de qualidade da colheita em tempo real
+            const harvestSubfam = document.getElementById('harvest_subfamily_select');
+            const harvestFirm = document.getElementById('id_harvest_firmness');
+            const harvestBrix = document.getElementById('id_harvest_brix');
+            const harvestAcid = document.getElementById('id_harvest_acidity');
+
+            if (harvestSubfam) harvestSubfam.addEventListener('change', calculateLiveQualityScore);
+            if (harvestFirm) {
+                harvestFirm.addEventListener('input', calculateLiveQualityScore);
+                harvestFirm.addEventListener('change', calculateLiveQualityScore);
+            }
+            if (harvestBrix) {
+                harvestBrix.addEventListener('input', calculateLiveQualityScore);
+                harvestBrix.addEventListener('change', calculateLiveQualityScore);
+            }
+            if (harvestAcid) {
+                harvestAcid.addEventListener('input', calculateLiveQualityScore);
+                harvestAcid.addEventListener('change', calculateLiveQualityScore);
+            }
+            calculateLiveQualityScore();
         });
     </script>
     <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>

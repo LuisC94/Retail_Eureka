@@ -4,8 +4,9 @@ __pycache__/
 venv/
 env/
 *.sqlite3
+*.db
 .DS_Store
 .env
 staticfiles/
 storage/
-
+scratch/

@@ -1,6 +1,0 @@
-@ProductManagement_HostAddress = http://localhost:5093
-
-GET {{ProductManagement_HostAddress}}/Product
-Accept: application/json
-
-###

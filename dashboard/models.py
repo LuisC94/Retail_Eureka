@@ -39,6 +39,16 @@ EVENT_TYPE_CHOICES = [
 # Choices para Armazéns e Sensores
 SENSOR_TYPE_CHOICES = [('Temperature', 'Temperatura'), ('Humidity', 'Humidade'), ('Light', 'Luminosidade'), ('Gas', 'Gás/CO2')]
 CONTROL_TYPE_CHOICES = [('Controlled', 'Controlado'), ('Non-Controlled', 'Não Controlado')]
+METEO_SOURCE_CHOICES = [
+    ('FIXED', 'Valores Fixos'),
+    ('IPMA', 'IPMA (Estação Regional)'),
+    ('JSON', 'Ficheiro JSON de Sensores'),
+]
+JSON_FALLBACK_CHOICES = [
+    ('NONE', 'Nenhum / Sem Fallback'),
+    ('FIXED', 'Valores Fixos'),
+    ('IPMA', 'IPMA (Estação Regional)'),
+]
 REGION_CHOICES = [
     ('PT-NL', 'Norte Litoral (Muito húmido, temperaturas moderadas)'),
     ('PT-NI', 'Norte Interior (Invernos frios, verões quentes)'),
@@ -193,6 +203,10 @@ class Warehouse(models.Model):
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, verbose_name="Latitude")
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, verbose_name="Longitude")
     sensors = models.ManyToManyField(Sensor, blank=True, verbose_name="Sensores Instalados")
+    meteo_source = models.CharField(max_length=20, choices=METEO_SOURCE_CHOICES, default='FIXED', verbose_name="Fonte Meteorológica / Sensores")
+    json_fallback_mode = models.CharField(max_length=20, choices=JSON_FALLBACK_CHOICES, default='FIXED', verbose_name="Modo de Preenchimento de Falhas (Fallback)")
+    fixed_temperature = models.DecimalField(max_digits=5, decimal_places=2, default=4.0, null=True, blank=True, verbose_name="Temperatura Fixa (°C)")
+    fixed_humidity = models.DecimalField(max_digits=5, decimal_places=2, default=90.0, null=True, blank=True, verbose_name="Humidade Fixa (%)")
     class Meta: db_table = 'warehouses'
     def __str__(self): return f"Armazém {self.warehouse_id} - {self.location} ({self.get_storage_unit_display()})"
 
@@ -401,12 +415,14 @@ class Harvest(models.Model):
     expiration_date = models.DateField(null=True, blank=True, verbose_name="Expiration Date (Validade)")
     harvest_quantity_kg = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Harvest Quantity (Kg)")
     delivered_quantity_kg = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Delivered Quantity (Kg)")
-    avg_quality_score = models.IntegerField(choices=QUALITY_SCORE_CHOICES, verbose_name="Average Quality Score (1-10)")
-    utilized_quantity_kg = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Waste (Kg)")
+    avg_quality_score = models.DecimalField(max_digits=5, decimal_places=2, default=10.0, verbose_name="Score de Qualidade (Calculado)")
+    utilized_quantity_kg = models.DecimalField(max_digits=10, decimal_places=2, default=0.0, verbose_name="Waste (Kg)")
     
-    # New fields requested by user
-    caliber = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name="Caliber (mm)")
-    soluble_solids = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name="Soluble Solids (Brix)")
+    # Medições Físico-Químicas da Colheita (Cálculo Automático de Qualidade)
+    firmness = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True, verbose_name="Firmeza (N / kg/cm²)")
+    soluble_solids = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name="Teor de Açúcar / Brix (°Bx)")
+    acidity = models.DecimalField(max_digits=6, decimal_places=3, null=True, blank=True, verbose_name="Acidez (g/L / %)")
+    caliber = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name="Calibre (mm)")
     
     warehouse = models.ForeignKey(Warehouse, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Stored In (Warehouse)")
     
@@ -629,7 +645,7 @@ class WarehouseSensorReading(models.Model):
     date = models.DateField(verbose_name="Data da Leitura")
     temperature = models.DecimalField(max_digits=5, decimal_places=2, verbose_name="Temperatura (°C)")
     humidity = models.DecimalField(max_digits=5, decimal_places=2, verbose_name="Humidade (%)")
-    ethylene = models.DecimalField(max_digits=6, decimal_places=3, verbose_name="Etileno (ppm)")
+    ethylene = models.DecimalField(max_digits=6, decimal_places=3, null=True, blank=True, verbose_name="Etileno (ppm)")
 
     class Meta:
         db_table = 'warehouse_sensor_readings'
