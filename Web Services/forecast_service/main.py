@@ -284,3 +284,9 @@ def predict_forecast(payload: PredictRequest):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erro durante a inferência: {str(e)}"
         )
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=8001, reload=True)
+

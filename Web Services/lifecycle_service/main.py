@@ -333,5 +333,6 @@ def calculate_lot_lifecycle_decay(
 
 
 if __name__ == "__main__":
-    logger.info(f"Starting Lifecycle Decay Prediction Web Service on {HOST}:{PORT}...")
-    uvicorn.run("main:app", host=HOST, port=PORT, reload=False)
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=8003, reload=True)
+
