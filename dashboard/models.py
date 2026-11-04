@@ -120,61 +120,24 @@ class UserProfile(models.Model):
                 user_obj.save()
         super().save(*args, **kwargs)
 
-class Product(models.Model):
-    product_id = models.AutoField(primary_key=True) 
-    name = models.CharField(max_length=100)
-    category = models.CharField(max_length=100)
-    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Preço de Venda (€)")
-    producer = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
-    class Meta: db_table = 'products' 
-    def __str__(self): return f"{self.product_id} - {self.name}"
-
 class ProductSubFamily(models.Model):
     FRUIT_TYPE_CHOICES = [('Kiwi', 'Kiwi'), ('Apple', 'Maçã')]
     
     subfamily_id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=100, verbose_name="Subfamília")
     fruit_type = models.CharField(max_length=50, choices=FRUIT_TYPE_CHOICES, verbose_name="Tipo de Fruta")
+    default_shelf_life_days = models.IntegerField(default=10, verbose_name="Tempo de Vida Padrão (Dias)")
     lifecycle_presets = models.JSONField(default=dict, blank=True, null=True, verbose_name="Lifecycle Presets (Biological Coefficients)")
 
-    class Meta: db_table = 'product_subfamilies'
-    def __str__(self): return f"{self.name} ({self.fruit_type})"
-
-class CultureShelfLife(models.Model):
-    subfamily = models.OneToOneField(ProductSubFamily, on_delete=models.CASCADE, related_name='shelf_life', verbose_name="Cultura (Subfamília)")
-    default_shelf_life_days = models.IntegerField(default=10, verbose_name="Tempo de Vida Padrão (Dias)")
-
     class Meta:
-        db_table = 'culture_shelf_life'
-        verbose_name = "Validade de Cultura"
-        verbose_name_plural = "Validades de Culturas"
+        db_table = 'product_subfamilies'
+        verbose_name = "Subfamília / Cultura"
+        verbose_name_plural = "Subfamílias / Culturas"
 
     def __str__(self):
-        return f"{self.subfamily.name} - {self.default_shelf_life_days} dias"
+        return f"{self.name} ({self.fruit_type})"
 
-class SupplyContract(models.Model):
-    STATUS_CHOICES = [
-        ('pending', 'Pendente'),
-        ('fulfilled', 'Concluído'),
-        ('cancelled', 'Cancelado'),
-    ]
-    buyer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='buyer_contracts', verbose_name="Comprador (Retailer/Processor)")
-    producer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='producer_contracts', verbose_name="Produtor Virtual (Tipo 3)")
-    subfamily = models.ForeignKey(ProductSubFamily, on_delete=models.CASCADE, verbose_name="Cultura (Subfamília)")
-    quantity_kg = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Quantidade Contratada (Kg)")
-    delivery_date = models.DateField(verbose_name="Data de Entrega Planeada (Dia X)")
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name="Estado do Contrato")
-    warehouse_location = models.CharField(max_length=255, blank=True, null=True, verbose_name="Local de Entrega (Armazém)")
-    created_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
-        db_table = 'supply_contract'
-        verbose_name = "Contrato de Fornecimento"
-        verbose_name_plural = "Contratos de Fornecimento"
-
-    def __str__(self):
-        return f"Contrato #{self.pk} ({self.subfamily.name}) - {self.buyer.username} & {self.producer.username}"
-    
 class SoilCharacteristic(models.Model):
     category = models.CharField(max_length=100, verbose_name="Categoria")
     sub_category = models.CharField(max_length=100, verbose_name="Sub-Categoria")
@@ -299,8 +262,6 @@ class IrrigationWaterData(models.Model):
 class PlantationPlan(models.Model):
     plantation_id = models.AutoField(primary_key=True)
     producer = models.ForeignKey(User, on_delete=models.CASCADE) 
-    product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, blank=True)
-    # subfamilies removed: moved to separate model PlantationCrop 
 
     # --- Campos Existentes ---
     plantation_name = models.CharField(max_length=100, verbose_name="Nome da Plantação", blank=True, null=True)
@@ -313,16 +274,11 @@ class PlantationPlan(models.Model):
     
     # --- 11 CARACTERÍSTICAS DO POMAR/SOLO ---
     total_area_ha = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Área total do pomar (m²)", blank=True, null=True)
-    # avg_plant_age_years removed
-    # kiwi_variety removed
-    # rootstock removed
-    # density_plants_ha removed
     conduct_system = models.CharField(max_length=50, choices=CONDUCT_SYSTEM_CHOICES, verbose_name="Sistema de condução", blank=True, null=True)
     soil_type = models.CharField(max_length=50, choices=SOIL_TYPE_CHOICES, verbose_name="Tipo de solo", blank=True, null=True)
     ph_soil = models.DecimalField(max_digits=4, decimal_places=2, verbose_name="pH do solo", blank=True, null=True)
     organic_matter_percent = models.DecimalField(max_digits=4, decimal_places=2, verbose_name="Matéria orgânica do solo (%)", blank=True, null=True)
     water_regime = models.CharField(max_length=20, choices=WATER_REGIME_CHOICES, verbose_name="Regime hídrico", blank=True, null=True)
-    # irrigation_system removed
     
     # M2M com Tabela de Valores do Solo
     soil_characteristics = models.ManyToManyField(
@@ -335,10 +291,7 @@ class PlantationPlan(models.Model):
     def __str__(self): 
         if self.plantation_name:
             return self.plantation_name
-        elif self.product:
-            return f"Plano {self.plantation_id} - Produto: {self.product.name}"
-        else:
-            return f"Plano {self.plantation_id}"
+        return f"Plano {self.plantation_id}"
 
 # --- NOVO MODELO: Detalhes da Cultura na Plantação ---
 class PlantationCrop(models.Model):
@@ -430,7 +383,10 @@ class Harvest(models.Model):
     
     @property
     def current_stock_kg(self):
-        return self.harvest_quantity_kg - self.utilized_quantity_kg
+        from decimal import Decimal
+        h_qty = self.harvest_quantity_kg if self.harvest_quantity_kg is not None else Decimal('0.0')
+        u_qty = self.utilized_quantity_kg if self.utilized_quantity_kg is not None else Decimal('0.0')
+        return Decimal(str(h_qty)) - Decimal(str(u_qty))
 
     def __str__(self): return f"Colheita {self.pk} - {self.subfamily.name if self.subfamily else 'N/A'} ({self.current_stock_kg}kg disp)"
     
@@ -485,12 +441,17 @@ class Route(models.Model):
     class Meta:
         db_table = 'routes'
 
-    def __str__(self):
-        return f"Rota #{self.pk} - {self.route_date} ({self.get_status_display()})"
-
     @property
     def total_weight_kg(self):
-        return sum(order.quantity_kg for order in self.orders.all())
+        if hasattr(self, 'optimized_path') and self.optimized_path:
+            import re
+            weights = re.findall(r':\s*([\d\.]+)\s*kg', self.optimized_path, re.IGNORECASE)
+            if weights:
+                try:
+                    return round(sum(float(w) for w in weights), 1)
+                except Exception:
+                    pass
+        return 0.0
 
     @property
     def total_crates(self):
@@ -500,145 +461,18 @@ class Route(models.Model):
     def total_pallets(self):
         return round(float(self.total_weight_kg) / PALLET_WEIGHT_KG, 1) if self.total_weight_kg else 0
 
-
-# ----------------------------------------------------------------------
-# 6. MODELO DE MARKETPLACE (TRANSAÇÕES)
-# ----------------------------------------------------------------------
-
-class MarketplaceOrder(models.Model):
-    ORDER_TYPE_CHOICES = [
-        ('BUY', 'Purchase Request (Compra)'),
-        ('SELL', 'Export Offer (Venda/Exportação)'),
-    ]
-    STATUS_CHOICES = [
-        ('OPEN', 'Open (Aberto)'),
-        ('APPROVED', 'Approved/Fulfilled (Aprovado)'),
-    ]
-
-    # Quem criou o pedido
-    requester = models.ForeignKey(User, on_delete=models.CASCADE, related_name='market_orders_requested')
-    # Perfil de quem criou (Ex: 'Retailer', 'Producer') - útil para filtragem visual
-    role = models.CharField(max_length=50, verbose_name="Perfil do Requerente")
-
-    order_type = models.CharField(max_length=10, choices=ORDER_TYPE_CHOICES, verbose_name="Tipo de Pedido")
-    
-    # O que está a ser transacionado
-    culture = models.ForeignKey(ProductSubFamily, on_delete=models.CASCADE, verbose_name="Cultura")
-    
-    # Só faz sentido para SELL orders (Produtor -> Mercado)
-    harvest_origin = models.ForeignKey(Harvest, on_delete=models.SET_NULL, null=True, blank=True, related_name='market_orders', verbose_name="Origem (Colheita)")
-    
-    quantity_kg = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Quantidade (Kg)")
-    price_per_kg = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Price / Kg (€)")
-    
-    # Detalhes Logísticos
-    warehouse_location = models.CharField(max_length=255, verbose_name="Localização do Armazém")
-    
-    # --- Quality Metrics (Premium Market) ---
-    # For SELL Orders (Specific Batch Data)
-    caliber = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name="Caliber (mm)")
-    soluble_solids = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name="Soluble Solids (Brix)")
-    quality_score = models.IntegerField(null=True, blank=True, verbose_name="Quality Score (1-10)")
-
-    # For BUY Orders (Minimum Requirements)
-    min_caliber = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name="Min Caliber (mm)")
-    min_soluble_solids = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name="Min Soluble Solids (Brix)")
-    min_quality_score = models.IntegerField(null=True, blank=True, verbose_name="Min Quality Score (1-10)")
-    
-    # Estado e Aprovação
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='OPEN', db_index=True)
-    fulfilled_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='market_orders_fulfilled')
-    
-    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
-    fulfilled_at = models.DateTimeField(null=True, blank=True, db_index=True)
-
-    # --- CAMPOS DE LOGÍSTICA (TRANSPORTE LIACC) ---
-    TRANSPORT_STATUS_CHOICES = [
-        ('PENDING', 'Pending (Pendente)'),
-        ('ACCEPTED', 'Job Accepted (Aceite)'),
-        ('PLANNED', 'Planned (Planeado)'),
-        ('IN_TRANSIT', 'In Transit (Em Trânsito)'),
-        ('DELIVERED', 'Delivered (Entregue)'),
-    ]
-    
-    transport_status = models.CharField(max_length=20, choices=TRANSPORT_STATUS_CHOICES, default='PENDING', db_index=True, verbose_name="Estado do Transporte")
-    
-    # Planeamento (Input da LIACC)
-    planned_pickup_date = models.DateTimeField(null=True, blank=True, verbose_name="Data Prevista de Recolha")
-    planned_delivery_date = models.DateTimeField(null=True, blank=True, verbose_name="Data Prevista de Entrega")
-    
-    # Execução Real (Input do Transportador/Blocos)
-    actual_pickup_date = models.DateTimeField(null=True, blank=True, verbose_name="Data Real de Recolha")
-    actual_delivery_date = models.DateTimeField(null=True, blank=True, db_index=True, verbose_name="Data Real de Entrega")
-    
-    # Dados de Sensores (JSON Dump da LIACC)
-    # Usamos TextField para simplicidade (pode conter JSON)
-    transport_sensor_data = models.TextField(null=True, blank=True, verbose_name="Dados dos Sensores (JSON)")
-
-    # Relacionamento com Frota e Otimização de Rotas
-    vehicle = models.ForeignKey(Vehicle, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Veículo")
-    route = models.ForeignKey(Route, on_delete=models.SET_NULL, null=True, blank=True, related_name='orders', verbose_name="Rota")
-
-    # --- PROCESSOR: PROCESSING FIELDS ---
-    is_processed = models.BooleanField(default=False, verbose_name="Processado?")
-    packaging_type = models.CharField(
-        max_length=50, 
-        choices=[('Plastic', 'Plástico'), ('Cardboard', 'Cartão'), ('Other', 'Outro')],
-        null=True, blank=True,
-        verbose_name="Tipo de Embalagem"
-    )
-    preservation_treatment = models.CharField(
-        max_length=50,
-        choices=[('Natural', 'Tratamento Natural'), ('Conventional', 'Convencional/Químico'), ('None', 'Nenhum')],
-        null=True, blank=True,
-        verbose_name="Tratamento de Conservação"
-    )
-    
-    class Meta:
-        db_table = 'marketplace_orders'
-        ordering = ['-created_at']
-
     @property
-    def pk_str(self):
-        return str(self.pk)
+    def orders_count(self):
+        if hasattr(self, 'optimized_path') and self.optimized_path:
+            import re
+            deals = re.findall(r'(?:Deal|Carga)\s*#([^\s\(\]]+)', self.optimized_path, re.IGNORECASE)
+            if deals:
+                return len(deals)
+            parts = [p for p in self.optimized_path.split('->') if p.strip()]
+            return len(parts) if parts else 1
+        return 1
 
-    @property
-    def total_price(self):
-        if self.price_per_kg and self.quantity_kg:
-            return self.price_per_kg * self.quantity_kg
-        return 0.0
 
-    @property
-    def destination_warehouse(self):
-        if self.warehouse_location and ' (WH:' in self.warehouse_location:
-            try:
-                wh_id = int(self.warehouse_location.split(' (WH:')[-1].replace(')', '').strip())
-                from .models import Warehouse
-                return Warehouse.objects.filter(pk=wh_id).first()
-            except Exception:
-                pass
-        return None
-
-    @property
-    def destination_latitude(self):
-        wh = self.destination_warehouse
-        return wh.latitude if wh else None
-
-    @property
-    def destination_longitude(self):
-        wh = self.destination_warehouse
-        return wh.longitude if wh else None
-
-    @property
-    def total_crates(self):
-        return int(float(self.quantity_kg) / CRATE_WEIGHT_KG) if self.quantity_kg else 0
-
-    @property
-    def total_pallets(self):
-        return round(float(self.quantity_kg) / PALLET_WEIGHT_KG, 1) if self.quantity_kg else 0
-
-    def __str__(self):
-        return f"{self.order_type} - {self.culture.name} ({self.quantity_kg}kg) by {self.requester.username}"
 
 class WarehouseSensorReading(models.Model):
     warehouse = models.ForeignKey(Warehouse, on_delete=models.CASCADE, related_name='sensor_readings')
@@ -673,99 +507,6 @@ class ConsolidatedStock(models.Model):
 
     def __str__(self):
         return f"Stock de {self.owner.username} - {self.culture.name} ({self.quantity}kg) em {self.warehouse_location}"
-
-
-from django.db.models.signals import post_save, post_delete
-from django.dispatch import receiver
-from itertools import chain
-
-def update_consolidated_stock(user, culture, warehouse_location):
-    is_processor = user.groups.filter(name='Processor').exists()
-    
-    incoming_qs = MarketplaceOrder.objects.filter(
-        status='APPROVED',
-        warehouse_location=warehouse_location,
-        culture=culture
-    )
-    
-    if is_processor:
-        purchases_in = incoming_qs.filter(requester=user, order_type='BUY', transport_status='DELIVERED', is_processed=True)
-        sales_in = incoming_qs.filter(fulfilled_by=user, order_type='SELL', transport_status='DELIVERED', is_processed=True)
-    else:
-        purchases_in = incoming_qs.filter(requester=user, order_type='BUY', transport_status='DELIVERED')
-        sales_in = incoming_qs.filter(fulfilled_by=user, order_type='SELL', transport_status='DELIVERED')
-        
-    total_qty = 0.0
-    mass_cal = 0.0
-    mass_brix = 0.0
-    mass_score = 0.0
-    
-    for p in chain(purchases_in, sales_in):
-        qty = float(p.quantity_kg)
-        total_qty += qty
-        
-        if p.order_type == 'SELL':
-            cal = float(p.caliber) if p.caliber else 0.0
-            brix = float(p.soluble_solids) if p.soluble_solids else 0.0
-            score = float(p.quality_score) if p.quality_score else 0.0
-        else:
-            cal = float(p.min_caliber) if p.min_caliber else 0.0
-            brix = float(p.min_soluble_solids) if p.min_soluble_solids else 0.0
-            score = float(p.min_quality_score) if p.min_quality_score else 0.0
-            
-        mass_cal += (cal * qty)
-        mass_brix += (brix * qty)
-        mass_score += (score * qty)
-        
-    outgoing_qs = MarketplaceOrder.objects.filter(
-        warehouse_location=warehouse_location,
-        culture=culture
-    )
-    
-    sales_out = outgoing_qs.filter(requester=user, order_type='SELL').exclude(status='CANCELLED')
-    purchases_out = outgoing_qs.filter(fulfilled_by=user, order_type='BUY', status='APPROVED')
-    
-    total_out = 0.0
-    for s in chain(sales_out, purchases_out):
-        total_out += float(s.quantity_kg)
-        
-    net_qty = max(0.0, total_qty - total_out)
-    
-    avg_cal = (mass_cal / total_qty) if total_qty > 0 else 0.0
-    avg_brix = (mass_brix / total_qty) if total_qty > 0 else 0.0
-    avg_score = (mass_score / total_qty) if total_qty > 0 else 0.0
-    
-    if net_qty > 0.001:
-        obj, created = ConsolidatedStock.objects.get_or_create(
-            owner=user,
-            culture=culture,
-            warehouse_location=warehouse_location
-        )
-        obj.quantity = net_qty
-        obj.avg_caliber = avg_cal
-        obj.avg_soluble_solids = avg_brix
-        obj.avg_quality_score = avg_score
-        obj.save()
-    else:
-        ConsolidatedStock.objects.filter(
-            owner=user,
-            culture=culture,
-            warehouse_location=warehouse_location
-        ).delete()
-
-@receiver(post_save, sender=MarketplaceOrder)
-def order_post_save(sender, instance, **kwargs):
-    if instance.requester:
-        update_consolidated_stock(instance.requester, instance.culture, instance.warehouse_location)
-    if instance.fulfilled_by:
-        update_consolidated_stock(instance.fulfilled_by, instance.culture, instance.warehouse_location)
-        
-@receiver(post_delete, sender=MarketplaceOrder)
-def order_post_delete(sender, instance, **kwargs):
-    if instance.requester:
-        update_consolidated_stock(instance.requester, instance.culture, instance.warehouse_location)
-    if instance.fulfilled_by:
-        update_consolidated_stock(instance.fulfilled_by, instance.culture, instance.warehouse_location)
 
 
 class HistoricalSalesData(models.Model):

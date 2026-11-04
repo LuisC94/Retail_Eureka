@@ -48,7 +48,7 @@ def run_simulation_prof_luis_paulo(
         p = PRESETS_ACADEMIC[fruit_key]
 
     max_sim_days = max(days + 200, 365)
-    t = np.arange(0, max_sim_days + dt * 0.5, dt)
+    t = np.arange(0, max_sim_days, dt)
     
     extra_days = max_sim_days - days
     if extra_days > 0:
@@ -173,6 +173,7 @@ def run_simulation_prof_luis_paulo(
         "quality": quality[:idx_end].tolist(),
         "firmness": firmness[:idx_end].tolist(),
         "brix": brix[:idx_end].tolist(),
+        "mold": mold[:idx_end].tolist(),
         "t": t[:idx_end].tolist()
     }
     return final_quality, remaining_SL, float(firmness[idx_days]), float(brix[idx_days]), arrays_dict
@@ -203,7 +204,27 @@ def run_simulation_sofia_machado(
             p.setdefault(kk, vv)
     else:
         p = PRESETS_SOFIA[fruit_key]
-        
+
+    if days <= 0:
+        firm_score = 1.0 / (1.0 + np.exp(-0.35 * (float(firmness_0_user) - float(p["qual_firmness_threshold"]))))
+        brix_score = np.exp(-((float(brix_0_user) - float(p["qual_brix_target"])) ** 2) / 2.0)
+        acidity_score = np.exp(-((float(acidity_0_user) - float(p.get("qual_acidity_target", 1.0))) ** 2) / 0.5)
+        maturation_index = float(brix_0_user) / max(1e-5, float(acidity_0_user))
+        target_ratio = float(p["qual_brix_target"]) / max(1e-5, float(p.get("qual_acidity_target", 1.0)))
+        ratio_score = np.exp(-((maturation_index - target_ratio) ** 2) / 10.0)
+        quality_base = 100.0 * (0.35 * firm_score + 0.35 * ratio_score + 0.15 * brix_score + 0.15 * acidity_score)
+        SL_ref = float(p.get("SL_ref", 30))
+        arrays_dict = {
+            "quality": [round(quality_base, 2)],
+            "quality_base": [round(quality_base, 2)],
+            "firmness": [float(firmness_0_user)],
+            "brix": [float(brix_0_user)],
+            "acidity": [float(acidity_0_user)],
+            "ratio": [round(maturation_index, 2)],
+            "t": [0.0]
+        }
+        return float(round(quality_base, 2)), float(SL_ref), float(firmness_0_user), float(brix_0_user), arrays_dict
+
     if packaging_methods is None:
         packaging_methods = ["Granel (Sem embalagem)"] * days
     else:
@@ -332,6 +353,7 @@ def run_simulation_sofia_machado(
         "brix": brix.tolist(), 
         "acidity": acidity.tolist(), 
         "ratio": maturation_index.tolist(), 
+        "mold": mold.tolist(),
         "t": t.tolist()
     }
     

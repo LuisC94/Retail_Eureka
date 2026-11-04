@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import UserProfile, CultureShelfLife, SupplyContract, ProductSubFamily, Harvest, HistoricalSalesData, DemandForecast, TrainedModel
+from .models import UserProfile, ProductSubFamily, Harvest, HistoricalSalesData, DemandForecast, TrainedModel
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
@@ -7,16 +7,12 @@ class UserProfileAdmin(admin.ModelAdmin):
     list_filter = ('producer_type',)
     search_fields = ('user__username', 'phone_number')
 
-@admin.register(CultureShelfLife)
-class CultureShelfLifeAdmin(admin.ModelAdmin):
-    list_display = ('subfamily', 'default_shelf_life_days')
-    search_fields = ('subfamily__name',)
+@admin.register(ProductSubFamily)
+class ProductSubFamilyAdmin(admin.ModelAdmin):
+    list_display = ('name', 'fruit_type', 'default_shelf_life_days')
+    list_filter = ('fruit_type',)
+    search_fields = ('name',)
 
-@admin.register(SupplyContract)
-class SupplyContractAdmin(admin.ModelAdmin):
-    list_display = ('id', 'buyer', 'producer', 'subfamily', 'quantity_kg', 'delivery_date', 'status')
-    list_filter = ('status', 'delivery_date')
-    search_fields = ('buyer__username', 'producer__username', 'subfamily__name')
 
 @admin.register(HistoricalSalesData)
 class HistoricalSalesDataAdmin(admin.ModelAdmin):

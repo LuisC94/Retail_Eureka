@@ -45,15 +45,15 @@ def get_user_storage_dir(user_id: Union[int, str]) -> str:
 # ============================================================
 
 class HistoricalSaleItem(BaseModel):
-    date: str = Field(..., example="2026-08-01", description="Data da venda YYYY-MM-DD")
-    sales_quantity_kg: float = Field(..., example=125.5, description="Quantidade vendida em Kg")
-    price_per_kg: Optional[float] = Field(2.0, example=2.15, description="Preço de venda por Kg")
+    date: str = Field(..., examples=["2026-08-01"], description="Data da venda YYYY-MM-DD")
+    sales_quantity_kg: float = Field(..., examples=[125.5], description="Quantidade vendida em Kg")
+    price_per_kg: Optional[float] = Field(2.0, examples=[2.15], description="Preço de venda por Kg")
 
 
 class TrainRequest(BaseModel):
-    user_id: Union[int, str] = Field(..., example=1, description="ID do Utilizador autenticado na plataforma")
-    culture_id: Union[int, str] = Field(..., example=3, description="ID da Cultura / Subfamília de produto")
-    model_type: str = Field("mlp", example="mlp", description="Tipo de modelo: 'mlp' ou 'autoformer'")
+    user_id: Union[int, str] = Field(..., examples=[1], description="ID do Utilizador autenticado na plataforma")
+    culture_id: Union[int, str] = Field(..., examples=[3], description="ID da Cultura / Subfamília de produto")
+    model_type: str = Field("mlp", examples=["mlp"], description="Tipo de modelo: 'mlp' ou 'autoformer'")
     sales_history: List[HistoricalSaleItem] = Field(..., description="Lista de dados históricos diários")
 
 
@@ -69,13 +69,13 @@ class TrainResponse(BaseModel):
 
 
 class PredictRequest(BaseModel):
-    user_id: Union[int, str] = Field(..., example=1, description="ID do Utilizador")
-    culture_id: Union[int, str] = Field(..., example=3, description="ID da Cultura")
-    model_type: Optional[str] = Field("mlp", example="mlp", description="Tipo de modelo a utilizar ('mlp' ou 'autoformer')")
-    horizon_days: int = Field(30, example=30, description="Número de dias futuros a prever")
-    start_date: Optional[str] = Field(None, example="2026-09-16", description="Data inicial da previsão (default: hoje)")
-    recent_sales_lags: List[float] = Field(..., example=[120.0, 130.0, 140.0, 115.0, 125.0, 130.0, 135.0], description="Últimos valores reais registados (mínimo 7 para lags)")
-    avg_price: Optional[float] = Field(2.0, example=2.15, description="Preço médio de mercado de referência")
+    user_id: Union[int, str] = Field(..., examples=[1], description="ID do Utilizador")
+    culture_id: Union[int, str] = Field(..., examples=[3], description="ID da Cultura")
+    model_type: Optional[str] = Field("mlp", examples=["mlp"], description="Tipo de modelo a utilizar ('mlp' ou 'autoformer')")
+    horizon_days: int = Field(30, examples=[30], description="Número de dias futuros a prever")
+    start_date: Optional[str] = Field(None, examples=["2026-09-16"], description="Data inicial da previsão (default: hoje)")
+    recent_sales_lags: List[float] = Field(..., examples=[[120.0, 130.0, 140.0, 115.0, 125.0, 130.0, 135.0]], description="Últimos valores reais registados (mínimo 7 para lags)")
+    avg_price: Optional[float] = Field(2.0, examples=[2.15], description="Preço médio de mercado de referência")
 
 
 class PredictionDay(BaseModel):

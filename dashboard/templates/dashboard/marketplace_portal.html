@@ -1,0 +1,2151 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retail Eureka — Agri-Food Marketplace & Commodity Exchange</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-base: #0b1319;
+            --bg-surface: #121e27;
+            --bg-card: #182834;
+            --bg-card-hover: #1f3343;
+            --border-subtle: #243b4d;
+            --border-highlight: #00a884;
+            --primary: #00b074;
+            --primary-glow: rgba(0, 176, 116, 0.25);
+            --primary-dark: #008759;
+            --accent-blue: #0284c7;
+            --accent-purple: #8b5cf6;
+            --accent-orange: #f97316;
+            --accent-gold: #eab308;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --text-dim: #64748b;
+            --success: #10b981;
+            --danger: #ef4444;
+            --font-display: 'Outfit', sans-serif;
+            --font-body: 'Inter', sans-serif;
+        }
+
+        /* ==================== LIGHT MODE THEME ==================== */
+        [data-theme="light"] {
+            --bg-base: #f0f4f8;
+            --bg-surface: #ffffff;
+            --bg-card: #ffffff;
+            --bg-card-hover: #f8fafc;
+            --border-subtle: #e2e8f0;
+            --border-highlight: #00b074;
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --text-dim: #94a3b8;
+        }
+
+        [data-theme="light"] body {
+            background-color: var(--bg-base);
+            color: var(--text-main);
+        }
+
+        [data-theme="light"] .portal-header {
+            background: rgba(255, 255, 255, 0.95);
+            border-bottom: 1px solid #e2e8f0;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+        }
+
+        [data-theme="light"] .brand-titles h1 {
+            background: linear-gradient(90deg, #00796b, #0284c7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        [data-theme="light"] .ticker-wrapper {
+            background: #e2e8f0;
+            border-bottom: 1px solid #cbd5e1;
+        }
+
+        [data-theme="light"] .ticker-name { color: #334155; }
+        [data-theme="light"] .ticker-price { color: #0f172a; }
+        [data-theme="light"] .metric-info .metric-val { color: #0f172a; }
+
+        [data-theme="light"] .trading-action-banner {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.04);
+        }
+
+        [data-theme="light"] .trading-prompt h2 { color: #0f172a; }
+        [data-theme="light"] .nav-pills-tabs { background: #f1f5f9; border-color: #e2e8f0; }
+        [data-theme="light"] .tab-btn.active { background: #ffffff; color: #00796b; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+        [data-theme="light"] .filter-bar { background: #f8fafc; border-color: #e2e8f0; }
+        [data-theme="light"] .filter-input { background: #ffffff; border-color: #cbd5e1; color: #0f172a; }
+        [data-theme="light"] .market-table th { background: #f8fafc; color: #475569; border-bottom-color: #e2e8f0; }
+        [data-theme="light"] .market-table td { border-bottom-color: #f1f5f9; color: #1e293b; }
+        [data-theme="light"] .market-table tr:hover td { background: #f8fafc; }
+        [data-theme="light"] .intel-header h3 { color: #0f172a; }
+        [data-theme="light"] .news-item { background: #ffffff; border-color: #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+        [data-theme="light"] .news-item:hover { border-color: #cbd5e1; box-shadow: 0 4px 15px rgba(0,0,0,0.06); }
+        [data-theme="light"] .news-title a, [data-theme="light"] .news-title { color: #0f172a !important; }
+        [data-theme="light"] .index-box { background: #f8fafc; border-color: #e2e8f0; }
+        [data-theme="light"] .index-val { color: #0f172a; }
+        [data-theme="light"] .portal-modal-dialog { background: #ffffff; border-color: #e2e8f0; color: #0f172a; box-shadow: 0 25px 60px rgba(0, 0, 0, 0.12); }
+        [data-theme="light"] .modal-header-flex h2 { color: #0f172a; }
+        [data-theme="light"] .modal-header-subtitle { color: #64748b; }
+        [data-theme="light"] .modal-section-card { background: #f8fafc; border-color: #e2e8f0; }
+        [data-theme="light"] .modal-section-title { color: #475569; }
+        [data-theme="light"] .form-label { color: #334155; }
+        [data-theme="light"] .portal-modal input,
+        [data-theme="light"] .portal-modal select,
+        [data-theme="light"] .portal-modal textarea,
+        [data-theme="light"] .portal-modal .form-control,
+        [data-theme="light"] .form-input, 
+        [data-theme="light"] .form-select, 
+        [data-theme="light"] .form-textarea {
+            background: #ffffff;
+            border-color: #cbd5e1;
+            color: #0f172a;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+        [data-theme="light"] .portal-modal input:focus,
+        [data-theme="light"] .portal-modal select:focus,
+        [data-theme="light"] .portal-modal textarea:focus,
+        [data-theme="light"] .portal-modal .form-control:focus,
+        [data-theme="light"] .form-input:focus, 
+        [data-theme="light"] .form-select:focus {
+            border-color: #00b074;
+            background: #ffffff;
+            box-shadow: 0 0 0 3px rgba(0, 176, 116, 0.15);
+        }
+        [data-theme="light"] .quality-metric-box { background: rgba(0, 176, 116, 0.08); border-color: rgba(0, 176, 116, 0.3); }
+        [data-theme="light"] .quality-metric-box .metric-label { color: #475569; }
+        [data-theme="light"] .quality-metric-box input { color: #059669 !important; }
+        [data-theme="light"] .deal-calc-box { background: linear-gradient(135deg, #f0fdf4 0%, #f0f9ff 100%); border-color: #86efac; }
+        [data-theme="light"] .deal-calc-box .calc-label { color: #166534; }
+        [data-theme="light"] .deal-calc-box .calc-val { color: #15803d; }
+        [data-theme="light"] .btn-action-tertiary { background: #f1f5f9; border-color: #cbd5e1; color: #334155; }
+        [data-theme="light"] .btn-back-dashboard { background: #f1f5f9; border-color: #cbd5e1; color: #334155; }
+        [data-theme="light"] .user-badge { background: #f8fafc; border-color: #e2e8f0; color: #334155; }
+        [data-theme="light"] .theme-toggle-btn { background: #f1f5f9; border-color: #cbd5e1; color: #334155; }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* ==================== TOP NAVIGATION ==================== */
+        .portal-header {
+            background: rgba(18, 30, 39, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-subtle);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 14px 28px;
+        }
+
+        .header-content {
+            max-width: 1700px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .brand-section {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .brand-logo-icon {
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, #00b074 0%, #0284c7 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            box-shadow: 0 0 20px var(--primary-glow);
+        }
+
+        .brand-titles h1 {
+            font-family: var(--font-display);
+            font-size: 1.35em;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            background: linear-gradient(90deg, #ffffff, #a7f3d0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand-titles p {
+            font-size: 0.78em;
+            color: var(--text-muted);
+            letter-spacing: 0.3px;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #34d399;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #10b981;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #10b981;
+            animation: pulse-dot 2s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.85); }
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .user-badge {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            padding: 7px 16px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85em;
+        }
+
+        .user-role-tag {
+            background: rgba(0, 176, 116, 0.2);
+            color: #34d399;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.75em;
+            text-transform: uppercase;
+        }
+
+        .btn-back-dashboard {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-main);
+            border: 1px solid var(--border-subtle);
+            padding: 9px 18px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.85em;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-back-dashboard:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: var(--text-muted);
+            transform: translateY(-1px);
+        }
+
+        .theme-toggle-btn {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-main);
+            border: 1px solid var(--border-subtle);
+            padding: 9px 16px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.85em;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .theme-toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: var(--text-muted);
+            transform: translateY(-1px);
+        }
+
+        /* ==================== TICKER BAR ==================== */
+        .ticker-wrapper {
+            background: #080f14;
+            border-bottom: 1px solid var(--border-subtle);
+            overflow: hidden;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            height: 38px;
+        }
+
+        .ticker-tag {
+            background: var(--primary);
+            color: #0b1319;
+            font-weight: 800;
+            font-size: 0.72em;
+            padding: 0 16px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            letter-spacing: 0.5px;
+            z-index: 10;
+            flex-shrink: 0;
+        }
+
+        .ticker-content {
+            display: inline-flex;
+            animation: ticker-scroll 35s linear infinite;
+        }
+
+        .ticker-content:hover {
+            animation-play-state: paused;
+        }
+
+        @keyframes ticker-scroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        .ticker-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0 24px;
+            font-size: 0.82em;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .ticker-name {
+            color: #cbd5e1;
+            font-weight: 500;
+        }
+
+        .ticker-price {
+            font-weight: 700;
+            color: #ffffff;
+            font-family: monospace;
+        }
+
+        .ticker-change {
+            font-weight: 700;
+            font-size: 0.85em;
+        }
+
+        .ticker-change.up { color: #10b981; }
+        .ticker-change.down { color: #ef4444; }
+        .ticker-change.neutral { color: #94a3b8; }
+
+        /* ==================== MAIN LAYOUT ==================== */
+        .portal-main {
+            max-width: 1700px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 24px 28px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* DJANGO MESSAGES */
+        .messages-box {
+            margin-bottom: 10px;
+        }
+        .alert-msg {
+            padding: 14px 20px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            font-weight: 600;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .alert-msg.success {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            color: #6ee7b7;
+        }
+        .alert-msg.error {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.35);
+            color: #fca5a5;
+        }
+
+        /* ==================== HERO KPI CARDS ==================== */
+        .hero-metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+        }
+
+        .metric-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: all 0.25s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--primary);
+        }
+
+        .metric-card.accent-blue::after { background: var(--accent-blue); }
+        .metric-card.accent-purple::after { background: var(--accent-purple); }
+        .metric-card.accent-orange::after { background: var(--accent-orange); }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.15);
+            background: var(--bg-card);
+        }
+
+        .metric-icon-box {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .metric-info h4 {
+            font-size: 0.8em;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .metric-info .metric-val {
+            font-family: var(--font-display);
+            font-size: 1.6em;
+            font-weight: 800;
+            color: #ffffff;
+        }
+
+        .metric-info .metric-sub {
+            font-size: 0.75em;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+
+        /* ==================== ACTION BAR & SHORTCUTS ==================== */
+        .trading-action-banner {
+            background: linear-gradient(135deg, rgba(18, 30, 39, 0.95) 0%, rgba(24, 40, 52, 0.9) 100%);
+            border: 1px solid var(--border-subtle);
+            border-radius: 18px;
+            padding: 22px 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+        }
+
+        .trading-prompt h2 {
+            font-family: var(--font-display);
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+
+        .trading-prompt p {
+            font-size: 0.85em;
+            color: var(--text-muted);
+        }
+
+        .quick-actions-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn-action-primary {
+            background: linear-gradient(135deg, #00b074 0%, #008759 100%);
+            color: #ffffff;
+            border: none;
+            padding: 11px 22px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.88em;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px var(--primary-glow);
+            transition: all 0.25s ease;
+        }
+
+        .btn-action-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 22px rgba(0, 176, 116, 0.4);
+            filter: brightness(1.1);
+        }
+
+        .btn-action-secondary {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            color: #ffffff;
+            border: none;
+            padding: 11px 22px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.88em;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(2, 132, 199, 0.25);
+            transition: all 0.25s ease;
+        }
+
+        .btn-action-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 22px rgba(2, 132, 199, 0.4);
+            filter: brightness(1.1);
+        }
+
+        .btn-action-tertiary {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-main);
+            border: 1px solid var(--border-subtle);
+            padding: 11px 20px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.88em;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.25s ease;
+        }
+
+        .btn-action-tertiary:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: var(--text-muted);
+            transform: translateY(-2px);
+        }
+
+        /* ==================== TWO-COLUMN CONTENT ==================== */
+        .portal-grid-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 1200px) {
+            .portal-grid-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ==================== ORDER BOOK & DATA TABS ==================== */
+        .orderbook-panel {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .orderbook-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .nav-pills-tabs {
+            display: flex;
+            gap: 8px;
+            background: #0b141a;
+            padding: 6px;
+            border-radius: 12px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .tab-btn.active {
+            background: var(--bg-card);
+            color: #ffffff;
+            border: 1px solid var(--border-highlight);
+            box-shadow: 0 2px 10px rgba(0, 176, 116, 0.2);
+        }
+
+        .tab-count-badge {
+            background: rgba(255, 255, 255, 0.12);
+            padding: 2px 6px;
+            border-radius: 6px;
+            font-size: 0.8em;
+            font-weight: 700;
+        }
+
+        /* LIVE FILTERS */
+        .filter-bar {
+            background: #0d171f;
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .filter-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.82em;
+            color: var(--text-muted);
+        }
+
+        .filter-input {
+            background: #15222c;
+            border: 1px solid var(--border-subtle);
+            color: #ffffff;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 0.85em;
+            outline: none;
+        }
+
+        .filter-input:focus {
+            border-color: var(--primary);
+        }
+
+        .btn-filter-apply {
+            background: var(--primary);
+            color: #0b1319;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.82em;
+            cursor: pointer;
+        }
+
+        .btn-filter-clear {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-muted);
+            border: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.82em;
+            cursor: pointer;
+        }
+
+        /* DATA TABLES */
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        .market-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85em;
+            text-align: left;
+        }
+
+        .market-table th {
+            background: #0d171f;
+            color: var(--text-muted);
+            padding: 12px 14px;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-subtle);
+            letter-spacing: 0.3px;
+        }
+
+        .market-table td {
+            padding: 14px;
+            border-bottom: 1px solid rgba(36, 59, 77, 0.5);
+            color: #e2e8f0;
+            vertical-align: middle;
+        }
+
+        .market-table tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .badge-type-sell {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #34d399;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 0.78em;
+        }
+
+        .badge-type-buy {
+            background: rgba(2, 132, 199, 0.15);
+            border: 1px solid rgba(2, 132, 199, 0.3);
+            color: #38bdf8;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 0.78em;
+        }
+
+        .score-pill {
+            display: inline-block;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+        .score-good { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+        .score-med { background: rgba(234, 179, 8, 0.2); color: #facc15; }
+        .score-low { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+
+        .btn-table-action {
+            background: linear-gradient(135deg, #00b074 0%, #008759 100%);
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.82em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-table-action:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px var(--primary-glow);
+        }
+
+        /* ==================== RIGHT SIDEBAR: INTELLIGENCE & NEWS ==================== */
+        .intel-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .intel-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            padding: 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .intel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-subtle);
+            padding-bottom: 12px;
+        }
+
+        .intel-header h3 {
+            font-family: var(--font-display);
+            font-size: 1.1em;
+            font-weight: 700;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* NEWS FEED */
+        .news-list {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .news-item {
+            background: #0d171f;
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .news-item:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            background: #111e28;
+            transform: translateY(-1px);
+        }
+
+        .news-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .news-tag {
+            font-size: 0.72em;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+
+        .news-date {
+            font-size: 0.72em;
+            color: var(--text-dim);
+        }
+
+        .news-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #f1f5f9;
+            margin-bottom: 6px;
+            line-height: 1.35;
+        }
+
+        .news-desc {
+            font-size: 0.78em;
+            color: var(--text-muted);
+            line-height: 1.45;
+        }
+
+        /* COMMODITIES QUICK INDEX */
+        .index-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .index-box {
+            background: #0d171f;
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 12px;
+        }
+
+        .index-symbol {
+            font-size: 0.72em;
+            color: var(--text-dim);
+            font-family: monospace;
+        }
+
+        .index-val {
+            font-family: var(--font-display);
+            font-size: 1.15em;
+            font-weight: 700;
+            color: #ffffff;
+            margin: 4px 0 2px;
+        }
+
+        .index-sub {
+            font-size: 0.72em;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* ==================== MODALS ==================== */
+        .portal-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(6px);
+        }
+
+        .portal-modal-dialog {
+            background: #121e27;
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            max-width: 650px;
+            margin: 5% auto;
+            padding: 30px;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .modal-header-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .modal-header-flex h2 {
+            font-family: var(--font-display);
+            font-size: 1.3em;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .close-modal-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 24px;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .close-modal-btn:hover {
+            color: #ffffff;
+        }
+
+        .form-grid-modal {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .form-group-full {
+            grid-column: 1 / -1;
+        }
+
+        .modal-section-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            padding: 18px;
+            margin-bottom: 16px;
+        }
+
+        .modal-section-title {
+            font-size: 0.82em;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.82em;
+            font-weight: 600;
+            color: #cbd5e1;
+            margin-bottom: 6px;
+        }
+
+        .portal-modal input,
+        .portal-modal select,
+        .portal-modal textarea,
+        .portal-modal .form-control,
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            background: #0d171f;
+            border: 1.5px solid var(--border-subtle);
+            color: #ffffff;
+            padding: 11px 15px;
+            border-radius: 12px;
+            font-size: 0.92em;
+            font-family: var(--font-body);
+            outline: none;
+            transition: all 0.2s ease;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .portal-modal input:focus,
+        .portal-modal select:focus,
+        .portal-modal textarea:focus,
+        .portal-modal .form-control:focus,
+        .form-input:focus, .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+            background: #12212c;
+        }
+
+        .quality-metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .quality-metric-box {
+            background: rgba(0, 176, 116, 0.06);
+            border: 1px solid rgba(0, 176, 116, 0.25);
+            border-radius: 12px;
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .quality-metric-box:hover {
+            background: rgba(0, 176, 116, 0.1);
+            border-color: rgba(0, 176, 116, 0.4);
+        }
+
+        .quality-metric-box .metric-label {
+            font-size: 0.75em;
+            color: #94a3b8;
+            font-weight: 600;
+        }
+
+        .quality-metric-box input {
+            background: transparent !important;
+            border: none !important;
+            padding: 0 !important;
+            font-size: 1.15em !important;
+            font-weight: 700 !important;
+            color: #34d399 !important;
+            box-shadow: none !important;
+        }
+
+        .deal-calc-box {
+            background: linear-gradient(135deg, rgba(0, 176, 116, 0.1) 0%, rgba(2, 132, 199, 0.1) 100%);
+            border: 1px solid rgba(0, 176, 116, 0.3);
+            border-radius: 12px;
+            padding: 14px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 14px;
+        }
+
+        .deal-calc-box .calc-label {
+            font-size: 0.85em;
+            color: #cbd5e1;
+            font-weight: 600;
+        }
+
+        .deal-calc-box .calc-val {
+            font-family: var(--font-display);
+            font-size: 1.35em;
+            font-weight: 800;
+            color: #34d399;
+        }
+
+        .modal-footer-btns {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 24px;
+            padding-top: 18px;
+            border-top: 1px solid var(--border-subtle);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ==================== TOP NAVIGATION HEADER ==================== -->
+    <header class="portal-header">
+        <div class="header-content">
+            <div class="brand-section">
+                <div class="brand-logo-icon">🌾</div>
+                <div class="brand-titles">
+                    <h1>RETAIL EUREKA — AGRI-FOOD EXCHANGE</h1>
+                    <p>Decoupled Web Service Trading Hub & Order Book</p>
+                </div>
+                <div class="status-pill">
+                    <span class="status-dot"></span>
+                    {% if service_online %}
+                        <span>Web Service: Online (FastAPI)</span>
+                    {% else %}
+                        <span>Web Service: Connected (Edge Mode)</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <button type="button" id="themeToggleBtn" class="theme-toggle-btn" onclick="toggleTheme()" title="Alternar Modo Claro / Modo Escuro">
+                    <span id="themeIcon">🌙</span> <span id="themeLabel">Modo Claro</span>
+                </button>
+                <div class="user-badge">
+                    <span>👤 <strong>{{ username }}</strong></span>
+                    <span class="user-role-tag">{{ role }}</span>
+                </div>
+                <a href="{% url return_dashboard_url %}" class="btn-back-dashboard">
+                    <span>← Voltar ao {{ role }} Dashboard</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- ==================== REAL-TIME COMMODITIES TICKER ==================== -->
+    <div class="ticker-wrapper">
+        <div class="ticker-tag">⚡ COTAÇÕES AO VIVO (SIMA / AGRI-COMMODITIES)</div>
+        <div class="ticker-content">
+            {% for t in market_tickers %}
+            <div class="ticker-item">
+                <span class="ticker-name">{{ t.name }}</span>
+                <span class="ticker-price">{{ t.price }} {{ t.unit }}</span>
+                <span class="ticker-change {{ t.trend }}">{{ t.change }}</span>
+                <small style="color:var(--text-dim);">({{ t.origin }})</small>
+            </div>
+            {% endfor %}
+            <!-- Duplicate for infinite seamless scroll -->
+            {% for t in market_tickers %}
+            <div class="ticker-item">
+                <span class="ticker-name">{{ t.name }}</span>
+                <span class="ticker-price">{{ t.price }} {{ t.unit }}</span>
+                <span class="ticker-change {{ t.trend }}">{{ t.change }}</span>
+                <small style="color:var(--text-dim);">({{ t.origin }})</small>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- ==================== MAIN PORTAL CONTAINER ==================== -->
+    <main class="portal-main">
+
+        <!-- DJANGO MESSAGES NOTIFICATION BOX -->
+        {% if messages %}
+        <div class="messages-box">
+            {% for msg in messages %}
+            <div class="alert-msg {% if msg.tags == 'success' %}success{% else %}error{% endif %}">
+                <span>{% if msg.tags == 'success' %}✅{% else %}⚠️{% endif %}</span>
+                <span>{{ msg }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- HERO KPI METRICS -->
+        <div class="hero-metrics-grid">
+            <div class="metric-card">
+                <div class="metric-icon-box">📦</div>
+                <div class="metric-info">
+                    <h4>Volume em Negociação</h4>
+                    <div class="metric-val">{{ market_stats.total_open_volume }} <span style="font-size:0.6em; color:var(--text-muted);">Kg</span></div>
+                    <div class="metric-sub">Liquidez ativa no Order Book</div>
+                </div>
+            </div>
+
+            <div class="metric-card accent-blue">
+                <div class="metric-icon-box">📢</div>
+                <div class="metric-info">
+                    <h4>Ofertas de Venda (Ask)</h4>
+                    <div class="metric-val">{{ market_stats.open_listings_count }}</div>
+                    <div class="metric-sub">Produtores & Exportadores</div>
+                </div>
+            </div>
+
+            <div class="metric-card accent-purple">
+                <div class="metric-icon-box">🛒</div>
+                <div class="metric-info">
+                    <h4>Ordens de Compra (Bid)</h4>
+                    <div class="metric-val">{{ market_stats.open_bids_count }}</div>
+                    <div class="metric-sub">Retalho & Processamento</div>
+                </div>
+            </div>
+
+            <div class="metric-card accent-orange">
+                <div class="metric-icon-box">🤝</div>
+                <div class="metric-info">
+                    <h4>Deals Celebrados</h4>
+                    <div class="metric-val">{{ market_stats.total_deals_count }}</div>
+                    <div class="metric-sub">{{ market_stats.total_deals_volume }} Kg liquidados</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ACTION & TRADING BANNER -->
+        <div class="trading-action-banner">
+            <div class="trading-prompt">
+                <h2>Terminal de Transações Agroalimentares</h2>
+                <p>Publique novas ordens de venda, lance pedidos de compra ou celebre contratos futuros de fornecimento.</p>
+            </div>
+
+            <div class="quick-actions-group">
+                {% if role == 'Producer' %}
+                    <button type="button" class="btn-action-primary" onclick="openModal('sellOfferModal')">
+                        <span>📢</span> Publicar Oferta de Venda (Ask)
+                    </button>
+                {% else %}
+                    <button type="button" class="btn-action-primary" onclick="openModal('buyOrderModal')">
+                        <span>🛒</span> Registar Pedido de Compra (Bid)
+                    </button>
+                {% endif %}
+
+                {% if role == 'Retailer' or role == 'Processor' or role == 'Admin' %}
+                    <button type="button" class="btn-action-secondary" onclick="openModal('contractModal')">
+                        <span>📜</span> Celebrar Contrato Futuro (Dia X)
+                    </button>
+                {% endif %}
+
+                <button type="button" class="btn-action-tertiary" onclick="switchMarketTab('my-deals')">
+                    <span>📑</span> As Minhas Ordens
+                </button>
+            </div>
+        </div>
+
+        <!-- TWO-COLUMN CONTENT: ORDER BOOK + INTELLIGENCE & NEWS -->
+        <div class="portal-grid-content">
+            
+            <!-- LEFT COLUMN: LIVE ORDER BOOK & TRANSACTION TABLES -->
+            <div class="orderbook-panel">
+                <div class="orderbook-header">
+                    <div class="nav-pills-tabs">
+                        <button class="tab-btn active" onclick="switchMarketTab('all-orders')">
+                            <span>📊 Livro de Ordens</span>
+                            <span class="tab-count-badge">{{ open_orders|length }}</span>
+                        </button>
+                        <button class="tab-btn" onclick="switchMarketTab('sell-listings')">
+                            <span>🍏 Vendas (Ask)</span>
+                            <span class="tab-count-badge">{{ open_listings|length }}</span>
+                        </button>
+                        <button class="tab-btn" onclick="switchMarketTab('buy-bids')">
+                            <span>🛒 Compras (Bid)</span>
+                            <span class="tab-count-badge">{{ open_bids|length }}</span>
+                        </button>
+                        <button class="tab-btn" onclick="switchMarketTab('history-deals')">
+                            <span>📜 Deals Concluídos</span>
+                            <span class="tab-count-badge">{{ closed_deals|length }}</span>
+                        </button>
+                    </div>
+
+                    <!-- SEARCH AND FILTERS -->
+                    <div class="filter-bar">
+                        <div class="filter-item">
+                            <label>Cultura:</label>
+                            <select id="filterCulture" class="filter-input" onchange="applyPortalFilters()">
+                                <option value="">Todas as Culturas</option>
+                                {% for sub in product_subfamilies %}
+                                    <option value="{{ sub.name }}">{{ sub.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="filter-item">
+                            <label>Calibre ></label>
+                            <input type="number" id="filterCaliber" class="filter-input" style="width:70px;" placeholder="mm" oninput="applyPortalFilters()">
+                        </div>
+                        <div class="filter-item">
+                            <label>Brix ></label>
+                            <input type="number" step="0.1" id="filterBrix" class="filter-input" style="width:70px;" placeholder="°Bx" oninput="applyPortalFilters()">
+                        </div>
+                        <div class="filter-item">
+                            <label>Score ></label>
+                            <input type="number" step="0.1" id="filterScore" class="filter-input" style="width:70px;" placeholder="1-10" oninput="applyPortalFilters()">
+                        </div>
+                        <button type="button" class="btn-filter-clear" onclick="clearPortalFilters()">Limpar</button>
+                    </div>
+                </div>
+
+                <!-- TAB 1: ALL OPEN ORDERS (SELL + BUY) -->
+                <div id="tab-all-orders" class="market-tab-content">
+                    {% if open_orders %}
+                    <div class="table-responsive">
+                        <table class="market-table" id="tableOpenOrders">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Tipo</th>
+                                    <th>Interveniente</th>
+                                    <th>Cultura / Produto</th>
+                                    <th>Calibre</th>
+                                    <th>Brix</th>
+                                    <th>Score</th>
+                                    <th>Preço (€/kg)</th>
+                                    <th>Qtd (Kg)</th>
+                                    <th>Localização</th>
+                                    <th>Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for o in open_orders %}
+                                <tr data-culture="{{ o.culture.name }}" data-caliber="{{ o.caliber|default:o.min_caliber|default:0 }}" data-brix="{{ o.soluble_solids|default:o.min_soluble_solids|default:0 }}" data-score="{{ o.quality_score|default:o.min_quality_score|default:0 }}" data-type="{{ o.order_type }}">
+                                    <td>{{ o.created_at|date:"d/m H:i"|default:"Hoje" }}</td>
+                                    <td>
+                                        {% if o.order_type == 'SELL' %}
+                                            <span class="badge-type-sell">VENDA (ASK)</span>
+                                        {% else %}
+                                            <span class="badge-type-buy">COMPRA (BID)</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <strong>{{ o.requester.username }}</strong>
+                                        <small style="display:block; color:var(--text-dim);">{{ o.role }}</small>
+                                    </td>
+                                    <td><strong>{{ o.culture.name }}</strong></td>
+                                    <td>
+                                        {% if o.order_type == 'SELL' %}
+                                            {{ o.caliber|default_if_none:"-" }} mm
+                                        {% else %}
+                                            {% if o.min_caliber %}>{{ o.min_caliber }} mm{% else %}-{% endif %}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if o.order_type == 'SELL' %}
+                                            {{ o.soluble_solids|default_if_none:"-" }} °Bx
+                                        {% else %}
+                                            {% if o.min_soluble_solids %}>{{ o.min_soluble_solids }} °Bx{% else %}-{% endif %}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if o.order_type == 'SELL' %}
+                                            {% if o.quality_score %}
+                                                <span class="score-pill {% if o.quality_score >= 8 %}score-good{% elif o.quality_score >= 5 %}score-med{% else %}score-low{% endif %}">
+                                                    {{ o.quality_score }}/10
+                                                </span>
+                                            {% else %}-{% endif %}
+                                        {% else %}
+                                            {% if o.min_quality_score %}>{{ o.min_quality_score }}{% else %}-{% endif %}
+                                        {% endif %}
+                                    </td>
+                                    <td style="font-weight:700; color:#34d399;">{{ o.price_per_kg|floatformat:2 }} €</td>
+                                    <td><strong>{{ o.quantity_kg }}</strong> kg</td>
+                                    <td style="color:var(--text-muted); font-size:0.9em;">{{ o.warehouse_location }}</td>
+                                    <td>
+                                        {% if o.requester.username != username %}
+                                            <button type="button" class="btn-table-action" onclick="openAcceptOrderModal('{{ o.id }}', '{{ o.culture.name|escapejs }}', '{{ o.quantity_kg }}', '{{ o.price_per_kg }}', '{{ o.order_type }}')">
+                                                {% if o.order_type == 'SELL' %}⚡ Comprar{% else %}🤝 Aceitar Bid{% endif %}
+                                            </button>
+                                        {% else %}
+                                            <span style="color:var(--text-dim); font-size:0.8em;">(A Minha Ordem)</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p style="text-align:center; padding: 30px; color:var(--text-muted);">Nenhuma ordem aberta no momento.</p>
+                    {% endif %}
+                </div>
+
+                <!-- TAB 2: SELL LISTINGS (ASK) -->
+                <div id="tab-sell-listings" class="market-tab-content" style="display:none;">
+                    {% if open_listings %}
+                    <div class="table-responsive">
+                        <table class="market-table">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Vendedor</th>
+                                    <th>Cultura</th>
+                                    <th>Calibre</th>
+                                    <th>Brix</th>
+                                    <th>Score</th>
+                                    <th>Preço (€/kg)</th>
+                                    <th>Qtd (Kg)</th>
+                                    <th>Armazém Origem</th>
+                                    <th>Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for o in open_listings %}
+                                <tr>
+                                    <td>{{ o.created_at|date:"d/m H:i"|default:"Hoje" }}</td>
+                                    <td><strong>{{ o.requester.username }}</strong></td>
+                                    <td><strong>{{ o.culture.name }}</strong></td>
+                                    <td>{{ o.caliber|default:"-" }} mm</td>
+                                    <td>{{ o.soluble_solids|default:"-" }} °Bx</td>
+                                    <td>
+                                        <span class="score-pill {% if o.quality_score >= 8 %}score-good{% elif o.quality_score >= 5 %}score-med{% else %}score-low{% endif %}">
+                                            {{ o.quality_score|default:"10" }}/10
+                                        </span>
+                                    </td>
+                                    <td style="font-weight:700; color:#34d399;">{{ o.price_per_kg|floatformat:2 }} €</td>
+                                    <td>{{ o.quantity_kg }} kg</td>
+                                    <td>{{ o.warehouse_location }}</td>
+                                    <td>
+                                        {% if o.requester.username != username %}
+                                            <button type="button" class="btn-table-action" onclick="openAcceptOrderModal('{{ o.id }}', '{{ o.culture.name|escapejs }}', '{{ o.quantity_kg }}', '{{ o.price_per_kg }}', 'SELL')">
+                                                ⚡ Comprar
+                                            </button>
+                                        {% else %}
+                                            <span style="color:var(--text-dim); font-size:0.8em;">(A Minha Ordem)</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p style="text-align:center; padding: 30px; color:var(--text-muted);">Sem ofertas de venda ativas.</p>
+                    {% endif %}
+                </div>
+
+                <!-- TAB 3: BUY BIDS (PURCHASE REQUESTS) -->
+                <div id="tab-buy-bids" class="market-tab-content" style="display:none;">
+                    {% if open_bids %}
+                    <div class="table-responsive">
+                        <table class="market-table">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Comprador</th>
+                                    <th>Cultura</th>
+                                    <th>Min Calibre</th>
+                                    <th>Min Brix</th>
+                                    <th>Min Score</th>
+                                    <th>Preço Máx (€/kg)</th>
+                                    <th>Qtd (Kg)</th>
+                                    <th>Destino</th>
+                                    <th>Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for o in open_bids %}
+                                <tr>
+                                    <td>{{ o.created_at|date:"d/m H:i"|default:"Hoje" }}</td>
+                                    <td><strong>{{ o.requester.username }}</strong></td>
+                                    <td><strong>{{ o.culture.name }}</strong></td>
+                                    <td>{% if o.min_caliber %}>{{ o.min_caliber }} mm{% else %}-{% endif %}</td>
+                                    <td>{% if o.min_soluble_solids %}>{{ o.min_soluble_solids }} °Bx{% else %}-{% endif %}</td>
+                                    <td>{% if o.min_quality_score %}>{{ o.min_quality_score }}{% else %}-{% endif %}</td>
+                                    <td style="font-weight:700; color:#38bdf8;">{{ o.price_per_kg|floatformat:2 }} €</td>
+                                    <td>{{ o.quantity_kg }} kg</td>
+                                    <td>{{ o.warehouse_location }}</td>
+                                    <td>
+                                        {% if o.requester.username != username %}
+                                            <button type="button" class="btn-table-action" onclick="openAcceptOrderModal('{{ o.id }}', '{{ o.culture.name|escapejs }}', '{{ o.quantity_kg }}', '{{ o.price_per_kg }}', 'BUY')">
+                                                🤝 Aceitar
+                                            </button>
+                                        {% else %}
+                                            <span style="color:var(--text-dim); font-size:0.8em;">(A Minha Ordem)</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p style="text-align:center; padding: 30px; color:var(--text-muted);">Sem pedidos de compra ativos.</p>
+                    {% endif %}
+                </div>
+
+                <!-- TAB 4: CLOSED DEALS & HISTORY -->
+                <div id="tab-history-deals" class="market-tab-content" style="display:none;">
+                    {% if closed_deals %}
+                    <div class="table-responsive">
+                        <table class="market-table">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Tipo</th>
+                                    <th>Comprador</th>
+                                    <th>Vendedor / Fornecedor</th>
+                                    <th>Cultura</th>
+                                    <th>Preço (€/kg)</th>
+                                    <th>Volume (Kg)</th>
+                                    <th>Total (€)</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for d in closed_deals %}
+                                <tr>
+                                    <td>{{ d.fulfilled_at|date:"d/m H:i"|default:"Hoje" }}</td>
+                                    <td>
+                                        {% if d.deal_type == 'CONTRACT' %}
+                                            <span style="color:#a78bfa; font-weight:700;">📜 Contrato Futuro</span>
+                                        {% else %}
+                                            <span style="color:#34d399; font-weight:700;">⚡ Compra Imediata</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><strong>{{ d.requester.username }}</strong></td>
+                                    <td><strong>{{ d.fulfilled_by.username }}</strong></td>
+                                    <td>{{ d.culture.name }}</td>
+                                    <td>{{ d.price_per_kg|floatformat:2 }} €</td>
+                                    <td><strong>{{ d.quantity_kg }}</strong> kg</td>
+                                    <td style="font-weight:700; color:#ffffff;">{{ d.total_price|floatformat:2 }} €</td>
+                                    <td>
+                                        <span style="background:rgba(16,185,129,0.15); color:#34d399; padding:2px 8px; border-radius:6px; font-weight:700; font-size:0.8em;">
+                                            {{ d.status|upper }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p style="text-align:center; padding: 30px; color:var(--text-muted);">Nenhum histórico de transações disponível.</p>
+                    {% endif %}
+                </div>
+
+            </div>
+
+            <!-- RIGHT COLUMN: MARKET NEWS & CROP INTELLIGENCE -->
+            <div class="intel-sidebar">
+                
+                <!-- NEWS & HARVEST REPORT CARD -->
+                <div class="intel-card">
+                    <div class="intel-header">
+                        <h3>📰 Notícias & Inteligência de Mercado</h3>
+                    </div>
+
+                    <div class="news-list">
+                        {% for n in market_news %}
+                        <div class="news-item" style="position:relative;">
+                            <div class="news-meta">
+                                <span class="news-tag" style="background:{{ n.badge_color }}22; color:{{ n.badge_color }}; border:1px solid {{ n.badge_color }}44;">
+                                    {{ n.badge }}
+                                </span>
+                                <span class="news-date">{{ n.date }}</span>
+                            </div>
+                            <div class="news-title" style="font-weight:700;">
+                                {% if n.link and n.link != '#' %}
+                                    <a href="{{ n.link }}" target="_blank" rel="noopener noreferrer" style="color:#f1f5f9; text-decoration:none; display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+                                        <span>{{ n.title }}</span>
+                                        <span style="font-size:0.8em; color:var(--primary); flex-shrink:0;">↗</span>
+                                    </a>
+                                {% else %}
+                                    <span>{{ n.title }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="news-desc">{{ n.summary }}</div>
+                            <div style="margin-top:8px; display:flex; justify-content:space-between; align-items:center; font-size:0.72em; color:var(--text-dim);">
+                                <span>Fonte: <strong style="color:var(--text-muted);">{{ n.source|default:"Agro Notícias" }}</strong></span>
+                                {% if n.link and n.link != '#' %}
+                                    <a href="{{ n.link }}" target="_blank" rel="noopener noreferrer" style="color:var(--primary); text-decoration:underline; font-weight:600;">
+                                        Ler Notícia Completa
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- REGIONAL FRESH PRODUCE BENCHMARK -->
+                <div class="intel-card">
+                    <div class="intel-header">
+                        <h3>📊 Índices de Preço em Mercados Grossistas</h3>
+                    </div>
+                    
+                    <div class="index-grid">
+                        <div class="index-box">
+                            <div class="index-symbol">MACA-ALC</div>
+                            <div class="index-val">1.48 €</div>
+                            <div class="index-sub">
+                                <span>Maçã Alcobaça</span>
+                                <span style="color:#10b981; font-weight:700;">+3.2%</span>
+                            </div>
+                        </div>
+
+                        <div class="index-box">
+                            <div class="index-symbol">PERA-ROCHA</div>
+                            <div class="index-val">1.62 €</div>
+                            <div class="index-sub">
+                                <span>Pêra Rocha DOP</span>
+                                <span style="color:#10b981; font-weight:700;">+1.8%</span>
+                            </div>
+                        </div>
+
+                        <div class="index-box">
+                            <div class="index-symbol">TOM-RIBATEJO</div>
+                            <div class="index-val">1.15 €</div>
+                            <div class="index-sub">
+                                <span>Tomate Rama</span>
+                                <span style="color:#ef4444; font-weight:700;">-0.5%</span>
+                            </div>
+                        </div>
+
+                        <div class="index-box">
+                            <div class="index-symbol">LAR-ALGARVE</div>
+                            <div class="index-val">1.25 €</div>
+                            <div class="index-sub">
+                                <span>Laranja Algarve</span>
+                                <span style="color:#10b981; font-weight:700;">+0.8%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- ==================== MODAL 1: PUBLICAR OFERTA DE VENDA (PRODUTOR) ==================== -->
+    <div id="sellOfferModal" class="portal-modal">
+        <div class="portal-modal-dialog">
+            <div class="modal-header-flex">
+                <div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span style="font-size:22px; background:rgba(0,176,116,0.15); border:1px solid rgba(0,176,116,0.3); padding:6px 10px; border-radius:10px;">📢</span>
+                        <h2>Publicar Oferta de Venda (Ask)</h2>
+                    </div>
+                    <p class="modal-header-subtitle" style="font-size:0.85em; color:var(--text-muted); margin-top:4px;">Disponibilize o seu lote certificado diretamente para compradores no Order Book descentralizado.</p>
+                </div>
+                <button type="button" class="close-modal-btn" onclick="closeModal('sellOfferModal')">&times;</button>
+            </div>
+
+            <form method="POST" action="{% url 'market_submit_order' %}" id="sellOfferForm">
+                {% csrf_token %}
+                
+                <!-- CARD 1: ORIGEM & LOGÍSTICA -->
+                <div class="modal-section-card">
+                    <div class="modal-section-title">
+                        <span>📦</span> Origem do Lote & Localização de Recolha
+                    </div>
+                    <div class="form-grid-modal">
+                        <div class="form-group-full">
+                            <label class="form-label">{{ sell_order_form.harvest_origin.label }}</label>
+                            {{ sell_order_form.harvest_origin }}
+                        </div>
+                        <div class="form-group-full">
+                            <label class="form-label">{{ sell_order_form.warehouse_location.label }}</label>
+                            {{ sell_order_form.warehouse_location }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD 2: CONDIÇÕES COMERCIAIS & CÁLCULO LIVE -->
+                <div class="modal-section-card">
+                    <div class="modal-section-title">
+                        <span>💰</span> Condições Comerciais & Preço
+                    </div>
+                    <div class="form-grid-modal">
+                        <div>
+                            <label class="form-label">{{ sell_order_form.quantity_kg.label }}</label>
+                            {{ sell_order_form.quantity_kg }}
+                        </div>
+                        <div>
+                            <label class="form-label">{{ sell_order_form.price_per_kg.label }}</label>
+                            {{ sell_order_form.price_per_kg }}
+                        </div>
+                    </div>
+                    
+                    <div class="deal-calc-box">
+                        <div class="calc-label">
+                            <div style="font-weight:700;">Valor Total Bruto Estimado:</div>
+                            <div style="font-size:0.75em; opacity:0.8;">Cálculo automático: Quantidade × Preço Unitário</div>
+                        </div>
+                        <div class="calc-val" id="sellOrderTotalEst">0.00 €</div>
+                    </div>
+                </div>
+
+                <!-- CARD 3: PARÂMETROS DE QUALIDADE DO LOTE -->
+                <div class="modal-section-card">
+                    <div class="modal-section-title" style="justify-content:space-between;">
+                        <span><span>⭐</span> Parâmetros de Qualidade Certificados</span>
+                        <span style="font-size:0.75em; text-transform:none; color:var(--primary); font-weight:600; background:rgba(0,176,116,0.12); padding:2px 8px; border-radius:6px; border:1px solid rgba(0,176,116,0.25);">Auto-Preenchido do Lote</span>
+                    </div>
+                    <div class="quality-metrics-grid">
+                        <div class="quality-metric-box">
+                            <span class="metric-label">📏 Calibre (mm)</span>
+                            {{ sell_order_form.caliber }}
+                        </div>
+                        <div class="quality-metric-box">
+                            <span class="metric-label">🍬 Brix (°Bx)</span>
+                            {{ sell_order_form.soluble_solids }}
+                        </div>
+                        <div class="quality-metric-box">
+                            <span class="metric-label">🏆 Score (0-10)</span>
+                            {{ sell_order_form.quality_score }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer-btns">
+                    <button type="button" class="btn-action-tertiary" onclick="closeModal('sellOfferModal')">Cancelar</button>
+                    <button type="submit" class="btn-action-primary" style="padding:12px 28px; font-size:0.95em;">
+                        <span>📢</span> Publicar Oferta no Mercado
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL 2: REGISTAR PEDIDO DE COMPRA (BID) ==================== -->
+    <div id="buyOrderModal" class="portal-modal">
+        <div class="portal-modal-dialog">
+            <div class="modal-header-flex">
+                <div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span style="font-size:22px; background:rgba(2,132,199,0.15); border:1px solid rgba(2,132,199,0.3); padding:6px 10px; border-radius:10px;">🛒</span>
+                        <h2>Registar Pedido de Compra (Bid)</h2>
+                    </div>
+                    <p class="modal-header-subtitle" style="font-size:0.85em; color:var(--text-muted); margin-top:4px;">Crie uma ordem de compra aberta para os produtores responderem com lotes certificados.</p>
+                </div>
+                <button type="button" class="close-modal-btn" onclick="closeModal('buyOrderModal')">&times;</button>
+            </div>
+
+            <form method="POST" action="{% url 'market_submit_order' %}" id="buyOrderForm">
+                {% csrf_token %}
+                <input type="hidden" name="order_type" value="BUY">
+                
+                <!-- CARD 1: CULTURA & LOCALIZAÇÃO -->
+                <div class="modal-section-card">
+                    <div class="modal-section-title">
+                        <span>🌾</span> Produto Pretendido & Destino
+                    </div>
+                    <div class="form-grid-modal">
+                        <div class="form-group-full">
+                            <label class="form-label">Cultura / Subfamília de Produto:</label>
+                            {{ market_order_form.culture }}
+                        </div>
+                        <div class="form-group-full">
+                            <label class="form-label">Armazém / Localização de Destino:</label>
+                            {{ market_order_form.warehouse_location }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD 2: CONDIÇÕES DE COMPRA -->
+                <div class="modal-section-card">
+                    <div class="modal-section-title">
+                        <span>💵</span> Condições Comerciais de Compra
+                    </div>
+                    <div class="form-grid-modal">
+                        <div>
+                            <label class="form-label">Quantidade Necessária (Kg):</label>
+                            {{ market_order_form.quantity_kg }}
+                        </div>
+                        <div>
+                            <label class="form-label">Preço Máximo de Compra (€/Kg):</label>
+                            {{ market_order_form.price_per_kg }}
+                        </div>
+                    </div>
+
+                    <div class="deal-calc-box">
+                        <div class="calc-label">
+                            <div style="font-weight:700;">Orçamento Máximo Previsto:</div>
+                            <div style="font-size:0.75em; opacity:0.8;">Cálculo: Quantidade × Preço Máximo Unitário</div>
+                        </div>
+                        <div class="calc-val" id="buyOrderTotalEst" style="color:var(--accent-blue);">0.00 €</div>
+                    </div>
+                </div>
+
+                <!-- CARD 3: QUALIDADE MÍNIMA EXIGIDA -->
+                <div class="modal-section-card">
+                    <div class="modal-section-title">
+                        <span>🎯</span> Requisitos Mínimos de Qualidade
+                    </div>
+                    <div class="quality-metrics-grid">
+                        <div class="quality-metric-box" style="background:rgba(2,132,199,0.06); border-color:rgba(2,132,199,0.25);">
+                            <span class="metric-label" style="color:#7dd3fc;">📏 Calibre Mínimo</span>
+                            {{ market_order_form.min_caliber }}
+                        </div>
+                        <div class="quality-metric-box" style="background:rgba(2,132,199,0.06); border-color:rgba(2,132,199,0.25);">
+                            <span class="metric-label" style="color:#7dd3fc;">🍬 Brix Mínimo</span>
+                            {{ market_order_form.min_soluble_solids }}
+                        </div>
+                        <div class="quality-metric-box" style="background:rgba(2,132,199,0.06); border-color:rgba(2,132,199,0.25);">
+                            <span class="metric-label" style="color:#7dd3fc;">🏆 Score Mínimo</span>
+                            {{ market_order_form.min_quality_score }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer-btns">
+                    <button type="button" class="btn-action-tertiary" onclick="closeModal('buyOrderModal')">Cancelar</button>
+                    <button type="submit" class="btn-action-secondary" style="padding:12px 28px; font-size:0.95em;">
+                        <span>🛒</span> Submeter Pedido de Compra
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL 3: CONTRATO DE FORNECIMENTO FUTURO ==================== -->
+    <div id="contractModal" class="portal-modal">
+        <div class="portal-modal-dialog">
+            <div class="modal-header-flex">
+                <div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span style="font-size:22px; background:rgba(139,92,246,0.15); border:1px solid rgba(139,92,246,0.3); padding:6px 10px; border-radius:10px;">📜</span>
+                        <h2>Celebrar Contrato de Fornecimento Futuro</h2>
+                    </div>
+                    <p class="modal-header-subtitle" style="font-size:0.85em; color:var(--text-muted); margin-top:4px;">Compromisso futuro garantido: colheita e entrega automática no armazém no Dia X.</p>
+                </div>
+                <button type="button" class="close-modal-btn" onclick="closeModal('contractModal')">&times;</button>
+            </div>
+
+            <form method="POST" action="{% url 'create_supply_contract' %}">
+                {% csrf_token %}
+                
+                <div class="modal-section-card">
+                    <div class="modal-section-title">
+                        <span>🤝</span> Entidade Parceira & Armazém de Receção
+                    </div>
+                    <div class="form-grid-modal">
+                        <div class="form-group-full">
+                            <label class="form-label">Fornecedor / Produtor Parceiro:</label>
+                            <input type="text" name="producer_name" class="form-input" placeholder="Ex: QuintaDoVale, AgroFresco, BioFruit..." required>
+                        </div>
+                        <div class="form-group-full">
+                            <label class="form-label">Armazém de Destino:</label>
+                            <select name="warehouse_id" class="form-select" required>
+                                {% for w in user_warehouses %}
+                                    <option value="{{ w.pk }}">{{ w.location }} (WH: {{ w.warehouse_id }})</option>
+                                {% empty %}
+                                    <option value="">Sem armazéns registados</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-section-card">
+                    <div class="modal-section-title">
+                        <span>🌿</span> Especificação da Cultura & Quantidade
+                    </div>
+                    <div class="form-grid-modal">
+                        <div class="form-group-full">
+                            <label class="form-label">Cultura / Subfamília:</label>
+                            <select name="culture_id" class="form-select" required>
+                                {% for sub in product_subfamilies %}
+                                    <option value="{{ sub.subfamily_id }}">{{ sub.name }} ({{ sub.fruit_type }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">Quantidade Contratual (Kg):</label>
+                            <input type="number" step="0.01" name="quantity_kg" class="form-input" placeholder="Ex: 5000.00" required min="0.01">
+                        </div>
+                        <div>
+                            <label class="form-label">Data de Entrega Planeada (Dia X):</label>
+                            <input type="date" name="delivery_date" class="form-input" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer-btns">
+                    <button type="button" class="btn-action-tertiary" onclick="closeModal('contractModal')">Cancelar</button>
+                    <button type="submit" class="btn-action-secondary" style="background:linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); box-shadow:0 4px 15px rgba(139,92,246,0.3); padding:12px 28px; font-size:0.95em;">
+                        <span>📜</span> Celebrar Contrato Futuro
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL 4: ACEITAR ORDEM / COMPRA IMEDIATA ==================== -->
+    <div id="acceptOrderModal" class="portal-modal">
+        <div class="portal-modal-dialog">
+            <div class="modal-header-flex">
+                <div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span style="font-size:22px; background:rgba(0,176,116,0.15); border:1px solid rgba(0,176,116,0.3); padding:6px 10px; border-radius:10px;">🤝</span>
+                        <h2>Concluir Transação</h2>
+                    </div>
+                    <p class="modal-header-subtitle" style="font-size:0.85em; color:var(--text-muted); margin-top:4px;">Execução imediata de contraparte com liquidação e atualização em tempo real.</p>
+                </div>
+                <button type="button" class="close-modal-btn" onclick="closeModal('acceptOrderModal')">&times;</button>
+            </div>
+
+            <form method="POST" action="{% url 'market_accept_order' %}">
+                {% csrf_token %}
+                <input type="hidden" name="order_id" id="modalOrderId">
+
+                <div class="modal-section-card" style="background:linear-gradient(135deg, rgba(0,176,116,0.06) 0%, rgba(2,132,199,0.06) 100%); border-color:rgba(0,176,116,0.25);">
+                    <div class="modal-section-title">
+                        <span>📋</span> Resumo do Ativo a Transacionar
+                    </div>
+                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; margin-top:8px;">
+                        <div style="background:rgba(0,0,0,0.2); padding:10px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
+                            <div style="font-size:0.75em; color:var(--text-muted);">Produto</div>
+                            <div id="modalOrderProduct" style="font-weight:700; font-size:1.05em; color:#ffffff; margin-top:2px;">-</div>
+                        </div>
+                        <div style="background:rgba(0,0,0,0.2); padding:10px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
+                            <div style="font-size:0.75em; color:var(--text-muted);">Volume</div>
+                            <div style="font-weight:700; font-size:1.05em; color:#34d399; margin-top:2px;"><span id="modalOrderQty">-</span> kg</div>
+                        </div>
+                        <div style="background:rgba(0,0,0,0.2); padding:10px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.05);">
+                            <div style="font-size:0.75em; color:var(--text-muted);">Preço Unitário</div>
+                            <div style="font-weight:700; font-size:1.05em; color:#38bdf8; margin-top:2px;"><span id="modalOrderPrice">-</span> €/kg</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-section-card">
+                    <div class="modal-section-title">
+                        <span>📍</span> Armazém Operacional para Transferência
+                    </div>
+                    <div class="form-group-full">
+                        <label class="form-label">Selecione o seu Armazém para Entrega / Recolha:</label>
+                        <select name="warehouse_id" class="form-select">
+                            {% for w in user_warehouses %}
+                                <option value="{{ w.pk }}">{{ w.location }} (WH: {{ w.warehouse_id }})</option>
+                            {% empty %}
+                                <option value="">Armazém Central Padrão</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="modal-footer-btns">
+                    <button type="button" class="btn-action-tertiary" onclick="closeModal('acceptOrderModal')">Cancelar</button>
+                    <button type="submit" class="btn-action-primary" style="padding:12px 28px; font-size:0.95em;">
+                        <span>🤝</span> Confirmar e Liquidar Negócio
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SCRIPT DATA AUTO-FILL -->
+    {{ harvest_data_map|json_script:"harvest-data-map" }}
+
+    <script>
+        // TAB SWITCHING
+        function switchMarketTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.market-tab-content').forEach(c => c.style.display = 'none');
+
+            if (tabName === 'all-orders') {
+                document.getElementById('tab-all-orders').style.display = 'block';
+                event.currentTarget.classList.add('active');
+            } else if (tabName === 'sell-listings') {
+                document.getElementById('tab-sell-listings').style.display = 'block';
+                event.currentTarget.classList.add('active');
+            } else if (tabName === 'buy-bids') {
+                document.getElementById('tab-buy-bids').style.display = 'block';
+                event.currentTarget.classList.add('active');
+            } else if (tabName === 'history-deals' || tabName === 'my-deals') {
+                document.getElementById('tab-history-deals').style.display = 'block';
+                const historyBtn = document.querySelectorAll('.tab-btn')[3];
+                if (historyBtn) historyBtn.classList.add('active');
+            }
+        }
+
+        // MODALS
+        function openModal(modalId) {
+            const el = document.getElementById(modalId);
+            if (el) {
+                el.style.display = 'block';
+                updateSellCalc();
+                updateBuyCalc();
+            }
+        }
+
+        function closeModal(modalId) {
+            const el = document.getElementById(modalId);
+            if (el) el.style.display = 'none';
+        }
+
+        function openAcceptOrderModal(orderId, prodName, qty, price, orderType) {
+            document.getElementById('modalOrderId').value = orderId;
+            document.getElementById('modalOrderProduct').innerText = prodName;
+            document.getElementById('modalOrderQty').innerText = qty;
+            document.getElementById('modalOrderPrice').innerText = price;
+            openModal('acceptOrderModal');
+        }
+
+        window.onclick = function(event) {
+            if (event.target.classList.contains('portal-modal')) {
+                event.target.style.display = 'none';
+            }
+        };
+
+        // AUTO-FILL HARVEST DATA FOR PRODUCER SELL FORM
+        function setupHarvestAutoFill() {
+            const harvestSelect = document.getElementById('id_sell_harvest_origin');
+            const locationInput = document.getElementById('id_sell_warehouse_location');
+            const caliberInput = document.getElementById('id_sell_caliber');
+            const brixInput = document.getElementById('id_sell_soluble_solids');
+            const scoreInput = document.getElementById('id_sell_quality_score');
+            const qtyInput = document.getElementById('id_sell_quantity_kg');
+            const dataScript = document.getElementById('harvest-data-map');
+            
+            if (harvestSelect && dataScript) {
+                const dataMap = JSON.parse(dataScript.textContent || '{}');
+
+                function updateFields() {
+                    const harvestId = harvestSelect.value;
+                    const data = dataMap[harvestId];
+
+                    if (data) {
+                        if (locationInput) {
+                            locationInput.value = data.location || '';
+                            locationInput.setAttribute('readonly', 'readonly');
+                        }
+                        if (caliberInput) caliberInput.value = data.caliber ? data.caliber.toFixed(1) : '-';
+                        if (brixInput) brixInput.value = data.brix ? data.brix.toFixed(1) : '-';
+                        if (scoreInput) scoreInput.value = data.score ? data.score.toFixed(1) : '-';
+                        if (qtyInput && !qtyInput.value && data.stock) {
+                            qtyInput.value = data.stock;
+                            updateSellCalc();
+                        }
+                    }
+                }
+
+                harvestSelect.addEventListener('change', updateFields);
+                updateFields();
+            }
+        }
+
+        // DYNAMIC DEAL CALCULATION
+        function updateSellCalc() {
+            const qtyInput = document.getElementById('id_sell_quantity_kg');
+            const priceInput = document.getElementById('id_sell_price_per_kg');
+            const totalDisplay = document.getElementById('sellOrderTotalEst');
+            if (qtyInput && priceInput && totalDisplay) {
+                const q = parseFloat(qtyInput.value) || 0;
+                const p = parseFloat(priceInput.value) || 0;
+                const tot = q * p;
+                totalDisplay.innerText = tot.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+            }
+        }
+
+        function updateBuyCalc() {
+            const buyForm = document.getElementById('buyOrderForm');
+            if (!buyForm) return;
+            const qtyInput = buyForm.querySelector('input[name="quantity_kg"]');
+            const priceInput = buyForm.querySelector('input[name="price_per_kg"]');
+            const totalDisplay = document.getElementById('buyOrderTotalEst');
+            if (qtyInput && priceInput && totalDisplay) {
+                const q = parseFloat(qtyInput.value) || 0;
+                const p = parseFloat(priceInput.value) || 0;
+                const tot = q * p;
+                totalDisplay.innerText = tot.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+            }
+        }
+
+        // CLIENT-SIDE FILTERING IN LIVE ORDER BOOK
+        function applyPortalFilters() {
+            const cultureVal = document.getElementById('filterCulture').value.toLowerCase().trim();
+            const calVal = parseFloat(document.getElementById('filterCaliber').value) || 0;
+            const brixVal = parseFloat(document.getElementById('filterBrix').value) || 0;
+            const scoreVal = parseFloat(document.getElementById('filterScore').value) || 0;
+
+            const rows = document.querySelectorAll('#tableOpenOrders tbody tr');
+            rows.forEach(r => {
+                const culture = (r.getAttribute('data-culture') || '').toLowerCase().trim();
+                const caliber = parseFloat(r.getAttribute('data-caliber')) || 0;
+                const brix = parseFloat(r.getAttribute('data-brix')) || 0;
+                const score = parseFloat(r.getAttribute('data-score')) || 0;
+
+                let show = true;
+                if (cultureVal && !culture.includes(cultureVal)) show = false;
+                if (calVal > 0 && caliber < calVal) show = false;
+                if (brixVal > 0 && brix < brixVal) show = false;
+                if (scoreVal > 0 && score < scoreVal) show = false;
+
+                r.style.display = show ? '' : 'none';
+            });
+        }
+
+        function clearPortalFilters() {
+            document.getElementById('filterCulture').value = '';
+            document.getElementById('filterCaliber').value = '';
+            document.getElementById('filterBrix').value = '';
+            document.getElementById('filterScore').value = '';
+            applyPortalFilters();
+        }
+
+        // THEME TOGGLE (DARK / LIGHT MODE)
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('marketplace_theme', newTheme);
+            updateThemeButton(newTheme);
+        }
+
+        function updateThemeButton(theme) {
+            const icon = document.getElementById('themeIcon');
+            const label = document.getElementById('themeLabel');
+            if (theme === 'light') {
+                if (icon) icon.innerText = '☀️';
+                if (label) label.innerText = 'Modo Escuro';
+            } else {
+                if (icon) icon.innerText = '🌙';
+                if (label) label.innerText = 'Modo Claro';
+            }
+        }
+
+        // Initialize Everything on DOMContentLoaded
+        document.addEventListener("DOMContentLoaded", function() {
+            const savedTheme = localStorage.getItem('marketplace_theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            updateThemeButton(savedTheme);
+
+            setupHarvestAutoFill();
+
+            // Setup real-time calculators
+            const sellQty = document.getElementById('id_sell_quantity_kg');
+            const sellPrice = document.getElementById('id_sell_price_per_kg');
+            if (sellQty) sellQty.addEventListener('input', updateSellCalc);
+            if (sellPrice) sellPrice.addEventListener('input', updateSellCalc);
+
+            const buyForm = document.getElementById('buyOrderForm');
+            if (buyForm) {
+                const buyQty = buyForm.querySelector('input[name="quantity_kg"]');
+                const buyPrice = buyForm.querySelector('input[name="price_per_kg"]');
+                if (buyQty) buyQty.addEventListener('input', updateBuyCalc);
+                if (buyPrice) buyPrice.addEventListener('input', updateBuyCalc);
+            }
+        });
+    </script>
+</body>
+</html>

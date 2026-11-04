@@ -127,6 +127,7 @@ def test_forecast_simulation():
         print(f"  - Dias de Vida Útil Restante (Shelf-Life): {data.get('remaining_lifetime')} dias")
         print(f"  - Firmeza Prevista: {data.get('firmness')} N")
         print(f"  - Sólidos Solúveis (°Brix): {data.get('brix')} °Bx")
+        print(f"  - Acidez Titulável: {data.get('acidity')}")
         print("-> [OK] Simulação de Decaimento concluída com sucesso!")
     else:
         print(f"-> [ERRO] Response: {res.text}")

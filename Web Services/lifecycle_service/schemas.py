@@ -12,7 +12,9 @@ class InitialMetrics(BaseModel):
     waste_kg: Optional[float] = Field(None, description="Reported discarded/waste kg")
     expiration_date: Optional[str] = Field(None, description="Expiration date string YYYY-MM-DD")
     firmness: Optional[float] = Field(None, description="Initial firmness in N or kg/cm2")
+    firmness_n: Optional[float] = Field(None, description="Initial firmness in N (alias)")
     acidity: Optional[float] = Field(None, description="Initial titratable acidity (% malic or citric acid)")
+    acidity_percent: Optional[float] = Field(None, description="Initial titratable acidity percent (alias)")
 
 
 class LotIdentification(BaseModel):
@@ -73,6 +75,8 @@ class ForecastResponse(BaseModel):
     remaining_lifetime: float = Field(..., description="Estimated remaining shelf-life days")
     firmness: float = Field(..., description="Estimated firmness (N)")
     brix: float = Field(..., description="Estimated soluble solids / sugar (°Brix)")
+    acidity: Optional[float] = Field(None, description="Estimated titratable acidity (% malic or citric acid)")
+    mold: Optional[float] = Field(0.0, description="Estimated mold / fungal presence fraction (0.0 to 1.0)")
     continuous_data: Optional[Dict[str, List[float]]] = Field(None, description="Continuous curve series for charts")
 
 

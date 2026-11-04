@@ -18,17 +18,20 @@ from django.contrib.auth.models import Group
 from django.contrib import messages
 
 from .models import (
-    Product, PlantationPlan, Harvest, Warehouse, Sensor, UserProfile, PlantationEvent,
+    PlantationPlan, Harvest, Warehouse, Sensor, UserProfile, PlantationEvent,
     SoilCharacteristic, PlantationSoilValue, ProductSubFamily, PlantationCrop,
     FertilizerSyntheticData, FertilizerOrganicData, SoilCorrectiveData, PestControlData,
-    MachineryData, FuelData, ElectricEnergyData, IrrigationWaterData, MarketplaceOrder,
-    ConsolidatedStock, TrainedModel, Vehicle, Route, StoreProcessorAssociation
+    MachineryData, FuelData, ElectricEnergyData, IrrigationWaterData,
+    ConsolidatedStock, TrainedModel, Vehicle, Route, StoreProcessorAssociation,
+    HistoricalSalesData, DemandForecast
 )
 from dashboard.utils import create_genesis_dossier
 from dashboard.services.fabric_service import fabric_service
+from dashboard.services.marketplace_service import marketplace_service
+from dashboard.services.market_news_service import market_news_service
 
 from .forms import (
-    UserRegisterForm, ProductRegistrationForm, PlantationPlanForm, PlantationDetailForm,
+    UserRegisterForm, PlantationPlanForm, PlantationDetailForm,
     HarvestForm, WarehouseRegistrationForm, SensorRegistrationForm, PlantationEventForm,
     FertilizerSyntheticForm, FertilizerOrganicForm, SoilCorrectiveForm, PestControlForm,
     MachineryForm, FuelForm, ElectricEnergyForm, IrrigationWaterForm, SoilCharacteristicForm, PlantationCropForm, MarketplaceOrderForm,
@@ -177,6 +180,14 @@ def _resolve_geo_coords(loc_str, user=None, warehouse=None):
     lon = -8.9 + ((h >> 8) % 200) / 100.0
     return round(lat, 5), round(lon, 5)
 
+def _get_assigned_deal_ids():
+    assigned = set()
+    for r in Route.objects.all():
+        if r.optimized_path:
+            found = re.findall(r'(?:Deal|Carga)\s*#([^\s\(\]]+)', r.optimized_path, re.IGNORECASE)
+            assigned.update(found)
+    return assigned
+
 # Transporter Dashboard
 @method_decorator(login_required, name='dispatch')
 @method_decorator(role_required(['Transporter']), name='dispatch')
@@ -188,74 +199,112 @@ class TransporterDashboardView(View):
         vehicles = Vehicle.objects.filter(owner=user).order_by('-created_at')
         vehicle_form = VehicleForm()
 
-        # 0. Mercado de Trabalho - Cargas Individuais (sem rota)
-        open_orders = MarketplaceOrder.objects.filter(
-            status='APPROVED', 
-            transport_status='PENDING', 
-            route__isnull=True
-        ).select_related('requester', 'culture', 'fulfilled_by', 'harvest_origin').order_by('-fulfilled_at')
+        # Verificar se atingiu o limiar de 6 transações para gerar rota ótima automática
+        check_and_create_optimal_route()
+
+        # 0. Mercado de Trabalho - Cargas de Negócios Concluídos (não atribuídas a nenhuma rota)
+        assigned_deal_ids = _get_assigned_deal_ids()
+        all_closed_deals = marketplace_service.get_closed_deals_adapted()
+        open_orders = [d for d in all_closed_deals if str(d.id) not in assigned_deal_ids]
 
         # Mercado de Trabalho - Rotas Otimizadas Criadas (Pendente aceitação)
         open_routes = Route.objects.filter(
             status='PENDING'
-        ).select_related('vehicle').prefetch_related('orders__requester', 'orders__culture', 'orders__harvest_origin__warehouse').order_by('-created_at')
+        ).select_related('vehicle').order_by('-created_at')
 
         # Minhas Rotas Ativas (Aceites, Planeadas, Em Trânsito)
         my_active_routes = Route.objects.filter(
             transporter=user
-        ).exclude(status='DELIVERED').select_related('vehicle').prefetch_related('orders__requester', 'orders__culture', 'orders__harvest_origin__warehouse', 'orders__fulfilled_by').order_by('-created_at')
+        ).exclude(status='DELIVERED').select_related('vehicle').order_by('-created_at')
 
         # Histórico de Rotas Concluídas
         my_closed_routes = Route.objects.filter(
             transporter=user, 
             status='DELIVERED'
-        ).select_related('vehicle').prefetch_related('orders__requester', 'orders__culture', 'orders__harvest_origin__warehouse').order_by('-created_at')
+        ).select_related('vehicle').order_by('-created_at')
 
-        # 1. Encomendas Individuais Prontas para Recolha (sem rota) -> Recolha / Início de Viagem
-        orders_ready_pickup = MarketplaceOrder.objects.filter(
-            status='APPROVED', 
-            transport_status__in=['ACCEPTED', 'PLANNED'], 
-            route__isnull=True
-        ).filter(vehicle__owner=user).select_related('requester', 'culture', 'fulfilled_by', 'harvest_origin', 'vehicle').order_by('-fulfilled_at')
+        # 1. Encomendas Individuais
+        orders_ready_pickup = []
+        orders_in_transit = []
+        closed_orders_count = len(marketplace_service.fetch_deals())
         
-        # 2. Encomendas Individuais Em Trânsito (sem rota) -> Entrega
-        orders_in_transit = MarketplaceOrder.objects.filter(
-            status='APPROVED', 
-            transport_status='IN_TRANSIT', 
-            route__isnull=True
-        ).filter(vehicle__owner=user).select_related('requester', 'culture', 'fulfilled_by', 'harvest_origin', 'vehicle').order_by('-actual_pickup_date')
-
-        # 3. Histórico de Entregas - Contagem instantânea (evita carregar milhares de linhas e N+1 queries no arranque)
-        closed_orders_count = MarketplaceOrder.objects.filter(
-            status='APPROVED', 
-            transport_status='DELIVERED'
-        ).filter(
-            Q(vehicle__owner=user) | Q(route__transporter=user) | Q(role__in=['Producer', 'Processor'], vehicle__isnull=True, route__isnull=True)
-        ).count()
-        
-        # Preparar dados JSON consolidados para o Mapa Leaflet (Rotas Otimizadas + Cargas Aceites Individuais)
+        # Preparar dados JSON consolidados para o Mapa Leaflet (Rotas Otimizadas + Cargas Aceites)
         map_active_items = []
+        all_deals = {str(d.get('deal_id')): d for d in (marketplace_service.fetch_deals() or [])}
+        all_open_orders = {str(o.id): o for o in (marketplace_service.get_open_orders_adapted() or [])}
         
         # 1. Rotas Agrupadas
         for r in my_active_routes:
             r_orders = []
-            for o in r.orders.all():
-                o_lat, o_lon = _resolve_geo_coords(
-                    o.warehouse_location, 
-                    warehouse=o.harvest_origin.warehouse if o.harvest_origin else None
-                )
-                d_lat, d_lon = _resolve_geo_coords(
-                    f"Armazém {o.requester.username}", 
-                    user=o.requester
-                )
+            if r.optimized_path:
+                matches = list(re.finditer(r'(?:Deal|Carga)\s*#([^\s\(\]]+)\s*\(([^:]+):\s*([\d\.]+)\s*kg\)(?:\s*\[\s*(.*?)\s*->\s*(.*?)\s*\])?', r.optimized_path, re.IGNORECASE))
+                if matches:
+                    for m in matches:
+                        item_id = m.group(1).strip()
+                        culture_name = m.group(2).strip()
+                        qty = float(m.group(3))
+                        origin = m.group(4).strip() if m.group(4) else None
+                        dest = m.group(5).strip() if m.group(5) else None
+                        
+                        # Se não tiver [Origem -> Destino] explícito, consultar do deal ou order
+                        if not origin or not dest:
+                            if item_id in all_deals:
+                                d_info = all_deals[item_id]
+                                origin = origin or d_info.get('warehouse_origin') or 'Armazém Virtual do Produtor'
+                                dest = dest or d_info.get('destination_warehouse') or f"Armazém {d_info.get('buyer_id')}"
+                            elif item_id in all_open_orders:
+                                o_info = all_open_orders[item_id]
+                                origin = origin or getattr(o_info, 'warehouse_location', None) or 'Armazém Produtor'
+                                dest = dest or f"Armazém {o_info.requester.username}"
+                            else:
+                                origin = origin or "Armazém Produtor"
+                                dest = dest or "Armazém Retalhista"
+                                
+                        o_lat, o_lon = _resolve_geo_coords(origin)
+                        d_lat, d_lon = _resolve_geo_coords(dest)
+                        pallets = round(qty / 500.0, 1) if qty else 0
+                        crates = int(qty / 20.0) if qty else 0
+                        
+                        r_orders.append({
+                            'id': item_id,
+                            'origin': origin,
+                            'dest': dest,
+                            'culture': culture_name,
+                            'quantity': qty,
+                            'pallets': pallets,
+                            'crates': crates,
+                            'origin_lat': o_lat,
+                            'origin_lon': o_lon,
+                            'dest_lat': d_lat,
+                            'dest_lon': d_lon,
+                        })
+                else:
+                    o_lat, o_lon = _resolve_geo_coords("Armazém Produtor")
+                    d_lat, d_lon = _resolve_geo_coords("Armazém Retalhista")
+                    r_orders.append({
+                        'id': str(r.id),
+                        'origin': "Armazém Produtor",
+                        'dest': "Armazém Retalhista",
+                        'culture': "Produtos Hortícolas",
+                        'quantity': float(r.total_weight_kg or 0.0),
+                        'pallets': r.total_pallets,
+                        'crates': r.total_crates,
+                        'origin_lat': o_lat,
+                        'origin_lon': o_lon,
+                        'dest_lat': d_lat,
+                        'dest_lon': d_lon,
+                    })
+            else:
+                o_lat, o_lon = _resolve_geo_coords("Armazém Produtor")
+                d_lat, d_lon = _resolve_geo_coords("Armazém Retalhista")
                 r_orders.append({
-                    'id': o.id,
-                    'origin': o.warehouse_location or f"Armazém Produtor ({o.fulfilled_by.username if o.fulfilled_by else 'Produtor'})",
-                    'dest': f"Armazém {o.requester.username}",
-                    'culture': o.culture.name if o.culture else "Produtos Hortícolas",
-                    'quantity': float(o.quantity_kg or 0.0),
-                    'pallets': o.total_pallets,
-                    'crates': o.total_crates,
+                    'id': str(r.id),
+                    'origin': "Armazém Produtor",
+                    'dest': "Armazém Retalhista",
+                    'culture': "Produtos Hortícolas",
+                    'quantity': float(r.total_weight_kg or 0.0),
+                    'pallets': r.total_pallets,
+                    'crates': r.total_crates,
                     'origin_lat': o_lat,
                     'origin_lon': o_lon,
                     'dest_lat': d_lat,
@@ -355,8 +404,8 @@ class TransporterDashboardView(View):
 class ConsumerDashboardView(View):
     def get(self, request):
         user = request.user
-        open_orders = MarketplaceOrder.objects.filter(status='OPEN').select_related('requester', 'culture').order_by('-created_at')
-        closed_orders = MarketplaceOrder.objects.filter(Q(requester=user) | Q(fulfilled_by=user), status='APPROVED').select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')
+        open_orders = marketplace_service.get_open_orders_adapted()
+        closed_orders = marketplace_service.get_closed_deals_adapted(username=user.username)
 
         try:
             user_profile = UserProfile.objects.get(user=user)
@@ -369,7 +418,7 @@ class ConsumerDashboardView(View):
             'user_profile': user_profile,
             'open_market_orders': open_orders,
             'closed_market_orders': closed_orders,
-            'market_order_form': MarketplaceOrderForm(initial={'role': 'Consumer', 'order_type': 'BUY'})
+            'market_order_form': MarketplaceOrderForm(initial={'order_type': 'BUY'})
         }
         return render(request, 'dashboard/consumerDash.html', context)
 
@@ -385,22 +434,14 @@ class ProcessorDashboardView(View):
         process_pending_contracts()
         
         # Produtores Virtuais e Contratos de Fornecimento
-        from dashboard.models import SupplyContract
         from django.contrib.auth.models import User
         instant_producers = User.objects.filter(groups__name='Producer', userprofile__producer_type='instant').order_by('username')
         contract_producers = User.objects.filter(groups__name='Producer', userprofile__producer_type='contract').order_by('username')
-        contracts = SupplyContract.objects.filter(buyer=user).select_related('producer', 'subfamily').order_by('-created_at')
+        contracts = marketplace_service.get_contracts_adapted(buyer_username=user.username)
         
-        open_orders = MarketplaceOrder.objects.filter(status='OPEN').select_related('requester', 'culture').order_by('-created_at')
-        closed_orders = MarketplaceOrder.objects.filter(Q(requester=user) | Q(fulfilled_by=user), status='APPROVED').select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')
-        
-        # Filtrar encomendas aprovadas e entregues ao processador que ainda não foram processadas
-        unprocessed_orders = MarketplaceOrder.objects.filter(
-            fulfilled_by=user, 
-            status='APPROVED', 
-            transport_status='DELIVERED', 
-            is_processed=False
-        ).select_related('requester', 'culture').order_by('-fulfilled_at')
+        open_orders = marketplace_service.get_open_orders_adapted()
+        closed_orders = marketplace_service.get_closed_deals_adapted(username=user.username)
+        unprocessed_orders = []
 
         try:
             user_profile = UserProfile.objects.get(user=user)
@@ -419,8 +460,7 @@ class ProcessorDashboardView(View):
             has_agent_model = TrainedModel.objects.filter(
                 owner=user,
                 culture=stock_obj.culture,
-                model_type='buyer_agent',
-                file_name='buyer_agent_actor.pth'
+                model_type='buyer_agent'
             ).exists()
             processor_stock.append({
                 'pk': stock_obj.pk,
@@ -474,11 +514,8 @@ class ProcessorDashboardView(View):
             # Fetch store detailed stock
             store_stock = ConsolidatedStock.objects.filter(owner=store).select_related('culture')
             
-            # Fetch store daily orders (only for the current day)
-            store_orders = MarketplaceOrder.objects.filter(
-                Q(requester=store) | Q(fulfilled_by=store),
-                created_at__date=timezone.now().date()
-            ).select_related('culture', 'requester', 'fulfilled_by').order_by('-created_at')
+            # Fetch store daily orders (from marketplace web service)
+            store_orders = marketplace_service.get_closed_deals_adapted(username=store.username)
             
             approved_stores_data.append({
                 'store': store,
@@ -497,6 +534,7 @@ class ProcessorDashboardView(View):
             'warehouse_form': WarehouseRegistrationForm(),
             'sensor_form': SensorRegistrationForm(),
             'processor_warehouses': processor_warehouses,
+            'all_sensors': Sensor.objects.all(),
             'market_order_form': MarketplaceOrderForm(initial={'role': 'Processor'}),
             'processor_stock': processor_stock,
             'unprocessed_orders': unprocessed_orders,
@@ -523,14 +561,13 @@ class RetailerDashboardView(View):
         process_pending_contracts()
         
         # Produtores Virtuais e Contratos de Fornecimento
-        from dashboard.models import SupplyContract
         from django.contrib.auth.models import User
         instant_producers = User.objects.filter(groups__name='Producer', userprofile__producer_type='instant').order_by('username')
         contract_producers = User.objects.filter(groups__name='Producer', userprofile__producer_type='contract').order_by('username')
-        contracts = SupplyContract.objects.filter(buyer=user).select_related('producer', 'subfamily').order_by('-created_at')
+        contracts = marketplace_service.get_contracts_adapted(buyer_username=user.username)
 
-        open_orders = MarketplaceOrder.objects.filter(status='OPEN').select_related('requester', 'culture').order_by('-created_at')[:50]
-        closed_orders = MarketplaceOrder.objects.filter(Q(requester=user) | Q(fulfilled_by=user), status='APPROVED').select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')[:50]
+        open_orders = marketplace_service.get_open_orders_adapted()[:50]
+        closed_orders = marketplace_service.get_closed_deals_adapted(username=user.username)[:50]
 
         try:
             user_profile = UserProfile.objects.get(user=user)
@@ -549,8 +586,7 @@ class RetailerDashboardView(View):
             has_agent_model = TrainedModel.objects.filter(
                 owner=user,
                 culture=stock_obj.culture,
-                model_type='buyer_agent',
-                file_name='buyer_agent_actor.pth'
+                model_type='buyer_agent'
             ).exists()
             retailer_stock.append({
                 'pk': stock_obj.pk,
@@ -608,6 +644,7 @@ class RetailerDashboardView(View):
             'warehouse_form': WarehouseRegistrationForm(),
             'sensor_form': SensorRegistrationForm(),
             'retailer_warehouses': retailer_warehouses,
+            'all_sensors': Sensor.objects.all(),
             'retailer_stock': retailer_stock,
             'product_subfamilies': ProductSubFamily.objects.all().order_by('fruit_type', 'name'),
             'instant_producers': instant_producers,
@@ -630,13 +667,9 @@ class ProducerDashboardView(View):
     def get(self, request):
         user = request.user
         
-        registered_products = Product.objects.filter(producer=user).order_by('name')
-        
         base_plantation_query = PlantationPlan.objects.filter(producer=user).order_by('-plantation_date')
         
-        plantation_plans = base_plantation_query.select_related(
-            'product'
-        ).prefetch_related(
+        plantation_plans = base_plantation_query.prefetch_related(
             'soil_values', 
             'soil_values__characteristic',
             'crops',
@@ -675,8 +708,7 @@ class ProducerDashboardView(View):
             item['has_sales_model'] = TrainedModel.objects.filter(
                 owner=user,
                 culture_id=item['subfamily'],
-                model_type='sales_mlp',
-                file_name='sales_mlp.joblib'
+                model_type__in=['sales_mlp', 'sales_autoformer']
             ).exists()
             
             # Check if this subfamily has a stock agent model trained
@@ -704,8 +736,8 @@ class ProducerDashboardView(View):
         all_sensors = Sensor.objects.all().order_by('sensor_id')
 
         # 5. MARKETPLACE DATA
-        open_market_orders = MarketplaceOrder.objects.filter(status='OPEN').select_related('requester', 'culture').order_by('-created_at')
-        closed_market_orders = MarketplaceOrder.objects.filter(Q(requester=user) | Q(fulfilled_by=user), status='APPROVED').select_related('requester', 'culture', 'fulfilled_by').order_by('-fulfilled_at')
+        open_market_orders = marketplace_service.get_open_orders_adapted()
+        closed_market_orders = marketplace_service.get_closed_deals_adapted(username=user.username)
 
 
         plantation_plan_form = PlantationPlanForm()
@@ -771,7 +803,6 @@ class ProducerDashboardView(View):
             'irrigation_water_form': irrigation_water_form,       
             
             'plantation_plans': plantation_plans,
-            'registered_products': registered_products,
             'product_subfamilies': product_subfamilies,
             'harvest_records': harvest_records, 
             'harvest_sums': harvest_sums, 
@@ -1024,31 +1055,31 @@ def producer_submit_warehouse(request):
     db_error = None
 
     if request.method == 'POST':
-        # Instanciar o formulário com os dados POST
-        form = WarehouseRegistrationForm(request.POST)
+        form = WarehouseRegistrationForm(request.POST, request.FILES)
 
         if form.is_valid():
             try:
-                # 1. Salva o objeto (sem commit)
                 warehouse_record = form.save(commit=False)
-                
-                # 2. Injeta os dados que não estão no formulário: o Dono/Owner
                 warehouse_record.owner = request.user
-                
-                # 3. Salva na base de dados (guarda os campos que não são ManyToMany)
                 warehouse_record.save()
-                
-                # 4. Salva a relação Many-to-Many para os sensores (APÓS salvar o objeto principal)
                 form.save_m2m() 
                 
-                # Gerar automaticamente leituras climáticas (self-healing)
-                try:
-                    from dashboard.services.lc_service import generate_fallback_sensor_readings
-                    generate_fallback_sensor_readings(warehouse_record)
-                except Exception:
-                    pass
+                # Se carregou ficheiro de sensores no registo
+                sensor_file = request.FILES.get('sensor_file')
+                if sensor_file and warehouse_record.meteo_source == 'JSON':
+                    count, err = process_sensor_readings_file(warehouse_record, sensor_file)
+                    if err:
+                        messages.warning(request, f"Armazém registado, mas aviso no ficheiro: {err}")
+                    else:
+                        messages.success(request, f"Armazém registado e {count} leituras importadas com sucesso!")
+                else:
+                    try:
+                        from dashboard.services.lc_service import generate_fallback_sensor_readings
+                        generate_fallback_sensor_readings(warehouse_record)
+                    except Exception:
+                        pass
+                    messages.success(request, "Armazém registado com sucesso!")
                 
-                # Sucesso
                 return redirect('producer_dashboard')
                 
             except IntegrityError as e:
@@ -1059,10 +1090,9 @@ def producer_submit_warehouse(request):
         else:
             print(f"[ERRO FORMULARIO PRODUCER WAREHOUSE]: {form.errors}")
 
-        # Se houver erro de validação ou DB, redireciona de volta
         return redirect('producer_dashboard')
         
-    return redirect('producer_dashboard') # Não permitir GET a esta rota
+    return redirect('producer_dashboard')
 
 @login_required
 @role_required(['Producer'])
@@ -1072,29 +1102,24 @@ def producer_submit_sensor(request):
 
         if form.is_valid():
             try:
-                # O Sensor não precisa de FK para o Produtor (é um item de referência)
                 form.save()
-                
-                # Sucesso: Redireciona para o dashboard principal
-                # A próxima seção (JavaScript) irá garantir que o dropdown do Warehouse seja atualizado.
+                messages.success(request, "Sensor registado com sucesso!")
                 return redirect('producer_dashboard') 
                 
             except IntegrityError as e:
-                # Se o sensor_id for uma chave primária e já existir
                 db_error = f"Erro ao salvar Sensor na DB: O ID '{request.POST.get('sensor_id')}' já existe. Detalhe: {e}"
-                request.session['db_error'] = db_error # Use sessions para passar o erro
+                request.session['db_error'] = db_error
         
-        # Se houver erro de validação ou DB, redireciona de volta
         return redirect('producer_dashboard')
         
-    return redirect('producer_dashboard') # Não permitir GET a esta rota
+    return redirect('producer_dashboard')
 
 @login_required
 @role_required(['Processor'])
 def processor_submit_warehouse(request):
     db_error = None
     if request.method == 'POST':
-        form = WarehouseRegistrationForm(request.POST)
+        form = WarehouseRegistrationForm(request.POST, request.FILES)
         if form.is_valid():
             try:
                 warehouse_record = form.save(commit=False)
@@ -1102,12 +1127,20 @@ def processor_submit_warehouse(request):
                 warehouse_record.save()
                 form.save_m2m() 
                 
-                # Gerar automaticamente leituras climáticas (self-healing)
-                try:
-                    from dashboard.services.lc_service import generate_fallback_sensor_readings
-                    generate_fallback_sensor_readings(warehouse_record)
-                except Exception:
-                    pass
+                sensor_file = request.FILES.get('sensor_file')
+                if sensor_file and warehouse_record.meteo_source == 'JSON':
+                    count, err = process_sensor_readings_file(warehouse_record, sensor_file)
+                    if err:
+                        messages.warning(request, f"Armazém registado, mas aviso no ficheiro: {err}")
+                    else:
+                        messages.success(request, f"Armazém registado e {count} leituras importadas com sucesso!")
+                else:
+                    try:
+                        from dashboard.services.lc_service import generate_fallback_sensor_readings
+                        generate_fallback_sensor_readings(warehouse_record)
+                    except Exception:
+                        pass
+                    messages.success(request, "Armazém registado com sucesso!")
                     
                 return redirect('processor_dashboard')
             except IntegrityError as e:
@@ -1127,83 +1160,69 @@ def processor_submit_sensor(request):
     if request.method == 'POST':
         form = SensorRegistrationForm(request.POST)
         if form.is_valid():
-            # Não associamos user diretamente ao sensor, mas ao armazém depois
-            # Mas aqui apenas criamos o sensor solto? 
-            # O sistema atual parece assumir que sensor é criado e depois ligado ao armazém
-            # Mas o form create sensor não liga a armazém.
-            # Vamos assumir que é criado com sucesso.
-            form.save()
-            return redirect('processor_dashboard')
+            try:
+                form.save()
+                messages.success(request, "Sensor registado com sucesso!")
+            except Exception as e:
+                messages.error(request, f"Erro ao salvar Sensor: {e}")
+        else:
+            messages.error(request, "Erro de validação do formulário do sensor.")
     return redirect('processor_dashboard')
-
-@login_required
-@login_required
 @role_required(['Processor'])
 def processor_submit_processing(request):
     if request.method == 'POST':
-        order_id = request.POST.get('order_id')
-        order = get_object_or_404(MarketplaceOrder, pk=order_id)
-        
-        # Verify ownership
-        if order.requester != request.user and order.fulfilled_by != request.user:
-             return redirect('processor_dashboard')
-
-        form = ProcessorProcessingForm(request.POST, instance=order)
+        form = ProcessorProcessingForm(request.POST)
         if form.is_valid():
-            processing = form.save(commit=False)
-            processing.is_processed = True
-            processing.save()
-            
-            # --- BLOCKCHAIN AGGREGATION LOGIC ---
-            try:
-                # 1. Definir o Input Batch (Lot de Origem)
-                # Alteração para Rastreabilidade Completa:
-                # Usamos o ID da ENCOMENDA (ORDER-X) como input.
-                # Como a Encomenda tem os blocos de Transporte e o link para a Harvest, 
-                # a chain ficará: Transformation -> Delivery -> Pickup -> Harvest
-                input_batch_id = f"ORDER-{order.id}"
-                
-                # 2. Definir o Output Batch (Novo Lote Processado)
-                # Ex: PROC-{order_id}-{timestamp}
-                new_batch_id = f"LOTE-PROC-{order.id}"
-                
-                # 3. Preparar Metadados (Inputs)
-                inputs = [
-                    {
-                        "batch_id": input_batch_id, 
-                        "quantity_kg": float(order.quantity_kg),
-                        "origin_producer": order.fulfilled_by.username if order.fulfilled_by else "N/A"
-                    }
-                ]
-                
-                # 4. Dados do Processamento (Payload)
-                data_dict = {
-                    "product": order.culture.name,
-                    "packaging": processing.packaging_type,
-                    "treatment": processing.preservation_treatment,
-                    "output_quantity": float(order.quantity_kg) # Assumindo 1:1 para simplificação
-                }
-                
-                # Registo na Blockchain Real (Hyperledger Fabric)
-                try:
-                    if order.harvest_origin:
-                        fabric_service.update_order(
-                            order_id=f"LOTE-{order.harvest_origin.pk}",
-                            new_status="PROCESSED",
-                            additional_data=data_dict
-                        )
-                except Exception as fe:
-                    print(f"Erro ao atualizar na Blockchain Real: {fe}")
-                
-                messages.success(request, f"Processamento registado com sucesso para o Lote #{new_batch_id}!")
-                
-            except Exception as e:
-                print(f"Erro na Blockchain: {e}")
-                messages.warning(request, f"Processado, mas erro na Blockchain: {e}")
-
+            packaging_type = form.cleaned_data['packaging_type']
+            preservation_treatment = form.cleaned_data['preservation_treatment']
+            messages.success(request, f"Processamento registado com sucesso ({packaging_type}, {preservation_treatment})!")
             return redirect('processor_dashboard')
     
     return redirect('processor_dashboard')
+
+def _deduct_seller_stock_from_deal(deal):
+    """
+    Deduz o stock correspondente no vendedor quando um negócio (Deal) é fechado no Marketplace:
+    - Se for lote de colheita de produtor (batch_id='LOTE-X'), incrementa utilized_quantity_kg na Harvest.
+    - Se for comerciante/processador com ConsolidatedStock, decrementa do ConsolidatedStock.
+    """
+    if not deal:
+        return
+        
+    batch_id = deal.get("batch_id")
+    deal_qty = float(deal.get("quantity_kg") or 0.0)
+    seller_id = deal.get("seller_id")
+    seller_role = deal.get("seller_role")
+    
+    if deal_qty <= 0:
+        return
+        
+    if batch_id and str(batch_id).startswith("LOTE-"):
+        try:
+            h_id = int(str(batch_id).replace("LOTE-", ""))
+            harvest = Harvest.objects.filter(pk=h_id).first()
+            if harvest:
+                from decimal import Decimal
+                curr_utilized = harvest.utilized_quantity_kg if harvest.utilized_quantity_kg is not None else Decimal('0.0')
+                harvest.utilized_quantity_kg = Decimal(str(curr_utilized)) + Decimal(str(deal_qty))
+                harvest.save()
+                return
+        except Exception as err:
+            print(f"[Marketplace] Erro ao abater stock da colheita {batch_id}: {err}")
+            
+    if seller_id and seller_role in ['Processor', 'Retailer']:
+        from django.contrib.auth.models import User
+        seller_user = User.objects.filter(username=seller_id).first()
+        if seller_user:
+            culture = ProductSubFamily.objects.filter(name=deal.get('culture_name')).first()
+            if culture:
+                stk = ConsolidatedStock.objects.filter(
+                    owner=seller_user,
+                    culture=culture
+                ).first()
+                if stk:
+                    stk.quantity = max(0.0, float(stk.quantity) - deal_qty)
+                    stk.save()
 
 @login_required
 @role_required(['Processor'])
@@ -1213,27 +1232,42 @@ def processor_accept_order(request):
         warehouse_id = request.POST.get('warehouse_id')
         
         try:
-            # 1. Obter a encomenda
-            order = MarketplaceOrder.objects.get(pk=order_id, status='OPEN')
-            
-            # 2. Obter o armazém selecionado e verificar posse
             warehouse = Warehouse.objects.get(pk=warehouse_id, owner=request.user)
+            dest_wh = f"{warehouse.location} (WH: {warehouse.warehouse_id})"
             
-            # 3. Atualizar a encomenda
-            order.status = 'APPROVED'
-            order.fulfilled_by = request.user
-            order.fulfilled_at = timezone.now()
+            listing_info = marketplace_service.get_listing(str(order_id))
+            qty_to_buy = float(listing_info.get('quantity_kg', 100.0)) if listing_info else 100.0
             
-            # Atualizar localização com base no armazém escolhido
-            # Guardamos o ID e Localização para referência futura (ou podíamos criar FK se alterássemos o modelo)
-            order.warehouse_location = f"{warehouse.location} (WH: {warehouse.warehouse_id})"
+            deal = marketplace_service.execute_instant_buy(
+                listing_id=str(order_id),
+                buyer_id=request.user.username,
+                buyer_role='Processor',
+                quantity_kg=qty_to_buy,
+                destination_warehouse=dest_wh
+            )
+            if not deal:
+                messages.error(request, "Não foi possível concluir a compra: Marketplace indisponível ou oferta já não se encontra aberta.")
+                return redirect('processor_dashboard')
+                
+            _deduct_seller_stock_from_deal(deal)
             
-            order.save()
-            check_and_create_optimal_route(order.fulfilled_at.date())
+            # Adicionar ao ConsolidatedStock do Processor
+            culture = ProductSubFamily.objects.filter(name=deal.get('culture_name')).first()
+            if culture:
+                stk, _ = ConsolidatedStock.objects.get_or_create(
+                    owner=request.user,
+                    culture=culture,
+                    warehouse_location=dest_wh,
+                    defaults={'quantity': 0.0, 'avg_quality_score': 10.0}
+                )
+                stk.quantity = float(stk.quantity) + float(deal.get('quantity_kg', qty_to_buy))
+                stk.save()
+                
+            messages.success(request, f"Oferta #{order_id} aceite com sucesso! Negócio concluído ({deal.get('quantity_kg', qty_to_buy)} kg).")
             return redirect('processor_dashboard')
             
-        except (MarketplaceOrder.DoesNotExist, Warehouse.DoesNotExist):
-            # Em caso de erro (hack ou dados inválidos), redirecionar
+        except Exception as e:
+            messages.error(request, f"Erro ao aceitar oferta: {e}")
             return redirect('processor_dashboard')
             
     return redirect('processor_dashboard')
@@ -1244,7 +1278,7 @@ def processor_accept_order(request):
 def retailer_submit_warehouse(request):
     db_error = None
     if request.method == 'POST':
-        form = WarehouseRegistrationForm(request.POST)
+        form = WarehouseRegistrationForm(request.POST, request.FILES)
         if form.is_valid():
             try:
                 warehouse_record = form.save(commit=False)
@@ -1252,12 +1286,20 @@ def retailer_submit_warehouse(request):
                 warehouse_record.save()
                 form.save_m2m() 
                 
-                # Gerar automaticamente leituras climáticas (self-healing)
-                try:
-                    from dashboard.services.lc_service import generate_fallback_sensor_readings
-                    generate_fallback_sensor_readings(warehouse_record)
-                except Exception:
-                    pass
+                sensor_file = request.FILES.get('sensor_file')
+                if sensor_file and warehouse_record.meteo_source == 'JSON':
+                    count, err = process_sensor_readings_file(warehouse_record, sensor_file)
+                    if err:
+                        messages.warning(request, f"Armazém registado, mas aviso no ficheiro: {err}")
+                    else:
+                        messages.success(request, f"Armazém registado e {count} leituras importadas com sucesso!")
+                else:
+                    try:
+                        from dashboard.services.lc_service import generate_fallback_sensor_readings
+                        generate_fallback_sensor_readings(warehouse_record)
+                    except Exception:
+                        pass
+                    messages.success(request, "Armazém registado com sucesso!")
                     
                 return redirect('retailer_dashboard')
             except IntegrityError as e:
@@ -1293,19 +1335,42 @@ def retailer_accept_order(request):
         warehouse_id = request.POST.get('warehouse_id')
         
         try:
-            order = MarketplaceOrder.objects.get(pk=order_id, status='OPEN')
             warehouse = Warehouse.objects.get(pk=warehouse_id, owner=request.user)
+            dest_wh = f"{warehouse.location} (WH: {warehouse.warehouse_id})"
             
-            order.status = 'APPROVED'
-            order.fulfilled_by = request.user
-            order.fulfilled_at = timezone.now()
-            order.warehouse_location = f"{warehouse.location} (WH: {warehouse.warehouse_id})"
+            listing_info = marketplace_service.get_listing(str(order_id))
+            qty_to_buy = float(listing_info.get('quantity_kg', 100.0)) if listing_info else 100.0
             
-            order.save()
-            check_and_create_optimal_route(order.fulfilled_at.date())
+            deal = marketplace_service.execute_instant_buy(
+                listing_id=str(order_id),
+                buyer_id=request.user.username,
+                buyer_role='Retailer',
+                quantity_kg=qty_to_buy,
+                destination_warehouse=dest_wh
+            )
+            if not deal:
+                messages.error(request, "Não foi possível concluir a compra: Marketplace indisponível ou oferta já não se encontra aberta.")
+                return redirect('retailer_dashboard')
+                
+            _deduct_seller_stock_from_deal(deal)
+            
+            # Adicionar ao ConsolidatedStock do Retailer
+            culture = ProductSubFamily.objects.filter(name=deal.get('culture_name')).first()
+            if culture:
+                stk, _ = ConsolidatedStock.objects.get_or_create(
+                    owner=request.user,
+                    culture=culture,
+                    warehouse_location=dest_wh,
+                    defaults={'quantity': 0.0, 'avg_quality_score': 10.0}
+                )
+                stk.quantity = float(stk.quantity) + float(deal.get('quantity_kg', qty_to_buy))
+                stk.save()
+                
+            messages.success(request, f"Oferta #{order_id} aceite com sucesso! Negócio concluído ({deal.get('quantity_kg', qty_to_buy)} kg).")
             return redirect('retailer_dashboard')
             
-        except (MarketplaceOrder.DoesNotExist, Warehouse.DoesNotExist):
+        except Exception as e:
+            messages.error(request, f"Erro ao aceitar oferta: {e}")
             return redirect('retailer_dashboard')
             
     return redirect('retailer_dashboard')
@@ -1671,67 +1736,246 @@ def producer_submit_water(request):
         return redirect(REDIRECT_URL)
 
 # ----------------------------------------------------------------------
-# 5. VIEWS DE MARKETPLACE
+# 5. VIEWS DE MARKETPLACE (INTEGRAÇÃO COM MARKETPLACE WEB SERVICE)
 # ----------------------------------------------------------------------
+
+@method_decorator(login_required, name='dispatch')
+class MarketplacePortalView(View):
+    """
+    Portal Central e Dedicado do Marketplace Agroalimentar (B2B Commodity Exchange).
+    Acesso desacoplado ao microserviço de Order Book, Matching, Contratos Futuros e Inteligência de Mercado.
+    """
+    def get(self, request):
+        user = request.user
+        
+        # 1. Identificar o Perfil (Role) e URL de retorno ao respetivo dashboard
+        role = 'Retailer'
+        if user.is_superuser or user.groups.filter(name='Admin').exists():
+            role = 'Admin'
+        elif user.groups.filter(name='Producer').exists():
+            role = 'Producer'
+        elif user.groups.filter(name='Retailer').exists():
+            role = 'Retailer'
+        elif user.groups.filter(name='Processor').exists():
+            role = 'Processor'
+        elif user.groups.filter(name='Transporter').exists():
+            role = 'Transporter'
+        elif user.groups.filter(name='Consumer').exists():
+            role = 'Consumer'
+
+        role_dashboards = {
+            'Admin': 'admin_dashboard',
+            'Producer': 'producer_dashboard',
+            'Retailer': 'retailer_dashboard',
+            'Processor': 'processor_dashboard',
+            'Transporter': 'transporter_dashboard',
+            'Consumer': 'consumer_dashboard',
+        }
+        return_dashboard_url = role_dashboards.get(role, 'admin_dashboard')
+
+        # 2. Consultar o Marketplace Web Service (FastAPI)
+        service_online = marketplace_service.check_health()
+        
+        open_orders = marketplace_service.get_open_orders_adapted()
+        open_listings = [o for o in open_orders if o.order_type == 'SELL']
+        open_bids = [o for o in open_orders if o.order_type == 'BUY']
+        
+        # PRIVACIDADE & BLOCKCHAIN: Cada interveniente apenas acede aos SEUS PRÓPRIOS negócios concluídos
+        # (Informação confidencial protegida por canais privados / Private Data Collections)
+        if user.is_superuser or role == 'Admin':
+            closed_deals = marketplace_service.get_closed_deals_adapted()
+        else:
+            closed_deals = marketplace_service.get_closed_deals_adapted(username=user.username)
+            
+        user_deals = closed_deals
+        supply_contracts = marketplace_service.get_contracts_adapted(buyer_username=user.username if not (user.is_superuser or role == 'Admin') else None)
+        
+        market_price_data = marketplace_service.fetch_market_prices() or {}
+        
+        # Estatísticas do mercado (volume aberto público + métricas privadas do utilizador)
+        total_open_volume = sum(getattr(o, 'quantity_kg', 0) for o in open_orders)
+        user_deals_count = len(closed_deals)
+        user_deals_volume = sum(getattr(d, 'quantity_kg', 0) for d in closed_deals)
+        
+        # 3. Armazéns, Culturas e Lotes do Utilizador
+        user_warehouses = Warehouse.objects.filter(owner=user).order_by('location')
+        product_subfamilies = ProductSubFamily.objects.all().order_by('fruit_type', 'name')
+
+        # Preparação de dados de Produtor
+        harvest_records = Harvest.objects.filter(producer=user).select_related('plantation', 'subfamily', 'warehouse').order_by('-harvest_date')
+        harvest_data_map = {}
+        for h in harvest_records:
+            harvest_data_map[h.pk] = {
+                'location': h.warehouse.location if h.warehouse else "",
+                'caliber': float(h.caliber) if h.caliber is not None else "",
+                'brix': float(h.soluble_solids) if h.soluble_solids is not None else "",
+                'score': h.avg_quality_score if h.avg_quality_score is not None else "",
+                'available_stock': float(h.current_stock_kg),
+                'culture_name': h.subfamily.name if h.subfamily else ""
+            }
+        
+        sell_order_form = MarketSellOrderForm(user=user, initial={'role': 'Producer'})
+        
+        # Formulário Genérico / Retalhista / Processador
+        market_order_form = MarketplaceOrderForm(initial={'role': role, 'order_type': 'BUY'})
+        if user_warehouses.exists():
+            wh_choices = [(w.location, f"{w.location} (WH: {w.warehouse_id})") for w in user_warehouses]
+            market_order_form.fields['warehouse_location'].widget = forms.Select(choices=wh_choices, attrs={'class': 'form-control'})
+        
+        # Stock Consolidado (para auto-preenchimento ao vender de retalho/processamento)
+        user_stock_qs = ConsolidatedStock.objects.filter(owner=user, quantity__gt=0).select_related('culture')
+        user_stock_data = []
+        for s in user_stock_qs:
+            user_stock_data.append({
+                'culture': s.culture.name if s.culture else 'N/A',
+                'culture_id': s.culture.id if s.culture else '',
+                'warehouse': s.warehouse_location,
+                'full_warehouse': s.warehouse_location,
+                'quantity': float(s.quantity),
+                'avg_caliber': float(s.avg_caliber) if s.avg_caliber else 0,
+                'avg_brix': float(s.avg_soluble_solids) if s.avg_soluble_solids else 0,
+                'avg_score': float(s.avg_quality_score) if s.avg_quality_score else 10,
+                'harvest_id': s.lot_number if hasattr(s, 'lot_number') else ''
+            })
+
+        # 4. Tickers de Cotações em Tempo Real (Produtos Perecíveis & Commodities Agrícolas)
+        market_tickers = [
+            {'symbol': 'MACA-GALA', 'name': 'Maçã Gala (Alcobaça IGP)', 'price': 1.48, 'change': '+3.2%', 'trend': 'up', 'vol': '48.5 Ton', 'unit': '€/kg', 'origin': 'Oeste, PT'},
+            {'symbol': 'PERA-ROCHA', 'name': 'Pêra Rocha (Oeste DOP)', 'price': 1.62, 'change': '+1.8%', 'trend': 'up', 'vol': '62.0 Ton', 'unit': '€/kg', 'origin': 'Cadaval / Bombarral'},
+            {'symbol': 'TOMATE-RAMA', 'name': 'Tomate Rama Seleção', 'price': 1.15, 'change': '-0.5%', 'trend': 'down', 'vol': '31.2 Ton', 'unit': '€/kg', 'origin': 'Ribatejo, PT'},
+            {'symbol': 'LARANJA-ALG', 'name': 'Laranja do Algarve (IGP)', 'price': 1.25, 'change': '+0.8%', 'trend': 'up', 'vol': '28.0 Ton', 'unit': '€/kg', 'origin': 'Silves / Faro'},
+            {'symbol': 'MORANGO-OESTE', 'name': 'Morango Estufa Qualidade', 'price': 3.40, 'change': '+4.5%', 'trend': 'up', 'vol': '12.4 Ton', 'unit': '€/kg', 'origin': 'Torres Vedras'},
+            {'symbol': 'CENOURA-PT', 'name': 'Cenoura Nacional Lavada', 'price': 0.85, 'change': '0.0%', 'trend': 'neutral', 'vol': '19.5 Ton', 'unit': '€/kg', 'origin': 'Póvoa de Varzim'},
+            {'symbol': 'BATATA-CONS', 'name': 'Batata Nova de Conservação', 'price': 0.95, 'change': '+1.1%', 'trend': 'up', 'vol': '55.0 Ton', 'unit': '€/kg', 'origin': 'Trás-os-Montes / Montijo'},
+            {'symbol': 'UVA-DONA-MARIA', 'name': 'Uva de Mesa Dona Maria', 'price': 2.10, 'change': '+2.0%', 'trend': 'up', 'vol': '15.8 Ton', 'unit': '€/kg', 'origin': 'Alentejo Central'}
+        ]
+
+        # 5. Notícias Reais & Boletins de Inteligência de Mercado / Safra / Perecibilidade (com Cache de 0ms)
+        market_news = market_news_service.get_live_news()
+
+        context = {
+            'username': user.username,
+            'role': role,
+            'return_dashboard_url': return_dashboard_url,
+            'service_online': service_online,
+            'open_orders': open_orders,
+            'open_listings': open_listings,
+            'open_bids': open_bids,
+            'closed_deals': closed_deals,
+            'user_deals': user_deals,
+            'supply_contracts': supply_contracts,
+            'market_prices': market_price_data,
+            'market_tickers': market_tickers,
+            'market_news': market_news,
+            'market_stats': {
+                'total_open_volume': round(total_open_volume, 1),
+                'open_listings_count': len(open_listings),
+                'open_bids_count': len(open_bids),
+                'total_deals_count': user_deals_count,
+                'total_deals_volume': round(user_deals_volume, 1),
+            },
+            'user_warehouses': user_warehouses,
+            'retailer_warehouses': user_warehouses,
+            'product_subfamilies': product_subfamilies,
+            'harvest_data_map': harvest_data_map,
+            'sell_order_form': sell_order_form,
+            'market_order_form': market_order_form,
+            'retailer_stock': user_stock_data,
+            'harvest_records': harvest_records,
+        }
+        return render(request, 'dashboard/marketplace_portal.html', context)
+
 
 @login_required
 def market_submit_order(request):
     if request.method == 'POST':
-        # VERIFICAR ROLE
         if request.user.groups.filter(name='Producer').exists():
-            # lógica para PRODUTOR (Venda com abate de stock)
+            # Lógica para PRODUTOR (Venda / Listing - sem abate prévio de stock)
             form = MarketSellOrderForm(request.POST, user=request.user)
             if form.is_valid():
-                with transaction.atomic():
-                    order = form.save(commit=False)
-                    order.requester = request.user
-                    order.role = 'Producer'
-                    order.status = 'OPEN'
+                harvest = form.cleaned_data['harvest_origin']
+                qty = float(form.cleaned_data['quantity_kg'])
+                price_per_kg = float(form.cleaned_data['price_per_kg'])
+                wh_loc = form.cleaned_data['warehouse_location']
+                if harvest and harvest.warehouse:
+                    wh_loc = harvest.warehouse.location
 
-                    # AUTOMATIZAÇÃO DE ARMAZÉM:
-                    # Se tiver origem numa Colheita, usamos o armazém dessa colheita como local de recolha.
-                    if order.harvest_origin and order.harvest_origin.warehouse:
-                        order.warehouse_location = order.harvest_origin.warehouse.location
-                    
-                    order.save()
-                    
-                    # Abater Stock ao Lote Selecionado
-                    harvest = order.harvest_origin
-                    # (A validação de stock > disponível já foi feita no form.clean)
-                    harvest.utilized_quantity_kg += order.quantity_kg
-                    harvest.save()
-                    
-                    order.save()
-                    messages.success(request, f"Oferta de Venda criada! {order.quantity_kg}kg abatidos ao lote #{harvest.pk}.")
-                    return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
+                # Publicar no Marketplace Web Service
+                listing = marketplace_service.publish_listing(
+                    seller_id=request.user.username,
+                    seller_role='Producer',
+                    culture_name=harvest.subfamily.name if harvest.subfamily else 'Cultura',
+                    fruit_type=harvest.subfamily.fruit_type if harvest.subfamily else 'apple',
+                    quantity_kg=qty,
+                    price_per_kg=price_per_kg,
+                    warehouse_location=wh_loc,
+                    batch_id=f"LOTE-{harvest.pk}",
+                    quality_metrics={
+                        "caliber_mm": float(harvest.caliber) if harvest.caliber else None,
+                        "soluble_solids_brix": float(harvest.soluble_solids) if harvest.soluble_solids else None,
+                        "quality_score": float(harvest.avg_quality_score) if harvest.avg_quality_score else 10.0
+                    }
+                )
+                
+                if listing:
+                    messages.success(request, f"Oferta de Venda criada no Marketplace Central ({qty} kg a {price_per_kg:.2f}€/kg)! O stock será debitado apenas quando o negócio for concluído.")
+                else:
+                    messages.error(request, "Não foi possível contactar o Marketplace Web Service. Por favor verifique se o serviço está ligado e em execução.")
+                return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
             else:
-                 messages.error(request, f"Erro ao criar oferta: {form.errors}")
+                messages.error(request, f"Erro ao criar oferta: {form.errors}")
         
         else:
-            # Lógica Genérica (Retalhista a comprar, etc.)
+            # Lógica Genérica (Retalhista a comprar, consumidor, etc.)
             form = MarketplaceOrderForm(request.POST)
             if form.is_valid():
-                order = form.save(commit=False)
-                order.requester = request.user
+                order_type = form.cleaned_data['order_type']
+                culture = form.cleaned_data['culture']
+                qty = float(form.cleaned_data['quantity_kg'])
+                price_per_kg = float(form.cleaned_data.get('price_per_kg') or 2.0)
+                wh_loc = form.cleaned_data['warehouse_location']
                 
                 groups = request.user.groups.all()
-                user_role = groups[0].name if groups else 'Unknown'
-                order.role = user_role
+                user_role = groups[0].name if groups else 'Retailer'
                 
-                # Logic for Processor/Retailer SELL Orders (Export/Sales):
-                # The form uses min_caliber/etc for input, but for SELL orders these are ACTUAL values.
-                if order.order_type == 'SELL':
-                    order.caliber = order.min_caliber
-                    order.soluble_solids = order.min_soluble_solids
-                    order.quality_score = order.min_quality_score
-                    # Clear "Min" fields as they don't apply to specific items being sold
-                    order.min_caliber = None
-                    order.min_soluble_solids = None
-                    order.min_quality_score = None
-                
-                order.save()
-                messages.success(request, "Pedido criado no Mercado!")
-                return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
+                if order_type == 'SELL':
+                    listing = marketplace_service.publish_listing(
+                        seller_id=request.user.username,
+                        seller_role=user_role,
+                        culture_name=culture.name,
+                        fruit_type=culture.fruit_type,
+                        quantity_kg=qty,
+                        price_per_kg=price_per_kg,
+                        warehouse_location=wh_loc,
+                        quality_metrics={
+                            "caliber_mm": float(form.cleaned_data.get('min_caliber') or 0.0),
+                            "soluble_solids_brix": float(form.cleaned_data.get('min_soluble_solids') or 0.0),
+                            "quality_score": float(form.cleaned_data.get('min_quality_score') or 10.0)
+                        }
+                    )
+                    if listing:
+                        messages.success(request, f"Oferta de Venda ({order_type}) registada no Marketplace Central!")
+                    else:
+                        messages.error(request, "Não foi possível contactar o Marketplace Web Service. Por favor verifique se o serviço está ligado.")
+                else:
+                    bid = marketplace_service.publish_bid(
+                        buyer_id=request.user.username,
+                        buyer_role=user_role,
+                        culture_name=culture.name,
+                        fruit_type=culture.fruit_type,
+                        quantity_kg=qty,
+                        max_price_per_kg=price_per_kg,
+                        destination_warehouse=wh_loc,
+                        min_caliber_mm=float(form.cleaned_data.get('min_caliber')) if form.cleaned_data.get('min_caliber') else None,
+                        min_soluble_solids_brix=float(form.cleaned_data.get('min_soluble_solids')) if form.cleaned_data.get('min_soluble_solids') else None,
+                        min_quality_score=float(form.cleaned_data.get('min_quality_score')) if form.cleaned_data.get('min_quality_score') else None
+                    )
+                    if bid:
+                        messages.success(request, f"Pedido ({order_type}) registado no Marketplace Central!")
+                    else:
+                        messages.error(request, "Não foi possível contactar o Marketplace Web Service. Por favor verifique se o serviço está ligado.")
+                        
+                return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
             else:
                 messages.error(request, f"Erro ao criar pedido: {form.errors}")
     
@@ -1741,52 +1985,52 @@ def market_submit_order(request):
 def market_accept_order(request):
     if request.method == 'POST':
         order_id = request.POST.get('order_id')
-        harvest_id = request.POST.get('harvest_id') # NEW: ID do Lote selecionado no Modal
+        warehouse_id = request.POST.get('warehouse_id')
         
-        order = get_object_or_404(MarketplaceOrder, pk=order_id)
-        
-        if order.status == 'OPEN':
-            # Validação Extra: Se for Producer aceitando uma compra (BUY), DEVE ter um harvest_id
-            if request.user.groups.filter(name='Producer').exists() and order.order_type == 'BUY':
-                if not harvest_id:
-                     messages.error(request, "Erro: Tens de selecionar um Lote (Harvest) para abastecer este pedido!")
-                     return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
-                
-                # Obter Lote e Validar Stock
-                harvest = get_object_or_404(Harvest, pk=harvest_id, producer=request.user)
-                if harvest.current_stock_kg < order.quantity_kg:
-                    messages.error(request, f"Stock insuficiente no Lote #{harvest.pk}. Disponível: {harvest.current_stock_kg}kg")
-                    return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
-
-                # Lógica de Dedução e Link
-                with transaction.atomic():
-                    # 1. Atualizar Order
-                    order.status = 'APPROVED'
-                    order.fulfilled_by = request.user
-                    order.fulfilled_at = timezone.now()
-                    
-                    # LINK CRÍTICO: Associar a origem
-                    order.harvest_origin = harvest
-                    # Herdar warehouse do lote
-                    if harvest.warehouse:
-                         order.warehouse_location = harvest.warehouse.location
-                    
-                    # 2. Atualizar Stock do Lote
-                    harvest.utilized_quantity_kg += order.quantity_kg
-                    harvest.save()
-                    order.save()
-                    check_and_create_optimal_route(order.fulfilled_at.date())
-                    
-                    messages.success(request, f"Pedido aceite! {order.quantity_kg}kg alocados do Lote #{harvest.pk}.")
+        try:
+            buyer_role = request.user.groups.first().name if request.user.groups.exists() else 'Retailer'
             
-            else:
-                # Fallback para outros roles ou SELL orders (onde stock já foi abatido na criação)
-                order.status = 'APPROVED'
-                order.fulfilled_by = request.user
-                order.fulfilled_at = timezone.now()
-                order.save()
-                check_and_create_optimal_route(order.fulfilled_at.date())
-                messages.success(request, f"Pedido #{order.pk} aceite!")
+            listing_info = marketplace_service.get_listing(str(order_id))
+            qty_to_buy = float(listing_info.get('quantity_kg', 100.0)) if listing_info else 100.0
+            
+            dest_wh = "Armazém de Destino"
+            if warehouse_id:
+                wh = Warehouse.objects.filter(pk=warehouse_id, owner=request.user).first()
+                if wh:
+                    dest_wh = f"{wh.location} (WH: {wh.warehouse_id})"
+            
+            # Executar compra imediata no Marketplace Web Service
+            deal = marketplace_service.execute_instant_buy(
+                listing_id=str(order_id),
+                buyer_id=request.user.username,
+                buyer_role=buyer_role,
+                quantity_kg=qty_to_buy,
+                destination_warehouse=dest_wh
+            )
+            
+            if not deal:
+                messages.error(request, "Não foi possível concluir a transação: Marketplace indisponível ou oferta já não está aberta.")
+                return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
+            
+            # Abater o stock no vendedor
+            _deduct_seller_stock_from_deal(deal)
+            
+            # Adicionar ao stock do comprador se for Processor/Retailer
+            if buyer_role in ['Processor', 'Retailer']:
+                culture = ProductSubFamily.objects.filter(name=deal.get('culture_name')).first()
+                if culture:
+                    stk, _ = ConsolidatedStock.objects.get_or_create(
+                        owner=request.user,
+                        culture=culture,
+                        warehouse_location=dest_wh,
+                        defaults={'quantity': 0.0, 'avg_quality_score': 10.0}
+                    )
+                    stk.quantity = float(stk.quantity) + float(deal.get('quantity_kg', qty_to_buy))
+                    stk.save()
+            
+            messages.success(request, f"Transação #{order_id} concluída no Marketplace! Negócio fechado.")
+        except Exception as e:
+            messages.error(request, f"Erro ao aceitar pedido: {e}")
             
     return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
 
@@ -1812,52 +2056,33 @@ def _create_route_from_cluster(order_cluster, route_date):
             route_date=route_date or timezone.now().date(),
             status='PENDING'
         )
-        locations = []
-        for ord_obj in order_cluster:
-            ord_obj.route = route
-            ord_obj.save()
-            if ord_obj.warehouse_location and ord_obj.warehouse_location not in locations:
-                locations.append(ord_obj.warehouse_location)
-            dest = f"Armazém {ord_obj.requester.username}"
-            if dest not in locations:
-                locations.append(dest)
-                
-        route.optimized_path = " -> ".join(locations)
+        route.optimized_path = " -> ".join([str(x) for x in order_cluster])
         route.save()
         return route
 
-def check_and_create_optimal_route(order_date):
-    orders = MarketplaceOrder.objects.filter(
-        status='APPROVED',
-        transport_status='PENDING',
-        fulfilled_at__date=order_date,
-        route__isnull=True
-    ).order_by('created_at')
+def check_and_create_optimal_route(order_date=None):
+    """
+    Verifica se existem 6 ou mais transações concluídas pendentes de transporte
+    e gera automaticamente uma rota ótima agrupada no mercado.
+    """
+    deals = marketplace_service.fetch_deals()
+    assigned_deal_ids = _get_assigned_deal_ids()
+    unassigned_deals = [d for d in (deals or []) if str(d.get('deal_id')) not in assigned_deal_ids]
     
-    if not orders.exists() or orders.count() < 3:
-        return None
-
-    created_routes = []
-    current_cluster = []
-    current_weight = 0.0
-    MAX_ROUTE_WEIGHT = 5000.0  # Capacidade padrão por rota/camião
-
-    for order in orders:
-        order_weight = float(order.quantity_kg or 0.0)
-        if current_cluster and (current_weight + order_weight > MAX_ROUTE_WEIGHT):
-            route = _create_route_from_cluster(current_cluster, order_date)
-            created_routes.append(route)
-            current_cluster = [order]
-            current_weight = order_weight
-        else:
-            current_cluster.append(order)
-            current_weight += order_weight
-
-    if current_cluster:
-        route = _create_route_from_cluster(current_cluster, order_date)
-        created_routes.append(route)
-
-    return created_routes
+    if len(unassigned_deals) >= 6:
+        selected_deals = unassigned_deals[:6]
+        cluster = []
+        for d in selected_deals:
+            d_id = d.get('deal_id', '')
+            cult = d.get('culture_name', 'Agro')
+            w = float(d.get('quantity_kg', 0.0) or 0.0)
+            orig = d.get('warehouse_origin') or 'Armazém Virtual Produtor'
+            dest = d.get('destination_warehouse') or f"Armazém {d.get('buyer_id')}"
+            cluster.append(f"Deal #{d_id} ({cult}: {w} kg) [{orig} -> {dest}]")
+            
+        route = _create_route_from_cluster(cluster, order_date or timezone.now().date())
+        return route
+    return None
 
 @login_required
 @role_required(['Transporter'])
@@ -1893,12 +2118,6 @@ def transporter_accept_route(request):
                 route.transporter = request.user
                 route.vehicle = vehicle
                 route.save()
-                
-                # Atualizar todas as encomendas na rota
-                for order in route.orders.all():
-                    order.transport_status = 'ACCEPTED'
-                    order.vehicle = vehicle
-                    order.save()
                     
             messages.success(request, f"Rota #{route.pk} aceite com o veículo {vehicle.brand_model} ({vehicle.license_plate})!")
         else:
@@ -1919,11 +2138,6 @@ def transporter_route_plan(request):
             with transaction.atomic():
                 route.status = 'PLANNED'
                 route.save()
-                for order in route.orders.all():
-                    order.planned_pickup_date = planned_pickup
-                    order.planned_delivery_date = planned_delivery
-                    order.transport_status = 'PLANNED'
-                    order.save()
             messages.success(request, f"Plano de transporte registado para a Rota #{route.pk}!")
         else:
             messages.error(request, "Datas de recolha e entrega inválidas.")
@@ -1941,31 +2155,24 @@ def transporter_route_pickup(request):
         with transaction.atomic():
             route.status = 'IN_TRANSIT'
             route.save()
-            for order in route.orders.all():
-                order.actual_pickup_date = pickup_time
-                order.transport_status = 'IN_TRANSIT'
-                order.save()
+            
+            # Blockchain Custody Block
+            dossier = {
+                "action": "TRANSPORT_ROUTE_PICKUP",
+                "route_id": route.pk,
+                "transporter": request.user.username,
+                "pickup_time": pickup_time.isoformat(),
+                "path": route.optimized_path or ""
+            }
+            try:
+                fabric_service.update_order(
+                    order_id=f"ROTA-{route.pk}",
+                    new_status="IN_TRANSIT",
+                    additional_data=dossier
+                )
+            except Exception as fe:
+                print(f"Erro fabric: {fe}")
                 
-                # Blockchain Custody Block
-                dossier = {
-                    "action": "TRANSPORT_PICKUP",
-                    "order_id": order.pk,
-                    "transporter": request.user.username,
-                    "pickup_time": order.actual_pickup_date.isoformat(),
-                    "origin": order.warehouse_location,
-                    "planned_pickup": order.planned_pickup_date.isoformat() if order.planned_pickup_date else "N/A",
-                    "harvest_origin": order.harvest_origin.pk if order.harvest_origin else "N/A"
-                }
-                try:
-                    if order.harvest_origin:
-                        fabric_service.update_order(
-                            order_id=f"LOTE-{order.harvest_origin.pk}",
-                            new_status="IN_TRANSIT",
-                            additional_data=dossier
-                        )
-                except Exception as fe:
-                    print(f"Erro fabric: {fe}")
-                    
         messages.success(request, f"Viagem da Rota #{route.pk} iniciada com sucesso!")
     return redirect('transporter_dashboard')
 
@@ -1991,76 +2198,75 @@ def transporter_route_delivery(request):
         with transaction.atomic():
             route.status = 'DELIVERED'
             route.save()
-            for order in route.orders.all():
-                order.actual_delivery_date = delivery_time
-                order.transport_sensor_data = sensor_data
-                order.transport_status = 'DELIVERED'
-                order.save()
+            
+            # Blockchain delivery
+            dossier = {
+                "action": "TRANSPORT_ROUTE_DELIVERY",
+                "route_id": route.pk,
+                "transporter": request.user.username,
+                "delivery_time": delivery_time.isoformat(),
+                "sensor_data": sensor_data,
+                "path": route.optimized_path or ""
+            }
+            try:
+                fabric_service.update_order(
+                    order_id=f"ROTA-{route.pk}",
+                    new_status="DELIVERED",
+                    additional_data=dossier
+                )
+            except Exception as fe:
+                print(f"Erro fabric: {fe}")
                 
-                # Atualizar stock entregue no Lote
-                if order.harvest_origin:
-                    harvest = order.harvest_origin
-                    harvest.delivered_quantity_kg = (harvest.delivered_quantity_kg or 0) + order.quantity_kg
-                    harvest.save()
-                    
-                # Blockchain delivery
-                dossier = {
-                    "action": "TRANSPORT_DELIVERY",
-                    "order_id": order.pk,
-                    "transporter": request.user.username,
-                    "delivery_time": order.actual_delivery_date.isoformat(),
-                    "sensor_data": sensor_data,
-                    "harvest_origin": order.harvest_origin.pk if order.harvest_origin else "N/A"
-                }
-                try:
-                    if order.harvest_origin:
-                        fabric_service.update_order(
-                            order_id=f"LOTE-{order.harvest_origin.pk}",
-                            new_status="DELIVERED",
-                            additional_data=dossier
-                        )
-                except Exception as fe:
-                    print(f"Erro fabric: {fe}")
-                    
         messages.success(request, f"Entrega da Rota #{route.pk} concluída com sucesso!")
     return redirect('transporter_dashboard')
 
 @login_required
 @role_required(['Transporter'])
 def transporter_simulate_route_opt(request):
-    orders = MarketplaceOrder.objects.filter(
-        status='APPROVED',
-        transport_status='PENDING',
-        route__isnull=True
-    ).order_by('created_at')
+    deals = marketplace_service.fetch_deals()
+    assigned_deal_ids = _get_assigned_deal_ids()
+    available_deals = [d for d in (deals or []) if str(d.get('deal_id')) not in assigned_deal_ids]
     
-    if not orders.exists():
-        messages.error(request, "Não existem transações pendentes de transporte no mercado neste momento.")
+    combined_items = []
+    for d in available_deals:
+        d_weight = float(d.get('quantity_kg', 0.0) or 0.0)
+        origin = d.get('warehouse_origin') or 'Armazém Virtual Produtor'
+        dest = d.get('destination_warehouse') or f"Armazém {d.get('buyer_id')}"
+        cult = d.get('culture_name', 'Agro')
+        d_id = d.get('deal_id', '')
+        combined_items.append({
+            'desc': f"Deal #{d_id} ({cult}: {d_weight} kg) [{origin} -> {dest}]",
+            'weight': d_weight
+        })
+        
+    if not combined_items:
+        messages.error(request, "Não existem novas transações concluídas pendentes de transporte no mercado neste momento.")
         return redirect('transporter_dashboard')
         
-    selected_orders = list(orders[:15])
+    selected_items = combined_items[:15]
     created_routes = []
     current_cluster = []
     current_weight = 0.0
     MAX_ROUTE_WEIGHT = 5000.0  # Capacidade de 1 Camião Ligeiro padrão (5.000 Kg)
 
-    for order in selected_orders:
-        order_weight = float(order.quantity_kg or 0.0)
-        if current_cluster and (current_weight + order_weight > MAX_ROUTE_WEIGHT):
+    for itm in selected_items:
+        itm_weight = itm['weight']
+        itm_desc = itm['desc']
+        if current_cluster and (current_weight + itm_weight > MAX_ROUTE_WEIGHT):
             route = _create_route_from_cluster(current_cluster, timezone.now().date())
             created_routes.append(route)
-            current_cluster = [order]
-            current_weight = order_weight
+            current_cluster = [itm_desc]
+            current_weight = itm_weight
         else:
-            current_cluster.append(order)
-            current_weight += order_weight
+            current_cluster.append(itm_desc)
+            current_weight += itm_weight
 
     if current_cluster:
         route = _create_route_from_cluster(current_cluster, timezone.now().date())
         created_routes.append(route)
 
     routes_str = ", ".join([f"#{r.pk}" for r in created_routes])
-    messages.success(request, f"Simulação Concluída! Foram geradas {len(created_routes)} rotas independentes ({routes_str}) para acomodar {len(selected_orders)} transações respeitando os limites dos veículos.")
+    messages.success(request, f"Simulação Concluída! Foram geradas {len(created_routes)} rotas independentes ({routes_str}) para acomodar {len(selected_items)} transações concluídas respeitando os limites dos veículos.")
     return redirect('transporter_dashboard')
 
 @login_required
@@ -2069,36 +2275,28 @@ def transporter_job_history_api(request):
     """
     Endpoint AJAX para carregar o histórico de entregas de forma paginada e instantânea.
     """
-    user = request.user
     page_number = request.GET.get('page', 1)
     
-    orders_qs = MarketplaceOrder.objects.filter(
-        status='APPROVED', 
-        transport_status='DELIVERED'
-    ).filter(
-        Q(vehicle__owner=user) | Q(route__transporter=user) | Q(role__in=['Producer', 'Processor'], vehicle__isnull=True, route__isnull=True)
-    ).select_related(
-        'requester', 'culture', 'fulfilled_by', 'harvest_origin', 'vehicle'
-    ).order_by('-actual_delivery_date')
-    
-    paginator = Paginator(orders_qs, 15)
-    page_obj = paginator.get_page(page_number)
+    deals = marketplace_service.fetch_deals()
     
     orders_data = []
-    for order in page_obj:
+    for d in (deals or []):
         orders_data.append({
-            'pk': order.pk,
-            'actual_delivery_date': order.actual_delivery_date.strftime("%d/%m/%Y %H:%M") if order.actual_delivery_date else "-",
-            'culture_name': order.culture.name if order.culture else "N/A",
-            'quantity_kg': float(order.quantity_kg) if order.quantity_kg else 0.0,
-            'origin': order.warehouse_location or "N/A",
-            'requester': order.requester.username if order.requester else "N/A",
-            'vehicle': f"{order.vehicle.brand_model} ({order.vehicle.license_plate})" if order.vehicle else "-",
-            'harvest_id': order.harvest_origin.pk if order.harvest_origin else None,
+            'pk': d.get('deal_id', 'N/A'),
+            'actual_delivery_date': d.get('delivery_date') or d.get('executed_at') or d.get('timestamp') or '-',
+            'culture_name': d.get('culture_name', 'N/A'),
+            'quantity_kg': float(d.get('quantity_kg', 0.0) or 0.0),
+            'origin': d.get('warehouse_origin') or d.get('origin_warehouse', 'N/A'),
+            'requester': d.get('buyer_id', 'N/A'),
+            'vehicle': '-',
+            'harvest_id': d.get('batch_id', None),
         })
         
+    paginator = Paginator(orders_data, 15)
+    page_obj = paginator.get_page(page_number)
+        
     return JsonResponse({
-        'orders': orders_data,
+        'orders': list(page_obj.object_list),
         'current_page': page_obj.number,
         'total_pages': paginator.num_pages,
         'total_count': paginator.count,
@@ -2112,141 +2310,72 @@ def transporter_job_history_api(request):
 @role_required(['Transporter'])
 def transporter_accept_job(request):
     """
-    Passo 1: Aceitar o trabalho (Move de 'PENDING' para 'ACCEPTED').
+    Aceitar trabalho de transporte individual (Deal do Marketplace).
     """
     if request.method == "POST":
         order_id = request.POST.get('order_id')
         vehicle_id = request.POST.get('vehicle_id')
-        order = get_object_or_404(MarketplaceOrder, pk=order_id)
         
         if not vehicle_id:
-            messages.error(request, "Tem de selecionar um veículo para aceitar esta carga.")
+            messages.error(request, "Tem de selecionar um veículo para transportar esta carga.")
             return redirect('transporter_dashboard')
             
         vehicle = get_object_or_404(Vehicle, pk=vehicle_id, owner=request.user)
         
-        if order.transport_status == 'PENDING':
-            with transaction.atomic():
-                order.transport_status = 'ACCEPTED'
-                order.vehicle = vehicle
-                order.save()
-            messages.success(request, f"Trabalho aceite! Encomenda #{order.pk} movida para Planeamento com o veículo {vehicle.license_plate}.")
-        else:
-            messages.error(request, "Esta encomenda já não está disponível.")
+        assigned_deal_ids = _get_assigned_deal_ids()
+        if str(order_id) in assigned_deal_ids:
+            messages.warning(request, f"A transação/carga #{order_id} já foi aceite ou atribuída a uma rota.")
+            return redirect('transporter_dashboard')
             
+        # Obter detalhes da carga nos deals
+        deals = marketplace_service.fetch_deals()
+        target_deal = next((d for d in deals if str(d.get('deal_id')) == str(order_id)), None)
+        if target_deal:
+            culture_name = target_deal.get('culture_name', 'Agro')
+            quantity_kg = float(target_deal.get('quantity_kg', 0.0) or 0.0)
+            origin = target_deal.get('warehouse_origin') or 'Armazém Virtual Produtor'
+            dest = target_deal.get('destination_warehouse') or f"Armazém {target_deal.get('buyer_id')}"
+            path_desc = f"Deal #{target_deal.get('deal_id')} ({culture_name}: {quantity_kg} kg) [{origin} -> {dest}]"
+        else:
+            open_orders = marketplace_service.get_open_orders_adapted()
+            target_order = next((o for o in open_orders if str(o.id) == str(order_id)), None)
+            if target_order:
+                culture_name = target_order.culture.name if hasattr(target_order, 'culture') and hasattr(target_order.culture, 'name') else 'Agro'
+                quantity_kg = float(getattr(target_order, 'quantity_kg', 0.0) or 0.0)
+                origin = getattr(target_order, 'warehouse_location', None) or 'Armazém Virtual Produtor'
+                dest = f"Armazém {target_order.requester.username}" if hasattr(target_order, 'requester') else 'Armazém Comprador'
+                path_desc = f"Carga #{target_order.id} ({culture_name}: {quantity_kg} kg) [{origin} -> {dest}]"
+            else:
+                path_desc = f"Deal #{order_id} (Agro: 1000.0 kg) [Armazém Produtor -> Armazém Retalhista]"
+                
+        with transaction.atomic():
+            route = Route.objects.create(
+                transporter=request.user,
+                vehicle=vehicle,
+                route_date=timezone.now().date(),
+                status='ACCEPTED',
+                optimized_path=path_desc
+            )
+            
+        messages.success(request, f"Carga #{order_id} aceite com sucesso! Rota #{route.pk} atribuída ao veículo {vehicle.brand_model} ({vehicle.license_plate}).")
     return redirect('transporter_dashboard')
 
 @login_required
 @role_required(['Transporter'])
 def transporter_submit_plan(request):
-    if request.method == "POST":
-        order_id = request.POST.get('order_id')
-        order = get_object_or_404(MarketplaceOrder, pk=order_id)
-        
-        form = TransportPlanForm(request.POST, instance=order)
-        if form.is_valid():
-            order.transport_status = 'PLANNED'
-            form.save()
-            messages.success(request, f"Plano de transporte registado para Encomenda #{order.pk}!")
-        else:
-            messages.error(request, "Erro ao registar plano. Verifique as datas.")
-            
+    messages.info(request, "O planeamento de transporte é agora efetuado por Rota.")
     return redirect('transporter_dashboard')
 
 @login_required
 @role_required(['Transporter'])
 def transporter_validate_pickup(request):
-    if request.method == "POST":
-        order_id = request.POST.get('order_id')
-        order = get_object_or_404(MarketplaceOrder, pk=order_id)
-        
-        pickup_time = _parse_or_now_dt(request.POST.get('actual_pickup_date'))
-        
-        # 1. Atualizar BD
-        order.actual_pickup_date = pickup_time
-        order.transport_status = 'IN_TRANSIT'
-        order.save()
-        
-        # 2. Blockchain Event (Proof of Custody)
-        # Assumindo que o Produtor já criou o batch (se não, criamos um novo ORDER-ID)
-        dossier = {
-            "action": "TRANSPORT_PICKUP",
-            "order_id": order.pk,
-            "transporter": request.user.username,
-            "pickup_time": order.actual_pickup_date.isoformat(),
-            "origin": order.warehouse_location,
-            "planned_pickup": order.planned_pickup_date.isoformat() if order.planned_pickup_date else "N/A",
-            # LINK CRÍTICO PARA RASTREABILIDADE TOTAL:
-            "harvest_origin": order.harvest_origin.pk if order.harvest_origin else "N/A"
-        }
-        
-        # Real Blockchain Call (Hyperledger Fabric)
-        try:
-            if order.harvest_origin:
-                fabric_service.update_order(
-                    order_id=f"LOTE-{order.harvest_origin.pk}",
-                    new_status="IN_TRANSIT",
-                    additional_data=dossier
-                )
-        except Exception as fe:
-            print(f"Erro ao atualizar na Blockchain Real: {fe}")
-        
-        messages.success(request, f"Carga validada e estado atualizado na Blockchain para Encomenda #{order.pk}.")
-        
+    messages.info(request, "A recolha de transporte é agora registada por Rota.")
     return redirect('transporter_dashboard')
 
 @login_required
 @role_required(['Transporter'])
 def transporter_submit_delivery(request):
-    if request.method == "POST":
-        order_id = request.POST.get('order_id')
-        order = get_object_or_404(MarketplaceOrder, pk=order_id)
-        
-        sensor_data = "No Sensor Data Recorded"
-        if 'sensor_file' in request.FILES:
-            try:
-                uploaded_file = request.FILES['sensor_file']
-                sensor_data = uploaded_file.read().decode('utf-8')
-            except Exception as e:
-                sensor_data = f"File Read Error: {e}"
-        elif request.POST.get('transport_sensor_data'):
-            sensor_data = request.POST.get('transport_sensor_data')
-            
-        delivery_time = _parse_or_now_dt(request.POST.get('actual_delivery_date'))
-        
-        try:
-            with transaction.atomic():
-                # 1. Atualizar BD (Order)
-                order.actual_delivery_date = delivery_time
-                order.transport_sensor_data = sensor_data
-                order.transport_status = 'DELIVERED'
-                order.save()
-
-                # 2. Atualizar Stock de "Delivered" no Lote de Origem (Harvest)
-                if order.harvest_origin:
-                    harvest = order.harvest_origin
-                    harvest.delivered_quantity_kg = (harvest.delivered_quantity_kg or 0) + order.quantity_kg
-                    harvest.save()
-
-            # 3. Real Blockchain Call (Hyperledger Fabric)
-            dossier = {
-                "action": "TRANSPORT_DELIVERY",
-                "order_id": order.pk,
-                "transporter": request.user.username,
-                "delivery_time": order.actual_delivery_date.isoformat(),
-                "sensor_data": order.transport_sensor_data or "No Data",
-                "harvest_origin": order.harvest_origin.pk if order.harvest_origin else "N/A"
-            }
-            if order.harvest_origin:
-                fabric_service.update_order(
-                    order_id=f"LOTE-{order.harvest_origin.pk}",
-                    new_status="DELIVERED",
-                    additional_data=dossier
-                )
-            messages.success(request, "Entrega registada e atualizada na Blockchain Real com sucesso!")
-        except Exception as e:
-            messages.error(request, f"Erro ao processar entrega: {e}")
-            
+    messages.info(request, "A entrega de transporte é agora registada por Rota.")
     return redirect('transporter_dashboard')
 
 
@@ -2303,9 +2432,9 @@ def get_harvest_history(request, harvest_id):
     Retorna o HTML do modal preenchido.
     """
     try:
-        # 1. Construir o ID usado na Blockchain (Ex: "LOTE-123")
-        # Nota: O harvest_id que vem no URL é o PK da BD (Ex: 123)
-        asset_id = f"LOTE-{harvest_id}"
+        # 1. Construir o ID usado na Blockchain (Ex: "LOTE-123" ou "LOTE-AUTO-005")
+        harvest_str = str(harvest_id).strip()
+        asset_id = harvest_str if harvest_str.startswith("LOTE-") else f"LOTE-{harvest_str}"
         
         # 2. Buscar Histórico ao Go Middleware
         history_data = fabric_service.get_asset_history(asset_id)
@@ -2348,10 +2477,9 @@ def get_agent_recommendations(request):
     import io
     from django.http import JsonResponse
     from django.conf import settings
-    from django.db.models import Avg
-    from .models import TrainedModel, ProductSubFamily, ConsolidatedStock, WarehouseSensorReading, Warehouse, HistoricalSalesData
-    import datetime
-
+@login_required
+@role_required(['Retailer', 'Processor'])
+def get_agent_recommendations(request):
     try:
         # Obter os modelos de Buyer Agent treinados por este utilizador
         trained_models = TrainedModel.objects.filter(
@@ -2363,69 +2491,44 @@ def get_agent_recommendations(request):
         if not trained_models.exists():
             return JsonResponse({'status': 'success', 'data': []})
             
-        from dashboard.services.agent_service import compute_daily_agent_decision
-        from dashboard.services.lc_service import calculate_quality_decay_curve
+        from dashboard.services.agent_service import get_buyer_agent_decision_details
 
         recommendations = []
         
         for model_obj in trained_models:
             subfamily = model_obj.culture
+            if not subfamily:
+                continue
             
             try:
-                # Calcular a recomendação real usando o modelo treinado da BD!
-                recommended_qty = compute_daily_agent_decision(request.user, subfamily)
+                # Obter a decisão em tempo real diretamente do Buyer Agent Web Service (:8002)
+                decision_data = get_buyer_agent_decision_details(request.user, subfamily)
+                recommended_qty = float(decision_data.get('recommended_order_kg', 0.0))
+                price = float(decision_data.get('price_today', 2.0))
                 
-                # Preço médio histórico ou fallback
-                price_agg = HistoricalSalesData.objects.filter(
-                    owner=request.user,
-                    culture=subfamily
-                ).aggregate(Avg('price_per_kg'))['price_per_kg__avg']
-                price = float(price_agg) if price_agg and price_agg > 0 else 1.50
-                
-                # Calcular o Stock RSL com o LC Agent
-                stock_item = ConsolidatedStock.objects.filter(owner=request.user, culture=subfamily).first()
-                rsl_days = 15
-                if stock_item:
-                    clean_loc = stock_item.warehouse_location.split(' (WH:')[0].strip() if stock_item.warehouse_location and ' (WH:' in stock_item.warehouse_location else stock_item.warehouse_location
-                    warehouse = Warehouse.objects.filter(owner=request.user, location=clean_loc).first()
-                    sensor_readings = []
-                    if warehouse:
-                        # Self-healing check
-                        if WarehouseSensorReading.objects.filter(warehouse=warehouse).count() < 30:
-                            try:
-                                from dashboard.services.lc_service import generate_fallback_sensor_readings
-                                generate_fallback_sensor_readings(warehouse)
-                            except Exception:
-                                pass
-                        today_date = datetime.date.today()
-                        future_readings = WarehouseSensorReading.objects.filter(warehouse=warehouse, date__gte=today_date).order_by('date')
-                        if future_readings.exists():
-                            sensor_readings = list(future_readings[:120])
-                        else:
-                            past_readings = WarehouseSensorReading.objects.filter(warehouse=warehouse).order_by('-date')[:30]
-                            sensor_readings = sorted(list(past_readings), key=lambda r: r.date)
-                            
-                    _, rsl_days = calculate_quality_decay_curve(
-                        culture_name=f"{subfamily.name} ({subfamily.fruit_type})",
-                        initial_score=stock_item.avg_quality_score or 10.0,
-                        sensor_readings=sensor_readings
-                    )
-                
-                # Determinar o mínimo requerido de shelf life de forma robusta
+                # RSL do stock
+                rsl_days = int(decision_data.get('state_summary', {}).get('rsl_days', 15) or 15)
                 min_required_shelf_life = 5 if recommended_qty > 0 else 0
                 
                 recommendations.append({
-                    'item_id': str(subfamily.subfamily_id),
+                    'item_id': str(subfamily.subfamily_id or subfamily.pk),
                     'sku': subfamily.name,
-                    'quantity': int(max(0, recommended_qty)),
+                    'quantity': int(max(0, round(recommended_qty))),
                     'price': round(price, 2),
                     'culture_id': subfamily.pk,
                     'culture_name': f"{subfamily.name} ({subfamily.fruit_type})",
                     'min_required_shelf_life': int(min_required_shelf_life),
                     'stock_remaining_shelf_life': int(rsl_days)
                 })
+            except ConnectionError:
+                # O Web Service está offline
+                return JsonResponse({
+                    'status': 'offline',
+                    'message': 'Buyer Agent Web Service offline na porta 8002.',
+                    'data': []
+                })
             except Exception as e:
-                print(f"Erro ao computar recomendação para {subfamily.name}: {str(e)}")
+                print(f"[Buyer Service] Aviso ao obter decisão para {subfamily.name}: {str(e)}")
                 
         return JsonResponse({'status': 'success', 'data': recommendations})
         
@@ -2433,212 +2536,6 @@ def get_agent_recommendations(request):
         import traceback
         traceback.print_exc()
         return JsonResponse({'status': 'error', 'message': f'Erro ao obter recomendações: {str(e)}'}, status=500)
-
-
-@login_required
-@role_required(['Producer'])
-def get_stock_recommendations(request):
-    import os
-    import sys
-    import torch
-    import pandas as pd
-    import numpy as np
-    from django.http import JsonResponse
-    from django.conf import settings
-    from .models import ProductSubFamily, Harvest
-
-    try:
-        buyer_agent_path = os.path.join(settings.BASE_DIR, 'BuyerAgent')
-        stock_management_path = os.path.join(settings.BASE_DIR, 'StockManagement')
-        novos_dias_path = os.path.join(stock_management_path, 'datasets', 'NovosDias.xlsx')
-        
-        if not os.path.exists(novos_dias_path):
-            return JsonResponse({'status': 'error', 'message': f'Ficheiro {novos_dias_path} não encontrado.'}, status=404)
-            
-        df_novos = pd.read_excel(novos_dias_path)
-        
-        sku_culture_map = {
-            "3_080": "Gala",
-            "3_090": "Fuji",
-            "3_252": "Hayward",
-            "3_586": "Gold",
-            "2_586": "Gold",
-            "911753": "Reineta",
-        }
-        
-        if stock_management_path in sys.path:
-            sys.path.remove(stock_management_path)
-        sys.path.insert(0, stock_management_path)
-        import sys as sys_module
-        for mod in ['agent.ppo_agent', 'agent.actor_critic', 'agent']:
-            if mod in sys_module.modules:
-                del sys_module.modules[mod]
-        from environment_pricing import PricingStockEnvironment
-        from agent.ppo_agent import ParallelPPOAgent
-
-        recommendations = []
-        
-        for idx, row in df_novos.iterrows():
-            item_id = str(row['item_id']).strip()
-            prediction = int(row['prediction'])
-            price = float(row['price'])
-            
-            model_sku = item_id
-            if model_sku == "2_586":
-                model_sku = "3_586"
-            elif model_sku == "911753":
-                model_sku = "911753" # use exact SKU first
-                
-            excel_name = f"m5_foods_{model_sku}.xlsx"
-            if model_sku == "911753":
-                excel_name = "911753_151dias_com_real.xlsx"
-                
-            excel_path = os.path.join(stock_management_path, 'datasets', excel_name)
-            if not os.path.exists(excel_path):
-                excel_path = os.path.join(stock_management_path, 'datasets', "m5_foods_3_080.xlsx")
-                
-            env = PricingStockEnvironment(excel_path=excel_path, is_training=False, train_split=0.6, max_capacity=500)
-            state = env.reset()
-            
-            state_dim = 17
-            agent = ParallelPPOAgent(state_dim=state_dim, action_dim=2)
-            agent.device = torch.device('cpu')
-            
-            checkpoint_dir = os.path.join(stock_management_path, 'models')
-            
-            loaded = False
-            # Tentar primeiro carregar o modelo treinado da BD para este utilizador e cultura
-            culture_name = sku_culture_map.get(item_id, "Gala")
-            culture = ProductSubFamily.objects.filter(name=culture_name).first()
-            
-            db_actor = None
-            if culture:
-                db_actor = TrainedModel.objects.filter(
-                    owner=request.user,
-                    culture=culture,
-                    model_type='stock_agent',
-                    file_name='stock_agent_actor.pth'
-                ).first()
-                
-            if db_actor:
-                try:
-                    import io
-                    agent.policy_old_actor.load_state_dict(torch.load(io.BytesIO(db_actor.file_data), map_location='cpu'))
-                    agent.policy_old_actor.eval()
-                    loaded = True
-                except Exception as db_err:
-                    print(f"Erro ao carregar modelo de stock da BD: {db_err}")
-
-            # Tentar carregar o modelo específico da SKU (suportando subpastas, seeds e best de forma dinâmica)
-            import glob
-            for base_name in [model_sku, "3_080"]:
-                sku_folder = os.path.join(checkpoint_dir, base_name)
-                search_paths = []
-                if os.path.isdir(sku_folder):
-                    search_paths.append(sku_folder)
-                search_paths.append(checkpoint_dir)
-                
-                for s_path in search_paths:
-                    actor_files = glob.glob(os.path.join(s_path, "*_actor.pth"))
-                    if not actor_files:
-                        actor_files = glob.glob(os.path.join(s_path, "**", "*_actor.pth"), recursive=True)
-                        
-                    if actor_files:
-                        matching_files = [f for f in actor_files if base_name in os.path.basename(f)]
-                        if not matching_files:
-                            matching_files = actor_files
-                        
-                        # Ordenar de forma a preferir os modelos com mais episódios e seed42
-                        matching_files.sort(key=lambda f: ('ep20032' in f, 'seed42' in f, os.path.getmtime(f)), reverse=True)
-                        
-                        for best_file in matching_files:
-                            checkpoint_path = best_file.replace('_actor.pth', '')
-                            try:
-                                agent.load(checkpoint_path)
-                                agent.policy_old_actor.to('cpu')
-                                agent.policy_old_actor.eval()
-                                loaded = True
-                                break
-                            except Exception:
-                                pass
-                        if loaded:
-                            break
-                if loaded:
-                    break
-                            
-            # Injetar os valores do "Novo Dia" diretamente no primeiro passo (dia a seguir ao fim do treino, index 0 do split de teste)
-            env.data.loc[0, 'prediction'] = prediction
-            if 'price' in env.data.columns:
-                env.data.loc[0, 'price'] = price
-            if 'temperature' in df_novos.columns:
-                env.data.loc[0, 'temperature'] = row['temperature']
-            if 'humidity' in df_novos.columns:
-                env.data.loc[0, 'humidity'] = row['humidity']
-            if 'ethylene' in df_novos.columns:
-                env.data.loc[0, 'ethylene'] = row['ethylene']
-                
-            # Obter estado do novo dia (sem simulação de malha fechada dos 40% restantes)
-            state = env._get_state()
-            
-            state_tensor = torch.FloatTensor(state).unsqueeze(0).to('cpu')
-            with torch.no_grad():
-                mean_percent, _ = agent.policy_old_actor(state_tensor)
-                price_mult = 0.5 + 1.0 * torch.clamp(mean_percent[:, 0], 0.0, 1.0).item()
-                qty_pct = torch.clamp(mean_percent[:, 1], 0.0, 1.0).item()
-                
-            culture_name = sku_culture_map.get(item_id, "Gala")
-            culture = ProductSubFamily.objects.filter(name=culture_name).first()
-            
-            # Stock real simulado no final da simulação do split de teste
-            total_stock_kg = sum(b['quantity'] for b in env.active_batches if b['quantity'] > 0)
-            if total_stock_kg <= 0.0:
-                total_stock_kg = 100.0  # Fallback se a simulação terminou com stock vazio
-                
-            harvest_id = None
-            if culture:
-                harvests = Harvest.objects.filter(producer=request.user, subfamily=culture)
-                for h in harvests:
-                    total = float(h.harvest_quantity_kg or 0.0)
-                    utilized = float(h.utilized_quantity_kg or 0.0)
-                    available = total - utilized
-                    if available > 0.0:
-                        if harvest_id is None:
-                            harvest_id = h.pk
-                # If no harvest with positive stock exists, select the first harvest of this culture if any exists
-                if harvest_id is None:
-                    first_h = harvests.first()
-                    if first_h:
-                        harvest_id = first_h.pk
-            
-            # If still no harvest is found, default to a mock ID to prevent UI blocking
-            if harvest_id is None:
-                harvest_id = "Lote-Recomendado"
-            
-            recommended_price = price * price_mult
-            recommended_qty_to_sell = total_stock_kg * qty_pct
-            
-            culture_id = culture.pk if culture else None
-            culture_fullname = str(culture) if culture else item_id
-            
-            recommendations.append({
-                'item_id': item_id,
-                'sku': model_sku,
-                'culture_id': culture_id,
-                'culture_name': culture_fullname,
-                'harvest_id': harvest_id,
-                'current_stock_kg': round(total_stock_kg, 1),
-                'recommended_price': round(recommended_price, 2),
-                'price_multiplier': round(price_mult, 3),
-                'recommended_qty_to_sell': round(recommended_qty_to_sell, 1),
-                'quantity_percent': round(qty_pct * 100.0, 1)
-            })
-            
-        return JsonResponse({'status': 'success', 'data': recommendations})
-        
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return JsonResponse({'status': 'error', 'message': f'Erro ao obter recomendações de pricing: {str(e)}'}, status=500)
 
 
 @login_required
@@ -2772,17 +2669,89 @@ def agent_simulation(request):
         return JsonResponse({'status': 'error', 'message': f'Erro crítico na simulação: {str(e)}'}, status=500)
 
 
+def process_sensor_readings_file(warehouse, file):
+    """
+    Processa ficheiros de leituras de sensores em formato JSON, CSV ou Excel (.xlsx, .xls)
+    e atualiza a tabela WarehouseSensorReading.
+    """
+    import json
+    import pandas as pd
+    from django.db import transaction
+    from .models import WarehouseSensorReading
+    
+    filename = file.name.lower()
+    df = None
+    try:
+        if filename.endswith(('.xlsx', '.xls')):
+            df = pd.read_excel(file)
+        elif filename.endswith('.csv'):
+            df = pd.read_csv(file)
+        elif filename.endswith('.json'):
+            content = file.read().decode('utf-8')
+            data = json.loads(content)
+            if isinstance(data, dict):
+                data = data.get('readings') or data.get('data') or data.get('sensor_data') or [data]
+            df = pd.DataFrame(data)
+        else:
+            return 0, "Formato não suportado. Use JSON (.json), Excel (.xlsx, .xls) ou CSV (.csv)."
+    except Exception as e:
+        return 0, f"Erro ao ler ficheiro: {str(e)}"
+        
+    if df is None or df.empty:
+        return 0, "O ficheiro fornecido está vazio ou não contém dados válidos."
+        
+    df.columns = [str(c).strip().lower() for c in df.columns]
+    
+    date_col = next((c for c in df.columns if c in ['data', 'date', 'dt', 'timestamp']), None)
+    temp_col = next((c for c in df.columns if c in ['temperatura', 'temperature', 'temp', 't']), None)
+    hum_col = next((c for c in df.columns if c in ['humidade', 'humidity', 'hum', 'h', 'rh']), None)
+    eth_col = next((c for c in df.columns if c in ['etileno', 'ethylene', 'eth', 'c2h4']), None)
+    
+    if not date_col or not temp_col or not hum_col:
+        return 0, "Colunas em falta. O ficheiro deve conter pelo menos 'Data', 'Temperatura' e 'Humidade' (a coluna 'Etileno' é opcional)."
+        
+    count = 0
+    with transaction.atomic():
+        for idx, row in df.iterrows():
+            try:
+                raw_date = row[date_col]
+                if pd.isna(raw_date):
+                    continue
+                dt_val = pd.to_datetime(raw_date).date()
+            except Exception:
+                continue
+            
+            temp_val = float(row[temp_col]) if not pd.isna(row[temp_col]) else 0.0
+            hum_val = float(row[hum_col]) if not pd.isna(row[hum_col]) else 0.0
+            eth_val = None
+            if eth_col and not pd.isna(row[eth_col]):
+                try:
+                    eth_val = float(row[eth_col])
+                except (ValueError, TypeError):
+                    eth_val = None
+            
+            WarehouseSensorReading.objects.update_or_create(
+                warehouse=warehouse,
+                date=dt_val,
+                defaults={
+                    'temperature': temp_val,
+                    'humidity': hum_val,
+                    'ethylene': eth_val
+                }
+            )
+            count += 1
+            
+    return count, None
+
+
 @login_required
 def import_sensor_readings(request, warehouse_id):
-    import pandas as pd
     from django.contrib import messages
     from django.shortcuts import get_object_or_404, redirect
-    from django.db import transaction
-    from .models import Warehouse, WarehouseSensorReading
+    from .models import Warehouse
     
     warehouse = get_object_or_404(Warehouse, pk=warehouse_id)
     
-    # Validação de permissões
     if warehouse.owner != request.user and not request.user.is_superuser:
         messages.error(request, "Não tem permissão para gerir este armazém.")
         return redirect('admin_dashboard')
@@ -2793,72 +2762,116 @@ def import_sensor_readings(request, warehouse_id):
         
     file = request.FILES.get('sensor_file')
     if not file:
-        messages.error(request, "Por favor, selecione um ficheiro Excel/CSV.")
+        messages.error(request, "Por favor, selecione um ficheiro JSON, Excel ou CSV.")
         return redirect(request.META.get('HTTP_REFERER', 'admin_dashboard'))
         
-    try:
-        filename = file.name.lower()
-        if filename.endswith(('.xlsx', '.xls')):
-            df = pd.read_excel(file)
-        elif filename.endswith('.csv'):
-            df = pd.read_csv(file)
-        else:
-            messages.error(request, "Formato de ficheiro não suportado. Use Excel (.xlsx, .xls) ou CSV.")
-            return redirect(request.META.get('HTTP_REFERER', 'admin_dashboard'))
-            
-        # Normalizar nomes de colunas
-        df.columns = [str(c).strip().lower() for c in df.columns]
-        
-        # Mapeamento flexível
-        date_col = next((c for c in df.columns if c in ['data', 'date']), None)
-        temp_col = next((c for c in df.columns if c in ['temperatura', 'temperature', 'temp']), None)
-        hum_col = next((c for c in df.columns if c in ['humidade', 'humidity', 'hum']), None)
-        eth_col = next((c for c in df.columns if c in ['etileno', 'ethylene', 'eth']), None)
-        
-        if not date_col or not temp_col or not hum_col:
-            messages.error(
-                request, 
-                "Colunas em falta no ficheiro. Garanta que contém pelo menos as colunas: 'Data', 'Temperatura' e 'Humidade' (a coluna 'Etileno' é opcional)."
-            )
-            return redirect(request.META.get('HTTP_REFERER', 'admin_dashboard'))
-            
-        count = 0
-        with transaction.atomic():
-            for idx, row in df.iterrows():
-                try:
-                    raw_date = row[date_col]
-                    if pd.isna(raw_date):
-                        continue
-                    dt_val = pd.to_datetime(raw_date).date()
-                except Exception:
-                    continue
-                
-                temp_val = float(row[temp_col]) if not pd.isna(row[temp_col]) else 0.0
-                hum_val = float(row[hum_col]) if not pd.isna(row[hum_col]) else 0.0
-                eth_val = None
-                if eth_col and not pd.isna(row[eth_col]):
-                    try:
-                        eth_val = float(row[eth_col])
-                    except (ValueError, TypeError):
-                        eth_val = None
-                
-                WarehouseSensorReading.objects.update_or_create(
-                    warehouse=warehouse,
-                    date=dt_val,
-                    defaults={
-                        'temperature': temp_val,
-                        'humidity': hum_val,
-                        'ethylene': eth_val
-                    }
-                )
-                count += 1
-                
+    count, err = process_sensor_readings_file(warehouse, file)
+    if err:
+        messages.error(request, err)
+    else:
+        if warehouse.meteo_source != 'JSON':
+            warehouse.meteo_source = 'JSON'
+            warehouse.save()
         messages.success(request, f"Importação concluída com sucesso! Registadas/atualizadas {count} leituras diárias.")
         
-    except Exception as e:
-        messages.error(request, f"Erro ao processar ficheiro: {str(e)}")
-        
     return redirect(request.META.get('HTTP_REFERER', 'admin_dashboard'))
+
+
+@login_required
+def edit_warehouse(request, warehouse_id):
+    """
+    Permite editar a localização, região, capacidade, sensores e modo meteorológico
+    de um armazém existente, recalculando as leituras de imediato.
+    """
+    from django.contrib import messages
+    from django.shortcuts import get_object_or_404, redirect
+    from .models import Warehouse, Sensor
+    from dashboard.services.lc_service import generate_fallback_sensor_readings
+    
+    warehouse = get_object_or_404(Warehouse, pk=warehouse_id)
+    
+    if warehouse.owner != request.user and not request.user.is_superuser:
+        messages.error(request, "Não tem permissão para editar este armazém.")
+        return redirect('admin_dashboard')
+        
+    if request.method == 'POST':
+        try:
+            location = request.POST.get('location', '').strip()
+            if location:
+                warehouse.location = location
+                
+            region = request.POST.get('region')
+            if region:
+                warehouse.region = region
+                
+            control_type = request.POST.get('control_type')
+            if control_type:
+                warehouse.control_type = control_type
+                
+            storage_unit = request.POST.get('storage_unit')
+            if storage_unit:
+                warehouse.storage_unit = storage_unit
+                
+            max_vehicle_access = request.POST.get('max_vehicle_access')
+            if max_vehicle_access:
+                warehouse.max_vehicle_access = max_vehicle_access
+                
+            capacity = request.POST.get('capacity')
+            if capacity:
+                warehouse.capacity = float(capacity)
+                
+            lat = request.POST.get('latitude')
+            warehouse.latitude = float(lat) if lat and lat.strip() else None
+            
+            lng = request.POST.get('longitude')
+            warehouse.longitude = float(lng) if lng and lng.strip() else None
+            
+            meteo_source = request.POST.get('meteo_source')
+            if meteo_source:
+                warehouse.meteo_source = meteo_source
+                
+            json_fallback_mode = request.POST.get('json_fallback_mode')
+            if json_fallback_mode:
+                warehouse.json_fallback_mode = json_fallback_mode
+                
+            fixed_temp = request.POST.get('fixed_temperature')
+            if fixed_temp and fixed_temp.strip():
+                warehouse.fixed_temperature = float(fixed_temp)
+                
+            fixed_hum = request.POST.get('fixed_humidity')
+            if fixed_hum and fixed_hum.strip():
+                warehouse.fixed_humidity = float(fixed_hum)
+                
+            warehouse.save()
+            
+            # Atualizar sensores Many-to-Many
+            sensor_ids = request.POST.getlist('sensors')
+            if sensor_ids:
+                warehouse.sensors.set(Sensor.objects.filter(sensor_id__in=sensor_ids))
+            else:
+                warehouse.sensors.clear()
+                
+            # Se foi enviado ficheiro de sensores no modo JSON
+            file = request.FILES.get('sensor_file')
+            if file and warehouse.meteo_source == 'JSON':
+                count, err = process_sensor_readings_file(warehouse, file)
+                if err:
+                    messages.warning(request, f"Armazém atualizado, mas aviso no ficheiro: {err}")
+                else:
+                    messages.success(request, f"Armazém e {count} leituras do ficheiro atualizados com sucesso!")
+            else:
+                try:
+                    generate_fallback_sensor_readings(warehouse)
+                except Exception as e:
+                    print(f"[REGENERATE ERROR]: {e}")
+                messages.success(request, f"Armazém '{warehouse.location}' atualizado com sucesso!")
+                
+        except Exception as e:
+            messages.error(request, f"Erro ao atualizar armazém: {str(e)}")
+            
+        return redirect(request.META.get('HTTP_REFERER', 'admin_dashboard'))
+        
+    return redirect('admin_dashboard')
 
 
 # ======================================================================
@@ -3329,10 +3342,44 @@ def adjust_stock_manually(request):
         quantity = float(request.POST.get('quantity', 0.0))
         adjustment_type = request.POST.get('adjustment_type', 'set')
         
+        # Parâmetros de Qualidade Físico-Química e Colheita
+        harvest_date_str = request.POST.get('harvest_date')
+        firmness_raw = request.POST.get('firmness')
+        brix_raw = request.POST.get('brix') or request.POST.get('soluble_solids')
+        acidity_raw = request.POST.get('acidity')
+        caliber_raw = request.POST.get('caliber')
+        
+        # Condições de Armazenamento / Lifecycle
+        meteo_source = request.POST.get('meteo_source')
+        fixed_temp = request.POST.get('fixed_temperature')
+        fixed_hum = request.POST.get('fixed_humidity')
+        json_fallback = request.POST.get('json_fallback_mode')
+        sensor_file = request.FILES.get('sensor_file')
+        
         if not culture_id or not warehouse_location:
             return JsonResponse({'status': 'error', 'message': 'Campos obrigatórios em falta.'}, status=400)
             
         culture = get_object_or_404(ProductSubFamily, pk=culture_id)
+        
+        # Calcular Score de Qualidade Biofísico
+        from dashboard.services.lc_service import calculate_harvest_quality, generate_fallback_sensor_readings, ensure_warehouse_readings_30d
+        quality_100 = calculate_harvest_quality(culture.name, firmness_raw, brix_raw, acidity_raw)
+        calculated_score = round(quality_100 / 10.0, 2)
+        
+        f_val = float(firmness_raw) if firmness_raw is not None and str(firmness_raw).strip() != '' else None
+        b_val = float(brix_raw) if brix_raw is not None and str(brix_raw).strip() != '' else None
+        a_val = float(acidity_raw) if acidity_raw is not None and str(acidity_raw).strip() != '' else None
+        c_val = float(caliber_raw) if caliber_raw is not None and str(caliber_raw).strip() != '' else None
+        
+        # Parse Data da Colheita
+        import datetime
+        if harvest_date_str:
+            try:
+                parsed_harvest_date = datetime.datetime.strptime(harvest_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                parsed_harvest_date = datetime.date.today()
+        else:
+            parsed_harvest_date = datetime.date.today()
         
         # Criar ou atualizar stock consolidado
         stock, created = ConsolidatedStock.objects.get_or_create(
@@ -3354,16 +3401,43 @@ def adjust_stock_manually(request):
             action_desc = f"definidos exatos {quantity} kg de stock de"
             
         stock.quantity = new_qty
+        if b_val is not None:
+            stock.avg_soluble_solids = round(b_val, 2)
+        if calculated_score is not None:
+            stock.avg_quality_score = round(calculated_score, 1)
+        if c_val is not None:
+            stock.avg_caliber = round(c_val, 2)
         stock.save()
         
-        # Se for um Produtor, sincronizar com o modelo Harvest
-        if request.user.groups.filter(name='Producer').exists():
-            from dashboard.models import Harvest, Warehouse
-            from decimal import Decimal
-            import datetime
+        # Atualizar parâmetros meteorológicos do Armazém se fornecidos (qualquer utilizador com Armazém)
+        from dashboard.models import Warehouse
+        warehouse_obj = Warehouse.objects.filter(owner=request.user, location=warehouse_location).first()
+        if not warehouse_obj:
+            warehouse_obj = Warehouse.objects.filter(owner=request.user).first()
             
-            # Tenta encontrar o objeto Warehouse correspondente
-            warehouse_obj = Warehouse.objects.filter(owner=request.user, location=warehouse_location).first()
+        if warehouse_obj and meteo_source:
+            warehouse_obj.meteo_source = meteo_source
+            if fixed_temp is not None and str(fixed_temp).strip() != '':
+                warehouse_obj.fixed_temperature = float(fixed_temp)
+            if fixed_hum is not None and str(fixed_hum).strip() != '':
+                warehouse_obj.fixed_humidity = float(fixed_hum)
+            if json_fallback:
+                warehouse_obj.json_fallback_mode = json_fallback
+            warehouse_obj.save()
+            
+            if sensor_file and meteo_source == 'JSON':
+                process_sensor_readings_file(warehouse_obj, sensor_file)
+            else:
+                generate_fallback_sensor_readings(warehouse_obj)
+        elif warehouse_obj:
+            generate_fallback_sensor_readings(warehouse_obj)
+        
+        # Se for um Produtor, sincronizar com o modelo Harvest e Blockchain
+        if request.user.groups.filter(name='Producer').exists():
+            from dashboard.models import Harvest
+            from decimal import Decimal
+            from dashboard.services.fabric_service import fabric_service
+            from dashboard.utils import create_genesis_dossier
             
             # 1. Obter todos os lotes com plantação
             plantation_harvests = list(Harvest.objects.filter(
@@ -3396,10 +3470,14 @@ def adjust_stock_manually(request):
                         subfamily=culture,
                         warehouse=warehouse_obj,
                         plantation=None,
-                        harvest_date=datetime.date.today(),
+                        harvest_date=parsed_harvest_date,
                         harvest_quantity_kg=diff,
                         utilized_quantity_kg=Decimal('0.0'),
-                        avg_quality_score=10
+                        avg_quality_score=calculated_score,
+                        firmness=f_val,
+                        soluble_solids=b_val,
+                        acidity=a_val,
+                        caliber=c_val
                     )
                     
                     # --- SUBMETER À BLOCKCHAIN NO AJUSTE MANUAL ---
@@ -3408,7 +3486,7 @@ def adjust_stock_manually(request):
                         fabric_service.create_order(
                             order_id=dossier['batch_id'],
                             producer_id=new_harvest.producer.username,
-                            culture_type="N/A",
+                            culture_type=new_harvest.subfamily.name if new_harvest.subfamily else "N/A",
                             quantity=float(new_harvest.harvest_quantity_kg),
                             harvest_date=new_harvest.harvest_date.strftime("%Y-%m-%d"),
                             additional_data=dossier
@@ -3438,7 +3516,7 @@ def adjust_stock_manually(request):
                         
         return JsonResponse({
             'status': 'success',
-            'message': f"Sucesso: Foram {action_desc} {culture.name} no armazém {warehouse_location}. Stock atual: {new_qty} kg.",
+            'message': f"Sucesso: Foram {action_desc} {culture.name} no armazém {warehouse_location}. Stock atual: {new_qty} kg (Score Qualidade: {calculated_score}/10 ⭐).",
             'quantity': float(stock.quantity)
         })
     except Exception as e:
@@ -3600,7 +3678,7 @@ def create_supply_contract(request):
         
         try:
             from django.contrib.auth.models import User, Group
-            from dashboard.models import ProductSubFamily, SupplyContract, UserProfile, Warehouse
+            from dashboard.models import ProductSubFamily, UserProfile, Warehouse
             import datetime
             
             if not producer_name or not producer_name.strip():
@@ -3640,15 +3718,17 @@ def create_supply_contract(request):
                 
                 UserProfile.objects.create(user=producer_user, producer_type='contract')
                 
-            # Criar o contrato
-            SupplyContract.objects.create(
-                buyer=request.user,
-                producer=producer_user,
-                subfamily=subfamily,
+            # Criar o contrato no Marketplace Web Service
+            marketplace_service.create_supply_contract(
+                buyer_id=request.user.username,
+                seller_id=producer_user.username,
+                culture_name=subfamily.name,
                 quantity_kg=qty,
-                delivery_date=delivery_date,
-                warehouse_location=warehouse_loc,
-                status='pending'
+                price_per_kg=0.0,
+                delivery_date=delivery_date.isoformat(),
+                destination_warehouse=warehouse_loc or "",
+                buyer_role='Retailer',
+                seller_role='Producer'
             )
             
             messages.success(request, f"Contrato de fornecimento celebrado com sucesso com {producer_user.username} para o dia {delivery_date_str}!")
@@ -3662,57 +3742,114 @@ from django.http import JsonResponse
 
 @login_required
 @role_required(['Retailer', 'Processor', 'Producer'])
+def get_forecast_status_api(request):
+    """
+    Endpoint AJAX para consultar o estado dos modelos de previsão no Forecast Web Service.
+    """
+    culture_id = request.GET.get('culture_id')
+    if not culture_id:
+        return JsonResponse({'status': 'error', 'message': 'culture_id é obrigatório.'}, status=400)
+    
+    subfamily = get_object_or_404(ProductSubFamily, pk=culture_id)
+    from dashboard.services.agent_service import get_forecast_model_status
+    status_data = get_forecast_model_status(request.user, subfamily)
+    
+    sales_count = HistoricalSalesData.objects.filter(owner=request.user, culture=subfamily).count()
+    status_data['historical_sales_count'] = sales_count
+    status_data['culture_name'] = subfamily.name
+    
+    return JsonResponse({'status': 'success', 'data': status_data})
+
+
+@login_required
+@role_required(['Retailer', 'Processor', 'Producer'])
 def upload_sales_history(request):
-    if request.method == "POST" and request.FILES.get('sales_file'):
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', '') or request.POST.get('is_ajax') == '1'
+    
+    if request.method == "POST":
         culture_id = request.POST.get('culture_id')
-        sales_file = request.FILES['sales_file']
+        sales_file = request.FILES.get('sales_file')
+        model_type = request.POST.get('model_type', 'mlp')
+        
+        if not culture_id:
+            msg = 'Por favor selecione uma cultura.'
+            if is_ajax:
+                return JsonResponse({'status': 'error', 'message': msg}, status=400)
+            messages.error(request, msg)
+            return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
+            
         subfamily = get_object_or_404(ProductSubFamily, pk=culture_id)
         
         try:
             import pandas as pd
-            if sales_file.name.endswith('.xlsx'):
-                df = pd.read_excel(sales_file)
+            if sales_file:
+                if sales_file.name.endswith('.xlsx'):
+                    df = pd.read_excel(sales_file)
+                else:
+                    df = pd.read_csv(sales_file)
+                    
+                # Normalizar nomes de colunas (Inglês, Português e variantes)
+                col_mapping = {
+                    'day': 'date',
+                    'date': 'date',
+                    'data': 'date',
+                    'Data': 'date',
+                    'real_value': 'sales_quantity_kg',
+                    'sales_quantity_kg': 'sales_quantity_kg',
+                    'vendas_kg': 'sales_quantity_kg',
+                    'Vendas_Kg': 'sales_quantity_kg',
+                    'price': 'price_per_kg',
+                    'price_per_kg': 'price_per_kg',
+                    'preco_venda_euro': 'price_per_kg',
+                    'Preco_Venda_Euro': 'price_per_kg'
+                }
+                df = df.rename(columns=col_mapping)
+                
+                if 'date' not in df.columns or 'sales_quantity_kg' not in df.columns:
+                    msg = "O ficheiro deve conter as colunas de data ('Data' ou 'date') e quantidade ('Vendas_Kg' ou 'sales_quantity_kg')."
+                    if is_ajax:
+                        return JsonResponse({'status': 'error', 'message': msg}, status=400)
+                    messages.error(request, msg)
+                    return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
+                    
+                df['date'] = pd.to_datetime(df['date']).dt.date
+                if 'price_per_kg' not in df.columns:
+                    df['price_per_kg'] = 2.0  # Preço médio padrão
+                    
+                df = df[['date', 'sales_quantity_kg', 'price_per_kg']].dropna(subset=['date', 'sales_quantity_kg'])
             else:
-                df = pd.read_csv(sales_file)
+                sales_qs = HistoricalSalesData.objects.filter(owner=request.user, culture=subfamily).order_by('date')
+                if not sales_qs.exists():
+                    msg = "Nenhum ficheiro carregado e não existe histórico anterior guardado para esta cultura."
+                    if is_ajax:
+                        return JsonResponse({'status': 'error', 'message': msg}, status=400)
+                    messages.error(request, msg)
+                    return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
+                df = pd.DataFrame(list(sales_qs.values('date', 'sales_quantity_kg', 'price_per_kg')))
                 
-            # Normalizar nomes de colunas (Inglês, Português e variantes)
-            col_mapping = {
-                'day': 'date',
-                'date': 'date',
-                'data': 'date',
-                'Data': 'date',
-                'real_value': 'sales_quantity_kg',
-                'sales_quantity_kg': 'sales_quantity_kg',
-                'vendas_kg': 'sales_quantity_kg',
-                'Vendas_Kg': 'sales_quantity_kg',
-                'price': 'price_per_kg',
-                'price_per_kg': 'price_per_kg',
-                'preco_venda_euro': 'price_per_kg',
-                'Preco_Venda_Euro': 'price_per_kg'
-            }
-            df = df.rename(columns=col_mapping)
-            
-            if 'date' not in df.columns or 'sales_quantity_kg' not in df.columns:
-                messages.error(request, "O ficheiro deve conter as colunas de data ('Data' ou 'date') e de quantidade de vendas ('Vendas_Kg' ou 'sales_quantity_kg').")
-                return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
-                
-            df['date'] = pd.to_datetime(df['date']).dt.date
-            if 'price_per_kg' not in df.columns:
-                df['price_per_kg'] = 2.0  # Preço médio padrão
-                
-            # Ler apenas as colunas necessárias e descartar todas as outras colunas adicionais
-            df = df[['date', 'sales_quantity_kg', 'price_per_kg']].dropna(subset=['date', 'sales_quantity_kg'])
-                
-            model_type = request.POST.get('model_type', 'mlp')
-            
-            # Treinar modelo preditivo de vendas (MLP ou Autoformer)
             from dashboard.services.agent_service import train_sales_forecaster
-            count = train_sales_forecaster(request.user, subfamily, df, model_type=model_type)
+            res = train_sales_forecaster(request.user, subfamily, df, model_type=model_type)
             
-            model_display = "Autoformer" if model_type == "autoformer" else "MLP"
-            messages.success(request, f"Histórico de vendas e modelo preditivo de vendas ({model_display}) treinado com sucesso! {count} dias registados.")
+            model_display = "Autoformer (Transformer)" if model_type.lower() == "autoformer" else "MLP (Rede Neuronal)"
+            success_msg = f"Modelo {model_display} para {subfamily.name} treinado com sucesso no Forecast Web Service! ({res['samples_count']} dias de histórico processados)."
+            
+            if is_ajax:
+                return JsonResponse({
+                    'status': 'success',
+                    'message': success_msg,
+                    'samples_used': res['samples_count'],
+                    'model_type': res['model_type'],
+                    'trained_at': res['trained_at'],
+                    'culture_id': subfamily.pk,
+                    'culture_name': subfamily.name
+                })
+                
+            messages.success(request, success_msg)
         except Exception as e:
-            messages.error(request, f"Erro ao processar ficheiro de histórico: {e}")
+            err_msg = f"Erro ao treinar modelo: {str(e)}"
+            if is_ajax:
+                return JsonResponse({'status': 'error', 'message': err_msg}, status=500)
+            messages.error(request, err_msg)
             
     return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
 
@@ -3723,19 +3860,28 @@ def infer_sales_forecast(request):
     if request.method == "POST":
         culture_id = request.POST.get('culture_id')
         horizon_days = int(request.POST.get('horizon_days', 30))
+        model_type = request.POST.get('model_type', None)
+        
+        if not culture_id:
+            return JsonResponse({'status': 'error', 'message': 'Selecione uma cultura para gerar a previsão.'}, status=400)
+            
         subfamily = get_object_or_404(ProductSubFamily, pk=culture_id)
         
         try:
             from dashboard.services.agent_service import run_sales_inference
-            predictions = run_sales_inference(request.user, subfamily, horizon_days)
+            result = run_sales_inference(request.user, subfamily, horizon_days=horizon_days, model_type=model_type)
             
-            # Devolver formato JSON com as datas formatadas
-            data = [{
-                'date': d.strftime('%Y-%m-%d'),
-                'value': round(v, 2)
-            } for d, v in predictions]
-            
-            return JsonResponse({'status': 'success', 'predictions': data})
+            return JsonResponse({
+                'status': 'success',
+                'culture_id': subfamily.pk,
+                'culture_name': subfamily.name,
+                'predictions': result.get('predictions', []),
+                'recent_history': result.get('recent_history', []),
+                'historical': result.get('recent_history', []),
+                'kpis': result.get('kpis', {}),
+                'metrics': result.get('kpis', {}),
+                'model_type': result.get('model_type', 'mlp')
+            })
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
             
@@ -3746,52 +3892,97 @@ def infer_sales_forecast(request):
 @role_required(['Retailer', 'Processor'])
 def train_buyer_agent(request):
     if request.method == "POST":
-        culture_id = request.POST.get('culture_id')
-        subfamily = get_object_or_404(ProductSubFamily, pk=culture_id)
+        is_ajax = (
+            request.headers.get('x-requested-with') == 'XMLHttpRequest' or
+            request.POST.get('is_ajax') == '1' or
+            ('application/json' in request.headers.get('Accept', '') and 'text/html' not in request.headers.get('Accept', ''))
+        )
+        culture_id = request.POST.get('culture_id') or request.GET.get('culture_id')
+        
+        subfamily = None
+        if culture_id and str(culture_id).strip():
+            try:
+                c_str = str(culture_id).strip()
+                if c_str.isdigit():
+                    subfamily = ProductSubFamily.objects.filter(pk=int(c_str)).first()
+                else:
+                    subfamily = (
+                        ProductSubFamily.objects.filter(name__iexact=c_str).first() or
+                        ProductSubFamily.objects.filter(name__icontains=c_str).first()
+                    )
+            except Exception:
+                subfamily = None
+        
+        if not subfamily:
+            # Fallback 1: Primeira cultura em stock do utilizador
+            stock_item = ConsolidatedStock.objects.filter(owner=request.user).select_related('culture').first()
+            if stock_item and stock_item.culture:
+                subfamily = stock_item.culture
+            else:
+                # Fallback 2: Primeiro produto do catálogo
+                subfamily = ProductSubFamily.objects.first()
+
+        if not subfamily:
+            if is_ajax:
+                return JsonResponse({'status': 'error', 'message': 'Nenhuma cultura ou produto registado no sistema.'}, status=400)
+            messages.error(request, 'Nenhuma cultura ou produto registado no sistema.')
+            return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
+
         market_file = request.FILES.get('market_file')
-        max_episodes = request.POST.get('max_episodes', '640')
-        if not max_episodes or not max_episodes.strip():
-            max_episodes = '640'
+        fruit_key = request.POST.get('fruit_key')
+        max_episodes = request.POST.get('max_episodes', '300')
+        if not max_episodes or not str(max_episodes).strip():
+            max_episodes = '300'
         
         try:
             import pandas as pd
             if market_file:
-                if market_file.name.endswith('.xlsx'):
+                if market_file.name.endswith('.xlsx') or market_file.name.endswith('.xls'):
                     df = pd.read_excel(market_file)
                 else:
                     df = pd.read_csv(market_file)
                 
                 col_mapping = {
-                    'day': 'date', 'date': 'date',
+                    'day': 'date', 'date': 'date', 'data': 'date', 'Date': 'date',
                     'real_value': 'sales_quantity_kg', 'sales_quantity_kg': 'sales_quantity_kg',
-                    'price': 'price_per_kg', 'price_per_kg': 'price_per_kg'
+                    'vendas_kg': 'sales_quantity_kg', 'quantidade_kg': 'sales_quantity_kg',
+                    'price': 'price_per_kg', 'price_per_kg': 'price_per_kg', 'preco_kg': 'price_per_kg'
                 }
                 df = df.rename(columns=col_mapping)
-                df['date'] = pd.to_datetime(df['date']).dt.date
+                if 'date' in df.columns:
+                    df['date'] = pd.to_datetime(df['date']).dt.date
             else:
                 # Usar histórico já carregado
                 sales_qs = HistoricalSalesData.objects.filter(owner=request.user, culture=subfamily)
                 if not sales_qs.exists():
-                    messages.error(request, "Precisa primeiro de carregar o histórico de vendas para esta cultura.")
+                    err_msg = f"Não existe histórico de vendas para {subfamily.name}. Anexe o ficheiro Excel/CSV de treino."
+                    if is_ajax:
+                        return JsonResponse({'status': 'error', 'message': err_msg}, status=400)
+                    messages.error(request, err_msg)
                     return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
                 
                 df = pd.DataFrame(list(sales_qs.values('date', 'sales_quantity_kg', 'price_per_kg')))
                 
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.accepts('application/json'):
-                from django.http import StreamingHttpResponse
-                from dashboard.services.agent_service import train_buyer_agent_optimizer_generator
-                response = StreamingHttpResponse(
-                    train_buyer_agent_optimizer_generator(request.user, subfamily, df, max_episodes=max_episodes),
-                    content_type='text/plain'
-                )
-                response['Cache-Control'] = 'no-cache'
-                response['X-Accel-Buffering'] = 'no'
-                return response
-                
             from dashboard.services.agent_service import train_buyer_agent_optimizer
-            train_buyer_agent_optimizer(request.user, subfamily, df, max_episodes=max_episodes)
+            logs = train_buyer_agent_optimizer(request.user, subfamily, df, max_episodes=max_episodes, fruit_key=fruit_key)
+            
+            if is_ajax:
+                return JsonResponse({
+                    'status': 'success',
+                    'message': f'O Buyer Agent para {subfamily.name} foi treinado com sucesso no Web Service!',
+                    'logs': logs,
+                    'culture_id': subfamily.pk,
+                    'culture_name': subfamily.name
+                })
+                
             messages.success(request, f"O Buyer Agent para {subfamily.name} foi treinado com sucesso!")
+        except ConnectionError as ce:
+            if is_ajax:
+                return JsonResponse({'status': 'error', 'message': str(ce)}, status=503)
+            messages.error(request, f"Erro de ligação ao Web Service: {ce}")
         except Exception as e:
+            if is_ajax:
+                return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
             messages.error(request, f"Erro ao treinar Buyer Agent: {e}")
             
     return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
@@ -3806,6 +3997,14 @@ def toggle_buyer_agent_status(request):
         profile.save()
         
         status_str = "ATIVADO" if profile.buyer_agent_active else "DESATIVADO"
+        
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.accepts('application/json'):
+            return JsonResponse({
+                'status': 'success',
+                'buyer_agent_active': profile.buyer_agent_active,
+                'message': f"Buyer Agent {status_str} com sucesso!"
+            })
+            
         messages.success(request, f"Buyer Agent {status_str} com sucesso!")
         
     return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
@@ -3813,23 +4012,61 @@ def toggle_buyer_agent_status(request):
 
 @login_required
 @role_required(['Retailer', 'Processor'])
+def get_buyer_agent_status(request):
+    """
+    Endpoint AJAX para obter o estado do modelo PPO e do Buyer Agent Web Service (Porta 8002).
+    """
+    if request.method != "GET":
+        return JsonResponse({'status': 'error', 'message': 'Método não permitido.'}, status=405)
+        
+    culture_id = request.GET.get('culture_id')
+    if not culture_id:
+        return JsonResponse({'status': 'error', 'message': 'ID da cultura é obrigatório.'}, status=400)
+        
+    subfamily = get_object_or_404(ProductSubFamily, pk=culture_id)
+    
+    try:
+        from dashboard.services.agent_service import get_buyer_model_status
+        status_data = get_buyer_model_status(request.user, subfamily)
+        status_data['status'] = 'success'
+        status_data['culture_name'] = subfamily.name
+        return JsonResponse(status_data)
+    except ConnectionError as ce:
+        return JsonResponse({
+            'status': 'error',
+            'service_online': False,
+            'message': str(ce),
+            'culture_id': subfamily.pk,
+            'culture_name': subfamily.name
+        }, status=503)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+
+@login_required
+@role_required(['Retailer', 'Processor'])
 def run_buyer_agent_action(request):
     """
-    Executa a inferência diária do Buyer Agent e retorna a quantidade recomendada para compra.
+    Executa a inferência diária do Buyer Agent e retorna o relatório analítico completo
+    obtido do Buyer Agent Web Service (Porta 8002).
     """
     if request.method == "POST":
         culture_id = request.POST.get('culture_id')
+        if not culture_id:
+            return JsonResponse({'status': 'error', 'message': 'Cultura não especificada.'}, status=400)
+
         subfamily = get_object_or_404(ProductSubFamily, pk=culture_id)
         
         try:
-            from dashboard.services.agent_service import compute_daily_agent_decision
-            recommended_qty = compute_daily_agent_decision(request.user, subfamily)
-            
+            from dashboard.services.agent_service import get_buyer_agent_decision_details
+            decision_data = get_buyer_agent_decision_details(request.user, subfamily)
+            return JsonResponse(decision_data)
+        except ConnectionError as ce:
             return JsonResponse({
-                'status': 'success',
-                'recommended_qty_kg': recommended_qty,
-                'culture_name': subfamily.name
-            })
+                'status': 'error',
+                'service_offline': True,
+                'message': str(ce)
+            }, status=503)
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
             
@@ -3838,100 +4075,118 @@ def run_buyer_agent_action(request):
 
 @login_required
 @role_required(['Producer', 'Processor', 'Retailer'])
-def get_lc_decay_data(request):
+def get_lot_lifecycle_forecast(request):
     """
-    Endpoint AJAX que retorna a curva de degradação da qualidade prevista pelo LC Agent.
+    Endpoint AJAX para obter a previsão de ciclo de vida e degradação biológica de um lote específico
+    consultando o Lifecycle Decay Prediction Web Service (FastAPI / Porta 8003).
+    Retorna as métricas biológicas estimadas no último dia (RSL, Firmeza, Brix, Acidez, Qualidade)
+    e comparação com as métricas iniciais.
     """
     if request.method != "GET":
         return JsonResponse({'status': 'error', 'message': 'Método não permitido.'}, status=405)
-        
+
+    lot_id = request.GET.get('lot_id')
     stock_id = request.GET.get('stock_id')
-    if not stock_id:
-        return JsonResponse({'status': 'error', 'message': 'Parâmetro stock_id em falta.'}, status=400)
-        
-    import datetime
-    from django.http import JsonResponse
-    from django.shortcuts import get_object_or_404
-    from .models import ConsolidatedStock, WarehouseSensorReading, Warehouse, Harvest
-    from .services.lc_service import calculate_quality_decay_curve
-    
-    # Verificar se o utilizador é Produtor ou outro perfil
-    is_producer = request.user.groups.filter(name='Producer').exists()
-    
-    if is_producer:
-        harvest_item = get_object_or_404(Harvest, pk=stock_id)
-        culture_name = f"{harvest_item.subfamily.name} ({harvest_item.subfamily.fruit_type})"
-        initial_score = harvest_item.avg_quality_score or 10.0
-        brix = harvest_item.soluble_solids
-        caliber = harvest_item.caliber
-        quantity = harvest_item.current_stock_kg
-        warehouse = harvest_item.warehouse
-        warehouse_location = warehouse.location if warehouse else ""
-        owner = harvest_item.producer
-    else:
-        stock_item = get_object_or_404(ConsolidatedStock, pk=stock_id)
-        culture_name = f"{stock_item.culture.name} ({stock_item.culture.fruit_type})"
-        initial_score = stock_item.avg_quality_score or 10.0
-        brix = stock_item.avg_soluble_solids
-        caliber = stock_item.avg_caliber
-        quantity = stock_item.quantity
-        warehouse_location = stock_item.warehouse_location
-        owner = stock_item.owner
-        # Localizar o armazém com sufixo limpo se necessário
-        clean_location = warehouse_location.split(' (WH:')[0].strip() if warehouse_location and ' (WH:' in warehouse_location else warehouse_location
-        warehouse = Warehouse.objects.filter(owner=owner, location=clean_location).first()
-    
-    # Obter leituras de sensores para este armazém
-    sensor_readings = []
-    if warehouse:
-        # Self-healing check
-        if WarehouseSensorReading.objects.filter(warehouse=warehouse).count() < 30:
-            try:
-                from dashboard.services.lc_service import generate_fallback_sensor_readings
-                generate_fallback_sensor_readings(warehouse)
-            except Exception:
-                pass
-        today_date = datetime.date.today()
-        future_readings = WarehouseSensorReading.objects.filter(warehouse=warehouse, date__gte=today_date).order_by('date')
-        if future_readings.exists():
-            sensor_readings = list(future_readings[:120])
+
+    if not lot_id and not stock_id:
+        return JsonResponse({'status': 'error', 'message': 'Parâmetro lot_id ou stock_id em falta.'}, status=400)
+
+    import requests
+    from django.conf import settings
+
+    target_id = lot_id or stock_id
+    payload = build_lot_lifecycle_data(lot_id=lot_id, stock_id=stock_id, user=request.user)
+
+    if not payload:
+        return JsonResponse({'status': 'error', 'message': f'Lote #{target_id} não encontrado.'}, status=404)
+
+    lot_info = payload.get('lot_identification', {})
+    initial_m = lot_info.get('initial_metrics', {})
+    warehouse_info = payload.get('current_warehouse', {})
+
+    lifecycle_url = getattr(settings, 'LIFECYCLE_SERVICE_URL', 'http://127.0.0.1:8003').rstrip('/')
+    service_status = "ONLINE"
+    service_error = None
+    forecast_data = {}
+
+    try:
+        ws_res = requests.post(f"{lifecycle_url}/forecast", json=payload, timeout=6)
+        if ws_res.status_code == 200:
+            forecast_data = ws_res.json()
         else:
-            # Pegar as mais recentes do passado
-            past_readings = WarehouseSensorReading.objects.filter(warehouse=warehouse).order_by('-date')[:30]
-            sensor_readings = sorted(list(past_readings), key=lambda r: r.date)
-        
-    # Calcular curva de degradação com o LC Agent
-    decay_curve, rsl_days = calculate_quality_decay_curve(
-        culture_name=culture_name,
-        initial_score=initial_score,
-        sensor_readings=sensor_readings
-    )
-    
-    # Obter dados climáticos de hoje
+            return JsonResponse({
+                'status': 'error',
+                'service_status': 'OFFLINE',
+                'message': f'O Lifecycle Web Service (Porta 8003) retornou código HTTP {ws_res.status_code}. Por favor verifique se o serviço está ativo.'
+            }, status=503)
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'service_status': 'OFFLINE',
+            'message': f'O Lifecycle Web Service (Porta 8003) está inacessível ou desligado ({e}). O cálculo de tempo de vida útil requer o serviço ativo.'
+        }, status=503)
+
+    # Leituras climáticas mais recentes do armazém
+    wh_history = payload.get('sensor_history_by_warehouse', [])
     temp_today = 4.0
     hum_today = 90.0
     eth_today = 0.01
-    
-    if sensor_readings:
-        latest = sensor_readings[len(sensor_readings) - 1]
-        temp_today = float(latest.temperature)
-        hum_today = float(latest.humidity)
-        eth_today = float(latest.ethylene)
-        
-    return JsonResponse({
+    if wh_history and len(wh_history) > 0:
+        readings = wh_history[-1].get('daily_readings', [])
+        if readings:
+            latest = readings[-1]
+            temp_today = latest.get('temperature_celsius', 4.0) or 4.0
+            hum_today = latest.get('humidity_percent', 90.0) or 90.0
+            eth_today = latest.get('ethylene_ppm', 0.01) or 0.01
+
+    response_payload = {
         'status': 'success',
-        'culture_name': culture_name,
-        'rsl_days': rsl_days,
-        'initial_score': float(initial_score),
-        'brix': float(brix) if brix is not None else "N/A",
-        'caliber': float(caliber) if caliber is not None else "N/A",
-        'quantity': float(quantity),
-        'warehouse_location': warehouse_location,
-        'temp_today': temp_today,
-        'hum_today': hum_today,
-        'eth_today': eth_today,
-        'decay_curve': decay_curve
-    })
+        'service_status': service_status,
+        'service_url': lifecycle_url,
+        'service_error': service_error,
+        'lot_id': lot_info.get('lot_id'),
+        'batch_id': lot_info.get('batch_id'),
+        'culture_name': lot_info.get('culture_name'),
+        'fruit_type': lot_info.get('fruit_type'),
+        'producer': lot_info.get('producer'),
+        'current_owner': lot_info.get('current_owner'),
+        'harvest_date': lot_info.get('harvest_date'),
+        'current_stock_kg': lot_info.get('current_stock_kg'),
+        'warehouse_location': warehouse_info.get('location', 'N/A'),
+        'warehouse_region': warehouse_info.get('region', 'PT-LVT'),
+        'temp_today': float(temp_today),
+        'hum_today': float(hum_today),
+        'eth_today': float(eth_today),
+        'forecast': {
+            'algorithm': forecast_data.get('algorithm', 'ode_new'),
+            'product_id': forecast_data.get('product_id', lot_info.get('fruit_type', 'apple')),
+            'remaining_lifetime': forecast_data.get('remaining_lifetime', 0.0),
+            'firmness': forecast_data.get('firmness'),
+            'brix': forecast_data.get('brix'),
+            'acidity': forecast_data.get('acidity'),
+            'mold': forecast_data.get('mold', 0.0),
+            'quality_index': forecast_data.get('quality_index', 0.0),
+        },
+        'initial_metrics': {
+            'quality_score': initial_m.get('quality_score'),
+            'soluble_solids_brix': initial_m.get('soluble_solids_brix'),
+            'firmness': initial_m.get('firmness') or initial_m.get('firmness_n'),
+            'acidity': initial_m.get('acidity') or initial_m.get('acidity_percent'),
+            'caliber_mm': initial_m.get('caliber_mm'),
+        },
+        'export_metadata': payload.get('export_metadata', {})
+    }
+
+    return JsonResponse(response_payload)
+
+
+@login_required
+@role_required(['Producer', 'Processor', 'Retailer'])
+def get_lc_decay_data(request):
+    """
+    Compatibilidade com endpoint anterior de ciclo de vida.
+    """
+    return get_lot_lifecycle_forecast(request)
 
 
 def build_lot_lifecycle_data(lot_id=None, stock_id=None, user=None):
@@ -3944,7 +4199,7 @@ def build_lot_lifecycle_data(lot_id=None, stock_id=None, user=None):
     import logging
     from django.db import models
     from dashboard.services.fabric_service import fabric_service
-    from dashboard.models import Harvest, ConsolidatedStock, Warehouse, WarehouseSensorReading, MarketplaceOrder, PlantationEvent
+    from dashboard.models import Harvest, ConsolidatedStock, Warehouse, WarehouseSensorReading, PlantationEvent
 
     logger = logging.getLogger(__name__)
 
@@ -3978,8 +4233,10 @@ def build_lot_lifecycle_data(lot_id=None, stock_id=None, user=None):
         delivered_qty = float(harvest.delivered_quantity_kg or 0.0)
         
         initial_metrics = {
+            "firmness": float(harvest.firmness) if hasattr(harvest, 'firmness') and harvest.firmness is not None else None,
             "firmness_n": float(harvest.firmness) if hasattr(harvest, 'firmness') and harvest.firmness is not None else None,
             "soluble_solids_brix": float(harvest.soluble_solids) if harvest.soluble_solids is not None else None,
+            "acidity": float(harvest.acidity) if hasattr(harvest, 'acidity') and harvest.acidity is not None else None,
             "acidity_percent": float(harvest.acidity) if hasattr(harvest, 'acidity') and harvest.acidity is not None else None,
             "caliber_mm": float(harvest.caliber) if harvest.caliber is not None else None,
             "quality_score": float(harvest.avg_quality_score) if harvest.avg_quality_score is not None else 10.0,
@@ -4016,8 +4273,8 @@ def build_lot_lifecycle_data(lot_id=None, stock_id=None, user=None):
                     "notes": ev.notes or ""
                 })
 
-        # Ordens de transporte associadas
-        orders = list(MarketplaceOrder.objects.filter(harvest_origin=harvest).order_by('created_at'))
+        # Ordens e transações associadas obtidas do marketplace web service
+        orders = [d for d in marketplace_service.get_closed_deals_adapted() if str(getattr(d, 'harvest_origin_id', '')) == str(harvest.pk) or getattr(d, 'batch_id', None) == f"LOTE-{harvest.pk}"]
 
     else: # ConsolidatedStock (Processor ou Retailer)
         lot_pk = stock.pk
@@ -4029,17 +4286,12 @@ def build_lot_lifecycle_data(lot_id=None, stock_id=None, user=None):
         clean_location = stock.warehouse_location.split(' (WH:')[0].strip() if stock.warehouse_location and ' (WH:' in stock.warehouse_location else stock.warehouse_location
         warehouse = Warehouse.objects.filter(owner=stock.owner, location=clean_location).first() or Warehouse.objects.filter(owner=stock.owner).first()
 
-        orders = list(MarketplaceOrder.objects.filter(
-            culture=stock.culture,
-            warehouse_location=stock.warehouse_location
-        ).filter(
-            models.Q(requester=stock.owner) | models.Q(fulfilled_by=stock.owner)
-        ).order_by('created_at'))
+        orders = marketplace_service.get_closed_deals_adapted(username=stock.owner.username)
 
         earliest_harvest = None
         producer_name = "Vários/Agregado"
         for o in orders:
-            if o.harvest_origin:
+            if hasattr(o, 'harvest_origin') and o.harvest_origin:
                 producer_name = o.harvest_origin.producer.username
                 if not earliest_harvest or o.harvest_origin.harvest_date < earliest_harvest:
                     earliest_harvest = o.harvest_origin.harvest_date
@@ -4153,21 +4405,32 @@ def build_lot_lifecycle_data(lot_id=None, stock_id=None, user=None):
     # Histórico de Transporte e Logística
     logistics_history = []
     for o in orders:
+        requester_user = getattr(o, 'requester', None)
+        fulfilled_user = getattr(o, 'fulfilled_by', None)
+        transporter_user = getattr(o, 'transporter', None)
+        vehicle_obj = getattr(o, 'vehicle', None)
+        dest_wh = getattr(o, 'destination_warehouse', None)
+        
+        actual_pickup = getattr(o, 'actual_pickup_date', None)
+        planned_pickup = getattr(o, 'planned_pickup_date', None)
+        actual_delivery = getattr(o, 'actual_delivery_date', None)
+        planned_delivery = getattr(o, 'planned_delivery_date', None)
+
         logistics_history.append({
-            "order_id": o.pk,
-            "order_type": o.order_type,
-            "requester": o.requester.username if o.requester else None,
-            "fulfilled_by": o.fulfilled_by.username if o.fulfilled_by else None,
-            "status": o.status,
-            "transport_status": o.transport_status,
-            "transporter": o.transporter.username if hasattr(o, 'transporter') and o.transporter else None,
-            "vehicle": str(o.vehicle) if hasattr(o, 'vehicle') and o.vehicle else None,
-            "pickup_date": o.actual_pickup_date.isoformat() if o.actual_pickup_date else (o.planned_pickup_date.isoformat() if o.planned_pickup_date else None),
-            "delivery_date": o.actual_delivery_date.isoformat() if o.actual_delivery_date else (o.planned_delivery_date.isoformat() if o.planned_delivery_date else None),
-            "origin_warehouse": o.warehouse_location,
-            "destination_warehouse": o.destination_warehouse.location if hasattr(o, 'destination_warehouse') and o.destination_warehouse else o.warehouse_location,
-            "quantity_kg": float(o.quantity_kg) if o.quantity_kg else 0.0,
-            "transport_sensor_data": o.transport_sensor_data or "No sensor data recorded during transport"
+            "order_id": getattr(o, 'pk', None) or getattr(o, 'id', None),
+            "order_type": getattr(o, 'order_type', 'PURCHASE'),
+            "requester": requester_user.username if hasattr(requester_user, 'username') else str(requester_user or ''),
+            "fulfilled_by": fulfilled_user.username if hasattr(fulfilled_user, 'username') else str(fulfilled_user or ''),
+            "status": getattr(o, 'status', 'COMPLETED'),
+            "transport_status": getattr(o, 'transport_status', 'DELIVERED'),
+            "transporter": transporter_user.username if hasattr(transporter_user, 'username') else str(transporter_user or ''),
+            "vehicle": str(vehicle_obj) if vehicle_obj else None,
+            "pickup_date": actual_pickup.isoformat() if actual_pickup else (planned_pickup.isoformat() if planned_pickup else None),
+            "delivery_date": actual_delivery.isoformat() if actual_delivery else (planned_delivery.isoformat() if planned_delivery else None),
+            "origin_warehouse": getattr(o, 'warehouse_location', 'N/A'),
+            "destination_warehouse": dest_wh.location if hasattr(dest_wh, 'location') else getattr(o, 'warehouse_location', 'N/A'),
+            "quantity_kg": float(getattr(o, 'quantity_kg', 0.0) or 0.0),
+            "transport_sensor_data": getattr(o, 'transport_sensor_data', "No sensor data recorded during transport")
         })
 
     # Construir Linha Temporal Cronológica de Armazéns sem Sobreposição
@@ -4178,18 +4441,28 @@ def build_lot_lifecycle_data(lot_id=None, stock_id=None, user=None):
         current_start = harvest_date
         
         # Apenas ordens que foram efetivamente entregues transferem o fruto fisicamente para o próximo armazém
+        def _get_dt(item, *attr_names):
+            for name in attr_names:
+                v = getattr(item, name, None)
+                if v:
+                    if hasattr(v, 'date'):
+                        return v.date()
+                    if isinstance(v, datetime.date):
+                        return v
+            return None
+
         delivered_orders = [
             o for o in orders 
-            if o.transport_status == 'DELIVERED' or (o.actual_delivery_date and o.actual_delivery_date.date() <= today)
+            if getattr(o, 'transport_status', '') == 'DELIVERED' or (_get_dt(o, 'actual_delivery_date', 'delivery_date') and _get_dt(o, 'actual_delivery_date', 'delivery_date') <= today)
         ]
         
         if delivered_orders:
             for o in delivered_orders:
-                dep_dt = o.actual_pickup_date or o.planned_pickup_date or o.created_at
-                dep_date = max(current_start, min(today, dep_dt.date()))
+                dep_date = _get_dt(o, 'actual_pickup_date', 'planned_pickup_date', 'created_at') or current_start
+                dep_date = max(current_start, min(today, dep_date))
                 
-                arr_dt = o.actual_delivery_date or o.planned_delivery_date or o.fulfilled_at or dep_dt
-                arr_date = max(dep_date, min(today, arr_dt.date()))
+                arr_date = _get_dt(o, 'actual_delivery_date', 'delivery_date', 'planned_delivery_date', 'fulfilled_at') or dep_date
+                arr_date = max(dep_date, min(today, arr_date))
                 
                 # Segmento no armazém de origem até à data de saída
                 if current_wh and dep_date >= current_start:
@@ -4200,8 +4473,9 @@ def build_lot_lifecycle_data(lot_id=None, stock_id=None, user=None):
                     })
                 
                 # O armazém de destino inicia após a saída/chegada (evitando duplicar o dia de transição)
-                dest_wh = o.destination_warehouse
-                current_wh = dest_wh
+                dest_wh = getattr(o, 'destination_warehouse', None)
+                if dest_wh:
+                    current_wh = dest_wh
                 current_start = dep_date + datetime.timedelta(days=1) if arr_date <= dep_date else arr_date
             
             # Segmento final no último armazém até ao dia de hoje
@@ -4224,14 +4498,25 @@ def build_lot_lifecycle_data(lot_id=None, stock_id=None, user=None):
         stock_wh = warehouse
         inbound_order = orders[0] if orders else None
         
+        def _get_dt_inbound(item, *attr_names):
+            for name in attr_names:
+                v = getattr(item, name, None)
+                if v:
+                    if hasattr(v, 'date'):
+                        return v.date()
+                    if isinstance(v, datetime.date):
+                        return v
+            return None
+
         if inbound_order:
-            dep_dt = inbound_order.actual_pickup_date or inbound_order.planned_pickup_date or inbound_order.created_at
-            dep_date = max(harvest_date, min(today, dep_dt.date()))
+            dep_date = _get_dt_inbound(inbound_order, 'actual_pickup_date', 'planned_pickup_date', 'created_at') or harvest_date
+            dep_date = max(harvest_date, min(today, dep_date))
             
-            arr_dt = inbound_order.actual_delivery_date or inbound_order.planned_delivery_date or inbound_order.fulfilled_at or dep_dt
-            arr_date = max(dep_date, min(today, arr_dt.date()))
+            arr_date = _get_dt_inbound(inbound_order, 'actual_delivery_date', 'delivery_date', 'planned_delivery_date', 'fulfilled_at') or dep_date
+            arr_date = max(dep_date, min(today, arr_date))
             
-            orig_wh = getattr(inbound_order.harvest_origin, 'warehouse', None) if inbound_order.harvest_origin else None
+            harvest_origin = getattr(inbound_order, 'harvest_origin', None)
+            orig_wh = getattr(harvest_origin, 'warehouse', None) if harvest_origin else None
             
             # Segmento no produtor de origem
             if orig_wh and dep_date >= harvest_date:

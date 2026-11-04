@@ -7,7 +7,7 @@ from django.db import transaction, connection
 from django.contrib.auth.models import User, Group
 from django.utils import timezone
 from dashboard.models import (
-    ProductSubFamily, Harvest, Warehouse, Sensor, MarketplaceOrder, WarehouseSensorReading, Product,
+    ProductSubFamily, Harvest, Warehouse, Sensor, WarehouseSensorReading,
     PlantationPlan, PlantationCrop, PlantationEvent, FertilizerSyntheticData, FertilizerOrganicData,
     SoilCorrectiveData, PestControlData, MachineryData, FuelData, ElectricEnergyData, IrrigationWaterData,
     ConsolidatedStock
@@ -38,106 +38,111 @@ class Command(BaseCommand):
             "label": "Maçã (Fuji)",
             "Tref_C": 5.0, "Ea_J": 47000.0, "k_firm_ref": 0.018, "alpha_E": 0.6,
             "beta_RH": 0.7, "RH_ref": 90.0,
-            "dureza_min": 15.0, "dureza_0_default": 80.0,
-            "brix_min": 13.0, "brix_max": 19.0, "brix_g": 0.15, "brix_0_default": 14.0,
-            "qual_firm_threshold": 40.0, "qual_brix_target": 16.0,
-            "E0_int": 0.008, "Eref_prod": 0.06, "E_t0": 25.0, "E_g": 0.5, "E_auto": 0.25,
-            "E_decay": 0.45, "Ea_E_J": 52000.0, "E_ext_shift": 1.4,
-            "RH_mold_thr": 95.0, "mold_rate_ref": 0.035, "mold_sens_RH": 8.0,
-            "mold_max_penalty": 0.55, "Ea_mold_J": 42000.0,
-            "elasticity": 1.5
+            "dureza_min": 9.0, "dureza_0_default": 65.0,
+            "brix_min": 13.0, "brix_max": 18.0, "brix_g": 0.22, "brix_0_default": 13.5,
+            "qual_firm_threshold": 30.0, "qual_brix_target": 15.0,
+            "E0_int": 0.010, "Eref_prod": 0.12, "E_t0": 12.0, "E_g": 0.8, "E_auto": 0.4,
+            "E_decay": 0.70, "Ea_E_J": 50000.0, "E_ext_shift": 2.5,
+            "RH_mold_thr": 95.0, "mold_rate_ref": 0.04, "mold_sens_RH": 8.0,
+            "mold_max_penalty": 0.60, "Ea_mold_J": 42000.0,
+            "elasticity": 1.4
         }
         kiwi_hayward = {
             "label": "Kiwi (Hayward)",
-            "Tref_C": 5.0, "Ea_J": 60000.0, "k_firm_ref": 0.06, "alpha_E": 1.8,
-            "beta_RH": 1.2, "RH_ref": 90.0,
-            "dureza_min": 3.0, "dureza_0_default": 45.0,
-            "brix_min": 11.0, "brix_max": 17.0, "brix_g": 0.35, "brix_0_default": 11.0,
-            "qual_firm_threshold": 8.0, "qual_brix_target": 15.0,
-            "E0_int": 0.02, "Eref_prod": 0.12, "E_t0": 10.0, "E_g": 0.9, "E_auto": 0.35,
-            "E_decay": 0.7, "Ea_E_J": 52000.0, "E_ext_shift": 2.0,
-            "RH_mold_thr": 95.0, "mold_rate_ref": 0.05, "mold_sens_RH": 9.0,
-            "mold_max_penalty": 0.65, "Ea_mold_J": 43000.0,
-            "elasticity": 1.5
+            "Tref_C": 0.0, "Ea_J": 65000.0, "k_firm_ref": 0.012, "alpha_E": 2.5,
+            "beta_RH": 0.95, "RH_ref": 95.0,
+            "dureza_min": 5.0, "dureza_0_default": 65.0,
+            "brix_min": 11.5, "brix_max": 16.0, "brix_g": 0.30, "brix_0_default": 12.0,
+            "qual_firm_threshold": 15.0, "qual_brix_target": 13.5,
+            "E0_int": 0.005, "Eref_prod": 0.08, "E_t0": 15.0, "E_g": 1.1, "E_auto": 0.8,
+            "E_decay": 0.55, "Ea_E_J": 68000.0, "E_ext_shift": 3.0,
+            "RH_mold_thr": 96.0, "mold_rate_ref": 0.06, "mold_sens_RH": 10.0,
+            "mold_max_penalty": 0.70, "Ea_mold_J": 45000.0,
+            "elasticity": 1.8
         }
 
-        # 2. Criar ou Obter Grupos e Utilizadores
-        roles = ['Producer', 'Processor', 'Retailer', 'Transporter', 'Consumer']
-        groups = {r: Group.objects.get_or_create(name=r)[0] for r in roles}
-
-        users_config = [
-            # Producers (3)
-            ('ProducerBraga', 'Producer'),
-            ('ProducerPorto', 'Producer'),
-            ('ProducerCoimbra', 'Producer'),
-            # Processors (3)
-            ('Processor', 'Processor'),
-            ('ProcessorNorte', 'Processor'),
-            ('ProcessorSul', 'Processor'),
-            # Retailer
-            ('RetailStore', 'Retailer'),
-            # Transporter
-            ('Transportes', 'Transporter'),
-            # Consumers (8: 4 standard, 4 mercearias)
-            ('Antonio', 'Consumer'),
-            ('Maria', 'Consumer'),
-            ('Jose', 'Consumer'),
-            ('Manuel', 'Consumer'),
-            ('MerceariaIdeal', 'Consumer'),
-            ('MerceariaDoBairro', 'Consumer'),
-            ('MerceariaCentral', 'Consumer'),
-            ('MerceariaNova', 'Consumer')
-        ]
-        users = {}
-        for username, role in users_config:
-            user = User.objects.filter(username__iexact=username).first()
-            if user:
-                # Atualizar a password para "123"
-                user.set_password("123")
-                user.save()
-            else:
-                user = User.objects.create_user(username=username, password="123")
-                self.stdout.write(f"Utilizador {username} criado com a senha '123'")
-            user.groups.add(groups[role])
-            if role not in users:
-                users[role] = []
-            users[role].append(user)
-
-        # 3. Limpeza dos Dados Transacionais com Transação SQL
         with transaction.atomic():
-            self.stdout.write("A remover dados antigos de forma instantanea (TRUNCATE)...")
+            # 2. Criar Utilizadores e Grupos Padrão
+            groups = ['Producer', 'Processor', 'Retailer', 'Consumer', 'Transporter']
+            group_objects = {name: Group.objects.get_or_create(name=name)[0] for name in groups}
+
+            # Produtores
+            prod_users = []
+            for name in ['ProducerBraga', 'ProducerPorto', 'ProducerCoimbra']:
+                u, _ = User.objects.get_or_create(username=name, defaults={'email': f"{name.lower()}@eureka.pt"})
+                u.set_password('1234')
+                u.save()
+                u.groups.add(group_objects['Producer'])
+                prod_users.append(u)
+
+            # Processadores
+            proc_users = []
+            for name in ['ProcessorNorte', 'ProcessorCentro', 'ProcessorSul']:
+                u, _ = User.objects.get_or_create(username=name, defaults={'email': f"{name.lower()}@eureka.pt"})
+                u.set_password('1234')
+                u.save()
+                u.groups.add(group_objects['Processor'])
+                proc_users.append(u)
+
+            # Retalhista Central
+            retailer_user, _ = User.objects.get_or_create(username='RetailStore', defaults={'email': 'store@retail.pt'})
+            retailer_user.set_password('1234')
+            retailer_user.save()
+            retailer_user.groups.add(group_objects['Retailer'])
+
+            # Consumidores Finais (8 Utilizadores para distribuir o consumo)
+            consumer_users = []
+            consumer_names = [
+                'Consumer_Ana', 'Consumer_Bruno', 'Consumer_Carlos', 'Consumer_Diana',
+                'Consumer_Eduardo', 'Consumer_Filipa', 'Consumer_Goncalo', 'Consumer_Helena'
+            ]
+            for name in consumer_names:
+                u, _ = User.objects.get_or_create(username=name, defaults={'email': f"{name.lower()}@gmail.pt"})
+                u.set_password('1234')
+                u.save()
+                u.groups.add(group_objects['Consumer'])
+                consumer_users.append(u)
+
+            # Transportador
+            transporter_user, _ = User.objects.get_or_create(username='TransportesRapidos', defaults={'email': 'logistica@transrapidos.pt'})
+            transporter_user.set_password('1234')
+            transporter_user.save()
+            transporter_user.groups.add(group_objects['Transporter'])
+
+            # 3. Limpar Tabelas Transacionais
+            self.stdout.write("A limpar dados transacionais...")
             with connection.cursor() as cursor:
                 cursor.execute("""
-                    TRUNCATE TABLE 
-                        marketplace_orders, 
-                        harvest_records, 
-                        warehouse_sensor_readings, 
-                        plantation_crops, 
-                        plantation_events, 
-                        plantation_plan, 
-                        event_fertilizer_synthetic, 
-                        event_fertilizer_organic, 
-                        event_soil_corrective, 
-                        event_pest_control, 
-                        event_machinery, 
-                        event_fuel, 
-                        event_electric_energy, 
-                        event_irrigation_water,
-                        consolidated_stock,
-                        products, 
-                        warehouses
-                    RESTART IDENTITY CASCADE;
+                    DELETE FROM warehouse_sensor_readings;
+                    DELETE FROM harvest_records;
+                    DELETE FROM plantation_events;
+                    DELETE FROM event_fertilizer_synthetic;
+                    DELETE FROM event_fertilizer_organic;
+                    DELETE FROM event_soil_corrective;
+                    DELETE FROM event_pest_control;
+                    DELETE FROM event_machinery;
+                    DELETE FROM event_fuel;
+                    DELETE FROM event_electric_energy;
+                    DELETE FROM event_irrigation_water;
+                    DELETE FROM plantation_soil_value;
+                    DELETE FROM plantation_crops;
+                    DELETE FROM plantation_plan;
+                    DELETE FROM sensors;
+                    DELETE FROM warehouses;
+                    DELETE FROM product_subfamilies;
+                    DELETE FROM consolidated_stock;
                 """)
 
             # 4. Configurar Subfamílias de Produtos
             subfamilies_data = [
-                ("Gala", "Apple", maca_gala),
-                ("Fuji", "Apple", maca_fuji),
-                ("Hayward", "Kiwi", kiwi_hayward)
+                ("Gala", "Apple", maca_gala, 14),
+                ("Fuji", "Apple", maca_fuji, 20),
+                ("Hayward", "Kiwi", kiwi_hayward, 30)
             ]
             sf_objects = {}
-            for name, fruit_type, presets in subfamilies_data:
+            for name, fruit_type, presets, shelf_life_days in subfamilies_data:
                 subfamily, _ = ProductSubFamily.objects.get_or_create(name=name, fruit_type=fruit_type)
+                subfamily.default_shelf_life_days = shelf_life_days
                 subfamily.lifecycle_presets = presets
                 subfamily.save()
                 sf_objects[name] = subfamily
@@ -146,9 +151,8 @@ class Command(BaseCommand):
             plantations = {}
             # Braga growing Gala
             pb_user = User.objects.get(username='ProducerBraga')
-            pb_prod = Product.objects.get_or_create(name="Maçã Gala", category="Apple", producer=pb_user)[0]
             pb_plan = PlantationPlan.objects.create(
-                producer=pb_user, product=pb_prod, plantation_name="Pomar Braga Gala",
+                producer=pb_user, plantation_name="Pomar Braga Gala",
                 quantity_of_trees=1200, production_type='integrated', chemical_use='No',
                 area=50000.0, location="Braga", plantation_date=datetime.date(2022, 1, 1)
             )
@@ -157,9 +161,8 @@ class Command(BaseCommand):
 
             # Porto growing Fuji
             pp_user = User.objects.get(username='ProducerPorto')
-            pp_prod = Product.objects.get_or_create(name="Maçã Fuji", category="Apple", producer=pp_user)[0]
             pp_plan = PlantationPlan.objects.create(
-                producer=pp_user, product=pp_prod, plantation_name="Pomar Porto Fuji",
+                producer=pp_user, plantation_name="Pomar Porto Fuji",
                 quantity_of_trees=1000, production_type='organic', chemical_use='No',
                 area=40000.0, location="Porto", plantation_date=datetime.date(2022, 3, 1)
             )
@@ -168,9 +171,8 @@ class Command(BaseCommand):
 
             # Coimbra growing Hayward
             pc_user = User.objects.get(username='ProducerCoimbra')
-            pc_prod = Product.objects.get_or_create(name="Kiwi Hayward", category="Kiwi", producer=pc_user)[0]
             pc_plan = PlantationPlan.objects.create(
-                producer=pc_user, product=pc_prod, plantation_name="Pomar Coimbra Kiwi",
+                producer=pc_user, plantation_name="Pomar Coimbra Kiwi",
                 quantity_of_trees=800, production_type='integrated', chemical_use='No',
                 area=30000.0, location="Coimbra", plantation_date=datetime.date(2022, 5, 1)
             )
@@ -295,83 +297,28 @@ class Command(BaseCommand):
                     
 
                     
-                    # 8.2 Compra pelo Processador com registo de Transporte e Bloco de Transporte
-                    order_date = current_sim_date + datetime.timedelta(days=1)
-                    order_proc = MarketplaceOrder.objects.create(
-                        requester=proc_user,
-                        role='Processor',
-                        order_type='BUY',
+                    # 8.2 Processador recebe o lote e armazena em ConsolidatedStock
+                    proc_stock, _ = ConsolidatedStock.objects.get_or_create(
+                        owner=proc_user,
                         culture=subfamily,
-                        harvest_origin=harvest,
-                        quantity_kg=harvest_qty,
-                        price_per_kg=round(random.uniform(0.8, 1.1), 2),
                         warehouse_location=wh_proc.location,
-                        caliber=harvest.caliber,
-                        soluble_solids=harvest.soluble_solids,
-                        quality_score=harvest.avg_quality_score,
-                        status='APPROVED',
-                        fulfilled_by=prod_user,
-                        created_at=timezone.make_aware(datetime.datetime.combine(order_date, datetime.time(9, 0))),
-                        fulfilled_at=timezone.make_aware(datetime.datetime.combine(order_date, datetime.time(10, 0))),
-                        transport_status='DELIVERED',
-                        planned_pickup_date=timezone.make_aware(datetime.datetime.combine(order_date, datetime.time(13, 0))),
-                        planned_delivery_date=timezone.make_aware(datetime.datetime.combine(order_date, datetime.time(17, 0))),
-                        actual_pickup_date=timezone.make_aware(datetime.datetime.combine(order_date, datetime.time(13, 10))),
-                        actual_delivery_date=timezone.make_aware(datetime.datetime.combine(order_date, datetime.time(16, 50))),
-                        transport_sensor_data=json.dumps([
-                            {"time": "13:30", "temp": 5.0, "humidity": 88.0},
-                            {"time": "14:30", "temp": 4.8, "humidity": 89.0},
-                            {"time": "15:30", "temp": 4.9, "humidity": 88.5}
-                        ])
+                        defaults={'quantity': 0.0}
                     )
-                    
+                    proc_stock.quantity = float(proc_stock.quantity) + harvest_qty
+                    proc_stock.save()
 
-                    
-                    # 8.3 Processador processa o produto
-                    process_date = current_sim_date + datetime.timedelta(days=2)
-                    order_proc.is_processed = True
-                    order_proc.packaging_type = 'Cardboard'
-                    order_proc.preservation_treatment = 'Natural'
-                    order_proc.save()
-                    
-
-                    
-                    # 8.4 RetailStore compra o lote processado (MarketplaceOrder BUY)
-                    retail_date = current_sim_date + datetime.timedelta(days=3)
-                    order_retail = MarketplaceOrder.objects.create(
-                        requester=retailer_user,
-                        role='Retailer',
-                        order_type='BUY',
+                    # 8.3 Processador processa o produto (atualiza ConsolidatedStock RetailStore)
+                    retail_wh = warehouses['RetailStore'].location
+                    retail_stock, _ = ConsolidatedStock.objects.get_or_create(
+                        owner=retailer_user,
                         culture=subfamily,
-                        harvest_origin=harvest,
-                        quantity_kg=harvest_qty,
-                        price_per_kg=round(order_proc.price_per_kg + random.uniform(0.5, 0.8), 2),
-                        warehouse_location=warehouses['RetailStore'].location,
-                        caliber=harvest.caliber,
-                        soluble_solids=harvest.soluble_solids,
-                        quality_score=harvest.avg_quality_score,
-                        status='APPROVED',
-                        fulfilled_by=proc_user,
-                        created_at=timezone.make_aware(datetime.datetime.combine(retail_date, datetime.time(9, 30))),
-                        fulfilled_at=timezone.make_aware(datetime.datetime.combine(retail_date, datetime.time(10, 30))),
-                        transport_status='DELIVERED',
-                        planned_pickup_date=timezone.make_aware(datetime.datetime.combine(retail_date, datetime.time(11, 0))),
-                        planned_delivery_date=timezone.make_aware(datetime.datetime.combine(retail_date, datetime.time(15, 0))),
-                        actual_pickup_date=timezone.make_aware(datetime.datetime.combine(retail_date, datetime.time(11, 15))),
-                        actual_delivery_date=timezone.make_aware(datetime.datetime.combine(retail_date, datetime.time(14, 45))),
-                        transport_sensor_data=json.dumps([
-                            {"time": "11:30", "temp": 5.2, "humidity": 86.0},
-                            {"time": "12:30", "temp": 5.4, "humidity": 86.5},
-                            {"time": "13:30", "temp": 5.5, "humidity": 85.0}
-                        ]),
-                        is_processed=True,
-                        packaging_type='Cardboard',
-                        preservation_treatment='Natural'
+                        warehouse_location=retail_wh,
+                        defaults={'quantity': 0.0}
                     )
-                    
+                    retail_stock.quantity = float(retail_stock.quantity) + harvest_qty
+                    retail_stock.save()
 
-
-                    # 8.5 Vendas diárias com sazonalidade e ruído para os 8 Consumidores
+                    # 8.4 Vendas diárias com sazonalidade e ruído para os 8 Consumidores
                     remaining_qty = harvest_qty
                     sales_days = list(range(3, 14))  # Vendas contínuas do dia 3 ao dia 13
                     
@@ -393,7 +340,7 @@ class Command(BaseCommand):
                     
                     total_weight = sum(w[1] for w in day_weights)
                     
-                    # 2. Distribuir e criar as ordens
+                    # 2. Distribuir vendas
                     for idx_w, (sale_date, weight, day_idx) in enumerate(day_weights):
                         if remaining_qty <= 0:
                             break
@@ -407,45 +354,25 @@ class Command(BaseCommand):
                         else:
                             sale_qty = 0
                             
-                        # Limites de segurança da quantidade de venda individual
                         sale_qty = max(0.0, sale_qty)
                         if sale_qty < 5.0 and idx_w < len(day_weights) - 1:
-                            continue  # ignora vendas insignificantes exceto no último dia
+                            continue
                             
                         remaining_qty -= sale_qty
                         consumer_user = random.choice(consumer_users)
                         
-                        order_sale = MarketplaceOrder.objects.create(
-                            requester=consumer_user,
-                            role='Consumer',
-                            order_type='BUY',
-                            culture=subfamily,
-                            harvest_origin=harvest,
-                            quantity_kg=sale_qty,
-                            price_per_kg=round(order_retail.price_per_kg + random.uniform(0.7, 1.2), 2),
-                            warehouse_location="Consumer Location",
-                            caliber=harvest.caliber,
-                            soluble_solids=harvest.soluble_solids,
-                            quality_score=max(1, harvest.avg_quality_score - (day_idx // 2)),
-                            status='APPROVED',
-                            fulfilled_by=retailer_user,
-                            created_at=timezone.make_aware(datetime.datetime.combine(sale_date, datetime.time(15, 0))),
-                            fulfilled_at=timezone.make_aware(datetime.datetime.combine(sale_date, datetime.time(16, 0))),
-                            transport_status='DELIVERED',
-                            is_processed=True
-                        )
-                        
                         dossier_sale = {
                             "event": "Final_Consumer_Sale",
-                            "order_id": order_sale.pk,
+                            "batch_id": f"LOTE-{harvest.pk}",
                             "buyer": consumer_user.username,
                             "seller": "RetailStore",
                             "qty_kg": float(sale_qty),
-                            "price_per_kg": float(order_sale.price_per_kg),
+                            "price_per_kg": round(1.8 + random.uniform(0.5, 1.2), 2),
                             "date": sale_date.isoformat()
                         }
                         
                         try:
+                            from dashboard.services.blockchain_service import blockchain_service
                             blockchain_service.sign_and_submit_block(
                                 user_role='Consumer',
                                 batch_id=f"LOTE-{harvest.pk}-VENDA-{day_idx}",
@@ -454,8 +381,7 @@ class Command(BaseCommand):
                                 inputs=[f"LOTE-{harvest.pk}"],
                                 data_payload=dossier_sale
                             )
-                        except Exception as e:
-                            # Evita falhar se houver algum erro de blockchain
+                        except Exception:
                             pass
                             
                     batch_count += 1

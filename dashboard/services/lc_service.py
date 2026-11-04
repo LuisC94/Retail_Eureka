@@ -133,9 +133,11 @@ def calculate_harvest_quality(culture_name, firmness, brix, acidity):
         
         # Qualidade Base (0 - 100)
         quality_base = 100.0 * (0.35 * firm_score + 0.35 * ratio_score + 0.15 * brix_score + 0.15 * acidez_score)
-        return max(0.0, min(100.0, round(quality_base, 2)))
     except Exception as e:
         return 100.0
+
+
+def calculate_quality_decay_curve(culture_name, initial_score=10.0, sensor_readings=None):
     """
     Calcula a projeção da curva de degradação da qualidade (% de 0 a 100)
     ao longo dos próximos 15 dias com base nos sensores.
@@ -312,12 +314,8 @@ def generate_fallback_sensor_readings(warehouse):
             hum = round(min(100.0, max(10.0, fixed_h + random.uniform(-1.0, 1.0))), 1)
             ethylene = None
         elif meteo_source == 'IPMA':
-            if is_controlled:
-                temp = round(3.5 + random.uniform(-0.5, 0.5), 1)
-                hum = round(91.0 + random.uniform(-1.5, 1.5), 1)
-            else:
-                temp = round(base_temp + temp_amp * seasonal_factor + random.uniform(-1.2, 1.2), 1)
-                hum = round(max(20.0, min(100.0, base_hum - hum_amp * seasonal_factor + random.uniform(-2.5, 2.5))), 1)
+            temp = round(base_temp + temp_amp * seasonal_factor + random.uniform(-1.2, 1.2), 1)
+            hum = round(max(20.0, min(100.0, base_hum - hum_amp * seasonal_factor + random.uniform(-2.5, 2.5))), 1)
             ethylene = None
         elif meteo_source == 'JSON':
             # Modo JSON: usa fallback configurado para os dias sem sensor manual
@@ -325,12 +323,8 @@ def generate_fallback_sensor_readings(warehouse):
                 temp = round(fixed_t + random.uniform(-0.3, 0.3), 1)
                 hum = round(min(100.0, max(10.0, fixed_h + random.uniform(-1.0, 1.0))), 1)
             elif json_fallback == 'IPMA':
-                if is_controlled:
-                    temp = round(3.5 + random.uniform(-0.5, 0.5), 1)
-                    hum = round(91.0 + random.uniform(-1.5, 1.5), 1)
-                else:
-                    temp = round(base_temp + temp_amp * seasonal_factor + random.uniform(-1.2, 1.2), 1)
-                    hum = round(max(20.0, min(100.0, base_hum - hum_amp * seasonal_factor + random.uniform(-2.5, 2.5))), 1)
+                temp = round(base_temp + temp_amp * seasonal_factor + random.uniform(-1.2, 1.2), 1)
+                hum = round(max(20.0, min(100.0, base_hum - hum_amp * seasonal_factor + random.uniform(-2.5, 2.5))), 1)
             else: # NONE
                 temp = 4.0
                 hum = 90.0
@@ -358,4 +352,11 @@ def generate_fallback_sensor_readings(warehouse):
         WarehouseSensorReading.objects.bulk_create(readings)
         
     return len(readings)
+
+
+def ensure_warehouse_readings_30d(warehouse):
+    """
+    Garante que o armazém possui leituras meteorológicas/sensores para o ciclo de vida.
+    """
+    return generate_fallback_sensor_readings(warehouse)
 

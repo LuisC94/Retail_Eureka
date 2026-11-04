@@ -225,31 +225,38 @@ def calculate_lot_lifecycle_decay(
                 alphas.append(default_alpha)
                 packaging_methods.append(wh.packaging_method)
 
-        # Fallback if no readings supplied: build at least 1 day baseline
-        if not T_c:
-            harvest_dt = datetime.strptime(request.lot_identification.harvest_date, "%Y-%m-%d")
-            start_date_str = request.lot_identification.harvest_date
-            days_elapsed = max(1, (datetime.now().date() - harvest_dt.date()).days)
-            for d in range(days_elapsed):
-                T_c.append(None)
-                RH_pct.append(None)
-                E_ppm.append(None)
-                region_codes.append("PT-LVT")
-                alphas.append(default_alpha)
-                packaging_methods.append("Granel (Sem embalagem)")
-        
-        start_date = datetime.strptime(start_date_str or request.lot_identification.harvest_date, "%Y-%m-%d")
-        days = len(T_c)
-        
-        # Meteorological Imputation (Fixed Fallback vs IPMA Regional Normals)
-        fallback_mode = request.meteorology_and_imputation_strategy.get("json_fallback_mode", "IPMA")
-        if fallback_mode == "FIXED":
-            fixed_t = float(request.meteorology_and_imputation_strategy.get("fixed_temperature_celsius", 4.0))
-            fixed_rh = float(request.meteorology_and_imputation_strategy.get("fixed_humidity_percent", 90.0))
-            T_c_filled = [t if t is not None else fixed_t for t in T_c]
-            RH_pct_filled = [rh if rh is not None else fixed_rh for rh in RH_pct]
+        # Calculate actual days elapsed since harvest
+        harvest_dt = datetime.strptime(request.lot_identification.harvest_date, "%Y-%m-%d")
+        real_days_elapsed = max(0, (datetime.now().date() - harvest_dt.date()).days)
+
+        if real_days_elapsed == 0:
+            days = 0
+            T_c_filled = []
+            RH_pct_filled = []
         else:
-            T_c_filled, RH_pct_filled = fill_nulls_with_warehouse_sim(T_c, RH_pct, region_codes, alphas, start_date)
+            # Fallback if no readings supplied: build baseline for elapsed days
+            if not T_c:
+                start_date_str = request.lot_identification.harvest_date
+                for d in range(real_days_elapsed):
+                    T_c.append(None)
+                    RH_pct.append(None)
+                    E_ppm.append(None)
+                    region_codes.append("PT-LVT")
+                    alphas.append(default_alpha)
+                    packaging_methods.append("Granel (Sem embalagem)")
+            
+            start_date = datetime.strptime(start_date_str or request.lot_identification.harvest_date, "%Y-%m-%d")
+            days = min(len(T_c), real_days_elapsed) if T_c else real_days_elapsed
+            
+            # Meteorological Imputation (Fixed Fallback vs IPMA Regional Normals)
+            fallback_mode = request.meteorology_and_imputation_strategy.get("json_fallback_mode", "IPMA")
+            if fallback_mode == "FIXED":
+                fixed_t = float(request.meteorology_and_imputation_strategy.get("fixed_temperature_celsius", 4.0))
+                fixed_rh = float(request.meteorology_and_imputation_strategy.get("fixed_humidity_percent", 90.0))
+                T_c_filled = [t if t is not None else fixed_t for t in T_c[:days]]
+                RH_pct_filled = [rh if rh is not None else fixed_rh for rh in RH_pct[:days]]
+            else:
+                T_c_filled, RH_pct_filled = fill_nulls_with_warehouse_sim(T_c[:days], RH_pct[:days], region_codes[:days], alphas[:days], start_date)
         
         # Decide solver: Academic ODE (with Ethylene synthesis) vs Multi-attribute supply chain ODE
         has_ethylene = any(e is not None for e in E_ppm)
@@ -267,9 +274,13 @@ def calculate_lot_lifecycle_decay(
         
         f0 = request.lot_identification.initial_metrics.firmness
         if f0 is None:
+            f0 = request.lot_identification.initial_metrics.firmness_n
+        if f0 is None:
             f0 = float(preset["firmness_0_default"])
             
         a0 = request.lot_identification.initial_metrics.acidity
+        if a0 is None:
+            a0 = request.lot_identification.initial_metrics.acidity_percent
         if a0 is None:
             a0 = float(preset.get("acidity_0_default", 0.5))
 
@@ -299,7 +310,17 @@ def calculate_lot_lifecycle_decay(
                 current_owner_type=request.lot_identification.current_owner_type
             )
 
-        logger.info(f"[Lifecycle Service] Forecast for {fruit_key} (Lot {request.lot_identification.batch_id}): Quality={quality:.1f}, RSL={lifetime:.1f}d, Firmness={final_f:.1f}N, Brix={final_b:.1f}°Bx")
+        final_a = None
+        if arrays_dict and "acidity" in arrays_dict and len(arrays_dict["acidity"]) > 0:
+            final_a = float(arrays_dict["acidity"][-1])
+        elif a0 is not None:
+            final_a = float(a0)
+
+        final_mold = 0.0
+        if arrays_dict and "mold" in arrays_dict and len(arrays_dict["mold"]) > 0:
+            final_mold = float(arrays_dict["mold"][-1])
+
+        logger.info(f"[Lifecycle Service] Forecast for {fruit_key} (Lot {request.lot_identification.batch_id}): Quality={quality:.1f}, RSL={lifetime:.1f}d, Firmness={final_f:.1f}N, Brix={final_b:.1f}°Bx, Acidity={final_a if final_a is not None else 'N/A'}, Mold={final_mold*100:.1f}%")
 
         return ForecastResponse(
             service="lifecycle_inference",
@@ -311,6 +332,8 @@ def calculate_lot_lifecycle_decay(
             remaining_lifetime=round(lifetime, 1),
             firmness=round(final_f, 2),
             brix=round(final_b, 2),
+            acidity=round(final_a, 3) if final_a is not None else None,
+            mold=round(final_mold, 4),
             continuous_data=arrays_dict if request.plot_info else None
         )
         

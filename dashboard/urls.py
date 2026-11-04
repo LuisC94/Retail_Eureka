@@ -31,6 +31,7 @@ urlpatterns = [
     path('submit-delivery/', views.producer_submit_delivery, name='producer_submit_delivery'),
 
     # MARKETPLACE URLS
+    path('marketplace/', views.MarketplacePortalView.as_view(), name='marketplace_portal'),
     path('market/submit-order/', views.market_submit_order, name='market_submit_order'),
     path('market/accept-order/', views.market_accept_order, name='market_accept_order'),
 
@@ -65,13 +66,13 @@ urlpatterns = [
     path('buy-direct-makro/', views.buy_direct_makro, name='buy_direct_makro'),
     path('create-supply-contract/', views.create_supply_contract, name='create_supply_contract'),
     path('warehouse/<int:warehouse_id>/import-readings/', views.import_sensor_readings, name='import_sensor_readings'),
+    path('warehouse/<int:warehouse_id>/edit/', views.edit_warehouse, name='edit_warehouse'),
 
     # 4. APIs e Autenticação
     path('api/soil-characteristics/', api_views.get_soil_characteristics, name='api_soil_characteristics'),
-    path('api/harvest-history/<int:harvest_id>/', views.get_harvest_history, name='get_harvest_history'), # [NEW]
+    path('api/harvest-history/<str:harvest_id>/', views.get_harvest_history, name='get_harvest_history'), # [NEW]
     path('api/agent-simulation/', views.agent_simulation, name='api_agent_simulation'),
     path('api/agent-recommendations/', views.get_agent_recommendations, name='api_agent_recommendations'),
-    path('api/stock-recommendations/', views.get_stock_recommendations, name='api_stock_recommendations'),
     path('api/producer-agent-simulation/', views.producer_agent_simulation, name='api_producer_agent_simulation'),
     path('api/sensor-data/', views.get_sensor_data_from_sheet, name='get_sensor_data_from_sheet'),
     
@@ -83,12 +84,15 @@ urlpatterns = [
     path('api/download-template/', views.download_training_template, name='download_training_template'),
     
     # NOVAS ROTAS DE INTELIGÊNCIA ARTIFICIAL (MLP & PPO AGENT)
+    path('ai/forecast-status/', views.get_forecast_status_api, name='get_forecast_status_api'),
     path('ai/upload-sales/', views.upload_sales_history, name='upload_sales_history'),
     path('ai/infer-sales/', views.infer_sales_forecast, name='infer_sales_forecast'),
     path('ai/train-buyer-agent/', views.train_buyer_agent, name='train_buyer_agent'),
+    path('ai/buyer-agent-status/', views.get_buyer_agent_status, name='get_buyer_agent_status'),
     path('ai/toggle-buyer-agent/', views.toggle_buyer_agent_status, name='toggle_buyer_agent_status'),
     path('ai/run-buyer-agent/', views.run_buyer_agent_action, name='run_buyer_agent_action'),
     path('api/lc-decay-data/', views.get_lc_decay_data, name='get_lc_decay_data'),
+    path('api/lot-lifecycle-forecast/', views.get_lot_lifecycle_forecast, name='get_lot_lifecycle_forecast'),
     path('api/lot-lifecycle-json/<int:lot_id>/', views.download_lot_lifecycle_json, name='download_lot_lifecycle_json'),
     
     path('accounts/register/', views.RegisterView.as_view(), name='register'),

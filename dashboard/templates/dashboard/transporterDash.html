@@ -412,8 +412,8 @@
                 <a href="#" class="menu-item active" onclick="switchSidebarTab('home-view')">
                     🏠 Home
                 </a>
-                <a href="#" class="menu-item" onclick="switchSidebarTab('marketplace-view')">
-                    🤝 Marketplace
+                <a href="{% url 'marketplace_portal' %}" class="menu-item" style="background: rgba(0, 176, 116, 0.15); border-left: 4px solid #00b074; font-weight: 700;">
+                    🌐 Marketplace <span style="font-size:0.7em; background:#00b074; color:white; padding:2px 6px; border-radius:4px; margin-left:auto;">PORTAL ↗</span>
                 </a>
                 <a href="#" class="menu-item" onclick="switchSidebarTab('vehicles-view')">
                     🚚 Veículos / Frota
@@ -504,7 +504,7 @@
                             <tr>
                                 <td><strong>#{{ route.pk }}</strong></td>
                                 <td>{{ route.route_date|date:"d/m/Y" }}</td>
-                                <td><span style="background:#e0f2f1; padding:4px 10px; border-radius:10px; font-weight:bold; color:#004d40;">{{ route.orders.count }}</span></td>
+                                <td><span style="background:#e0f2f1; padding:4px 10px; border-radius:10px; font-weight:bold; color:#004d40;">{{ route.orders_count }}</span></td>
                                 <td><span style="font-size:0.85em; font-family:monospace; color:#555; background:#f5f5f5; padding:4px; border-radius:4px; display:inline-block; max-width: 350px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ route.optimized_path|default:"Sem caminho definido" }}</span></td>
                                 <td><strong>{{ route.total_weight_kg }} Kg</strong></td>
                                 <td>
@@ -549,7 +549,7 @@
                         <tbody>
                             {% for order in open_market_orders %}
                             <tr>
-                                <td>{{ order.fulfilled_at|date:"d/m H:i" }}</td>
+                                <td>{% if order.fulfilled_at %}{{ order.fulfilled_at|date:"d/m H:i" }}{% else %}{{ order.created_at|date:"d/m H:i" }}{% endif %}</td>
                                 <td>{{ order.requester.username }} ({{ order.role }})</td>
                                 <td>{{ order.fulfilled_by.username }}</td>
                                 <td>{{ order.culture.name }}</td>
@@ -803,7 +803,7 @@
                             contentDiv.innerHTML = '';
                             paginationDiv.style.display = 'none';
 
-                            fetch(`/dashboard/transporter/api/job-history/?page=${page}`)
+                            fetch(`{% url 'transporter_job_history_api' %}?page=${page}`)
                                 .then(response => {
                                     if (!response.ok) throw new Error('Erro na resposta do servidor');
                                     return response.json();
@@ -1138,6 +1138,44 @@
         let map;
         let routeLayerGroups = {};
         let allMapBounds = null;
+        let activeIsolatedRouteId = null;
+        let routeMeta = {};
+
+        function updateRouteChipsUI() {
+            const routesBarEl = document.getElementById('map-routes-bar');
+            if (!routesBarEl) return;
+            const buttons = routesBarEl.querySelectorAll('.route-chip-btn');
+            buttons.forEach(btn => {
+                const rId = btn.getAttribute('data-route-id');
+                const meta = routeMeta[rId];
+                if (!meta) return;
+                if (activeIsolatedRouteId === null) {
+                    btn.style.background = '#ffffff';
+                    btn.style.color = meta.color;
+                    btn.style.border = `2px solid ${meta.color}`;
+                    btn.style.opacity = '1';
+                    btn.style.transform = 'scale(1)';
+                    btn.style.boxShadow = '0 2px 5px rgba(0,0,0,0.05)';
+                    btn.innerHTML = `<span style="width: 10px; height: 10px; border-radius: 50%; background: ${meta.color}; display: inline-block;"></span> ${meta.display_id} (${meta.weight} Kg)`;
+                } else if (String(activeIsolatedRouteId) === String(rId)) {
+                    btn.style.background = meta.color;
+                    btn.style.color = '#ffffff';
+                    btn.style.border = `2px solid ${meta.color}`;
+                    btn.style.opacity = '1';
+                    btn.style.transform = 'scale(1.05)';
+                    btn.style.boxShadow = '0 4px 12px rgba(0,0,0,0.25)';
+                    btn.innerHTML = `✓ ${meta.display_id} (${meta.weight} Kg)`;
+                } else {
+                    btn.style.background = '#f9f9f9';
+                    btn.style.color = '#888888';
+                    btn.style.border = '2px solid #e0e0e0';
+                    btn.style.opacity = '0.55';
+                    btn.style.transform = 'scale(0.98)';
+                    btn.style.boxShadow = 'none';
+                    btn.innerHTML = `<span style="width: 8px; height: 8px; border-radius: 50%; background: #ccc; display: inline-block;"></span> ${meta.display_id}`;
+                }
+            });
+        }
 
         function initMap() {
             const mapContainer = document.getElementById('leaflet-map');
@@ -1151,12 +1189,14 @@
             
             map = L.map('leaflet-map').setView([39.5, -8.0], 7);
             
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 18,
-                attribution: '© OpenStreetMap contributors'
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19,
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, TomTom'
             }).addTo(map);
 
             routeLayerGroups = {};
+            routeMeta = {};
+            activeIsolatedRouteId = null;
             
             const routesDataEl = document.getElementById('active-routes-json');
             const routesBarEl = document.getElementById('map-routes-bar');
@@ -1180,15 +1220,32 @@
                         const routeCoords = [];
                         const routeLayerGroup = L.featureGroup().addTo(map);
                         
+                        routeMeta[route.id] = {
+                            color: color,
+                            display_id: route.display_id,
+                            weight: route.total_weight_kg
+                        };
+                        
                         // Criar botão/chip interativo na barra de rotas
                         if (routesBarEl) {
                             const btn = document.createElement('button');
                             btn.type = 'button';
                             btn.className = 'route-chip-btn';
+                            btn.setAttribute('data-route-id', route.id);
                             btn.style.cssText = `background: white; border: 2px solid ${color}; color: ${color}; padding: 6px 14px; border-radius: 20px; font-size: 0.85em; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: all 0.2s ease;`;
                             btn.innerHTML = `<span style="width: 10px; height: 10px; border-radius: 50%; background: ${color}; display: inline-block;"></span> ${route.display_id} (${route.total_weight_kg} Kg)`;
-                            btn.onmouseover = () => { btn.style.background = color; btn.style.color = '#ffffff'; };
-                            btn.onmouseout = () => { btn.style.background = '#ffffff'; btn.style.color = color; };
+                            btn.onmouseover = () => { 
+                                if (String(activeIsolatedRouteId) !== String(route.id)) {
+                                    btn.style.background = color; 
+                                    btn.style.color = '#ffffff'; 
+                                }
+                            };
+                            btn.onmouseout = () => { 
+                                if (String(activeIsolatedRouteId) !== String(route.id)) {
+                                    btn.style.background = '#ffffff'; 
+                                    btn.style.color = color; 
+                                }
+                            };
                             btn.onclick = () => focusRouteOnMap(route.id);
                             routesBarEl.appendChild(btn);
                         }
@@ -1335,9 +1392,18 @@
         }
 
         function fitAllRoutes() {
-            if (map && allMapBounds && allMapBounds.isValid()) {
-                map.fitBounds(allMapBounds, { padding: [50, 50], maxZoom: 13 });
+            activeIsolatedRouteId = null;
+            if (map) {
+                Object.values(routeLayerGroups).forEach(group => {
+                    if (!map.hasLayer(group)) {
+                        map.addLayer(group);
+                    }
+                });
+                if (allMapBounds && allMapBounds.isValid()) {
+                    map.fitBounds(allMapBounds, { padding: [50, 50], maxZoom: 13 });
+                }
             }
+            updateRouteChipsUI();
         }
 
         function focusRouteOnMap(routeId) {
@@ -1345,12 +1411,33 @@
             setTimeout(() => {
                 if (map) {
                     map.invalidateSize();
-                    const group = routeLayerGroups[routeId];
-                    if (group && group.getBounds && group.getBounds().isValid()) {
-                        map.fitBounds(group.getBounds(), { padding: [60, 60], maxZoom: 14 });
-                    } else if (allMapBounds && allMapBounds.isValid()) {
-                        map.fitBounds(allMapBounds, { padding: [50, 50], maxZoom: 13 });
+                    
+                    // Se clicar na mesma rota que já está isolada, voltar a mostrar todas
+                    if (String(activeIsolatedRouteId) === String(routeId)) {
+                        fitAllRoutes();
+                        return;
                     }
+                    
+                    activeIsolatedRouteId = String(routeId);
+                    
+                    // Mostrar apenas a rota selecionada e esconder as outras
+                    Object.keys(routeLayerGroups).forEach(id => {
+                        const group = routeLayerGroups[id];
+                        if (String(id) === String(routeId)) {
+                            if (!map.hasLayer(group)) {
+                                map.addLayer(group);
+                            }
+                            if (group.getBounds && group.getBounds().isValid()) {
+                                map.fitBounds(group.getBounds(), { padding: [60, 60], maxZoom: 14 });
+                            }
+                        } else {
+                            if (map.hasLayer(group)) {
+                                map.removeLayer(group);
+                            }
+                        }
+                    });
+                    
+                    updateRouteChipsUI();
                 }
             }, 250);
         }

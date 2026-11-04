@@ -45,22 +45,22 @@ def get_culture_model_dir(user_id: Union[int, str], culture_id: Union[int, str])
 # ============================================================
 
 class MarketRecord(BaseModel):
-    date: str = Field(..., example="2026-08-01", description="Data no formato YYYY-MM-DD")
-    real_value: float = Field(..., example=120.0, description="Vendas/procura real registada em Kg")
-    prediction: float = Field(..., example=125.0, description="Previsão gerada pelo Forecast Agent em Kg")
-    price: Optional[float] = Field(2.0, example=2.15, description="Preço de venda por Kg")
-    temperature: Optional[float] = Field(1.5, example=1.5, description="Temperatura em câmara fria (°C)")
-    humidity: Optional[float] = Field(92.0, example=92.0, description="Humidade relativa (%)")
-    ethylene: Optional[float] = Field(0.05, example=0.05, description="Nível de etileno (ppm)")
-    volume: Optional[float] = Field(0.002, example=0.002, description="Volume do produto por Kg (m3)")
+    date: str = Field(..., examples=["2026-08-01"], description="Data no formato YYYY-MM-DD")
+    real_value: float = Field(..., examples=[120.0], description="Vendas/procura real registada em Kg")
+    prediction: float = Field(..., examples=[125.0], description="Previsão gerada pelo Forecast Agent em Kg")
+    price: Optional[float] = Field(2.0, examples=[2.15], description="Preço de venda por Kg")
+    temperature: Optional[float] = Field(1.5, examples=[1.5], description="Temperatura em câmara fria (°C)")
+    humidity: Optional[float] = Field(92.0, examples=[92.0], description="Humidade relativa (%)")
+    ethylene: Optional[float] = Field(0.05, examples=[0.05], description="Nível de etileno (ppm)")
+    volume: Optional[float] = Field(0.002, examples=[0.002], description="Volume do produto por Kg (m3)")
 
 
 class TrainRequest(BaseModel):
-    user_id: Union[int, str] = Field(..., example=1, description="ID do Utilizador na plataforma")
-    culture_id: Union[int, str] = Field(..., example=3, description="ID da Cultura / Subfamília de produto")
-    fruit_key: Optional[str] = Field("maca_gala", example="maca_gala", description="Preset biológico: maca_gala, maca_fuji, kiwi_hayward, maca_golden, maca_reineta")
-    max_capacity: Optional[float] = Field(500.0, example=500.0, description="Capacidade máxima de armazenamento em armazém")
-    episodes: Optional[int] = Field(300, example=300, description="Número de episódios de simulação PPO para treino")
+    user_id: Union[int, str] = Field(..., examples=[1], description="ID do Utilizador na plataforma")
+    culture_id: Union[int, str] = Field(..., examples=[3], description="ID da Cultura / Subfamília de produto")
+    fruit_key: Optional[str] = Field("maca_gala", examples=["maca_gala"], description="Preset biológico: maca_gala, maca_fuji, kiwi_hayward, maca_golden, maca_reineta")
+    max_capacity: Optional[float] = Field(500.0, examples=[500.0], description="Capacidade máxima de armazenamento em armazém")
+    episodes: Optional[int] = Field(300, examples=[300], description="Número de episódios de simulação PPO para treino")
     train_data: List[MarketRecord] = Field(..., description="Série histórica de mercado com previsões integradas")
 
 
@@ -78,31 +78,31 @@ class TrainResponse(BaseModel):
 
 
 class DecideRequest(BaseModel):
-    user_id: Union[int, str] = Field(..., example=1, description="ID do Utilizador")
-    culture_id: Union[int, str] = Field(..., example=3, description="ID da Cultura")
-    date: Optional[str] = Field(None, example="2026-09-16", description="Data da decisão (default: hoje)")
+    user_id: Union[int, str] = Field(..., examples=[1], description="ID do Utilizador")
+    culture_id: Union[int, str] = Field(..., examples=[3], description="ID da Cultura")
+    date: Optional[str] = Field(None, examples=["2026-09-16"], description="Data da decisão (default: hoje)")
     current_stock_profile: Optional[List[float]] = Field(
-        None, example=[50.0, 20.0, 10.0, 5.0],
+        None, examples=[[50.0, 20.0, 10.0, 5.0]],
         description="Stock por prateleira [G0 (>=4d), G1 (3d), G2 (2d), G3 (1d)] em Kg"
     )
     current_stock_total_kg: Optional[float] = Field(
-        None, example=85.0,
+        None, examples=[85.0],
         description="Stock total em armazém em Kg (usado se current_stock_profile não for fornecido)"
     )
-    in_transit_kg: float = Field(0.0, example=0.0, description="Quantidade já encomendada a chegar amanhã")
-    prediction_today_kg: float = Field(..., example=140.0, description="Previsão de procura para hoje em Kg")
-    prediction_tomorrow_kg: Optional[float] = Field(None, example=135.0, description="Previsão de procura para amanhã em Kg")
+    in_transit_kg: float = Field(0.0, examples=[0.0], description="Quantidade já encomendada a chegar amanhã")
+    prediction_today_kg: float = Field(..., examples=[140.0], description="Previsão de procura para hoje em Kg")
+    prediction_tomorrow_kg: Optional[float] = Field(None, examples=[135.0], description="Previsão de procura para amanhã em Kg")
     recent_sales_lags: Optional[List[float]] = Field(
-        None, example=[130.0, 125.0],
+        None, examples=[[130.0, 125.0]],
         description="Vendas reais mais recentes [t-1, t-2] em Kg"
     )
-    price_today: Optional[float] = Field(2.0, example=2.15, description="Preço de venda hoje por Kg")
+    price_today: Optional[float] = Field(2.0, examples=[2.15], description="Preço de venda hoje por Kg")
     recent_prices: Optional[List[float]] = Field(
-        None, example=[2.10, 2.15, 2.05, 2.20],
+        None, examples=[[2.10, 2.15, 2.05, 2.20]],
         description="Histórico de preços recentes (janela de 15 dias)"
     )
-    max_capacity: Optional[float] = Field(None, example=500.0, description="Capacidade máxima de armazém (sobrescreve o default)")
-    max_order_limit: Optional[float] = Field(None, example=200.0, description="Limite máximo diário de encomenda")
+    max_capacity: Optional[float] = Field(None, examples=[500.0], description="Capacidade máxima de armazém (sobrescreve o default)")
+    max_order_limit: Optional[float] = Field(None, examples=[200.0], description="Limite máximo diário de encomenda")
 
 
 class HeuristicsComparison(BaseModel):

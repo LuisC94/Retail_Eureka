@@ -1,8 +1,7 @@
 import re
 from django import forms
 from django.contrib.auth.models import User, Group
-# Importar apenas os modelos necessários
-from .models import PlantationPlan, Product, Harvest, QUALITY_SCORE_CHOICES, Sensor, Warehouse, SENSOR_TYPE_CHOICES, SoilCharacteristic, PlantationEvent, FertilizerSyntheticData, FertilizerOrganicData, SoilCorrectiveData, PestControlData, MachineryData, FuelData, ElectricEnergyData, IrrigationWaterData, ProductSubFamily, PlantationCrop, MarketplaceOrder, Vehicle, Route
+from .models import PlantationPlan, Harvest, QUALITY_SCORE_CHOICES, Sensor, Warehouse, SENSOR_TYPE_CHOICES, SoilCharacteristic, PlantationEvent, FertilizerSyntheticData, FertilizerOrganicData, SoilCorrectiveData, PestControlData, MachineryData, FuelData, ElectricEnergyData, IrrigationWaterData, ProductSubFamily, PlantationCrop, Vehicle, Route
 from django.forms import CheckboxSelectMultiple
 
 # Lista de Roles (mantida)
@@ -49,16 +48,6 @@ class UserRegisterForm(forms.ModelForm):
                 "As senhas não coincidem. Por favor, tente novamente."
             )
         return cleaned_data
-
-# --- 1. Formulário de Produto (Registar um Produto) ---
-class ProductRegistrationForm(forms.ModelForm):
-    class Meta:
-        model = Product
-        fields = [
-            'name',
-            'category',
-            'price',
-        ]
 
 # --- 6. Formulário de Registo de Característica de Solo (POPUP) ---
 class SoilCharacteristicForm(forms.ModelForm):
@@ -254,7 +243,7 @@ class PlantationEventForm(forms.ModelForm):
 class HarvestForm(forms.ModelForm):
     plantation = forms.ModelChoiceField(
         queryset=PlantationPlan.objects.all(), 
-        label='Plantation',
+        label='Plano de Plantação',
         empty_label="--- Select Plantation ---",
         required=False,
         widget=forms.Select(attrs={'class': 'form-control', 'id': 'harvest_plantation_select'})
@@ -262,7 +251,7 @@ class HarvestForm(forms.ModelForm):
     
     subfamily = forms.ModelChoiceField(
         queryset=ProductSubFamily.objects.all(),
-        label='Culture (Subfamily)',
+        label='Cultura / Variedade',
         empty_label="--- Select Culture ---",
         required=True,
         widget=forms.Select(attrs={'class': 'form-control', 'id': 'harvest_subfamily_select'})
@@ -271,8 +260,8 @@ class HarvestForm(forms.ModelForm):
     utilized_quantity_kg = forms.DecimalField(
         required=False,
         initial=0.0,
-        label='Waste (Kg)',
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': '0.0'})
+        label='Desperdício / Waste (Kg)',
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_utilized_quantity_kg', 'placeholder': '0.0'})
     )
     
     firmness = forms.DecimalField(
@@ -288,7 +277,7 @@ class HarvestForm(forms.ModelForm):
     
     soluble_solids = forms.DecimalField(
         required=False,
-        label='Teor de Açúcar / Brix (°Bx)',
+        label='Brix / Teor de Açúcar (°Bx)',
         widget=forms.NumberInput(attrs={
             'class': 'form-control quality-input',
             'step': '0.1',
@@ -350,18 +339,30 @@ class HarvestForm(forms.ModelForm):
             'harvest_date', 
             'harvest_quantity_kg', 
             'utilized_quantity_kg',
+            'warehouse',
             'firmness',
             'soluble_solids',
             'acidity',
             'caliber',
-            'warehouse'
         ]
+        labels = {
+            'plantation': 'Plano de Plantação',
+            'subfamily': 'Cultura / Variedade',
+            'harvest_date': 'Data da Colheita',
+            'harvest_quantity_kg': 'Quantidade Colhida (Kg)',
+            'utilized_quantity_kg': 'Desperdício / Waste (Kg)',
+            'warehouse': 'Armazém de Destino',
+            'firmness': 'Firmeza (N / kg/cm²)',
+            'soluble_solids': 'Brix / Teor de Açúcar (°Bx)',
+            'acidity': 'Acidez (g/L / %)',
+            'caliber': 'Calibre (mm)',
+        }
         widgets = {
-            'harvest_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'harvest_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control', 'id': 'id_harvest_date'}),
             'plantation': forms.Select(attrs={'class': 'form-control', 'id': 'harvest_plantation_select'}),
             'subfamily': forms.Select(attrs={'class': 'form-control', 'id': 'harvest_subfamily_select'}),
-            'harvest_quantity_kg': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ex: 500.0'}),
-            'warehouse': forms.Select(attrs={'class': 'form-control'}),
+            'harvest_quantity_kg': forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_harvest_quantity_kg', 'placeholder': 'Ex: 500.0'}),
+            'warehouse': forms.Select(attrs={'class': 'form-control', 'id': 'id_harvest_warehouse'}),
         }
 
 # --- 4. Formulário de Registo de Sensor (Para o Popup) ---
@@ -448,77 +449,111 @@ class VehicleForm(forms.ModelForm):
 # ----------------------------------------------------------------------
 # 6. FORMULÁRIO DE MARKETPLACE
 # ----------------------------------------------------------------------
+# 6. FORMULÁRIOS DE MARKETPLACE (DESACOPLADOS / WEB SERVICE)
+# ----------------------------------------------------------------------
 
-class MarketplaceOrderForm(forms.ModelForm):
-    class Meta:
-        model = MarketplaceOrder
-        fields = ['order_type', 'culture', 'quantity_kg', 'warehouse_location', 
-                  'min_caliber', 'min_soluble_solids', 'min_quality_score', 'price_per_kg']
-        widgets = {
-            'order_type': forms.Select(attrs={'class': 'form-control'}),
-            'culture': forms.Select(attrs={'class': 'form-control'}),
-            'quantity_kg': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'price_per_kg': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'id': 'id_price_per_kg_dynamic'}),
-            'warehouse_location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Armazém Norte / Sede'}),
-            
-            # Quality Filters (Buy)
-            'min_caliber': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Min mm'}),
-            'min_soluble_solids': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Min Brix'}),
-            'min_quality_score': forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'max': '10', 'placeholder': 'Min Score (1-10)'}),
-        }
-        labels = {
-            'warehouse_location': 'Localização para Entrega/Recolha',
-            'min_caliber': 'Calibre Mínimo (> mm)',
-            'min_soluble_solids': 'Brix Mínimo (> Brix)',
-            'min_quality_score': 'Qualidade Mínima (> 0-10)',
-            'price_per_kg': 'Preço (€/kg)',
-        }
-
+class MarketplaceOrderForm(forms.Form):
+    ORDER_TYPE_CHOICES = [
+        ('BUY', 'Purchase Request (Compra)'),
+        ('SELL', 'Export Offer (Venda/Exportação)'),
+    ]
+    order_type = forms.ChoiceField(
+        choices=ORDER_TYPE_CHOICES, 
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Tipo de Pedido'
+    )
+    culture = forms.ModelChoiceField(
+        queryset=ProductSubFamily.objects.all(),
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Cultura'
+    )
+    quantity_kg = forms.DecimalField(
+        max_digits=10, decimal_places=2, required=True,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        label='Quantidade (Kg)'
+    )
+    price_per_kg = forms.DecimalField(
+        max_digits=10, decimal_places=2, required=False,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'id': 'id_price_per_kg_dynamic'}),
+        label='Preço (€/kg)'
+    )
+    warehouse_location = forms.CharField(
+        max_length=255, required=True,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Armazém Norte / Sede'}),
+        label='Localização para Entrega/Recolha'
+    )
+    
+    # Quality Filters (Buy/Sell)
+    min_caliber = forms.DecimalField(
+        max_digits=5, decimal_places=2, required=False,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Min mm'}),
+        label='Calibre Mínimo (> mm)'
+    )
+    min_soluble_solids = forms.DecimalField(
+        max_digits=5, decimal_places=2, required=False,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Min Brix'}),
+        label='Brix Mínimo (> Brix)'
+    )
+    min_quality_score = forms.DecimalField(
+        max_digits=4, decimal_places=2, required=False,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'max': '10', 'step': '0.1', 'placeholder': 'Min Score (1-10)'}),
+        label='Qualidade Mínima (> 0-10)'
+    )
 
 
 class RetailerMarketplaceOrderForm(MarketplaceOrderForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Make quality fields mandatory for Retailers
         self.fields['min_caliber'].required = True
         self.fields['min_soluble_solids'].required = True
         self.fields['min_quality_score'].required = True
 
-class MarketSellOrderForm(forms.ModelForm):
+
+class MarketSellOrderForm(forms.Form):
+    harvest_origin = forms.ModelChoiceField(
+        queryset=Harvest.objects.none(),
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_sell_harvest_origin'}),
+        label='Lote de Origem (Stock Disponível)'
+    )
+    quantity_kg = forms.DecimalField(
+        max_digits=10, decimal_places=2, required=True,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'id': 'id_sell_quantity_kg'}),
+        label='Quantidade a Vender (Kg)'
+    )
+    price_per_kg = forms.DecimalField(
+        max_digits=10, decimal_places=2, required=True,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'id': 'id_sell_price_per_kg'}),
+        label='Preço de Venda (€/kg)'
+    )
+    warehouse_location = forms.CharField(
+        max_length=255, required=True,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Armazém Central', 'id': 'id_sell_warehouse_location'}),
+        label='Local de Recolha'
+    )
+    caliber = forms.DecimalField(
+        max_digits=5, decimal_places=2, required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly', 'id': 'id_sell_caliber'}),
+        label='Calibre (mm)'
+    )
+    soluble_solids = forms.DecimalField(
+        max_digits=5, decimal_places=2, required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly', 'id': 'id_sell_soluble_solids'}),
+        label='Brix'
+    )
+    quality_score = forms.DecimalField(
+        max_digits=4, decimal_places=2, required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly', 'id': 'id_sell_quality_score'}),
+        label='Score'
+    )
+
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         if user:
-            # Filtra apenas colheitas do produtor e que tenham stock > 0
             self.fields['harvest_origin'].queryset = Harvest.objects.filter(producer=user).order_by('-harvest_date')
-            
-            # Atualiza labels das opções para mostrar stock
-            # (O __str__ do Harvest já foi atualizado no models.py para mostrar stock)
-
-    class Meta:
-        model = MarketplaceOrder
-        fields = ['harvest_origin', 'quantity_kg', 'price_per_kg', 'warehouse_location',
-                  'caliber', 'soluble_solids', 'quality_score']
-        widgets = {
-            'harvest_origin': forms.Select(attrs={'class': 'form-control', 'id': 'id_sell_harvest_origin'}),
-            'quantity_kg': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'id': 'id_sell_quantity_kg'}),
-            'price_per_kg': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'id': 'id_sell_price_per_kg'}),
-            'warehouse_location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Armazém Central', 'id': 'id_sell_warehouse_location'}),
-            
-            # Read-only Auto-filled Quality Data
-            'caliber': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly', 'style': 'background-color: #e9ecef;', 'id': 'id_sell_caliber'}),
-            'soluble_solids': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly', 'style': 'background-color: #e9ecef;', 'id': 'id_sell_soluble_solids'}),
-            'quality_score': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly', 'style': 'background-color: #e9ecef;', 'id': 'id_sell_quality_score'}),
-        }
-        labels = {
-            'harvest_origin': 'Lote de Origem (Stock Disponível)',
-            'quantity_kg': 'Quantidade a Vender (Kg)',
-            'price_per_kg': 'Preço de Venda (€/kg)',
-            'warehouse_location': 'Local de Recolha',
-            'caliber': 'Calibre (mm)',
-            'soluble_solids': 'Brix',
-            'quality_score': 'Score',
-        }
 
     def clean(self):
         cleaned_data = super().clean()
@@ -528,52 +563,43 @@ class MarketSellOrderForm(forms.ModelForm):
         if harvest and qty:
             if qty > harvest.current_stock_kg:
                 raise forms.ValidationError(f"Quantidade excede o stock disponível ({harvest.current_stock_kg} kg).")
-            
-            # Preencher automaticamente
-            self.instance.culture = harvest.subfamily
-            self.instance.order_type = 'SELL'
+            cleaned_data['culture'] = harvest.subfamily
+            cleaned_data['order_type'] = 'SELL'
             
         return cleaned_data
 
+
 # ----------------------------------------------------------------------
-# 7. FORMS LOGISTICA TRANSPORTADOR (LIACC INTERFACE)
+# 7. FORMS LOGISTICA TRANSPORTADOR & PROCESSADOR
 # ----------------------------------------------------------------------
 
-class TransportPlanForm(forms.ModelForm):
-    class Meta:
-        model = MarketplaceOrder
-        fields = ['planned_pickup_date', 'planned_delivery_date']
-        widgets = {
-            'planned_pickup_date': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
-            'planned_delivery_date': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
-        }
-        labels = {
-            'planned_pickup_date': 'ETA Recolha (Planeado)',
-            'planned_delivery_date': 'ETA Entrega (Planeado)',
-        }
+class TransportPlanForm(forms.Form):
+    planned_pickup_date = forms.DateTimeField(
+        required=True,
+        widget=forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+        label='ETA Recolha (Planeado)'
+    )
+    planned_delivery_date = forms.DateTimeField(
+        required=True,
+        widget=forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+        label='ETA Entrega (Planeado)'
+    )
 
-class TransportDeliveryForm(forms.ModelForm):
-    class Meta:
-        model = MarketplaceOrder
-        fields = ['transport_sensor_data']
-        widgets = {
-            'transport_sensor_data': forms.Textarea(attrs={'class': 'form-control', 'rows': 5, 'placeholder': 'Cole aqui o JSON dos sensores...'})
-        }
-        labels = {
-            'transport_sensor_data': 'Relatório de Sensores (JSON)',
-        }
+class TransportDeliveryForm(forms.Form):
+    transport_sensor_data = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 5, 'placeholder': 'Cole aqui o JSON dos sensores...'}),
+        label='Relatório de Sensores (JSON)'
+    )
 
-# --- PROCESSOR FORMS ---
-
-class ProcessorProcessingForm(forms.ModelForm):
-    class Meta:
-        model = MarketplaceOrder
-        fields = ['packaging_type', 'preservation_treatment']
-        labels = {
-            'packaging_type': 'Tipo de Embalagem',
-            'preservation_treatment': 'Tratamento de Conservação',
-        }
-        widgets = {
-            'packaging_type': forms.Select(attrs={'class': 'form-control'}),
-            'preservation_treatment': forms.Select(attrs={'class': 'form-control'}),
-        }
+class ProcessorProcessingForm(forms.Form):
+    packaging_type = forms.ChoiceField(
+        choices=[('Plastic', 'Plástico'), ('Cardboard', 'Cartão'), ('Other', 'Outro')],
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Tipo de Embalagem'
+    )
+    preservation_treatment = forms.ChoiceField(
+        choices=[('Natural', 'Tratamento Natural'), ('Conventional', 'Convencional/Químico'), ('None', 'Nenhum')],
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Tratamento de Conservação'
+    )

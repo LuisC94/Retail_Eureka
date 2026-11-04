@@ -19,7 +19,7 @@ def create_genesis_dossier(harvest):
     }
 
     # B. Informação do Armazém (Onde está guardado atualmente)
-    warehouse = Warehouse.objects.filter(owner=harvest.producer).first()
+    warehouse = harvest.warehouse if harvest.warehouse else Warehouse.objects.filter(owner=harvest.producer).first()
     warehouse_info = {
         "id": warehouse.warehouse_id if warehouse else "N/A",
         "location": warehouse.location if warehouse else "Unknown",
