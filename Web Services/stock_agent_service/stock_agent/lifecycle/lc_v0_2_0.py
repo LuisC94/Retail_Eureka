@@ -166,7 +166,7 @@ PRESETS = {
     },
     "apple_gala": {
         "label": "Apple (Gala)", "Tref_C": 5.0, "Ea_J": 64000, "k_firm_ref": 0.0085, "beta_RH": 0.9, "RH_ref": 90,
-        "brix_min": 11.5, "brix_max": 18.5, "brix_g": 0.25, "brix_0_default": 13.0, "qual_brix_target": 14.5,
+        "brix_min": 8.0, "brix_max": 17.4, "brix_g": 0.18, "brix_0_default": 13.0, "qual_brix_target": 14.5,
         "firmness_min": 9.0, "firmness_0_default": 60.0, "qual_firmness_threshold": 28.0,
         "acidity_0_default": 0.4, "acidity_min": 0.2, "k_acidity_ref": 0.02, "Ea_acidity_J": 55000, "qual_acidity_target": 0.5,
         "SL_ref": 75.0, "Ea_SL_J": 42000.0, "E0_int": 0.015, "Eref_prod": 0.18, "E_t0": 10, "E_g": 0.9, "E_auto": 0.5, "E_decay": 0.65, "Ea_E_J": 52000, "E_ext_shift": 2.2, "alpha_E": 1.3,
@@ -175,7 +175,7 @@ PRESETS = {
     },
     "apple_golden": {
         "label": "Apple (Golden)", "Tref_C": 5.0, "Ea_J": 75000, "k_firm_ref": 0.012, "beta_RH": 0.8, "RH_ref": 90,
-        "brix_min": 11.5, "brix_max": 19.0, "brix_g": 0.18, "brix_0_default": 13.5, "qual_brix_target": 14.5,
+        "brix_min": 8.0, "brix_max": 19.0, "brix_g": 0.12, "brix_0_default": 13.5, "qual_brix_target": 14.5,
         "firmness_min": 12.0, "firmness_0_default": 72.0, "qual_firmness_threshold": 35.0,
         "acidity_0_default": 0.5, "acidity_min": 0.25, "k_acidity_ref": 0.02, "Ea_acidity_J": 55000, "qual_acidity_target": 0.6,
         "SL_ref": 120.0, "Ea_SL_J": 45000.0, "E0_int": 0.01, "Eref_prod": 0.10, "E_t0": 18, "E_g": 0.6, "E_auto": 0.35, "E_decay": 0.55, "Ea_E_J": 52000, "E_ext_shift": 1.8, "alpha_E": 0.8,

@@ -405,13 +405,10 @@
             </div>
 
             <nav>
-                <a href="#" class="menu-item active" onclick="switchSidebarTab('home-view')">
-                    🏠 Home
-                </a>
                 <a href="{% url 'marketplace_portal' %}" class="menu-item" style="background: rgba(0, 176, 116, 0.15); border-left: 4px solid #00b074; font-weight: 700;">
                     🌐 Marketplace <span style="font-size:0.7em; background:#00b074; color:white; padding:2px 6px; border-radius:4px; margin-left:auto;">PORTAL ↗</span>
                 </a>
-                <a href="#" class="menu-item" onclick="switchSidebarTab('purchases-view')">
+                <a href="#" class="menu-item active" onclick="switchSidebarTab('purchases-view')">
                     🛒 My Purchases
                 </a>
             </nav>
@@ -431,29 +428,6 @@
                         {% csrf_token %}
                         <button type="submit" class="logout-button">Logout</button>
                     </form>
-                </div>
-            </div>
-
-            <!-- HOME VIEW -->
-            <div id="home-view" class="tab-content active">
-                <h3 style="color: #00796b; margin-bottom: 20px;">Global Supply Chain Map</h3>
-                <div class="supply-map">
-                     - Map Integration Plugin (Leaflet/Google Maps) -
-                </div>
-                
-                <h3 style="color: #00796b; margin-bottom: 20px;">Key Performance Indicators</h3>
-                <div class="kpi-section">
-                    <div class="kpi-card">
-                        <div class="kpi-title">Customer Satisfaction</div>
-                        <div class="kpi-value">4.8/5 ⭐</div>
-                        <div class="kpi-trend">Stable</div>
-                    </div>
-                     <!-- Add more dummy KPIs if needed to match design richness -->
-                     <div class="kpi-card">
-                        <div class="kpi-title">Active Orders</div>
-                        <div class="kpi-value">12</div>
-                        <div class="kpi-trend">Processing</div>
-                    </div>
                 </div>
             </div>
 
@@ -815,7 +789,7 @@
             </div>
 
             <!-- MY PURCHASES & STOCK VIEW -->
-            <div id="purchases-view" class="tab-content" style="display: none;">
+            <div id="purchases-view" class="tab-content active">
                 <!-- FILTERABLE PURCHASED STOCK SECTION -->
                 <div class="data-table-container">
                     <h3>📦 Purchased Stock</h3>
@@ -1233,7 +1207,8 @@
             
             // Restore State on Load
             const savedSidebar = localStorage.getItem('activeSidebarTab');
-            if(savedSidebar && typeof switchSidebarTab === 'function') {
+            // Só restaurar separadores que existem neste perfil (ex.: 'home-view' foi removido)
+            if(savedSidebar && document.getElementById(savedSidebar) && typeof switchSidebarTab === 'function') {
                 switchSidebarTab(savedSidebar);
             }
             

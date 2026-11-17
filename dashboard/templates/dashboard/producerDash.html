@@ -2500,7 +2500,7 @@
                             <div style="background: #fdfbf7; border: 2px solid #ffe082; border-radius: 16px; padding: 20px; text-align: center;">
                                 <span style="font-size: 0.85em; text-transform: uppercase; font-weight: 700; color: #b78103; display: block; margin-bottom: 6px;">Índice de Qualidade Comercial</span>
                                 <div style="font-size: 2.2em; font-weight: 800; color: #e65100;" id="lc-quality-score">- / 100</div>
-                                <div id="lc-quality-label" style="margin-top: 6px; font-weight: 700; color: #2e7d32; font-size: 0.9em;">⭐ Excelente Qualidade</div>
+                                <div id="lc-quality-label" style="margin-top: 6px; font-weight: 700; color: #2e7d32; font-size: 0.9em;">—</div>
                             </div>
 
                             <!-- CONDIÇÕES ATUAIS DO ARMAZÉM -->
@@ -2532,9 +2532,6 @@
                             <h4 style="color: #00796b; font-weight: 700; margin: 0; font-size: 1.05em; display: flex; align-items: center; gap: 8px;">
                                 <span>📈</span> Curva de Degradação da Qualidade e Prazos Úteis (Ponto A vs Ponto B)
                             </h4>
-                            <span id="lc-chart-threshold-badge" style="background: #e0f2f1; color: #00796b; font-size: 0.82em; font-weight: 700; padding: 4px 12px; border-radius: 12px; border: 1px solid #b2dfdb;">
-                                Limiar de Aceitação Comercial
-                            </span>
                         </div>
                         <div style="position: relative; height: 320px; width: 100%;">
                             <canvas id="lc-decay-chart"></canvas>
@@ -2676,9 +2673,6 @@
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                                 <span style="font-size: 0.88em; text-transform: uppercase; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px;">
                                     📈 Curva de Degradação da Qualidade (Ponto A vs Ponto B)
-                                </span>
-                                <span id="modal-lc-chart-threshold-badge" style="background: #e0f2f1; color: #00796b; font-size: 0.78em; font-weight: 700; padding: 3px 10px; border-radius: 8px;">
-                                    Limiar Comercial
                                 </span>
                             </div>
                             <div style="position: relative; height: 230px; width: 100%;">
@@ -3713,16 +3707,28 @@
             });
             
             // Restore State on Load
-            const savedSidebar = localStorage.getItem('activeSidebarTab');
-            if(savedSidebar && typeof switchSidebarTab === 'function') {
-                switchSidebarTab(savedSidebar);
+            // Ao entrar/recarregar abre sempre no "Register" (main-dashboard).
+            // Só depois de submeter um formulário desta página se volta ao separador onde se estava
+            // (o localStorage é partilhado entre perfis e podia apontar para um separador inexistente).
+            const restoreTab = sessionStorage.getItem('producerRestoreTab');
+            const restoreInner = sessionStorage.getItem('producerRestoreInner');
+            sessionStorage.removeItem('producerRestoreTab');
+            sessionStorage.removeItem('producerRestoreInner');
+            if (typeof switchSidebarTab === 'function') {
+                switchSidebarTab(restoreTab && document.getElementById(restoreTab) ? restoreTab : 'main-dashboard');
             }
-            
-            const savedInner = localStorage.getItem('activeInnerTab');
-            if(savedInner) {
-                const btn = document.querySelector(`button[onclick*="'${savedInner}'"]`);
+            if (restoreTab && restoreInner) {
+                const btn = document.querySelector(`button[onclick*="'${restoreInner}'"]`);
                 if(btn) btn.click();
             }
+
+            // Guardar o separador atual apenas no momento de submeter um formulário
+            document.addEventListener('submit', function() {
+                const visible = Array.from(document.querySelectorAll('.dashboard-tab')).find(t => t.style.display === 'block');
+                if (visible && visible.id) sessionStorage.setItem('producerRestoreTab', visible.id);
+                const inner = localStorage.getItem('activeInnerTab');
+                if (inner) sessionStorage.setItem('producerRestoreInner', inner);
+            }, true);
 
             // 2. LOADING INDICATOR ON SUBMIT
             // We do NOT prevent default. We let the page reload.
@@ -4175,17 +4181,14 @@
                         
                         const qLabel = document.getElementById('lc-quality-label');
                         if (qLabel) {
-                            if (qIndex >= 80) {
-                                qLabel.textContent = '⭐ Excelente Qualidade Comercial';
+                            // Estado comercial segundo o Ponto A (qualidade + bolor + shelf-life física), como no modelo LC
+                            const ptADay = typeof fc.point_a_day === 'number' ? fc.point_a_day : 0;
+                            const lcElapsed = (data.export_metadata && data.export_metadata.days_elapsed_total) || 0;
+                            if (ptADay > 0 && lcElapsed <= ptADay) {
+                                qLabel.textContent = '✅ Aprovado — dentro da vida comercial (Ponto A)';
                                 qLabel.style.color = '#2e7d32';
-                            } else if (qIndex >= 60) {
-                                qLabel.textContent = '✨ Boa Qualidade Comercial';
-                                qLabel.style.color = '#0277bd';
-                            } else if (qIndex >= 40) {
-                                qLabel.textContent = '⚠️ Qualidade Comercial Aceitável';
-                                qLabel.style.color = '#e65100';
                             } else {
-                                qLabel.textContent = '⛔ Limite de Comercialização / Consumo Imediato';
+                                qLabel.textContent = '⛔ Fora de Padrão — vida comercial terminada (Ponto A)';
                                 qLabel.style.color = '#c62828';
                             }
                         }
@@ -4387,18 +4390,6 @@
             const qVals = contData.quality;
             const labels = tVals.map(t => `Dia ${Math.round(t)}`);
 
-            let threshold = 50;
-            if (ownerType === 'Producer') threshold = 70;
-            else if (ownerType === 'Processor') threshold = 65;
-            else if (ownerType === 'Retailer') threshold = 50;
-            else if (ownerType === 'Industry') threshold = 35;
-
-            const thresholdBadge = document.getElementById('modal-lc-chart-threshold-badge');
-            if (thresholdBadge) {
-                thresholdBadge.textContent = `Limiar ${ownerType || 'Comercial'}: ${threshold}%`;
-            }
-
-            const thresholdData = new Array(tVals.length).fill(threshold);
 
             const pointRadii = tVals.map(t => {
                 if (ptA !== null && ptA !== undefined && Math.abs(t - ptA) < 0.6) return 7;
@@ -4430,15 +4421,6 @@
                             pointBorderColor: '#ffffff',
                             pointBorderWidth: 2,
                             pointHoverRadius: 8
-                        },
-                        {
-                            label: `Limiar Aceitação (${threshold}%)`,
-                            data: thresholdData,
-                            borderColor: '#f59e0b',
-                            borderWidth: 2,
-                            borderDash: [5, 5],
-                            pointRadius: 0,
-                            fill: false
                         }
                     ]
                 },
@@ -4563,18 +4545,6 @@
             const qVals = contData.quality;
             const labels = tVals.map(t => `Dia ${Math.round(t)}`);
 
-            let threshold = 50;
-            if (ownerType === 'Producer') threshold = 70;
-            else if (ownerType === 'Processor') threshold = 65;
-            else if (ownerType === 'Retailer') threshold = 50;
-            else if (ownerType === 'Industry') threshold = 35;
-
-            const tBadge = document.getElementById('lc-chart-threshold-badge');
-            if (tBadge) {
-                tBadge.textContent = `Limiar ${ownerType || 'Comercial'}: ${threshold}% de Qualidade`;
-            }
-
-            const thresholdData = new Array(tVals.length).fill(threshold);
 
             const pointRadii = tVals.map(t => {
                 if (ptA !== null && ptA !== undefined && Math.abs(t - ptA) < 0.6) return 8;
@@ -4606,15 +4576,6 @@
                             pointBorderColor: '#ffffff',
                             pointBorderWidth: 2,
                             pointHoverRadius: 9
-                        },
-                        {
-                            label: `Limiar de Aceitação (${threshold}%)`,
-                            data: thresholdData,
-                            borderColor: '#f59e0b',
-                            borderWidth: 2,
-                            borderDash: [6, 6],
-                            pointRadius: 0,
-                            fill: false
                         }
                     ]
                 },
