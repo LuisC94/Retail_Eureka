@@ -1,0 +1,22 @@
+# Segredos e configuração local (os valores chegam ao contentor pelo docker-compose)
+.env
+.env.*
+
+# Ambientes virtuais e caches
+.venv/
+venv/
+env/
+**/__pycache__/
+**/*.pyc
+
+# Git e ficheiros locais
+.git/
+*.sqlite3
+staticfiles/
+
+# Web services correm em contentores/processos próprios (o Django fala com eles por HTTP)
+Web Services/
+
+# Documentos e datasets na raiz (podem conter dados reais)
+*.xlsx
+*.docx

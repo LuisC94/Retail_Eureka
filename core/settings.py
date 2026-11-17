@@ -34,7 +34,20 @@ if env_path.exists():
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-u*k0s4hd=efe&2rx-!&sut%x__2x+(c3(me-2#6w+l&56g&q04'
+# Os segredos vêm do ficheiro .env (não versionado) ou de variáveis de ambiente.
+from django.core.exceptions import ImproperlyConfigured
+
+
+def _required_env(name):
+    value = os.environ.get(name)
+    if not value:
+        raise ImproperlyConfigured(
+            f"Falta a variável {name}. Defina-a no ficheiro .env na raiz do projeto (pedir o valor ao responsável do projeto)."
+        )
+    return value
+
+
+SECRET_KEY = _required_env('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -98,7 +111,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql', 
         'NAME': os.environ.get('DB_NAME', 'retail_eureka'),     
         'USER': os.environ.get('DB_USER', 'aisupply'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', r'H6.yLBweMW1w\$P&ub60'),
+        'PASSWORD': _required_env('DB_PASSWORD'),
         'HOST': os.environ.get('DB_HOST', 'aisupply.rc'),                      
         'PORT': os.environ.get('DB_PORT', '5432'),
         'OPTIONS': {

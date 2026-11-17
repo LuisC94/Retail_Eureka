@@ -23,7 +23,8 @@ RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/wh
 COPY . .
 
 # Collect static files for production delivery with WhiteNoise
-RUN python manage.py collectstatic --noinput
+# (valores temporários só para o build: o collectstatic não liga à BD; os reais vêm do docker-compose)
+RUN DJANGO_SECRET_KEY=build-only-not-secret DB_PASSWORD=build-only python manage.py collectstatic --noinput
 
 # Expose Django port
 EXPOSE 8000
