@@ -63,6 +63,7 @@ urlpatterns = [
     path('retailer/submit-warehouse/', views.retailer_submit_warehouse, name='retailer_submit_warehouse'),
     path('retailer/submit-sensor/', views.retailer_submit_sensor, name='retailer_submit_sensor'),
     path('retailer/accept-order/', views.retailer_accept_order, name='retailer_accept_order'),
+    path('deals/confirm-reception/', views.confirm_deal_reception, name='confirm_deal_reception'),
     path('retailer/respond-association/', views.retailer_respond_association, name='retailer_respond_association'),
     path('buy-direct-makro/', views.buy_direct_makro, name='buy_direct_makro'),
     path('create-supply-contract/', views.create_supply_contract, name='create_supply_contract'),

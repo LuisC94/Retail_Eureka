@@ -467,6 +467,8 @@
             </div>
             {% endif %}
 
+            {% include "dashboard/partials/reception_banner.html" %}
+
             <!-- NOTIFICAÇÃO DE ASSOCIAÇÃO PENDENTE -->
             {% if incoming_associations %}
             <div style="background: #fff8e1; border-left: 6px solid #ffa000; padding: 20px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
@@ -1450,6 +1452,7 @@
 
             <!-- STOCK VIEW -->
             <div id="stock-view" class="tab-content">
+                {% include "dashboard/partials/receptions_panel.html" %}
                 <div class="data-table-container">
                     <h3>📊 Current Stock Status</h3>
                     {% if retailer_stock %}
@@ -3715,6 +3718,18 @@
                     {% endif %}
                 </div>
 
+                <div style="margin-bottom: 25px;">
+                    <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">Entrega:</label>
+                    <select name="delivery_mode" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc;">
+                        {% for value, label in delivery_mode_choices %}
+                            <option value="{{ value }}" {% if value == default_delivery_mode %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <label style="display:block; color:#2c3e50; font-weight:600; margin:15px 0 10px;">Data prevista de entrega (opcional):</label>
+                    <input type="date" name="expected_date" min="{{ today_iso }}" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ccc; box-sizing:border-box;">
+                    <p style="color:#607d8b; font-size:0.85em; margin-top:8px;">O stock só entra depois de confirmar a receção da mercadoria.</p>
+                </div>
+
                 <button type="submit" class="submit-button" {% if not retailer_warehouses %}disabled style="background:#ccc; cursor:not-allowed;"{% endif %}>
                     ✓ Confirm & Accept
                 </button>
@@ -5395,6 +5410,7 @@
     </script>
 
     <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+{% include "dashboard/partials/submit_once.html" %}
 </body>
 </html>
 

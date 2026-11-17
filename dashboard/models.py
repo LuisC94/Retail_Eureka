@@ -630,3 +630,75 @@ class LedgerEntry(models.Model):
 
     def __str__(self):
         return f"#{self.block_number} {self.function} {self.asset_id}"
+
+
+# ----------------------------------------------------------------------
+# RECEÇÃO DE MERCADORIA (negócios do marketplace)
+# ----------------------------------------------------------------------
+
+class DealReception(models.Model):
+    """
+    Receção física da mercadoria de um negócio do marketplace.
+    O stock só entra no comprador quando a receção é confirmada.
+    As medições (brix, acidez, firmeza, calibre) são opcionais: quando existem,
+    o ciclo de vida passa a ser calculado a partir do dia da receção com esses valores.
+    """
+    DELIVERY_CARRIER = 'carrier'
+    DELIVERY_OWN = 'own'
+    DELIVERY_MODE_CHOICES = [
+        (DELIVERY_CARRIER, 'Com transportador'),
+        (DELIVERY_OWN, 'Transporte próprio (sem transportador)'),
+    ]
+
+    STATUS_PENDING = 'PENDING'
+    STATUS_RECEIVED = 'RECEIVED'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pendente'),
+        (STATUS_RECEIVED, 'Recebida'),
+    ]
+
+    deal_id = models.CharField(max_length=100, unique=True, verbose_name="Negócio (Marketplace)")
+    deal_type = models.CharField(max_length=20, default='INSTANT')
+    buyer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='deal_receptions')
+    seller_id = models.CharField(max_length=150, blank=True, default="")
+    culture = models.ForeignKey('ProductSubFamily', on_delete=models.SET_NULL, null=True, blank=True)
+    culture_name = models.CharField(max_length=150, blank=True, default="")
+    batch_id = models.CharField(max_length=100, blank=True, default="", verbose_name="Lote de Origem")
+    quantity_kg = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Quantidade Negociada (Kg)")
+    destination_warehouse = models.CharField(max_length=255, verbose_name="Armazém de Destino")
+
+    delivery_mode = models.CharField(max_length=20, choices=DELIVERY_MODE_CHOICES, default=DELIVERY_OWN)
+    expected_date = models.DateField(null=True, blank=True, verbose_name="Data Prevista")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING, db_index=True)
+
+    # Preenchido na confirmação
+    received_at = models.DateField(null=True, blank=True, verbose_name="Data de Receção")
+    received_quantity_kg = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name="Quantidade Recebida (Kg)")
+    notes = models.TextField(blank=True, default="")
+    soluble_solids = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name="Brix (°Bx)")
+    acidity = models.DecimalField(max_digits=6, decimal_places=3, null=True, blank=True, verbose_name="Acidez")
+    firmness = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True, verbose_name="Firmeza")
+    caliber = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True, verbose_name="Calibre (mm)")
+    quality_score = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True, verbose_name="Score de Qualidade (0-10)")
+    stock = models.ForeignKey('ConsolidatedStock', on_delete=models.SET_NULL, null=True, blank=True, related_name='receptions')
+    ledger_tx_id = models.CharField(max_length=128, blank=True, default="")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Receção de Mercadoria"
+        verbose_name_plural = "Receções de Mercadoria"
+
+    @property
+    def has_measurements(self):
+        return any(v is not None for v in (self.soluble_solids, self.acidity, self.firmness))
+
+    @property
+    def is_overdue(self):
+        return (self.status == self.STATUS_PENDING and self.expected_date is not None
+                and self.expected_date < timezone.now().date())
+
+    def __str__(self):
+        return f"Receção {self.deal_id} ({self.get_status_display()}) - {self.buyer.username}"

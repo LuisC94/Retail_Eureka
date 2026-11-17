@@ -1844,7 +1844,7 @@
                         </div>
                         <div class="form-group-full">
                             <label class="form-label">Armazém de Destino:</label>
-                            <select name="warehouse_id" class="form-select" required>
+                            <select name="warehouse_id" class="form-select">
                                 {% for w in user_warehouses %}
                                     <option value="{{ w.pk }}">{{ w.location }} (WH: {{ w.warehouse_id }})</option>
                                 {% empty %}
@@ -1937,10 +1937,32 @@
                             {% for w in user_warehouses %}
                                 <option value="{{ w.pk }}">{{ w.location }} (WH: {{ w.warehouse_id }})</option>
                             {% empty %}
-                                <option value="">Armazém Central Padrão</option>
+                                <option value="" selected disabled>Sem armazéns registados</option>
+                            {% endfor %}
+                        </select>
+                        {% if not user_warehouses %}
+                        <p style="font-size:0.85em; color:#f87171; margin-top:8px;">⚠️ Registe pelo menos um armazém no seu dashboard antes de comprar.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="modal-section-card">
+                    <div class="modal-section-title">
+                        <span>🚚</span> Entrega
+                    </div>
+                    <div class="form-group-full">
+                        <label class="form-label">Modo de entrega:</label>
+                        <select name="delivery_mode" class="form-select">
+                            {% for value, label in delivery_mode_choices %}
+                                <option value="{{ value }}" {% if value == default_delivery_mode %}selected{% endif %}>{{ label }}</option>
                             {% endfor %}
                         </select>
                     </div>
+                    <div class="form-group-full" style="margin-top:10px;">
+                        <label class="form-label">Data prevista de entrega (opcional):</label>
+                        <input type="date" name="expected_date" class="form-select" min="{{ today_iso }}">
+                    </div>
+                    <p style="font-size:0.8em; color:var(--text-muted); margin-top:8px;">O stock só entra depois de confirmar a receção da mercadoria.</p>
                 </div>
 
                 <div class="modal-footer-btns">
@@ -2147,5 +2169,6 @@
             }
         });
     </script>
+{% include "dashboard/partials/submit_once.html" %}
 </body>
 </html>

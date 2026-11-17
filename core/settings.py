@@ -169,4 +169,9 @@ FABRIC_API_URL = 'http://localhost:3000'
 #   "local"  -> tabela LedgerEntry na BD do Django, encadeada por hash (sem blockchain)
 LEDGER_BACKEND = os.getenv('LEDGER_BACKEND', 'local').strip().lower()
 
+# Modo de entrega pré-selecionado ao fechar um negócio no marketplace:
+#   "own"     -> transporte próprio, sem transportador (o comprador só confirma a receção)
+#   "carrier" -> com transportador (fluxo completo do perfil Transporter)
+DEFAULT_DELIVERY_MODE = os.getenv('DEFAULT_DELIVERY_MODE', 'own').strip().lower()
+
 

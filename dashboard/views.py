@@ -30,6 +30,8 @@ from dashboard.utils import create_genesis_dossier
 from dashboard.services.fabric_service import fabric_service
 from dashboard.services.marketplace_service import marketplace_service
 from dashboard.services.market_news_service import market_news_service
+import logging
+logger = logging.getLogger(__name__)
 
 from .forms import (
     UserRegisterForm, PlantationPlanForm, PlantationDetailForm,
@@ -182,11 +184,17 @@ def _resolve_geo_coords(loc_str, user=None, warehouse=None):
     return round(lat, 5), round(lon, 5)
 
 def _get_assigned_deal_ids():
+    """
+    deal_ids que não estão disponíveis para transportadores: os que já estão numa rota
+    e os negócios com transporte próprio (o comprador só confirma a receção).
+    """
     assigned = set()
     for r in Route.objects.all():
         if r.optimized_path:
             found = re.findall(r'(?:Deal|Carga)\s*#([^\s\(\]]+)', r.optimized_path, re.IGNORECASE)
             assigned.update(found)
+    from dashboard.services.reception_service import own_transport_deal_ids
+    assigned.update(own_transport_deal_ids())
     return assigned
 
 # Transporter Dashboard
@@ -423,6 +431,31 @@ class ConsumerDashboardView(View):
         }
         return render(request, 'dashboard/consumerDash.html', context)
 
+# Receções de mercadoria (contexto comum a Processor e Retailer)
+def _reception_context(user):
+    from dashboard.models import DealReception
+    from dashboard.services.reception_service import default_delivery_mode
+    from dashboard.services.reception_service import warehouse_label
+    pending = list(DealReception.objects.filter(buyer=user, status=DealReception.STATUS_PENDING)
+                   .order_by('expected_date', 'created_at'))
+    buyer_warehouses = list(Warehouse.objects.filter(owner=user).order_by('location'))
+    labels = {warehouse_label(w): w.pk for w in buyer_warehouses}
+    for r in pending:
+        # Pré-seleciona o armazém de destino do negócio, se for um armazém registado
+        r.default_warehouse_id = labels.get(r.destination_warehouse) or (buyer_warehouses[0].pk if buyer_warehouses else None)
+    received = list(DealReception.objects.filter(buyer=user, status=DealReception.STATUS_RECEIVED)
+                    .order_by('-received_at', '-confirmed_at')[:10])
+    return {
+        'pending_receptions': pending,
+        'received_receptions': received,
+        'overdue_receptions_count': sum(1 for r in pending if r.is_overdue),
+        'buyer_warehouses': buyer_warehouses,
+        'delivery_mode_choices': DealReception.DELIVERY_MODE_CHOICES,
+        'default_delivery_mode': default_delivery_mode(),
+        'today_iso': timezone.now().date().isoformat(),
+    }
+
+
 # Processor Dashboard
 @method_decorator(login_required, name='dispatch')
 @method_decorator(role_required(['Processor']), name='dispatch')
@@ -548,6 +581,9 @@ class ProcessorDashboardView(View):
             'my_associations': my_associations,
             'available_retailers': available_retailers,
             'approved_stores_data': approved_stores_data,
+
+            # Receções de mercadoria
+            **_reception_context(user),
         }
         return render(request, 'dashboard/processorDash.html', context)
 
@@ -654,6 +690,9 @@ class RetailerDashboardView(View):
             # Novos campos para Armazém Central
             'incoming_associations': incoming_associations,
             'active_associations': active_associations,
+
+            # Receções de mercadoria
+            **_reception_context(user),
         }
         return render(request, 'dashboard/retailerDash.html', context)
 
@@ -1213,6 +1252,69 @@ def _deduct_seller_stock_from_deal(deal):
                     stk.quantity = max(0.0, float(stk.quantity) - deal_qty)
                     stk.save()
 
+def _open_reception_for_deal(request, deal, dest_wh, expected_date=None, culture=None):
+    """Cria a receção pendente do negócio com o modo de entrega escolhido no formulário."""
+    from dashboard.services.reception_service import register_pending_reception
+    try:
+        return register_pending_reception(
+            deal=deal,
+            buyer=request.user,
+            destination_warehouse=dest_wh,
+            delivery_mode=request.POST.get('delivery_mode'),
+            expected_date=expected_date or request.POST.get('expected_date'),
+            culture=culture,
+        )
+    except Exception as e:
+        logger.error(f"[Reception] Falha ao criar receção do negócio {deal.get('deal_id')}: {e}")
+        messages.warning(request, f"Negócio fechado, mas não foi possível criar a receção pendente: {e}")
+        return None
+
+
+@login_required
+@role_required(['Processor', 'Retailer'])
+def confirm_deal_reception(request):
+    """O comprador confirma a chegada da mercadoria: dá entrada ao stock e regista no ledger."""
+    fallback = 'processor_dashboard' if request.user.groups.filter(name='Processor').exists() else 'retailer_dashboard'
+    if request.method != 'POST':
+        return redirect(fallback)
+    from dashboard.services.reception_service import confirm_reception, ReceptionError
+    try:
+        reception, ledger = confirm_reception(
+            reception_id=request.POST.get('reception_id'),
+            user=request.user,
+            warehouse_id=request.POST.get('warehouse_id'),
+            received_at=request.POST.get('received_at'),
+            received_quantity_kg=request.POST.get('received_quantity_kg'),
+            soluble_solids=request.POST.get('soluble_solids'),
+            acidity=request.POST.get('acidity'),
+            firmness=request.POST.get('firmness'),
+            caliber=request.POST.get('caliber'),
+            notes=request.POST.get('notes', ''),
+        )
+        msg = (f"Receção do negócio #{reception.deal_id} confirmada: "
+               f"{reception.received_quantity_kg} kg de {reception.culture_name} deram entrada em stock "
+               f"em {reception.destination_warehouse} ({reception.received_at:%d/%m/%Y}).")
+        if reception.has_measurements:
+            msg += " O ciclo de vida passa a ser calculado a partir desta receção com as medições registadas."
+        messages.success(request, msg)
+        if ledger.get('status') == 'error':
+            messages.warning(request, f"Stock atualizado, mas a entrega não ficou registada no {fabric_service.label}: {ledger.get('message')}")
+    except ReceptionError as e:
+        messages.error(request, str(e))
+    except Exception as e:
+        logger.exception("[Reception] Erro ao confirmar receção")
+        messages.error(request, f"Erro ao confirmar receção: {e}")
+    return redirect(request.META.get('HTTP_REFERER') or fallback)
+
+
+def _reception_hint(reception):
+    if reception is None:
+        return ""
+    if reception.delivery_mode == reception.DELIVERY_OWN:
+        return "Transporte próprio: confirme a receção quando a mercadoria chegar para dar entrada no stock."
+    return "Com transportador: confirme a receção quando a mercadoria chegar para dar entrada no stock."
+
+
 @login_required
 @role_required(['Processor'])
 def processor_accept_order(request):
@@ -1220,8 +1322,12 @@ def processor_accept_order(request):
         order_id = request.POST.get('order_id')
         warehouse_id = request.POST.get('warehouse_id')
         
+        warehouse = Warehouse.objects.filter(pk=warehouse_id, owner=request.user).first() if str(warehouse_id or '').isdigit() else None
+        if warehouse is None:
+            messages.error(request, "Tem de registar pelo menos um armazém e selecioná-lo como destino antes de comprar.")
+            return redirect('processor_dashboard')
+
         try:
-            warehouse = Warehouse.objects.get(pk=warehouse_id, owner=request.user)
             dest_wh = f"{warehouse.location} (WH: {warehouse.warehouse_id})"
             
             listing_info = marketplace_service.get_listing(str(order_id))
@@ -1240,19 +1346,9 @@ def processor_accept_order(request):
                 
             _deduct_seller_stock_from_deal(deal)
             
-            # Adicionar ao ConsolidatedStock do Processor
-            culture = ProductSubFamily.objects.filter(name=deal.get('culture_name')).first()
-            if culture:
-                stk, _ = ConsolidatedStock.objects.get_or_create(
-                    owner=request.user,
-                    culture=culture,
-                    warehouse_location=dest_wh,
-                    defaults={'quantity': 0.0, 'avg_quality_score': 10.0}
-                )
-                stk.quantity = float(stk.quantity) + float(deal.get('quantity_kg', qty_to_buy))
-                stk.save()
-                
-            messages.success(request, f"Oferta #{order_id} aceite com sucesso! Negócio concluído ({deal.get('quantity_kg', qty_to_buy)} kg).")
+            # O stock só entra no Processor quando confirmar a receção
+            reception = _open_reception_for_deal(request, deal, dest_wh)
+            messages.success(request, f"Oferta #{order_id} aceite com sucesso! Negócio concluído ({deal.get('quantity_kg', qty_to_buy)} kg). {_reception_hint(reception)}")
             return redirect('processor_dashboard')
             
         except Exception as e:
@@ -1323,8 +1419,12 @@ def retailer_accept_order(request):
         order_id = request.POST.get('order_id')
         warehouse_id = request.POST.get('warehouse_id')
         
+        warehouse = Warehouse.objects.filter(pk=warehouse_id, owner=request.user).first() if str(warehouse_id or '').isdigit() else None
+        if warehouse is None:
+            messages.error(request, "Tem de registar pelo menos um armazém e selecioná-lo como destino antes de comprar.")
+            return redirect('retailer_dashboard')
+
         try:
-            warehouse = Warehouse.objects.get(pk=warehouse_id, owner=request.user)
             dest_wh = f"{warehouse.location} (WH: {warehouse.warehouse_id})"
             
             listing_info = marketplace_service.get_listing(str(order_id))
@@ -1343,19 +1443,9 @@ def retailer_accept_order(request):
                 
             _deduct_seller_stock_from_deal(deal)
             
-            # Adicionar ao ConsolidatedStock do Retailer
-            culture = ProductSubFamily.objects.filter(name=deal.get('culture_name')).first()
-            if culture:
-                stk, _ = ConsolidatedStock.objects.get_or_create(
-                    owner=request.user,
-                    culture=culture,
-                    warehouse_location=dest_wh,
-                    defaults={'quantity': 0.0, 'avg_quality_score': 10.0}
-                )
-                stk.quantity = float(stk.quantity) + float(deal.get('quantity_kg', qty_to_buy))
-                stk.save()
-                
-            messages.success(request, f"Oferta #{order_id} aceite com sucesso! Negócio concluído ({deal.get('quantity_kg', qty_to_buy)} kg).")
+            # O stock só entra no Retailer quando confirmar a receção
+            reception = _open_reception_for_deal(request, deal, dest_wh)
+            messages.success(request, f"Oferta #{order_id} aceite com sucesso! Negócio concluído ({deal.get('quantity_kg', qty_to_buy)} kg). {_reception_hint(reception)}")
             return redirect('retailer_dashboard')
             
         except Exception as e:
@@ -1867,8 +1957,22 @@ class MarketplacePortalView(View):
             'market_order_form': market_order_form,
             'retailer_stock': user_stock_data,
             'harvest_records': harvest_records,
+            # Modo de entrega no fecho do negócio
+            **_reception_context(request.user),
         }
         return render(request, 'dashboard/marketplace_portal.html', context)
+
+
+def _open_listed_kg(seller_id, batch_id=None, culture_name=None):
+    """Kg que o vendedor já tem em ofertas abertas no marketplace (por lote ou por cultura)."""
+    total = 0.0
+    for l in marketplace_service.fetch_open_listings(seller_id=seller_id) or []:
+        if batch_id is not None and l.get('batch_id') != batch_id:
+            continue
+        if culture_name is not None and (l.get('culture_name') != culture_name or l.get('batch_id')):
+            continue
+        total += float(l.get('quantity_kg') or 0.0)
+    return total
 
 
 @login_required
@@ -1884,6 +1988,15 @@ def market_submit_order(request):
                 wh_loc = form.cleaned_data['warehouse_location']
                 if harvest and harvest.warehouse:
                     wh_loc = harvest.warehouse.location
+
+                # Não permitir pôr à venda mais do que o disponível do lote, contando as ofertas já abertas
+                # (evita ofertas duplicadas por duplo clique e venda acima do stock)
+                batch_id = f"LOTE-{harvest.pk}"
+                already_listed = _open_listed_kg(request.user.username, batch_id=batch_id)
+                available = float(harvest.current_stock_kg) - already_listed
+                if qty > available + 1e-6:
+                    messages.error(request, f"O lote {batch_id} tem {float(harvest.current_stock_kg):.2f} kg disponíveis e {already_listed:.2f} kg já estão em ofertas abertas. Só pode pôr à venda mais {max(0.0, available):.2f} kg.")
+                    return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
 
                 # Publicar no Marketplace Web Service
                 listing = marketplace_service.publish_listing(
@@ -1924,6 +2037,14 @@ def market_submit_order(request):
                 user_role = groups[0].name if groups else 'Retailer'
                 
                 if order_type == 'SELL':
+                    # Processor/Retailer: não vender mais do que o stock da cultura, contando ofertas já abertas
+                    if user_role in ['Processor', 'Retailer']:
+                        in_stock = float(ConsolidatedStock.objects.filter(owner=request.user, culture=culture).aggregate(t=Sum('quantity'))['t'] or 0)
+                        already_listed = _open_listed_kg(request.user.username, culture_name=culture.name)
+                        available = in_stock - already_listed
+                        if qty > available + 1e-6:
+                            messages.error(request, f"Tem {in_stock:.2f} kg de {culture.name} em stock e {already_listed:.2f} kg já estão em ofertas abertas. Só pode pôr à venda mais {max(0.0, available):.2f} kg.")
+                            return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
                     listing = marketplace_service.publish_listing(
                         seller_id=request.user.username,
                         seller_role=user_role,
@@ -1979,10 +2100,13 @@ def market_accept_order(request):
             qty_to_buy = float(listing_info.get('quantity_kg', 100.0)) if listing_info else 100.0
             
             dest_wh = "Armazém de Destino"
-            if warehouse_id:
-                wh = Warehouse.objects.filter(pk=warehouse_id, owner=request.user).first()
-                if wh:
-                    dest_wh = f"{wh.location} (WH: {wh.warehouse_id})"
+            wh = Warehouse.objects.filter(pk=warehouse_id, owner=request.user).first() if str(warehouse_id or '').isdigit() else None
+            if wh:
+                dest_wh = f"{wh.location} (WH: {wh.warehouse_id})"
+            elif buyer_role in ['Processor', 'Retailer']:
+                # O stock do comprador tem de entrar num armazém registado
+                messages.error(request, "Tem de registar pelo menos um armazém e selecioná-lo como destino antes de comprar.")
+                return redirect(request.META.get('HTTP_REFERER', 'producer_dashboard'))
             
             # Executar compra imediata no Marketplace Web Service
             deal = marketplace_service.execute_instant_buy(
@@ -2000,20 +2124,12 @@ def market_accept_order(request):
             # Abater o stock no vendedor
             _deduct_seller_stock_from_deal(deal)
             
-            # Adicionar ao stock do comprador se for Processor/Retailer
+            # Processor/Retailer: o stock só entra quando confirmar a receção
+            hint = ""
             if buyer_role in ['Processor', 'Retailer']:
-                culture = ProductSubFamily.objects.filter(name=deal.get('culture_name')).first()
-                if culture:
-                    stk, _ = ConsolidatedStock.objects.get_or_create(
-                        owner=request.user,
-                        culture=culture,
-                        warehouse_location=dest_wh,
-                        defaults={'quantity': 0.0, 'avg_quality_score': 10.0}
-                    )
-                    stk.quantity = float(stk.quantity) + float(deal.get('quantity_kg', qty_to_buy))
-                    stk.save()
+                hint = _reception_hint(_open_reception_for_deal(request, deal, dest_wh))
             
-            messages.success(request, f"Transação #{order_id} concluída no Marketplace! Negócio fechado.")
+            messages.success(request, f"Transação #{order_id} concluída no Marketplace! Negócio fechado. {hint}".strip())
         except Exception as e:
             messages.error(request, f"Erro ao aceitar pedido: {e}")
             
@@ -3134,10 +3250,11 @@ def create_supply_contract(request):
                 messages.error(request, "A data de entrega não pode ser no passado.")
                 return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
                 
-            warehouse_loc = None
-            if warehouse_id:
-                w_obj = get_object_or_404(Warehouse, pk=warehouse_id, owner=request.user)
-                warehouse_loc = f"{w_obj.location} (WH: {w_obj.warehouse_id})"
+            w_obj = Warehouse.objects.filter(pk=warehouse_id, owner=request.user).first() if str(warehouse_id or '').isdigit() else None
+            if w_obj is None:
+                messages.error(request, "Tem de registar pelo menos um armazém e selecioná-lo como destino antes de celebrar um contrato.")
+                return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
+            warehouse_loc = f"{w_obj.location} (WH: {w_obj.warehouse_id})"
                 
             # Obter ou criar dinamicamente o fornecedor do contrato (com sufixo -Contract automática)
             expected_username = producer_name if producer_name.endswith('-Contract') else f"{producer_name}-Contract"
@@ -3155,7 +3272,7 @@ def create_supply_contract(request):
                 UserProfile.objects.create(user=producer_user, producer_type='contract')
                 
             # Criar o contrato no Marketplace Web Service
-            marketplace_service.create_supply_contract(
+            contract_deal = marketplace_service.create_supply_contract(
                 buyer_id=request.user.username,
                 seller_id=producer_user.username,
                 culture_name=subfamily.name,
@@ -3167,7 +3284,11 @@ def create_supply_contract(request):
                 seller_role='Producer'
             )
             
-            messages.success(request, f"Contrato de fornecimento celebrado com sucesso com {producer_user.username} para o dia {delivery_date_str}!")
+            # Receção pendente com a data prevista do contrato (stock só entra ao confirmar)
+            if contract_deal:
+                _open_reception_for_deal(request, contract_deal, warehouse_loc or "", expected_date=delivery_date, culture=subfamily)
+            
+            messages.success(request, f"Contrato de fornecimento celebrado com sucesso com {producer_user.username} para o dia {delivery_date_str}! Confirme a receção quando a mercadoria chegar.")
         except Exception as e:
             messages.error(request, f"Erro ao criar contrato: {e}")
             
@@ -3810,6 +3931,58 @@ def build_lot_lifecycle_data(lot_id=None, stock_id=None, user=None, packaging_me
         plantation_info = {"note": "Lote consolidado em armazém a jusante"}
         plantation_events = []
 
+        # Âncora do ciclo de vida: a receção mais antiga ainda em stock (FIFO, pior caso):
+        #  - com medições (brix/acidez/firmeza) -> começa no dia da receção com os valores reais
+        #  - sem medições -> segue a partir da colheita do lote de origem, com as métricas da colheita
+        from dashboard.services.reception_service import lifecycle_reception_for_stock
+        reception = lifecycle_reception_for_stock(stock)
+        if reception:
+            origin_harvest = None
+            if reception.batch_id and reception.batch_id.startswith("LOTE-") and reception.batch_id[5:].isdigit():
+                origin_harvest = Harvest.objects.filter(pk=int(reception.batch_id[5:])).select_related('producer', 'warehouse').first()
+            if origin_harvest and origin_harvest.producer:
+                producer_name = origin_harvest.producer.username
+            elif reception.seller_id:
+                producer_name = reception.seller_id
+
+            def _f(v):
+                return float(v) if v is not None else None
+
+            if reception.has_measurements:
+                harvest_date = reception.received_at
+                initial_metrics = {
+                    "firmness": _f(reception.firmness),
+                    "firmness_n": _f(reception.firmness),
+                    "soluble_solids_brix": _f(reception.soluble_solids),
+                    "acidity": _f(reception.acidity),
+                    "acidity_percent": _f(reception.acidity),
+                    "caliber_mm": _f(reception.caliber),
+                    "quality_score": _f(reception.quality_score) if reception.quality_score is not None else float(stock.avg_quality_score or 10.0),
+                    "waste_kg": 0.0,
+                    "expiration_date": None,
+                }
+                lc_anchor = {"type": "RECEPTION_MEASURED", "deal_id": reception.deal_id, "date": reception.received_at.isoformat()}
+            elif origin_harvest:
+                harvest_date = origin_harvest.harvest_date
+                initial_metrics = {
+                    "firmness": _f(origin_harvest.firmness),
+                    "firmness_n": _f(origin_harvest.firmness),
+                    "soluble_solids_brix": _f(origin_harvest.soluble_solids),
+                    "acidity": _f(origin_harvest.acidity),
+                    "acidity_percent": _f(origin_harvest.acidity),
+                    "caliber_mm": _f(origin_harvest.caliber),
+                    "quality_score": _f(origin_harvest.avg_quality_score) if origin_harvest.avg_quality_score is not None else 10.0,
+                    "waste_kg": 0.0,
+                    "expiration_date": origin_harvest.expiration_date.strftime("%Y-%m-%d") if origin_harvest.expiration_date else None,
+                }
+                lc_anchor = {"type": "ORIGIN_HARVEST", "deal_id": reception.deal_id, "batch_id": reception.batch_id, "date": harvest_date.isoformat()}
+            else:
+                lc_anchor = {"type": "ESTIMATED", "deal_id": reception.deal_id}
+            days_elapsed = max(0, (today - harvest_date).days)
+        else:
+            origin_harvest = None
+            lc_anchor = {"type": "ESTIMATED"}
+
     # Informação e Estratégia Meteorológica do Armazém
     if warehouse:
         meteo_source = warehouse.meteo_source or 'FIXED'
@@ -3992,6 +4165,22 @@ def build_lot_lifecycle_data(lot_id=None, stock_id=None, user=None, packaging_me
                     "end_date": today
                 })
                 
+    elif reception: # ConsolidatedStock com receção confirmada
+        stock_wh = warehouse
+        if reception.has_measurements:
+            # Ciclo de vida reinicia no dia da receção, no armazém do comprador
+            if stock_wh:
+                timeline_segments.append({"warehouse": stock_wh, "start_date": harvest_date, "end_date": today})
+        else:
+            # Desde a colheita no armazém de origem até à véspera da receção, depois no armazém do comprador
+            received = min(reception.received_at, today)
+            orig_wh = origin_harvest.warehouse if origin_harvest else None
+            if orig_wh and received > harvest_date:
+                timeline_segments.append({"warehouse": orig_wh, "start_date": harvest_date,
+                                          "end_date": received - datetime.timedelta(days=1)})
+            if stock_wh:
+                timeline_segments.append({"warehouse": stock_wh, "start_date": max(harvest_date, received), "end_date": today})
+
     else: # ConsolidatedStock (Processor ou Retailer)
         stock_wh = warehouse
         inbound_order = orders[0] if orders else None
@@ -4143,7 +4332,8 @@ def build_lot_lifecycle_data(lot_id=None, stock_id=None, user=None, packaging_me
             "initial_quantity_kg": initial_qty,
             "current_stock_kg": current_qty,
             "delivered_quantity_kg": delivered_qty,
-            "initial_metrics": initial_metrics
+            "initial_metrics": initial_metrics,
+            "lifecycle_anchor": lc_anchor if not harvest else {"type": "HARVEST"}
         },
         "plantation_origin": plantation_info,
         "plantation_agricultural_events": plantation_events,

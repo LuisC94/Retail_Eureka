@@ -57,3 +57,15 @@ class LedgerEntryAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+from .models import DealReception
+
+
+@admin.register(DealReception)
+class DealReceptionAdmin(admin.ModelAdmin):
+    list_display = ('deal_id', 'buyer', 'culture_name', 'quantity_kg', 'delivery_mode', 'status',
+                    'expected_date', 'received_at', 'received_quantity_kg')
+    list_filter = ('status', 'delivery_mode')
+    search_fields = ('deal_id', 'buyer__username', 'seller_id', 'batch_id', 'culture_name')
+    readonly_fields = ('created_at', 'confirmed_at', 'ledger_tx_id')

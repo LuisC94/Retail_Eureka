@@ -1,0 +1,11 @@
+{% if pending_receptions %}
+<div style="background: {% if overdue_receptions_count %}#ffebee{% else %}#e0f2f1{% endif %}; border-left: 6px solid {% if overdue_receptions_count %}#c62828{% else %}#00796b{% endif %}; padding: 16px 20px; border-radius: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+    <div>
+        <strong>📥 Tem {{ pending_receptions|length }} receção(ões) de mercadoria por confirmar</strong>{% if overdue_receptions_count %} — {{ overdue_receptions_count }} atrasada(s){% endif %}.
+        <div style="font-size: 0.9em; color: #546e7a;">A mercadoria só entra em stock depois de confirmar a receção.</div>
+    </div>
+    <button type="button" class="btn-action" style="background: #00796b; color: #fff; padding: 9px 18px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;" onclick="switchSidebarTab('stock-view'); setTimeout(function(){ var p=document.getElementById('receptions-panel'); if(p) p.scrollIntoView({behavior:'smooth'}); }, 50);">
+        Confirmar receções
+    </button>
+</div>
+{% endif %}

@@ -1,0 +1,27 @@
+{% comment %}
+Evita submissões duplicadas (duplo clique) nos formulários de publicar no marketplace:
+após o primeiro envio, os botões de submissão ficam desativados.
+{% endcomment %}
+<script>
+(function () {
+    var target = "{% url 'market_submit_order' %}";
+    document.addEventListener('submit', function (ev) {
+        var form = ev.target;
+        if (!form || form.tagName !== 'FORM') return;
+        var action = form.getAttribute('action') || '';
+        if (action.indexOf(target) === -1) return;
+        if (ev.defaultPrevented) return;
+        if (form.dataset.submitting === '1') { ev.preventDefault(); return; }
+        form.dataset.submitting = '1';
+        // Desativar só depois do envio, para o browser ainda incluir o botão clicado nos dados
+        setTimeout(function () {
+            form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(function (btn) {
+                btn.disabled = true;
+                btn.style.opacity = '0.6';
+                btn.style.cursor = 'wait';
+                if (btn.tagName === 'BUTTON') btn.textContent = 'A publicar…';
+            });
+        }, 0);
+    }, false);
+})();
+</script>
