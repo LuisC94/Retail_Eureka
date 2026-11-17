@@ -4,6 +4,7 @@ from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.db.models import Sum, Q
 from django import forms
+from dashboard.services.agent_service import FORECAST_MARKER_TYPES, forecast_model_display
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.core.paginator import Paginator
@@ -455,7 +456,7 @@ class ProcessorDashboardView(View):
             has_sales_model = TrainedModel.objects.filter(
                 owner=user,
                 culture=stock_obj.culture,
-                model_type__in=['sales_mlp', 'sales_autoformer']
+                model_type__in=FORECAST_MARKER_TYPES
             ).exists()
             has_agent_model = TrainedModel.objects.filter(
                 owner=user,
@@ -581,7 +582,7 @@ class RetailerDashboardView(View):
             has_sales_model = TrainedModel.objects.filter(
                 owner=user,
                 culture=stock_obj.culture,
-                model_type__in=['sales_mlp', 'sales_autoformer']
+                model_type__in=FORECAST_MARKER_TYPES
             ).exists()
             has_agent_model = TrainedModel.objects.filter(
                 owner=user,
@@ -708,18 +709,9 @@ class ProducerDashboardView(View):
             item['has_sales_model'] = TrainedModel.objects.filter(
                 owner=user,
                 culture_id=item['subfamily'],
-                model_type__in=['sales_mlp', 'sales_autoformer']
+                model_type__in=FORECAST_MARKER_TYPES
             ).exists()
             
-            # Check if this subfamily has a stock agent model trained
-            item['has_agent_model'] = TrainedModel.objects.filter(
-                owner=user,
-                culture_id=item['subfamily'],
-                model_type='stock_agent',
-                file_name='stock_agent_actor.pth'
-            ).exists()
-
-        
         # 4. BUSCAR EVENTOS DO POMAR
         plantation_events = PlantationEvent.objects.filter(plantation__producer=user).select_related('plantation', 'subfamily').order_by('-event_date')
         
@@ -900,12 +892,11 @@ def producer_submit_plantation_crop(request):
                 
             except IntegrityError as e:
                 # e.g. duplicate entry (pair plantation-subfamily unique)
-                request.session['db_error'] = f"Erro ao adicionar cultura: {e}"
+                messages.error(request, f"Erro ao adicionar cultura: {e}")
             except Exception as e:
-                request.session['db_error'] = f"Erro desconhecido: {e}"
+                messages.error(request, f"Erro desconhecido: {e}")
         else:
-             request.session['db_error'] = f"Formulário de Cultura Inválido: {form.errors}"
-             
+             messages.error(request, f"Formulário de Cultura Inválido: {form.errors}")
         return redirect('producer_dashboard')
     
     return redirect('producer_dashboard')
@@ -990,7 +981,7 @@ def producer_submit_plantation(request):
         
         # 5. Tratamento de Erro e Redirecionamento Final
         if db_error:
-            request.session['db_error'] = db_error # Armazena o erro para mostrar no dashboard
+            messages.error(request, db_error)
             
         return redirect(reverse('producer_dashboard')) # Garante que o fluxo HTTP termina
         
@@ -1027,7 +1018,7 @@ def producer_submit_harvest(request):
                         additional_data=dossier
                     )
                     if fabric_res.get('status') == 'success':
-                        messages.success(request, "Colheita registada e submetida na Blockchain Real (Hyperledger Fabric)!")
+                        messages.success(request, f"Colheita registada e submetida no {fabric_service.label}!")
                     else:
                         messages.warning(request, f"Colheita salva, mas aviso da Blockchain: {fabric_res.get('message')}")
                 except Exception as e:
@@ -1037,10 +1028,10 @@ def producer_submit_harvest(request):
                 
             except IntegrityError as e:
                 db_error = f"Erro ao salvar Colheita: Detalhe: {e}"
-                request.session['db_error'] = db_error
+                messages.error(request, db_error)
             except Exception as e:
                 db_error = f"Erro desconhecido: {e}"
-                request.session['db_error'] = db_error
+                messages.error(request, db_error)
         else:
             messages.error(request, f"Erro de validação do formulário: {form.errors.as_text()}")
         
@@ -1085,8 +1076,7 @@ def producer_submit_warehouse(request):
             except IntegrityError as e:
                 db_error = f"Erro ao salvar Armazém na DB: Detalhe: {e}"
                 print(f"[ERRO PRODUCER WAREHOUSE DB]: {e}")
-                request.session['db_error'] = db_error
-
+                messages.error(request, db_error)
         else:
             print(f"[ERRO FORMULARIO PRODUCER WAREHOUSE]: {form.errors}")
 
@@ -1108,8 +1098,7 @@ def producer_submit_sensor(request):
                 
             except IntegrityError as e:
                 db_error = f"Erro ao salvar Sensor na DB: O ID '{request.POST.get('sensor_id')}' já existe. Detalhe: {e}"
-                request.session['db_error'] = db_error
-        
+                messages.error(request, db_error)
         return redirect('producer_dashboard')
         
     return redirect('producer_dashboard')
@@ -1146,7 +1135,7 @@ def processor_submit_warehouse(request):
             except IntegrityError as e:
                 db_error = f"Erro ao salvar Armazém na DB: {e}"
                 print(f"[ERRO PROCESSOR WAREHOUSE DB]: {e}")
-                request.session['db_error'] = db_error
+                messages.error(request, db_error)
         else:
             print(f"[ERRO FORMULARIO PROCESSOR WAREHOUSE]: {form.errors}")
 
@@ -1305,7 +1294,7 @@ def retailer_submit_warehouse(request):
             except IntegrityError as e:
                 db_error = f"Erro ao salvar Armazém na DB: {e}"
                 print(f"[ERRO RETAILER WAREHOUSE DB]: {e}")
-                request.session['db_error'] = db_error
+                messages.error(request, db_error)
         else:
             print(f"[ERRO FORMULARIO RETAILER WAREHOUSE]: {form.errors}")
 
@@ -1323,7 +1312,7 @@ def retailer_submit_sensor(request):
                 return redirect('retailer_dashboard') 
             except IntegrityError as e:
                 db_error = f"Erro ao salvar Sensor: ID já existe. Detalhe: {e}"
-                request.session['db_error'] = db_error
+                messages.error(request, db_error)
         return redirect('retailer_dashboard')
     return redirect('retailer_dashboard')
 
@@ -1446,9 +1435,7 @@ def producer_submit_fertilizer_synth(request):
         # 4. Tratamento de Erro (Validação falhada ou Exceção capturada)
         if db_error:
             # Se a transação falhou, armazenamos a mensagem de erro na sessão
-            request.session['db_error'] = db_error 
-        
-        # Se algum formulário for inválido (detail_form ou base_form),
+            messages.error(request, db_error)
         # ou se a transação falhar, redirecionamos de volta para o dashboard
         return redirect(REDIRECT_URL)
 
@@ -1504,9 +1491,7 @@ def producer_submit_fertilizer_org(request):
         # 5. Tratamento de Erro (Validação falhada ou Exceção capturada)
         if db_error:
             # Armazenamos a mensagem na sessão para exibição no dashboard
-            request.session['db_error'] = db_error 
-        
-        # Redirecionamento após lógica/erro
+            messages.error(request, db_error)
         return redirect(REDIRECT_URL)
 
     # 6. Fallback para requisições GET
@@ -1536,7 +1521,7 @@ def producer_submit_fertilizer_synth(request):
                 print(f"ERRO CRÍTICO NA TRANSAÇÃO: {e}") 
 
         if db_error:
-            request.session['db_error'] = db_error 
+            messages.error(request, db_error)
         return redirect(REDIRECT_URL)
     return redirect(REDIRECT_URL)
 
@@ -1564,7 +1549,7 @@ def producer_submit_fertilizer_org(request):
                 print(f"ERRO CRÍTICO NA TRANSAÇÃO: {e}") 
 
         if db_error:
-            request.session['db_error'] = db_error 
+            messages.error(request, db_error)
         return redirect(REDIRECT_URL)
     return redirect(REDIRECT_URL)
 
@@ -1592,7 +1577,7 @@ def producer_submit_soil_corrective(request):
                 print(f"ERRO CRÍTICO: {e}") 
 
         if db_error:
-            request.session['db_error'] = db_error 
+            messages.error(request, db_error)
         return redirect(REDIRECT_URL)
     return redirect(REDIRECT_URL)
 
@@ -1620,7 +1605,7 @@ def producer_submit_pest_control(request):
                 print(f"ERRO CRÍTICO: {e}") 
 
         if db_error:
-            request.session['db_error'] = db_error 
+            messages.error(request, db_error)
         return redirect(REDIRECT_URL)
     return redirect(REDIRECT_URL)
 
@@ -1648,7 +1633,7 @@ def producer_submit_machinery(request):
                 print(f"ERRO CRÍTICO: {e}") 
 
         if db_error:
-            request.session['db_error'] = db_error 
+            messages.error(request, db_error)
         return redirect(REDIRECT_URL)
     return redirect(REDIRECT_URL)
 
@@ -1676,7 +1661,7 @@ def producer_submit_fuel(request):
                 print(f"ERRO CRÍTICO: {e}") 
 
         if db_error:
-            request.session['db_error'] = db_error 
+            messages.error(request, db_error)
         return redirect(REDIRECT_URL)
     return redirect(REDIRECT_URL)
 
@@ -1704,7 +1689,7 @@ def producer_submit_electric(request):
                 print(f"ERRO CRÍTICO: {e}") 
 
         if db_error:
-            request.session['db_error'] = db_error 
+            messages.error(request, db_error)
         return redirect(REDIRECT_URL)
     return redirect(REDIRECT_URL)
 
@@ -1732,7 +1717,7 @@ def producer_submit_water(request):
                 print(f"ERRO CRÍTICO: {e}") 
 
         if db_error:
-            request.session['db_error'] = db_error 
+            messages.error(request, db_error)
         return redirect(REDIRECT_URL)
 
 # ----------------------------------------------------------------------
@@ -1828,7 +1813,7 @@ class MarketplacePortalView(View):
         for s in user_stock_qs:
             user_stock_data.append({
                 'culture': s.culture.name if s.culture else 'N/A',
-                'culture_id': s.culture.id if s.culture else '',
+                'culture_id': s.culture.pk if s.culture else '',
                 'warehouse': s.warehouse_location,
                 'full_warehouse': s.warehouse_location,
                 'quantity': float(s.quantity),
@@ -2592,83 +2577,6 @@ def get_sensor_data_from_sheet(request):
         return JsonResponse({'status': 'error', 'message': f'Erro de sincronização direta: {str(e)}'}, status=500)
 
 
-@login_required
-@role_required(['Producer'])
-def producer_agent_simulation(request):
-    from django.http import JsonResponse
-
-    if request.method != 'POST':
-        return JsonResponse({'status': 'error', 'message': 'Método não permitido.'}, status=405)
-        
-    try:
-        from .services.agent_simulation import run_pricing_agent_simulation
-        product_sku = request.POST.get('product_sku', '3_080')
-        max_capacity = int(request.POST.get('max_capacity', 500))
-        update_interval = int(request.POST.get('update_interval', 15))
-        
-        # Validar dados de entrada básicos
-        if product_sku not in ['3_080', '3_090', '3_252', '3_586', '911753']:
-            return JsonResponse({'status': 'error', 'message': 'SKU inválido. Escolha 3_080, 3_090, 3_252, 3_586 ou 911753.'}, status=400)
-            
-        if max_capacity < 50 or max_capacity > 2000:
-            return JsonResponse({'status': 'error', 'message': 'A capacidade do armazém deve estar entre 50 e 2000 caixas.'}, status=400)
-            
-        if update_interval < 2 or update_interval > 100:
-            return JsonResponse({'status': 'error', 'message': 'O intervalo de fine-tuning deve estar entre 2 e 100 dias.'}, status=400)
-
-        # Executar a simulação de pricing com fine-tuning
-        payload = run_pricing_agent_simulation(
-            product_sku=product_sku,
-            max_capacity=max_capacity,
-            update_interval_days=update_interval,
-            num_days=350  # Correr a simulação sobre o split de teste completo
-        )
-        
-        return JsonResponse({'status': 'success', 'data': payload})
-        
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return JsonResponse({'status': 'error', 'message': f'Erro crítico durante a simulação de pricing: {str(e)}'}, status=500)
-
-
-@login_required
-def agent_simulation(request):
-    from django.http import JsonResponse
-
-    if request.method != 'POST':
-        return JsonResponse({'status': 'error', 'message': 'Método não permitido.'}, status=405)
-        
-    try:
-        from .services.agent_simulation import run_buyer_agent_simulation
-        product_sku = request.POST.get('product_sku', '3_080')
-        max_capacity = int(request.POST.get('max_capacity', 500))
-        update_interval = int(request.POST.get('update_interval', 15))
-        min_threshold = int(request.POST.get('min_threshold', 35))
-        max_threshold = int(request.POST.get('max_threshold', 130))
-        
-        # Validar dados de entrada
-        if product_sku not in ['3_080', '3_090', '3_252', '3_586', '911753']:
-            return JsonResponse({'status': 'error', 'message': 'SKU inválido.'}, status=400)
-            
-        # Executar a simulação do Buyer Agent
-        payload = run_buyer_agent_simulation(
-            product_sku=product_sku,
-            max_capacity=max_capacity,
-            update_interval_days=update_interval,
-            min_threshold=min_threshold,
-            max_threshold=max_threshold,
-            num_days=150  # Simulação padrão de 150 dias
-        )
-        
-        return JsonResponse({'status': 'success', 'data': payload})
-        
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return JsonResponse({'status': 'error', 'message': f'Erro crítico na simulação: {str(e)}'}, status=500)
-
-
 def process_sensor_readings_file(warehouse, file):
     """
     Processa ficheiros de leituras de sensores em formato JSON, CSV ou Excel (.xlsx, .xls)
@@ -2875,460 +2783,8 @@ def edit_warehouse(request, warehouse_id):
 
 
 # ======================================================================
-# NOVAS VIEWS PARA TREINO DE MODELOS (BUYER / STOCK) E AJUSTE DE STOCK
+# AJUSTE MANUAL DE STOCK E TEMPLATES DE TREINO
 # ======================================================================
-
-import threading
-import time
-
-# Dicionário em memória para guardar o estado dos treinos dos utilizadores
-TRAINING_STATUS = {}
-
-def async_buyer_training(user_id, sku, excel_file_path, storage_dir):
-    try:
-        TRAINING_STATUS[user_id] = {
-            'status': 'training',
-            'progress': 10,
-            'epoch': 0,
-            'loss': 0.0,
-            'message': f'A ler ficheiro de histórico e a preparar dados para {sku}...'
-        }
-        time.sleep(2)
-        
-        # 1. Tentar fazer o parse do ficheiro com pandas
-        import pandas as pd
-        try:
-            if excel_file_path.endswith(('.xlsx', '.xls')):
-                df = pd.read_excel(excel_file_path)
-            else:
-                df = pd.read_csv(excel_file_path)
-            row_count = len(df)
-        except Exception:
-            row_count = 100  # Fallback se falhar leitura
-            
-        TRAINING_STATUS[user_id].update({
-            'progress': 25,
-            'message': f'A treinar o modelo de Previsão de Procura (MLP) para {sku}...'
-        })
-        time.sleep(2.5)
-        
-        # Treinar a MLP modular criada
-        from BuyerAgent.agent.demand_forecast_model import ModularForecaster
-        import numpy as np
-        # input_dim=10, hidden_dim=64
-        X_dummy = np.random.randn(row_count if row_count > 10 else 100, 10)
-        y_dummy = np.random.randn(row_count if row_count > 10 else 100, 1)
-        
-        forecaster = ModularForecaster(input_dim=10, hidden_dim=64, output_dim=1)
-        forecaster.fit(X_dummy, y_dummy, epochs=15, batch_size=16)
-        
-        # Salvar o modelo na pasta forecast do utilizador
-        forecast_path = os.path.join(storage_dir, 'forecast', 'demand_forecast.pth')
-        forecaster.save(forecast_path)
-        
-        TRAINING_STATUS[user_id].update({
-            'progress': 50,
-            'epoch': 15,
-            'loss': 0.082,
-            'message': f'Previsão de Procura gravada! A treinar Agente Comprador (PPO) para {sku}...'
-        })
-        time.sleep(2)
-        
-        # Simular ciclo de treino do PPO
-        for epoch in range(1, 6):
-            time.sleep(1.5)
-            TRAINING_STATUS[user_id].update({
-                'progress': 50 + (epoch * 10),
-                'epoch': epoch * 20,
-                'loss': round(0.04 / epoch, 4),
-                'message': f'Otimização do Agente Comprador (PPO) para {sku} - Época {epoch * 20}/100...'
-            })
-            
-        # Salvar pesos do Buyer Agent
-        buyer_dir = os.path.join(storage_dir, 'buyer')
-        os.makedirs(buyer_dir, exist_ok=True)
-        with open(os.path.join(buyer_dir, 'actor.pth'), 'w') as f:
-            f.write('buyer_actor_dummy_weights')
-        with open(os.path.join(buyer_dir, 'critic.pth'), 'w') as f:
-            f.write('buyer_critic_dummy_weights')
-            
-        TRAINING_STATUS[user_id].update({
-            'status': 'completed',
-            'progress': 100,
-            'message': f'Treino do Buyer Agent e MLP para {sku} concluído com sucesso!'
-        })
-        
-    except Exception as e:
-        TRAINING_STATUS[user_id] = {
-            'status': 'failed',
-            'progress': 0,
-            'message': f'Erro no treino: {str(e)}'
-        }
-
-def async_stock_training(user_id, sku, excel_file_path, storage_dir):
-    try:
-        TRAINING_STATUS[user_id] = {
-            'status': 'training',
-            'progress': 10,
-            'epoch': 0,
-            'loss': 0.0,
-            'message': f'A ler ficheiro de histórico de stocks e colheitas para {sku}...'
-        }
-        
-        import os
-        import sys
-        import re
-        import subprocess
-        import io
-        import pandas as pd
-        import numpy as np
-        import joblib
-        import torch
-        from django.conf import settings
-        from django.contrib.auth.models import User
-        from .models import ProductSubFamily, TrainedModel, WarehouseSensorReading, Warehouse, Harvest
-
-        # Resolve SKU
-        subfamily_id = sku
-        harvest_id = None
-        if '|' in sku:
-            parts = sku.split('|')
-            subfamily_id = parts[0]
-            try:
-                harvest_id = int(parts[1])
-            except ValueError:
-                pass
-                
-        subfamily = ProductSubFamily.objects.get(pk=subfamily_id)
-        
-        # Load the user's trained sales prediction model (MLP)
-        model_record = TrainedModel.objects.filter(
-            owner_id=user_id,
-            culture=subfamily,
-            model_type='sales_mlp',
-            file_name='sales_mlp.joblib'
-        ).first()
-        
-        if not model_record:
-            raise FileNotFoundError("Precisa de treinar primeiro o modelo de previsão de vendas (MLP) para esta cultura no menu 'Previsão de Vendas'.")
-            
-        TRAINING_STATUS[user_id].update({
-            'progress': 20,
-            'message': 'A inicializar previsor de vendas e a processar dados...'
-        })
-        
-        # Load excel file
-        if excel_file_path.endswith('.xlsx') or excel_file_path.endswith('.xls'):
-            df = pd.read_excel(excel_file_path)
-        else:
-            df = pd.read_csv(excel_file_path)
-            
-        # Normalize columns
-        col_mapping = {
-            'day': 'date', 'date': 'date', 'data': 'date', 'Data': 'date',
-            'real_value': 'sales_quantity_kg', 'sales_quantity_kg': 'sales_quantity_kg',
-            'vendas_kg': 'sales_quantity_kg', 'Vendas_Kg': 'sales_quantity_kg',
-            'price': 'price_per_kg', 'price_per_kg': 'price_per_kg',
-            'preco_venda_euro': 'price_per_kg', 'Preco_Venda_Euro': 'price_per_kg',
-            'Stock_Inicial_Kg': 'stock_inicial_kg', 'Colheita_Kg': 'colheita_kg',
-            'Stock_Final_Kg': 'stock_final_kg',
-        }
-        df = df.rename(columns=col_mapping)
-        if 'date' not in df.columns or 'sales_quantity_kg' not in df.columns:
-            raise KeyError("O ficheiro deve conter as colunas de data ('Data' ou 'date') e de quantidade de vendas ('Vendas_Kg' ou 'sales_quantity_kg').")
-            
-        df = df.sort_values(by='date').reset_index(drop=True)
-        df['date'] = pd.to_datetime(df['date'])
-        
-        # Load forecasting model
-        mlp = joblib.load(io.BytesIO(model_record.file_data))
-        
-        df['day_of_week'] = df['date'].apply(lambda x: x.weekday() + 1)
-        df['month'] = df['date'].apply(lambda x: x.month)
-        
-        df['real_value_lag1'] = df['sales_quantity_kg'].shift(1)
-        df['real_value_lag7'] = df['sales_quantity_kg'].shift(7)
-        
-        # Fill lags
-        mean_sales = df['sales_quantity_kg'].mean() if len(df) > 0 else 10.0
-        df['real_value_lag1'] = df['real_value_lag1'].bfill().fillna(mean_sales)
-        df['real_value_lag7'] = df['real_value_lag7'].bfill().fillna(mean_sales)
-        
-        if 'price_per_kg' not in df.columns:
-            df['price_per_kg'] = 2.0
-            
-        X = df[['real_value_lag1', 'real_value_lag7', 'price_per_kg', 'day_of_week', 'month']].values
-        df['prediction'] = mlp.predict(X)
-        df['prediction'] = df['prediction'].clip(lower=0.0)
-        
-        # Fetch warehouse readings
-        user = User.objects.get(pk=user_id)
-        warehouse = None
-        if harvest_id:
-            try:
-                harvest = Harvest.objects.get(pk=harvest_id, producer=user)
-                warehouse = harvest.warehouse
-            except Exception:
-                pass
-        if not warehouse:
-            warehouse = Warehouse.objects.filter(owner=user).first()
-            
-        temperatures = []
-        humidities = []
-        ethylenes = []
-        for idx, row in df.iterrows():
-            d_val = row['date'].date()
-            reading = None
-            if warehouse:
-                reading = WarehouseSensorReading.objects.filter(warehouse=warehouse, date=d_val).first()
-            if not reading:
-                reading = WarehouseSensorReading.objects.filter(date=d_val).first()
-            if reading:
-                temperatures.append(float(reading.temperature))
-                humidities.append(float(reading.humidity))
-                ethylenes.append(float(reading.ethylene))
-            else:
-                temperatures.append(18.0)
-                humidities.append(72.0)
-                ethylenes.append(0.15)
-                
-        df['temperature'] = temperatures
-        df['humidity'] = humidities
-        df['ethylene'] = ethylenes
-        
-        preset_volume = 0.002
-        if subfamily.lifecycle_presets and isinstance(subfamily.lifecycle_presets, dict):
-            preset_volume = subfamily.lifecycle_presets.get('volume', 0.002)
-        df['volume'] = preset_volume
-        df['price'] = df['price_per_kg']
-        
-        # Save enriched excel file
-        temp_excel_dir = os.path.join(storage_dir, 'temp_stock')
-        os.makedirs(temp_excel_dir, exist_ok=True)
-        temp_excel_path = os.path.join(temp_excel_dir, f"stock_train_dataset_{user_id}.xlsx")
-        
-        save_cols = ['date', 'prediction', 'price', 'volume', 'temperature', 'humidity', 'ethylene']
-        if 'sales_quantity_kg' in df.columns:
-            df['real_value'] = df['sales_quantity_kg']
-            save_cols.append('real_value')
-            
-        df[save_cols].to_excel(temp_excel_path, index=False)
-        
-        TRAINING_STATUS[user_id].update({
-            'progress': 30,
-            'message': 'A inicializar subprocesso de treino PPO para o Stock Agent...'
-        })
-        
-        # Launch subprocess
-        stock_mgmt_dir = os.path.join(settings.BASE_DIR, 'StockManagement')
-        cmd = [sys.executable, 'train_pricing.py']
-        
-        env = os.environ.copy()
-        env["EXCEL_PATH"] = temp_excel_path
-        env["MAX_EPISODES_TOTAL"] = "640" # Quick training episode limit
-        env["NUM_WORKERS"] = "2" # Safe execution
-        env["NUM_ENVS"] = "32"
-        
-        process = subprocess.Popen(
-            cmd,
-            cwd=stock_mgmt_dir,
-            env=env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1
-        )
-        
-        for line in process.stdout:
-            clean_line = line.strip()
-            if clean_line:
-                if "Episódios:" in clean_line or "Episodios:" in clean_line:
-                    match = re.search(r'(?:Episódios|Episodios):\s+(\d+)/(\d+)\s+\|\s+Média Lucro Batch:\s+([\d.-]+)€\s+\|\s+Loss Total:\s+([\d.-]+)', clean_line)
-                    if match:
-                        ep = int(match.group(1))
-                        tot = int(match.group(2))
-                        profit = float(match.group(3))
-                        loss = float(match.group(4))
-                        
-                        progress = 30 + int((ep / tot) * 60) # Map 0%-100% of training to 30%-90% of UI progress
-                        TRAINING_STATUS[user_id].update({
-                            'progress': progress,
-                            'epoch': ep,
-                            'loss': loss,
-                            'message': f"A treinar Stock Agent: {ep}/{tot} episódios | Lucro: {profit:.1f}€ | Loss: {loss:.4f}"
-                        })
-                elif "ERRO" in clean_line or "Error" in clean_line:
-                    print(f"[Stock Training Subprocess Error] {clean_line}")
-                    
-        process.wait()
-        
-        # Load weights and save to database
-        actor_path = os.path.join(stock_mgmt_dir, 'models', 'custom_sku_seed42_actor.pth')
-        critic_path = os.path.join(stock_mgmt_dir, 'models', 'custom_sku_seed42_critic.pth')
-        
-        if not os.path.exists(actor_path):
-            actor_path = os.path.join(stock_mgmt_dir, 'models', 'custom_sku_seed1337_actor.pth')
-            critic_path = os.path.join(stock_mgmt_dir, 'models', 'custom_sku_seed1337_critic.pth')
-            
-        if os.path.exists(actor_path) and os.path.exists(critic_path):
-            with open(actor_path, 'rb') as f:
-                actor_data = f.read()
-            TrainedModel.objects.update_or_create(
-                owner=user,
-                culture=subfamily,
-                model_type='stock_agent',
-                file_name='stock_agent_actor.pth',
-                defaults={'file_data': actor_data}
-            )
-            
-            with open(critic_path, 'rb') as f:
-                critic_data = f.read()
-            TrainedModel.objects.update_or_create(
-                owner=user,
-                culture=subfamily,
-                model_type='stock_agent',
-                file_name='stock_agent_critic.pth',
-                defaults={'file_data': critic_data}
-            )
-            
-            # Clean up
-            try:
-                for file_to_del in [actor_path, critic_path]:
-                    if os.path.exists(file_to_del):
-                        os.remove(file_to_del)
-                import glob
-                for f in glob.glob(os.path.join(stock_mgmt_dir, 'models', 'custom_sku_seed*')):
-                    os.remove(f)
-                if os.path.exists(temp_excel_path):
-                    os.remove(temp_excel_path)
-            except Exception as cl_err:
-                print(f"Erro ao limpar arquivos temporários: {cl_err}")
-                
-            TRAINING_STATUS[user_id].update({
-                'status': 'completed',
-                'progress': 100,
-                'message': f'Treino do Stock Agent para {subfamily.name} concluído com sucesso!'
-            })
-        else:
-            raise FileNotFoundError("Não foi possível gerar os pesos finais do modelo (PPO Actor/Critic).")
-            
-    except Exception as e:
-        TRAINING_STATUS[user_id] = {
-            'status': 'failed',
-            'progress': 0,
-            'message': f'Erro no treino: {str(e)}'
-        }
-
-@login_required
-def submit_buyer_training(request):
-    from django.http import JsonResponse
-    if request.method != 'POST':
-        return JsonResponse({'status': 'error', 'message': 'Método não permitido.'}, status=405)
-        
-    sku = request.POST.get('sku', '')
-    file = request.FILES.get('history_file')
-    
-    if not file:
-        return JsonResponse({'status': 'error', 'message': 'Nenhum ficheiro carregado.'}, status=400)
-        
-    user_id = request.user.id
-    
-    # Resolve SKU dynamically
-    sku_label = sku
-    try:
-        if '|' in sku:
-            parts = sku.split('|')
-            subfamily = ProductSubFamily.objects.get(pk=parts[0])
-            sku_label = f"{subfamily.name} (Lote #{parts[1]})"
-        elif sku:
-            subfamily = ProductSubFamily.objects.get(pk=sku)
-            sku_label = subfamily.name
-    except Exception:
-        pass
-        
-    # Criar pasta do utilizador
-    storage_dir = os.path.join(settings.BASE_DIR, 'storage', 'users', str(user_id))
-    os.makedirs(storage_dir, exist_ok=True)
-    
-    # Salvar temporariamente
-    temp_dir = os.path.join(storage_dir, 'temp')
-    os.makedirs(temp_dir, exist_ok=True)
-    temp_file_path = os.path.join(temp_dir, file.name)
-    with open(temp_file_path, 'wb+') as destination:
-        for chunk in file.chunks():
-            destination.write(chunk)
-            
-    # Disparar thread de treino
-    thread = threading.Thread(target=async_buyer_training, args=(user_id, sku_label, temp_file_path, storage_dir))
-    thread.daemon = True
-    thread.start()
-    
-    return JsonResponse({
-        'status': 'success',
-        'message': f'Treino do Buyer Agent e Modelo de Previsões iniciado com sucesso para {sku_label}.'
-    })
-
-@login_required
-def submit_stock_training(request):
-    from django.http import JsonResponse
-    if request.method != 'POST':
-        return JsonResponse({'status': 'error', 'message': 'Método não permitido.'}, status=405)
-        
-    sku = request.POST.get('sku', '')
-    file = request.FILES.get('history_file')
-    
-    if not file:
-        return JsonResponse({'status': 'error', 'message': 'Nenhum ficheiro carregado.'}, status=400)
-        
-    user_id = request.user.id
-    
-    # Resolve SKU dynamically
-    sku_label = sku
-    try:
-        if '|' in sku:
-            parts = sku.split('|')
-            subfamily = ProductSubFamily.objects.get(pk=parts[0])
-            sku_label = f"{subfamily.name} (Lote #{parts[1]})"
-        elif sku:
-            subfamily = ProductSubFamily.objects.get(pk=sku)
-            sku_label = subfamily.name
-    except Exception:
-        pass
-        
-    # Criar pasta do utilizador
-    storage_dir = os.path.join(settings.BASE_DIR, 'storage', 'users', str(user_id))
-    os.makedirs(storage_dir, exist_ok=True)
-    
-    # Salvar temporariamente
-    temp_dir = os.path.join(storage_dir, 'temp')
-    os.makedirs(temp_dir, exist_ok=True)
-    temp_file_path = os.path.join(temp_dir, file.name)
-    with open(temp_file_path, 'wb+') as destination:
-        for chunk in file.chunks():
-            destination.write(chunk)
-            
-    # Disparar thread de treino
-    thread = threading.Thread(target=async_stock_training, args=(user_id, sku, temp_file_path, storage_dir))
-    thread.daemon = True
-    thread.start()
-    
-    return JsonResponse({
-        'status': 'success',
-        'message': f'Treino do Stock Agent iniciado com sucesso para {sku_label}.'
-    })
-
-@login_required
-def get_training_status(request):
-    from django.http import JsonResponse
-    user_id = request.user.id
-    status_data = TRAINING_STATUS.get(user_id, {
-        'status': 'idle',
-        'progress': 0,
-        'epoch': 0,
-        'loss': 0.0,
-        'message': 'Pronto para treinar.'
-    })
-    return JsonResponse(status_data)
 
 @login_required
 def adjust_stock_manually(request):
@@ -3528,7 +2984,6 @@ def download_training_template(request):
     import pandas as pd
     from django.http import HttpResponse
     
-    template_type = request.GET.get('type', 'buyer')
     sku = request.GET.get('sku', '')
     
     # Resolve SKU to a clean name for inclusion in template if possible
@@ -3552,40 +3007,21 @@ def download_training_template(request):
     clean_culture_name = "".join(c for c in unicodedata.normalize('NFD', culture_name) if unicodedata.category(c) != 'Mn')
 
     # Create dynamic template data
-    if template_type == 'stock':
-        columns = [
-            'Data', 
-            'Cultura_Produto', 
-            'Detalhe_Lote', 
-            'Stock_Inicial_Kg', 
-            'Colheita_Kg', 
-            'Vendas_Kg', 
-            'Stock_Final_Kg', 
-            'Preco_Venda_Euro'
-        ]
-        data = [
-            ['2026-06-01', culture_name, lot_info or 'Lote #10', 1000.0, 500.0, 200.0, 1300.0, 1.50],
-            ['2026-06-02', culture_name, lot_info or 'Lote #10', 1300.0, 0.0, 150.0, 1150.0, 1.55],
-            ['2026-06-03', culture_name, lot_info or 'Lote #10', 1150.0, 0.0, 300.0, 850.0, 1.60],
-            ['2026-06-04', culture_name, lot_info or 'Lote #10', 850.0, 200.0, 100.0, 950.0, 1.50],
-            ['2026-06-05', culture_name, lot_info or 'Lote #10', 950.0, 0.0, 250.0, 700.0, 1.65],
-        ]
-        filename = f"template_treino_stock_{clean_culture_name.lower().replace(' ', '_')}.xlsx"
-    else: # buyer
-        columns = [
-            'Data', 
-            'Cultura_Produto', 
-            'Vendas_Kg', 
-            'Preco_Venda_Euro'
-        ]
-        data = [
-            ['2026-06-01', culture_name, 250.0, 1.80],
-            ['2026-06-02', culture_name, 270.0, 1.85],
-            ['2026-06-03', culture_name, 310.0, 1.80],
-            ['2026-06-04', culture_name, 150.0, 1.90],
-            ['2026-06-05', culture_name, 400.0, 1.75],
-        ]
-        filename = f"template_previsao_vendas_{clean_culture_name.lower().replace(' ', '_')}.xlsx"
+    # Template de histórico de vendas (forecast / buyer agent)
+    columns = [
+        'Data', 
+        'Cultura_Produto', 
+        'Vendas_Kg', 
+        'Preco_Venda_Euro'
+    ]
+    data = [
+        ['2026-06-01', culture_name, 250.0, 1.80],
+        ['2026-06-02', culture_name, 270.0, 1.85],
+        ['2026-06-03', culture_name, 310.0, 1.80],
+        ['2026-06-04', culture_name, 150.0, 1.90],
+        ['2026-06-05', culture_name, 400.0, 1.75],
+    ]
+    filename = f"template_previsao_vendas_{clean_culture_name.lower().replace(' ', '_')}.xlsx"
 
     df = pd.DataFrame(data, columns=columns)
     
@@ -3769,7 +3205,7 @@ def upload_sales_history(request):
     if request.method == "POST":
         culture_id = request.POST.get('culture_id')
         sales_file = request.FILES.get('sales_file')
-        model_type = request.POST.get('model_type', 'mlp')
+        model_type = request.POST.get('model_type', 'modelo_1')
         
         if not culture_id:
             msg = 'Por favor selecione uma cultura.'
@@ -3830,8 +3266,8 @@ def upload_sales_history(request):
             from dashboard.services.agent_service import train_sales_forecaster
             res = train_sales_forecaster(request.user, subfamily, df, model_type=model_type)
             
-            model_display = "Autoformer (Transformer)" if model_type.lower() == "autoformer" else "MLP (Rede Neuronal)"
-            success_msg = f"Modelo {model_display} para {subfamily.name} treinado com sucesso no Forecast Web Service! ({res['samples_count']} dias de histórico processados)."
+            model_display = res['model_display_name']
+            success_msg = f"{model_display} para {subfamily.name} treinado com sucesso no Forecast Web Service! ({res['samples_count']} dias de histórico processados)."
             
             if is_ajax:
                 return JsonResponse({
@@ -3869,7 +3305,7 @@ def infer_sales_forecast(request):
         
         try:
             from dashboard.services.agent_service import run_sales_inference
-            result = run_sales_inference(request.user, subfamily, horizon_days=horizon_days, model_type=model_type)
+            result = run_sales_inference(request.user, subfamily, horizon_days=horizon_days, model_type=model_type, save_to_db=False)
             
             return JsonResponse({
                 'status': 'success',
@@ -3880,7 +3316,8 @@ def infer_sales_forecast(request):
                 'historical': result.get('recent_history', []),
                 'kpis': result.get('kpis', {}),
                 'metrics': result.get('kpis', {}),
-                'model_type': result.get('model_type', 'mlp')
+                'model_type': result.get('model_type', 'modelo_1'),
+                'model_display_name': result.get('model_display_name')
             })
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
@@ -3928,11 +3365,32 @@ def train_buyer_agent(request):
             messages.error(request, 'Nenhuma cultura ou produto registado no sistema.')
             return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
 
+        # Validação Prévia: Armazém com capacidade real configurada
+        has_valid_warehouse = Warehouse.objects.filter(owner=request.user, capacity__gt=0).exists()
+        if not has_valid_warehouse:
+            err_msg = "Não possui nenhum armazém com capacidade registada. Por favor, configure a capacidade do armazém em 'Gestão de Armazéns' antes de treinar o Buyer Agent."
+            if is_ajax:
+                return JsonResponse({'status': 'error', 'message': err_msg}, status=400)
+            messages.error(request, err_msg)
+            return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
+
+        # Validação Prévia: Modelo de previsão treinado no Forecast Service
+        from dashboard.services.agent_service import get_forecast_model_status
+        fc_status = get_forecast_model_status(request.user, subfamily)
+        has_forecast_model = fc_status.get('has_model', False)
+        if not has_forecast_model:
+            err_msg = f"Não existe modelo de previsão treinado para a cultura '{subfamily.name}'. Deve primeiro aceder à aba 'Previsão de Vendas' e treinar um modelo de previsão antes de treinar o Buyer Agent."
+            if is_ajax:
+                return JsonResponse({'status': 'error', 'message': err_msg}, status=400)
+            messages.error(request, err_msg)
+            return redirect(request.META.get('HTTP_REFERER', 'retailer_dashboard'))
+
         market_file = request.FILES.get('market_file')
         fruit_key = request.POST.get('fruit_key')
-        max_episodes = request.POST.get('max_episodes', '300')
+        max_episodes = request.POST.get('max_episodes', '350')
+        forecast_model_type = request.POST.get('forecast_model_type')
         if not max_episodes or not str(max_episodes).strip():
-            max_episodes = '300'
+            max_episodes = '350'
         
         try:
             import pandas as pd
@@ -3963,19 +3421,51 @@ def train_buyer_agent(request):
                 
                 df = pd.DataFrame(list(sales_qs.values('date', 'sales_quantity_kg', 'price_per_kg')))
                 
-            from dashboard.services.agent_service import train_buyer_agent_optimizer
-            logs = train_buyer_agent_optimizer(request.user, subfamily, df, max_episodes=max_episodes, fruit_key=fruit_key)
+            from dashboard.services.agent_service import train_buyer_agent_optimizer_generator
             
             if is_ajax:
-                return JsonResponse({
-                    'status': 'success',
-                    'message': f'O Buyer Agent para {subfamily.name} foi treinado com sucesso no Web Service!',
-                    'logs': logs,
-                    'culture_id': subfamily.pk,
-                    'culture_name': subfamily.name
-                })
-                
+                from django.http import StreamingHttpResponse as DjangoStreamingResponse
+                import json as _json
+
+                def stream_logs():
+                    try:
+                        gen = train_buyer_agent_optimizer_generator(
+                            request.user,
+                            subfamily,
+                            df,
+                            max_episodes=max_episodes,
+                            fruit_key=fruit_key,
+                            forecast_model_type=forecast_model_type
+                        )
+                        for log_line in gen:
+                            clean = log_line.replace('\n', '').strip()
+                            if clean:
+                                yield f"data: {_json.dumps({'type': 'log', 'text': clean})}\n\n"
+                        yield f"data: {_json.dumps({'type': 'done', 'status': 'success', 'message': f'O Buyer Agent para {subfamily.name} foi treinado com sucesso no Web Service!', 'culture_id': subfamily.pk, 'culture_name': subfamily.name})}\n\n"
+                    except (ValueError, ConnectionError, RuntimeError) as ex:
+                        yield f"data: {_json.dumps({'type': 'error', 'message': str(ex)})}\n\n"
+                    except Exception as ex:
+                        yield f"data: {_json.dumps({'type': 'error', 'message': str(ex)})}\n\n"
+
+                response = DjangoStreamingResponse(stream_logs(), content_type='text/event-stream')
+                response['Cache-Control'] = 'no-cache'
+                response['X-Accel-Buffering'] = 'no'
+                return response
+            
+            from dashboard.services.agent_service import train_buyer_agent_optimizer
+            logs = train_buyer_agent_optimizer(
+                request.user,
+                subfamily,
+                df,
+                max_episodes=max_episodes,
+                fruit_key=fruit_key,
+                forecast_model_type=forecast_model_type
+            )
             messages.success(request, f"O Buyer Agent para {subfamily.name} foi treinado com sucesso!")
+        except ValueError as ve:
+            if is_ajax:
+                return JsonResponse({'status': 'error', 'message': str(ve)}, status=400)
+            messages.error(request, str(ve))
         except ConnectionError as ce:
             if is_ajax:
                 return JsonResponse({'status': 'error', 'message': str(ce)}, status=503)
@@ -4087,6 +3577,7 @@ def get_lot_lifecycle_forecast(request):
 
     lot_id = request.GET.get('lot_id')
     stock_id = request.GET.get('stock_id')
+    packaging = request.GET.get('packaging') or request.GET.get('packaging_method')
 
     if not lot_id and not stock_id:
         return JsonResponse({'status': 'error', 'message': 'Parâmetro lot_id ou stock_id em falta.'}, status=400)
@@ -4095,7 +3586,7 @@ def get_lot_lifecycle_forecast(request):
     from django.conf import settings
 
     target_id = lot_id or stock_id
-    payload = build_lot_lifecycle_data(lot_id=lot_id, stock_id=stock_id, user=request.user)
+    payload = build_lot_lifecycle_data(lot_id=lot_id, stock_id=stock_id, user=request.user, packaging_method=packaging)
 
     if not payload:
         return JsonResponse({'status': 'error', 'message': f'Lote #{target_id} não encontrado.'}, status=404)
@@ -4150,6 +3641,7 @@ def get_lot_lifecycle_forecast(request):
         'fruit_type': lot_info.get('fruit_type'),
         'producer': lot_info.get('producer'),
         'current_owner': lot_info.get('current_owner'),
+        'current_owner_type': lot_info.get('current_owner_type', 'Retailer'),
         'harvest_date': lot_info.get('harvest_date'),
         'current_stock_kg': lot_info.get('current_stock_kg'),
         'warehouse_location': warehouse_info.get('location', 'N/A'),
@@ -4157,15 +3649,21 @@ def get_lot_lifecycle_forecast(request):
         'temp_today': float(temp_today),
         'hum_today': float(hum_today),
         'eth_today': float(eth_today),
+        'packaging_method': packaging or payload.get('packaging_method', 'bulk'),
         'forecast': {
             'algorithm': forecast_data.get('algorithm', 'ode_new'),
             'product_id': forecast_data.get('product_id', lot_info.get('fruit_type', 'apple')),
-            'remaining_lifetime': forecast_data.get('remaining_lifetime', 0.0),
+            'commercial_lifetime_remaining': forecast_data.get('commercial_lifetime_remaining', forecast_data.get('remaining_lifetime', 0.0)),
+            'biological_lifetime_remaining': forecast_data.get('biological_lifetime_remaining', 0.0),
+            'remaining_lifetime': forecast_data.get('commercial_lifetime_remaining', forecast_data.get('remaining_lifetime', 0.0)),
+            'point_a_day': forecast_data.get('point_a_day'),
+            'point_b_day': forecast_data.get('point_b_day'),
             'firmness': forecast_data.get('firmness'),
             'brix': forecast_data.get('brix'),
             'acidity': forecast_data.get('acidity'),
             'mold': forecast_data.get('mold', 0.0),
             'quality_index': forecast_data.get('quality_index', 0.0),
+            'continuous_data': forecast_data.get('continuous_data'),
         },
         'initial_metrics': {
             'quality_score': initial_m.get('quality_score'),
@@ -4189,7 +3687,7 @@ def get_lc_decay_data(request):
     return get_lot_lifecycle_forecast(request)
 
 
-def build_lot_lifecycle_data(lot_id=None, stock_id=None, user=None):
+def build_lot_lifecycle_data(lot_id=None, stock_id=None, user=None, packaging_method=None):
     """
     Constrói o payload JSON padronizado e integral de um lote desde a colheita até ao dia atual,
     incluindo eventos de blockchain, leituras diárias de sensores do armazém e regras de imputação meteorológica.
@@ -4582,11 +4080,13 @@ def build_lot_lifecycle_data(lot_id=None, stock_id=None, user=None):
                 "source": "SENSOR_RECORDING" if wh_source == 'JSON' else ("IPMA_REGIONAL" if wh_source == 'IPMA' else "FIXED_PRESET")
             })
 
+        seg_pkg = packaging_method or ("open_box" if wh.storage_unit == 'CRATES' else "bulk")
         sensor_history_by_warehouse.append({
             "warehouse_id": wh.warehouse_id,
             "warehouse_location": wh.location,
             "region": wh.region,
             "meteo_source": wh_source,
+            "packaging_method": seg_pkg,
             "period": {
                 "start_date": seg_start.strftime("%Y-%m-%d"),
                 "end_date": seg_end.strftime("%Y-%m-%d"),
@@ -4598,6 +4098,24 @@ def build_lot_lifecycle_data(lot_id=None, stock_id=None, user=None):
 
     # Atualizar estratégia meteorológica com flag de sensor de etileno
     meteorology_strategy["has_ethylene_sensor"] = has_any_real_ethylene
+
+    user_role = 'Retailer'
+    if user and hasattr(user, 'groups'):
+        group_names = [g.name for g in user.groups.all()]
+        if 'Producer' in group_names:
+            user_role = 'Producer'
+        elif 'Processor' in group_names:
+            user_role = 'Processor'
+        elif 'Retailer' in group_names:
+            user_role = 'Retailer'
+    elif harvest and not stock:
+        user_role = 'Producer'
+    elif stock and hasattr(stock, 'owner') and stock.owner:
+        group_names = [g.name for g in stock.owner.groups.all()]
+        if 'Processor' in group_names:
+            user_role = 'Processor'
+        elif 'Retailer' in group_names:
+            user_role = 'Retailer'
 
     # Payload Final Completo
     payload = {
@@ -4611,6 +4129,8 @@ def build_lot_lifecycle_data(lot_id=None, stock_id=None, user=None):
                 "end_date": today.strftime("%Y-%m-%d")
             }
         },
+        "packaging_method": packaging_method or "bulk",
+        "plot_info": True,
         "lot_identification": {
             "lot_id": lot_pk,
             "batch_id": batch_id,
@@ -4618,6 +4138,7 @@ def build_lot_lifecycle_data(lot_id=None, stock_id=None, user=None):
             "fruit_type": fruit_type,
             "producer": producer_name,
             "current_owner": owner_name,
+            "current_owner_type": user_role,
             "harvest_date": harvest_date.strftime("%Y-%m-%d"),
             "initial_quantity_kg": initial_qty,
             "current_stock_kg": current_qty,
@@ -4659,4 +4180,4 @@ def download_lot_lifecycle_json(request, lot_id):
     
     response = HttpResponse(response_data, content_type="application/json; charset=utf-8")
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
-    return response
+    return response

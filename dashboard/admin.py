@@ -32,3 +32,28 @@ class TrainedModelAdmin(admin.ModelAdmin):
     list_filter = ('model_type', 'culture')
     search_fields = ('owner__username', 'culture__name', 'file_name')
 
+
+
+from .models import LedgerEntry
+
+
+@admin.register(LedgerEntry)
+class LedgerEntryAdmin(admin.ModelAdmin):
+    """Ledger local: apenas leitura (append-only)."""
+    list_display = ('block_number', 'asset_id', 'function', 'actor', 'timestamp', 'short_hash')
+    list_filter = ('function',)
+    search_fields = ('asset_id', 'tx_id', 'actor')
+    ordering = ('-block_number',)
+
+    def short_hash(self, obj):
+        return obj.hash[:12]
+    short_hash.short_description = 'Hash'
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

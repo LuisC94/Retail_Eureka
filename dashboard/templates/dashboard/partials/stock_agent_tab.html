@@ -1,0 +1,285 @@
+{% comment %}
+    ABA STOCK AGENT (partilhada por Produtor, Retalhista e Processador).
+    Incluída nos 3 dashboards com o parâmetro tab_class:
+      - producerDash.html  -> tab_class="dashboard-tab"
+      - retailerDash.html / processorDash.html -> tab_class="tab-content"
+{% endcomment %}
+<div id="stock-agent" class="{{ tab_class|default:'tab-content' }}" style="display: none;">
+    <style>
+        #stock-agent .sa-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+        #stock-agent .sa-grid { display: grid; grid-template-columns: 2fr 2fr 1.2fr 1.4fr; gap: 14px; align-items: end; }
+        #stock-agent label.sa-label { display: block; font-size: 0.8em; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 6px; }
+        #stock-agent select, #stock-agent input[type=date] { width: 100%; padding: 9px 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.95em; background: #fff; box-sizing: border-box; }
+        #stock-agent .sa-seg { display: flex; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; }
+        #stock-agent .sa-seg button { flex: 1; padding: 9px 6px; border: none; background: #fff; color: #334155; font-weight: 600; font-size: 0.88em; cursor: pointer; }
+        #stock-agent .sa-seg button.active { background: #00796b; color: #fff; }
+        #stock-agent .sa-btn { width: 100%; padding: 10px 14px; border: none; border-radius: 8px; background: #00796b; color: #fff; font-weight: 700; font-size: 0.95em; cursor: pointer; }
+        #stock-agent .sa-btn:disabled { background: #94a3b8; cursor: not-allowed; }
+        #stock-agent .sa-hero { border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+        #stock-agent .sa-hero.sell { background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); border: 1.5px solid #fdba74; }
+        #stock-agent .sa-hero.wait { background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border: 1.5px solid #86efac; }
+        #stock-agent .sa-hero h4 { margin: 0 0 6px 0; font-size: 1.25em; color: #1e293b; }
+        #stock-agent .sa-chips { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+        #stock-agent .sa-chip { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; min-width: 150px; }
+        #stock-agent .sa-chip .v { font-size: 1.2em; font-weight: 700; color: #00796b; }
+        #stock-agent .sa-chip .l { font-size: 0.75em; color: #64748b; text-transform: uppercase; font-weight: 600; }
+        #stock-agent table.sa-table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+        #stock-agent table.sa-table th { text-align: left; background: #f1f5f9; color: #334155; padding: 9px 10px; font-size: 0.8em; text-transform: uppercase; }
+        #stock-agent table.sa-table td { padding: 9px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+        #stock-agent tr.sa-chosen td { background: #fff7ed; }
+        #stock-agent .sa-bar { background: #e2e8f0; border-radius: 6px; height: 8px; width: 110px; overflow: hidden; display: inline-block; vertical-align: middle; }
+        #stock-agent .sa-bar > span { display: block; height: 100%; background: #ea580c; }
+        #stock-agent .sa-badge { display: inline-block; padding: 3px 10px; border-radius: 9999px; font-size: 0.78em; font-weight: 700; white-space: nowrap; }
+        #stock-agent .b-sell { background: #ffedd5; color: #9a3412; border: 1px solid #fdba74; }
+        #stock-agent .b-wait { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+        #stock-agent .b-ca { background: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
+        #stock-agent .b-risk { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+        #stock-agent .sa-warn { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 10px; padding: 10px 14px; color: #92400e; font-size: 0.86em; margin-bottom: 14px; }
+        #stock-agent .sa-warn ul { margin: 4px 0 0 18px; padding: 0; }
+        #stock-agent .sa-muted { color: #64748b; font-size: 0.85em; }
+        @media (max-width: 900px) { #stock-agent .sa-grid { grid-template-columns: 1fr 1fr; } }
+    </style>
+
+    <!-- Cabeçalho -->
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #00796b; padding-bottom: 12px; margin-bottom: 22px; flex-wrap: wrap; gap: 15px;">
+        <div>
+            <h3 style="color: #00796b; margin: 0; font-weight: 700; display: flex; align-items: center; gap: 10px; font-size: 1.4em;">
+                <span>📦</span> Stock Agent
+            </h3>
+        </div>
+        <div id="sa-service-badge" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #475569; font-size: 0.85em; font-weight: 700; padding: 6px 14px; border-radius: 20px; display: inline-flex; align-items: center; gap: 6px;">
+            <span id="sa-service-dot" style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#94a3b8;"></span>
+            <span id="sa-service-text">Stock Agent Web Service (Porta 8005)</span>
+        </div>
+    </div>
+
+    <div id="sa-offline" class="sa-warn" style="display: none; background: #fef2f2; border-color: #f87171; color: #991b1b;">
+        <strong>⚠️ Stock Agent Web Service offline (porta 8005).</strong>
+        Inicie o serviço em <code>Web Services/stock_agent_service</code> com <code>python main.py</code>.
+    </div>
+
+    <!-- Pedido -->
+    <div class="sa-card">
+        <div class="sa-grid">
+            <div>
+                <label class="sa-label" for="sa-culture">Cultura em stock</label>
+                <select id="sa-culture" onchange="stockAgentCultureChanged()"><option value="">A carregar...</option></select>
+            </div>
+            <div>
+                <label class="sa-label">Tipo de decisão</label>
+                <div class="sa-seg">
+                    <button type="button" id="sa-mode-lot" class="active" onclick="stockAgentSetMode('lot')">🧺 Lotes (diária)</button>
+                    <button type="button" id="sa-mode-warehouse" onclick="stockAgentSetMode('warehouse')">🏭 Armazéns (semanal)</button>
+                </div>
+            </div>
+            <div>
+                <label class="sa-label" for="sa-date">Data</label>
+                <input type="date" id="sa-date">
+            </div>
+            <div>
+                <button type="button" id="sa-btn" class="sa-btn" onclick="stockAgentRequest()" disabled>🔍 Pedir recomendação</button>
+            </div>
+        </div>
+        <div id="sa-culture-info" class="sa-muted" style="margin-top: 10px;"></div>
+        <div id="sa-mode-help" class="sa-muted" style="margin-top: 4px;">
+            Lotes: o agente pode recomendar 0, 1 ou vários lotes para colocar à venda hoje.
+        </div>
+    </div>
+
+    <!-- Resultado -->
+    <div id="sa-loading" class="sa-card" style="display:none; text-align:center; color:#00796b; font-weight:600;">
+        ⏳ A reconstruir o estado dos lotes (Lifecycle) e a consultar o agente...
+    </div>
+    <div id="sa-error" class="sa-warn" style="display:none; background:#fef2f2; border-color:#f87171; color:#991b1b;"></div>
+    <div id="sa-result" style="display:none;">
+        <div id="sa-warnings"></div>
+        <div id="sa-hero" class="sa-hero"></div>
+        <div id="sa-chips" class="sa-chips"></div>
+        <div class="sa-card" style="padding: 0; overflow-x: auto;">
+            <table class="sa-table">
+                <thead id="sa-thead"></thead>
+                <tbody id="sa-tbody"></tbody>
+            </table>
+        </div>
+        <div id="sa-model" class="sa-muted" style="margin: -6px 2px 20px 2px;"></div>
+    </div>
+</div>
+
+<script type="text/javascript">
+(function () {
+    const STATUS_URL = "{% url 'stock_agent_status' %}";
+    const RECOMMEND_URL = "{% url 'stock_agent_recommend' %}";
+    const CSRF = "{{ csrf_token }}";
+    let saMode = 'lot';
+    let saCultures = [];
+
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const num = (v, d = 0) => (v == null || isNaN(v)) ? '—' : Number(v).toLocaleString('pt-PT', {minimumFractionDigits: d, maximumFractionDigits: d});
+    const el = (id) => document.getElementById(id);
+
+    function setBadge(online) {
+        el('sa-service-dot').style.background = online ? '#2e7d32' : '#dc2626';
+        el('sa-service-badge').style.background = online ? '#e8f5e9' : '#fef2f2';
+        el('sa-service-badge').style.borderColor = online ? '#a5d6a7' : '#fca5a5';
+        el('sa-service-badge').style.color = online ? '#2e7d32' : '#991b1b';
+        el('sa-service-text').textContent = 'Stock Agent Web Service (Porta 8005) ' + (online ? '· Online' : '· Offline');
+        el('sa-offline').style.display = online ? 'none' : 'block';
+    }
+
+    window.stockAgentLoadStatus = function () {
+        fetch(STATUS_URL, {credentials: 'same-origin'}).then(r => r.json()).then(data => {
+            setBadge(data.online);
+            saCultures = data.culturas || [];
+            const sel = el('sa-culture');
+            if (!saCultures.length) {
+                sel.innerHTML = '<option value="">Sem stock registado</option>';
+                el('sa-btn').disabled = true;
+                el('sa-culture-info').textContent = 'Não há lotes/stock com quantidade disponível para este perfil.';
+                return;
+            }
+            sel.innerHTML = saCultures.map(c => `<option value="${c.id}">${esc(c.fruta)} · ${esc(c.nome)} (${num(c.kg)} kg)</option>`).join('');
+            el('sa-btn').disabled = !data.online;
+            stockAgentCultureChanged();
+        }).catch(() => setBadge(false));
+    };
+
+    window.stockAgentCultureChanged = function () {
+        const c = saCultures.find(x => String(x.id) === el('sa-culture').value);
+        if (!c) { el('sa-culture-info').textContent = ''; return; }
+        el('sa-culture-info').innerHTML = `Stock atual: <strong>${num(c.kg)} kg</strong> em <strong>${c.n_lotes}</strong> ${c.n_lotes === 1 ? 'registo/lote' : 'registos/lotes'} e <strong>${c.n_armazens}</strong> armazém(ns).`;
+    };
+
+    window.stockAgentSetMode = function (mode) {
+        saMode = mode;
+        el('sa-mode-lot').classList.toggle('active', mode === 'lot');
+        el('sa-mode-warehouse').classList.toggle('active', mode === 'warehouse');
+        el('sa-mode-help').textContent = mode === 'lot'
+            ? 'Lotes: o agente pode recomendar 0, 1 ou vários lotes para colocar à venda hoje.'
+            : 'Armazéns: o agente recomenda abrir no máximo 1 armazém esta semana — todo o stock desse armazém vai para venda.';
+        el('sa-result').style.display = 'none';
+    };
+
+    window.stockAgentRequest = function () {
+        const cultureId = el('sa-culture').value;
+        if (!cultureId) return;
+        el('sa-loading').style.display = 'block';
+        el('sa-error').style.display = 'none';
+        el('sa-result').style.display = 'none';
+        el('sa-btn').disabled = true;
+        fetch(RECOMMEND_URL, {
+            method: 'POST', credentials: 'same-origin',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+            body: JSON.stringify({culture_id: Number(cultureId), mode: saMode, date: el('sa-date').value || null}),
+        }).then(r => r.json()).then(data => {
+            el('sa-loading').style.display = 'none';
+            el('sa-btn').disabled = false;
+            if (data.status !== 'success') {
+                let html = '<strong>⚠️ ' + esc(data.message || 'Erro ao obter a recomendação.') + '</strong>';
+                if (data.avisos && data.avisos.length) html += '<ul>' + data.avisos.map(a => `<li>${esc(a)}</li>`).join('') + '</ul>';
+                el('sa-error').innerHTML = html;
+                el('sa-error').style.display = 'block';
+                return;
+            }
+            render(data);
+        }).catch(err => {
+            el('sa-loading').style.display = 'none';
+            el('sa-btn').disabled = false;
+            el('sa-error').innerHTML = '<strong>⚠️ Erro de comunicação:</strong> ' + esc(err);
+            el('sa-error').style.display = 'block';
+        });
+    };
+
+    function rslBadge(r) {
+        if (r == null) return '—';
+        const cls = r <= 21 ? 'b-risk' : (r <= 45 ? 'b-sell' : 'b-wait');
+        return `<span class="sa-badge ${cls}">${num(r)} dias</span>`;
+    }
+    function bar(p) {
+        const pct = Math.max(0, Math.min(100, p * 100));
+        return `<span class="sa-bar"><span style="width:${pct}%"></span></span> <strong>${num(pct, 0)}%</strong>`;
+    }
+
+    function render(data) {
+        const r = data.resultado;
+        const ctx = r.contexto_mercado || {};
+        // Avisos sobre os dados usados
+        el('sa-warnings').innerHTML = (data.avisos && data.avisos.length)
+            ? '<div class="sa-warn"><strong>ℹ️ Dados usados com aproximações:</strong><ul>' + data.avisos.map(a => `<li>${esc(a)}</li>`).join('') + '</ul></div>' : '';
+
+        const hero = el('sa-hero');
+        if (r.modo === 'lot') {
+            const chosen = (r.avaliacao_lotes || []).filter(x => x.colocar_a_venda);
+            const kg = chosen.reduce((s, x) => s + x.kg, 0);
+            if (chosen.length) {
+                hero.className = 'sa-hero sell';
+                hero.innerHTML = `<h4>🛒 Colocar à venda hoje: ${chosen.length} ${chosen.length === 1 ? 'lote' : 'lotes'} (${num(kg)} kg)</h4>` +
+                    `<div>${chosen.map(x => `<span class="sa-badge b-sell" style="margin:2px 4px 2px 0;">${esc(x.lote_id)} · ${esc(x.armazem_nome)} · ${num(x.kg)} kg</span>`).join('')}</div>`;
+            } else {
+                hero.className = 'sa-hero wait';
+                hero.innerHTML = `<h4>⏸️ Aguardar — nenhum lote recomendado para venda hoje</h4><div class="sa-muted">Os lotes em armazém ainda têm margem de tempo de vida e/ou o stock à venda cobre a procura prevista.</div>`;
+            }
+        } else {
+            if (r.armazem_a_abrir) {
+                const w = (r.avaliacao_armazens || []).find(x => x.abrir) || {};
+                hero.className = 'sa-hero sell';
+                hero.innerHTML = `<h4>🏭 Abrir esta semana: ${esc(r.armazem_a_abrir_nome || r.armazem_a_abrir)}</h4>` +
+                    `<div>${num(w.kg)} kg em ${w.n_lotes} ${w.n_lotes === 1 ? 'lote' : 'lotes'} vão para venda · tempo de vida mínimo ${num(w.rsl_min_dias)} dias</div>`;
+            } else {
+                hero.className = 'sa-hero wait';
+                hero.innerHTML = `<h4>⏸️ Esperar — não abrir nenhum armazém esta semana</h4><div class="sa-muted">Probabilidade de esperar: ${num((r.probabilidade_esperar || 0) * 100)}%.</div>`;
+            }
+        }
+
+        const pv = ctx.preco_vs_ma30_pct;
+        el('sa-chips').innerHTML = [
+            ['Preço atual', `${num(ctx.preco, 2)} €/kg`],
+            ['Preço vs média 30 dias', pv == null ? '—' : `${pv > 0 ? '+' : ''}${num(pv, 1)}%`],
+            ['Procura prevista 7 dias', `${num(ctx.procura7)} kg`],
+            ['Stock já à venda', `${num(ctx.stock_venda)} kg`],
+            ['Stock analisado', `${num(data.dados.kg_total)} kg · ${data.dados.lotes} lotes`],
+        ].map(([l, v]) => `<div class="sa-chip"><div class="l">${l}</div><div class="v">${v}</div></div>`).join('');
+
+        if (r.modo === 'lot') {
+            el('sa-thead').innerHTML = '<tr><th>Lote</th><th>Armazém</th><th>Kg</th><th>Qualidade</th><th>Tempo de vida</th><th>Prob. venda</th><th>Decisão</th><th>Explicação</th></tr>';
+            el('sa-tbody').innerHTML = (r.avaliacao_lotes || []).map(x => `
+                <tr class="${x.colocar_a_venda ? 'sa-chosen' : ''}">
+                    <td><strong>${esc(x.lote_id)}</strong></td>
+                    <td>${esc(x.armazem_nome)} ${x.atmosfera_controlada ? '<span class="sa-badge b-ca">AC</span>' : ''}</td>
+                    <td>${num(x.kg)}</td>
+                    <td>${num(x.qualidade)}/100</td>
+                    <td>${rslBadge(x.rsl_dias)}</td>
+                    <td>${bar(x.probabilidade)}</td>
+                    <td>${x.colocar_a_venda ? '<span class="sa-badge b-sell">COLOCAR À VENDA</span>' : '<span class="sa-badge b-wait">AGUARDAR</span>'}</td>
+                    <td class="sa-muted">${esc(x.explicacao)}</td>
+                </tr>`).join('') || '<tr><td colspan="8" class="sa-muted">Todos os lotes já estão à venda.</td></tr>';
+        } else {
+            el('sa-thead').innerHTML = '<tr><th>Armazém</th><th>Kg</th><th>Lotes</th><th>Tempo de vida mín.</th><th>Prob. abrir</th><th>Decisão</th><th>Explicação</th></tr>';
+            el('sa-tbody').innerHTML = (r.avaliacao_armazens || []).map(x => `
+                <tr class="${x.abrir ? 'sa-chosen' : ''}">
+                    <td><strong>${esc(x.armazem_nome)}</strong> ${x.atmosfera_controlada ? '<span class="sa-badge b-ca">AC</span>' : ''}</td>
+                    <td>${num(x.kg)}</td>
+                    <td>${x.n_lotes}</td>
+                    <td>${rslBadge(x.rsl_min_dias)}</td>
+                    <td>${bar(x.probabilidade)}</td>
+                    <td>${x.abrir ? '<span class="sa-badge b-sell">ABRIR</span>' : '<span class="sa-badge b-wait">FECHADO</span>'}</td>
+                    <td class="sa-muted">${esc(x.explicacao)}</td>
+                </tr>`).join('');
+        }
+
+        const m = r.modelo_usado || {};
+        const met = m.metricas || {};
+        const origem = m.origem === 'perfil' ? 'modelo próprio deste perfil'
+            : `modelo por defeito <strong>${esc(m.fruta_modelo || m.fruta_lifecycle)}</strong>` +
+              (m.origem === 'defeito_familia' ? ` (mais próximo disponível para ${esc(m.fruta_lifecycle)})` : '') +
+              ` — treinado com dados sintéticos e normalizado à escala deste perfil`;
+        el('sa-model').innerHTML = `🤖 Recomendação gerada pelo ${origem}, treinado em ${esc(m.treinado_em || '—')}. ` +
+            (met.validacao_lucro_eur != null ? `Validação: lucro ${num(met.validacao_lucro_eur)} € vs FEFO ${num(met.fefo_lucro_eur)} € · desperdício ${num(met.validacao_desperdicio_pct, 1)}% vs FEFO ${num(met.fefo_desperdicio_pct, 1)}%.` : '');
+        el('sa-result').style.display = 'block';
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        el('sa-date').value = new Date().toISOString().slice(0, 10);
+        stockAgentLoadStatus();
+    });
+})();
+</script>

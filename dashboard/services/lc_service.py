@@ -133,6 +133,7 @@ def calculate_harvest_quality(culture_name, firmness, brix, acidity):
         
         # Qualidade Base (0 - 100)
         quality_base = 100.0 * (0.35 * firm_score + 0.35 * ratio_score + 0.15 * brix_score + 0.15 * acidez_score)
+        return max(0.0, min(100.0, round(quality_base, 2)))
     except Exception as e:
         return 100.0
 

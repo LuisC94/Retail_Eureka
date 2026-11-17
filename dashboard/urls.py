@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views 
 from . import api_views
+from . import views_stock_agent
 from django.contrib.auth import views as auth_views
 from .views import ProducerDashboardView # ProducerDataSubmitView removida
 
@@ -71,15 +72,10 @@ urlpatterns = [
     # 4. APIs e Autenticação
     path('api/soil-characteristics/', api_views.get_soil_characteristics, name='api_soil_characteristics'),
     path('api/harvest-history/<str:harvest_id>/', views.get_harvest_history, name='get_harvest_history'), # [NEW]
-    path('api/agent-simulation/', views.agent_simulation, name='api_agent_simulation'),
     path('api/agent-recommendations/', views.get_agent_recommendations, name='api_agent_recommendations'),
-    path('api/producer-agent-simulation/', views.producer_agent_simulation, name='api_producer_agent_simulation'),
     path('api/sensor-data/', views.get_sensor_data_from_sheet, name='get_sensor_data_from_sheet'),
     
-    # NOVAS ROTAS DE TREINO DE MODELOS E AJUSTE DE STOCK
-    path('api/train-buyer/', views.submit_buyer_training, name='submit_buyer_training'),
-    path('api/train-stock/', views.submit_stock_training, name='submit_stock_training'),
-    path('api/training-status/', views.get_training_status, name='get_training_status'),
+    # AJUSTE MANUAL DE STOCK E TEMPLATES DE TREINO
     path('api/adjust-stock/', views.adjust_stock_manually, name='adjust_stock_manually'),
     path('api/download-template/', views.download_training_template, name='download_training_template'),
     
@@ -91,6 +87,8 @@ urlpatterns = [
     path('ai/buyer-agent-status/', views.get_buyer_agent_status, name='get_buyer_agent_status'),
     path('ai/toggle-buyer-agent/', views.toggle_buyer_agent_status, name='toggle_buyer_agent_status'),
     path('ai/run-buyer-agent/', views.run_buyer_agent_action, name='run_buyer_agent_action'),
+    path('ai/stock-agent/status/', views_stock_agent.stock_agent_status, name='stock_agent_status'),
+    path('ai/stock-agent/recommend/', views_stock_agent.stock_agent_recommend, name='stock_agent_recommend'),
     path('api/lc-decay-data/', views.get_lc_decay_data, name='get_lc_decay_data'),
     path('api/lot-lifecycle-forecast/', views.get_lot_lifecycle_forecast, name='get_lot_lifecycle_forecast'),
     path('api/lot-lifecycle-json/<int:lot_id>/', views.download_lot_lifecycle_json, name='download_lot_lifecycle_json'),

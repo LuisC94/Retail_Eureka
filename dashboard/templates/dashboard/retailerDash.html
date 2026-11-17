@@ -428,6 +428,9 @@
                 <a href="#" class="menu-item" onclick="switchSidebarTab('lc-analysis')">
                     ⏳ Ciclo de Vida (LC)
                 </a>
+                <a href="#" class="menu-item" onclick="switchSidebarTab('stock-agent')">
+                    📦 Stock Agent
+                </a>
                 <a href="#" class="menu-item" onclick="switchSidebarTab('central-warehouse-mgmt')">
                     🏢 Gestão Central (Associações)
                 </a>
@@ -1236,17 +1239,6 @@
                             {{ warehouse_form.control_type }}
                         </div>
 
-                        <div style="margin-bottom: 25px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                            <div>
-                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">📦 Acondicionamento:</label>
-                                {{ warehouse_form.storage_unit }}
-                            </div>
-                            <div>
-                                <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">🚚 Acesso de Veículo:</label>
-                                {{ warehouse_form.max_vehicle_access }}
-                            </div>
-                        </div>
-
                         <div style="margin-bottom: 25px;">
                             <label style="display:block; color:#2c3e50; font-weight:600; margin-bottom:10px;">{{ warehouse_form.capacity.label }}</label>
                             {{ warehouse_form.capacity }}
@@ -1624,22 +1616,36 @@
                     <div style="margin-bottom: 18px;">
                         <label style="font-weight: 700; font-size: 0.88em; color: #334155; margin-bottom: 8px; display: block;">Arquitetura:</label>
                         <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                            <div id="fc-card-mlp" onclick="selectModelArch('mlp')" style="flex: 1; min-width: 200px; border: 2px solid #00796b; background: #f0fdfa; border-radius: 8px; padding: 12px 16px; cursor: pointer; transition: all 0.2s ease;">
+                            <div id="fc-card-modelo_1" onclick="selectModelArch('modelo_1')" style="flex: 1; min-width: 160px; border: 2px solid #00796b; background: #f0fdfa; border-radius: 8px; padding: 12px 16px; cursor: pointer; transition: all 0.2s ease;">
                                 <div style="display: flex; justify-content: space-between; align-items: center;">
                                     <div>
-                                        <div style="font-weight: 700; font-size: 0.95em; color: #004d40;">MLP (Rede Neuronal)</div>
-                                        <div style="font-size: 0.78em; color: #64748b;">3 Camadas Densas</div>
+                                        <div style="font-weight: 700; font-size: 0.95em; color: #004d40;">Modelo Previsão 1</div>
                                     </div>
-                                    <input type="radio" name="fc_arch_choice" id="arch-radio-mlp" value="mlp" checked onchange="selectModelArch('mlp')" style="accent-color: #00796b; cursor: pointer;">
+                                    <input type="radio" name="fc_arch_choice" id="arch-radio-modelo_1" value="modelo_1" checked onchange="selectModelArch('modelo_1')" style="accent-color: #00796b; cursor: pointer;">
                                 </div>
                             </div>
-                            <div id="fc-card-autoformer" onclick="selectModelArch('autoformer')" style="flex: 1; min-width: 200px; border: 2px solid #e2e8f0; background: #ffffff; border-radius: 8px; padding: 12px 16px; cursor: pointer; transition: all 0.2s ease;">
+                            <div id="fc-card-modelo_2" onclick="selectModelArch('modelo_2')" style="flex: 1; min-width: 160px; border: 2px solid #e2e8f0; background: #ffffff; border-radius: 8px; padding: 12px 16px; cursor: pointer; transition: all 0.2s ease;">
                                 <div style="display: flex; justify-content: space-between; align-items: center;">
                                     <div>
-                                        <div style="font-weight: 700; font-size: 0.95em; color: #1e1b4b;">Autoformer (Transformer)</div>
-                                        <div style="font-size: 0.78em; color: #64748b;">Decomposição & Auto-Correlation</div>
+                                        <div style="font-weight: 700; font-size: 0.95em; color: #1e1b4b;">Modelo Previsão 2</div>
                                     </div>
-                                    <input type="radio" name="fc_arch_choice" id="arch-radio-autoformer" value="autoformer" onchange="selectModelArch('autoformer')" style="accent-color: #6366f1; cursor: pointer;">
+                                    <input type="radio" name="fc_arch_choice" id="arch-radio-modelo_2" value="modelo_2" onchange="selectModelArch('modelo_2')" style="accent-color: #6366f1; cursor: pointer;">
+                                </div>
+                            </div>
+                            <div id="fc-card-modelo_3" onclick="selectModelArch('modelo_3')" style="flex: 1; min-width: 160px; border: 2px solid #e2e8f0; background: #ffffff; border-radius: 8px; padding: 12px 16px; cursor: pointer; transition: all 0.2s ease;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <div style="font-weight: 700; font-size: 0.95em; color: #0c4a6e;">Modelo Previsão 3</div>
+                                    </div>
+                                    <input type="radio" name="fc_arch_choice" id="arch-radio-modelo_3" value="modelo_3" onchange="selectModelArch('modelo_3')" style="accent-color: #0284c7; cursor: pointer;">
+                                </div>
+                            </div>
+                            <div id="fc-card-modelo_4" onclick="selectModelArch('modelo_4')" style="flex: 1; min-width: 160px; border: 2px solid #e2e8f0; background: #ffffff; border-radius: 8px; padding: 12px 16px; cursor: pointer; transition: all 0.2s ease;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <div style="font-weight: 700; font-size: 0.95em; color: #7c2d12;">Modelo Previsão 4</div>
+                                    </div>
+                                    <input type="radio" name="fc_arch_choice" id="arch-radio-modelo_4" value="modelo_4" onchange="selectModelArch('modelo_4')" style="accent-color: #c2410c; cursor: pointer;">
                                 </div>
                             </div>
                         </div>
@@ -1656,7 +1662,7 @@
 
                         <form id="fc-training-form" method="POST" action="{% url 'upload_sales_history' %}" enctype="multipart/form-data" onsubmit="submitForecastTraining(event)">
                             {% csrf_token %}
-                            <input type="hidden" name="model_type" id="fc-form-model-type" value="mlp">
+                            <input type="hidden" name="model_type" id="fc-form-model-type" value="modelo_1">
                             
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 14px;">
                                 <div class="form-group" style="margin-bottom: 0;">
@@ -1713,8 +1719,10 @@
                             <div>
                                 <label style="display:block; font-weight:600; font-size:0.85em; margin-bottom:6px; color: #334155;">Arquitetura:</label>
                                 <select id="infer-model-type" class="form-control" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.9em; background: #ffffff;" onchange="selectModelArch(this.value)">
-                                    <option value="mlp" selected>MLP (Rede Neuronal)</option>
-                                    <option value="autoformer">Autoformer (Transformer)</option>
+                                    <option value="modelo_1" selected>Modelo Previsão 1</option>
+                                    <option value="modelo_2">Modelo Previsão 2</option>
+                                    <option value="modelo_3">Modelo Previsão 3</option>
+                                    <option value="modelo_4">Modelo Previsão 4</option>
                                 </select>
                             </div>
                             <div>
@@ -1796,7 +1804,7 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #00796b; padding-bottom: 12px; margin-bottom: 25px; flex-wrap: wrap; gap: 15px;">
                     <div>
                         <h3 style="color: #00796b; margin: 0; font-weight: 700; display: flex; align-items: center; gap: 10px; font-size: 1.4em;">
-                            <span>🤖</span> Treino e Decisão do Buyer Agent (PPO Deep RL)
+                            <span>🤖</span> Treino e Decisão do Buyer Agent (DSAC Deep RL)
                         </h3>
                         <p style="color: #546e7a; font-size: 0.88em; margin: 4px 0 0 0;">
                             Motor federado de Reinforcement Learning para tomada de decisão ótima e compras autónomas no Marketplace.
@@ -1856,7 +1864,7 @@
                                 </span>
                             </div>
                             <h3 style="margin: 6px 0 0 0; font-size: 1.3em; font-weight: 700;" id="buyer-banner-title">Selecione uma cultura acima</h3>
-                            <p style="margin: 4px 0 0 0; font-size: 0.85em; opacity: 0.9;" id="buyer-banner-subtitle">Consulte os metadados do agente PPO treinado no Web Service.</p>
+                            <p style="margin: 4px 0 0 0; font-size: 0.85em; opacity: 0.9;" id="buyer-banner-subtitle">Consulte os metadados do agente DSAC treinado no Web Service.</p>
                         </div>
                         <div style="display: flex; gap: 15px; flex-wrap: wrap;">
                             <div style="background: rgba(255,255,255,0.1); border-radius: 8px; padding: 8px 14px; text-align: center; min-width: 100px;">
@@ -1869,7 +1877,7 @@
                             </div>
                             <div style="background: rgba(255,255,255,0.1); border-radius: 8px; padding: 8px 14px; text-align: center; min-width: 100px;">
                                 <span style="font-size: 0.72em; opacity: 0.8; display: block; text-transform: uppercase;">Capacidade</span>
-                                <strong style="font-size: 1.1em;" id="buyer-banner-capacity">500 Kg</strong>
+                                <strong style="font-size: 1.1em;" id="buyer-banner-capacity">-- Kg</strong>
                             </div>
                         </div>
                     </div>
@@ -1879,21 +1887,60 @@
                 <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 22px; margin-bottom: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">
                         <h4 style="color: #065f46; font-size: 1.05em; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 8px;">
-                            <span>🚀</span> 1. Treino do Modelo PPO (Reinforcement Learning)
+                            <span>🚀</span> 1. Treino do Modelo DSAC (Reinforcement Learning)
                         </h4>
                         <a href="{% url 'download_training_template' %}?type=buyer" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; padding: 5px 12px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.82em; display: inline-flex; align-items: center; gap: 5px;">
                             📥 Template Excel
                         </a>
                     </div>
 
+                    <!-- Alertas de Validação Prévia (Previsões e Armazém) -->
+                    <div id="buyer-missing-forecast-alert" style="display: none; background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #f59e0b; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; color: #92400e; font-size: 0.9em;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 1.3em;">⚠️</span>
+                                <span><strong>Modelo de Previsão em Falta:</strong> Não existe modelo de previsão treinado para esta cultura. O Buyer Agent necessita que treine primeiro um Modelo de Previsão (1, 2, 3 ou 4) na aba Previsão de Vendas.</span>
+                            </div>
+                            <button type="button" onclick="switchSidebarTab('sales-forecasting');" style="background: #f59e0b; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 0.85em; cursor: pointer;">
+                                Treinar Modelo de Previsão &rarr;
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="buyer-missing-warehouse-alert" style="display: none; background: #fef2f2; border: 1px solid #fecaca; border-left: 4px solid #ef4444; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; color: #991b1b; font-size: 0.9em;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 1.3em;">🚨</span>
+                                <span><strong>Capacidade de Armazém Não Definida:</strong> Não possui armazém com capacidade registada. Registe a capacidade do seu armazém para calibrar os limites do agente de compras.</span>
+                            </div>
+                            <button type="button" onclick="switchSidebarTab('warehouse-management');" style="background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 0.85em; cursor: pointer;">
+                                Gerir Armazéns &rarr;
+                            </button>
+                        </div>
+                    </div>
+
                     <form id="ppo-training-form" method="POST" action="{% url 'train_buyer_agent' %}" enctype="multipart/form-data" onsubmit="return false;">
                         {% csrf_token %}
                         <input type="hidden" name="culture_id" id="ppo-form-culture-id" value="{% if retailer_stock %}{{ retailer_stock.0.culture_id }}{% endif %}">
                         
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 18px;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 18px;">
+                            <div id="ppo-forecast-model-group">
+                                <label style="display:block; font-weight:600; font-size:0.85em; margin-bottom:6px; color:#334155;">
+                                    Modelo de Previsão de Procura:
+                                </label>
+                                <select name="forecast_model_type" id="ppo-forecast-model-select" class="form-control" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.9em; background: #ffffff;">
+                                    <option value="modelo_1">Modelo Previsão 1</option>
+                                    <option value="modelo_2">Modelo Previsão 2</option>
+                                    <option value="modelo_3">Modelo Previsão 3</option>
+                                    <option value="modelo_4">Modelo Previsão 4</option>
+                                </select>
+                                <small id="ppo-forecast-model-hint" style="display: block; font-size: 0.78em; color: #64748b; margin-top: 4px;">
+                                    A verificar modelos disponíveis...
+                                </small>
+                            </div>
                             <div>
                                 <label style="display:block; font-weight:600; font-size:0.85em; margin-bottom:6px; color:#334155;">Episódios de Treino (Nº de iterações):</label>
-                                <input type="number" name="max_episodes" id="ppo-episodes" class="form-control" min="10" max="50000" step="10" value="300" placeholder="Ex: 300" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.9em; background: #ffffff;">
+                                <input type="number" name="max_episodes" id="ppo-episodes" class="form-control" min="10" max="5000" step="10" value="350" placeholder="Ex: 350" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.9em; background: #ffffff;">
                             </div>
                             <div>
                                 <label style="display:block; font-weight:600; font-size:0.85em; margin-bottom:6px; color:#334155;">Histórico de Mercado (Ficheiro Excel Opcional):</label>
@@ -1914,7 +1961,7 @@
                         <div style="display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 0.92em; color: #0f172a; margin-bottom: 10px;">
                             <span id="ppo-status-msg" style="display: flex; align-items: center; gap: 8px;">
                                 <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #10b981;"></span>
-                                A inicializar treino PPO...
+                                A inicializar treino DSAC...
                             </span>
                             <span id="ppo-pct" style="font-family: monospace; background: #e2e8f0; padding: 2px 8px; border-radius: 6px; color: #0f172a; font-weight: 700;">0%</span>
                         </div>
@@ -1954,7 +2001,7 @@
                         <!-- HERO RECOMMENDATION CARD -->
                         <div style="background: linear-gradient(135deg, #312e81 0%, #1e1b4b 100%); color: white; border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
                             <div>
-                                <span style="font-size: 0.8em; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px;">Recomendação Ótima do Agente PPO</span>
+                                <span style="font-size: 0.8em; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px;">Recomendação Ótima do Agente DSAC</span>
                                 <div style="display: flex; align-items: baseline; gap: 10px; margin-top: 4px;">
                                     <h2 style="margin: 0; font-size: 2.2em; font-weight: 800;" id="dec-hero-qty">0 Kg</h2>
                                     <span id="dec-hero-culture" style="font-size: 1.1em; opacity: 0.9;">--</span>
@@ -2014,7 +2061,7 @@
                                 <!-- Policy 1: PPO RL -->
                                 <div style="background: #eef2ff; border: 2px solid #6366f1; border-radius: 8px; padding: 14px;">
                                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                                        <strong style="color: #3730a3; font-size: 0.88em;">PPO RL Agent (IA)</strong>
+                                        <strong style="color: #3730a3; font-size: 0.88em;">DSAC RL Agent (IA)</strong>
                                         <span style="background: #4f46e5; color: white; font-size: 0.7em; font-weight: 700; padding: 2px 6px; border-radius: 4px;">Ótimo</span>
                                     </div>
                                     <div style="font-size: 1.5em; font-weight: 800; color: #312e81; margin: 6px 0;" id="cmp-ppo-qty">0 Kg</div>
@@ -2054,30 +2101,46 @@
                 </div>
             </div>
 
+            <!-- STOCK AGENT TAB -->
+            {% include "dashboard/partials/stock_agent_tab.html" with tab_class="tab-content" %}
+
             <!-- LIFE CYCLE ANALYSIS TAB -->
-            <div id="lc-analysis" class="tab-content" style="display: none;">
+                        <div id="lc-analysis" class="tab-content" style="display: none;">
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #00796b; padding-bottom: 12px; margin-bottom: 25px;">
                     <h3 style="color: #00796b; margin: 0; font-weight: 700; display: flex; align-items: center; gap: 10px;">
                         <span>⏳</span> Previsão de Ciclo de Vida do Lote
                     </h3>
                     <div id="retailer-lc-service-badge" style="background: #e8f5e9; border: 1px solid #a5d6a7; color: #2e7d32; font-size: 0.85em; font-weight: 700; padding: 6px 14px; border-radius: 20px; display: inline-flex; align-items: center; gap: 6px;">
                         <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#2e7d32;"></span>
-                        Lifecycle Web Service (Porta 8003)
+                        Lifecycle Web Service (Porta 8003 - v0.2.0)
                     </div>
                 </div>
                 
                 <div style="background: white; border: 2px solid #e0f2f1; border-radius: 20px; padding: 22px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); margin-bottom: 25px;">
-                    <label style="display:block; font-weight:700; font-size:1em; margin-bottom:12px; color:#00796b;">Selecione o Lote de Stock em Loja / Armazém:</label>
-                    <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
-                        <select id="lc-stock-select" onchange="loadLcDecayData()" style="flex: 1; min-width: 280px; max-width: 600px; padding: 12px 15px; border-radius: 10px; border: 2px solid #b2dfdb; font-weight: 600; font-size: 0.95em; outline: none;">
-                            <option value="" disabled selected>--- Selecionar Lote de Stock ---</option>
-                            {% for item in retailer_stock %}
-                                <option value="{{ item.pk }}">{{ item.culture }} (Lote em {{ item.warehouse }}) - {{ item.quantity }} kg</option>
-                            {% endfor %}
-                        </select>
-                        <button onclick="loadLcDecayData()" class="btn-action" style="background: linear-gradient(135deg, #00796b 0%, #004d40 100%); color: white; border: none; padding: 12px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
-                            🔄 Consultar Web Service
-                        </button>
+                    <div style="display: grid; grid-template-columns: 1.5fr 1.2fr auto; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+                        <div>
+                            <label style="display:block; font-weight:700; font-size:0.95em; margin-bottom:8px; color:#00796b;">📦 Selecione o Lote de Stock em Loja / Armazém:</label>
+                            <select id="lc-stock-select" onchange="loadLcDecayData()" style="width: 100%; padding: 12px 15px; border-radius: 10px; border: 2px solid #b2dfdb; font-weight: 600; font-size: 0.92em; outline: none;">
+                                <option value="" disabled selected>--- Selecionar Lote de Stock ---</option>
+                                {% for item in retailer_stock %}
+                                    <option value="{{ item.pk }}">{{ item.culture }} (Lote em {{ item.warehouse }}) - {{ item.quantity }} kg</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display:block; font-weight:700; font-size:0.95em; margin-bottom:8px; color:#00796b;">🛡️ Modo de Embalamento / Acondicionamento:</label>
+                            <select id="lc-packaging-select" onchange="loadLcDecayData()" style="width: 100%; padding: 12px 15px; border-radius: 10px; border: 2px solid #b2dfdb; font-weight: 700; font-size: 0.9em; outline: none; background: #ffffff; color: #004d40; cursor: pointer;">
+                                <option value="bulk">A Granel (bulk - Sem barreira, Fator 1.00)</option>
+                                <option value="open_box">Caixa Aberta / Grades (open_box - Fator 0.85)</option>
+                                <option value="perforated_bag">Saco Perfurado (perforated_bag - Fator 0.45)</option>
+                                <option value="map_sealed">Atmosfera Modificada / MAP (map_sealed - Fator 0.10)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <button onclick="loadLcDecayData()" class="btn-action" style="background: linear-gradient(135deg, #00796b 0%, #004d40 100%); color: white; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-size: 0.95em; height: 46px;">
+                                🔄 Consultar Web Service
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -2093,51 +2156,63 @@
                         </div>
                     </div>
 
-                    <!-- 4 CARTÕES KPI PRINCIPAIS DA PREVISÃO NO ÚLTIMO DIA -->
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 20px; margin-bottom: 25px;">
+                    <!-- 5 CARTÕES KPI PRINCIPAIS DA PREVISÃO NO ÚLTIMO DIA -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px; margin-bottom: 25px;">
                         
-                        <!-- KPI 1: RSL -->
-                        <div style="background: #ffffff; border-radius: 16px; padding: 22px; border: 2px solid #80cbc4; box-shadow: 0 4px 12px rgba(0,0,0,0.04);">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                                <h4 style="margin: 0; color: #00796b; font-size: 0.85em; text-transform: uppercase; font-weight: 700;">Validade Restante (RSL)</h4>
-                                <span style="font-size: 1.4em;">⏳</span>
+                        <!-- KPI 1: PONTO A (COMERCIAL) -->
+                        <div style="background: #ffffff; border-radius: 16px; padding: 20px; border: 2px solid #80cbc4; box-shadow: 0 4px 12px rgba(0,0,0,0.04);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <h4 style="margin: 0; color: #00796b; font-size: 0.82em; text-transform: uppercase; font-weight: 800;">🟢 Prazo Comercial (Ponto A)</h4>
+                                <span style="font-size: 1.3em;">⏳</span>
                             </div>
-                            <div style="font-size: 2.4em; font-weight: 800; color: #004d40; line-height: 1.1;" id="lc-rsl-value">-</div>
-                            <div style="margin-top: 6px; font-size: 0.85em; font-weight: 600; color: #00796b;">dias úteis estimados</div>
-                            <div style="margin-top: 10px; font-size: 0.78em; color: #546e7a;">Previsão de degradação sob condições de loja</div>
+                            <div style="font-size: 2.3em; font-weight: 800; color: #004d40; line-height: 1.1;" id="lc-point-a-value">-</div>
+                            <div style="margin-top: 6px; font-size: 0.82em; font-weight: 700; color: #00796b;">dias de venda aceitável</div>
+                            <div style="margin-top: 8px; font-size: 0.75em; color: #546e7a;">Limite comercial conforme perfil</div>
+                            <span id="lc-rsl-value" style="display:none;">-</span>
                         </div>
 
-                        <!-- KPI 2: FIRMEZA -->
-                        <div style="background: #ffffff; border-radius: 16px; padding: 22px; border: 2px solid #b3e5fc; box-shadow: 0 4px 12px rgba(0,0,0,0.04);">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                                <h4 style="margin: 0; color: #0277bd; font-size: 0.85em; text-transform: uppercase; font-weight: 700;">Firmeza Estimada</h4>
-                                <span style="font-size: 1.4em;">🍎</span>
+                        <!-- KPI 2: PONTO B (BIOLÓGICO) -->
+                        <div style="background: #ffffff; border-radius: 16px; padding: 20px; border: 2px solid #ffcdd2; box-shadow: 0 4px 12px rgba(0,0,0,0.04);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <h4 style="margin: 0; color: #c62828; font-size: 0.82em; text-transform: uppercase; font-weight: 800;">🔴 Prazo Biológico (Ponto B)</h4>
+                                <span style="font-size: 1.3em;">🍂</span>
                             </div>
-                            <div style="font-size: 2.4em; font-weight: 800; color: #01579b; line-height: 1.1;" id="lc-firmness-value">-</div>
-                            <div style="margin-top: 6px; font-size: 0.85em; font-weight: 600; color: #0277bd;">N (Newtons no último dia)</div>
-                            <div style="margin-top: 10px; font-size: 0.78em; color: #546e7a;" id="lc-firmness-init">Inicial: - N</div>
+                            <div style="font-size: 2.3em; font-weight: 800; color: #b71c1c; line-height: 1.1;" id="lc-point-b-value">-</div>
+                            <div style="margin-top: 6px; font-size: 0.82em; font-weight: 700; color: #c62828;">dias até degradação total</div>
+                            <div style="margin-top: 8px; font-size: 0.75em; color: #546e7a;">Apodrecimento / Fim de vida biológica</div>
                         </div>
 
-                        <!-- KPI 3: BRIX -->
-                        <div style="background: #ffffff; border-radius: 16px; padding: 22px; border: 2px solid #ffe082; box-shadow: 0 4px 12px rgba(0,0,0,0.04);">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                                <h4 style="margin: 0; color: #d84315; font-size: 0.85em; text-transform: uppercase; font-weight: 700;">Grau Brix / Açúcar</h4>
-                                <span style="font-size: 1.4em;">🍯</span>
+                        <!-- KPI 3: FIRMEZA -->
+                        <div style="background: #ffffff; border-radius: 16px; padding: 20px; border: 2px solid #b3e5fc; box-shadow: 0 4px 12px rgba(0,0,0,0.04);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <h4 style="margin: 0; color: #0277bd; font-size: 0.82em; text-transform: uppercase; font-weight: 700;">Firmeza Estimada</h4>
+                                <span style="font-size: 1.3em;">🍎</span>
                             </div>
-                            <div style="font-size: 2.4em; font-weight: 800; color: #e65100; line-height: 1.1;" id="lc-brix-value">-</div>
-                            <div style="margin-top: 6px; font-size: 0.85em; font-weight: 600; color: #d84315;">°Bx (Sólidos Solúveis)</div>
-                            <div style="margin-top: 10px; font-size: 0.78em; color: #546e7a;" id="lc-brix-init">Inicial: - °Bx</div>
+                            <div style="font-size: 2.3em; font-weight: 800; color: #01579b; line-height: 1.1;" id="lc-firmness-value">-</div>
+                            <div style="margin-top: 6px; font-size: 0.82em; font-weight: 600; color: #0277bd;">N (Newtons no último dia)</div>
+                            <div style="margin-top: 8px; font-size: 0.75em; color: #546e7a;" id="lc-firmness-init">Inicial: - N</div>
                         </div>
 
-                        <!-- KPI 4: ACIDEZ -->
-                        <div style="background: #ffffff; border-radius: 16px; padding: 22px; border: 2px solid #c8e6c9; box-shadow: 0 4px 12px rgba(0,0,0,0.04);">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                                <h4 style="margin: 0; color: #2e7d32; font-size: 0.85em; text-transform: uppercase; font-weight: 700;">Acidez Titulável</h4>
-                                <span style="font-size: 1.4em;">🍋</span>
+                        <!-- KPI 4: BRIX -->
+                        <div style="background: #ffffff; border-radius: 16px; padding: 20px; border: 2px solid #ffe082; box-shadow: 0 4px 12px rgba(0,0,0,0.04);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <h4 style="margin: 0; color: #d84315; font-size: 0.82em; text-transform: uppercase; font-weight: 700;">Grau Brix / Açúcar</h4>
+                                <span style="font-size: 1.3em;">🍯</span>
                             </div>
-                            <div style="font-size: 2.4em; font-weight: 800; color: #1b5e20; line-height: 1.1;" id="lc-acidity-value">-</div>
-                            <div style="margin-top: 6px; font-size: 0.85em; font-weight: 600; color: #2e7d32;">% Acidez no último dia</div>
-                            <div style="margin-top: 10px; font-size: 0.78em; color: #546e7a;" id="lc-acidity-init">Inicial: - %</div>
+                            <div style="font-size: 2.3em; font-weight: 800; color: #e65100; line-height: 1.1;" id="lc-brix-value">-</div>
+                            <div style="margin-top: 6px; font-size: 0.82em; font-weight: 600; color: #d84315;">°Bx (Sólidos Solúveis)</div>
+                            <div style="margin-top: 8px; font-size: 0.75em; color: #546e7a;" id="lc-brix-init">Inicial: - °Bx</div>
+                        </div>
+
+                        <!-- KPI 5: ACIDEZ -->
+                        <div style="background: #ffffff; border-radius: 16px; padding: 20px; border: 2px solid #c8e6c9; box-shadow: 0 4px 12px rgba(0,0,0,0.04);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <h4 style="margin: 0; color: #2e7d32; font-size: 0.82em; text-transform: uppercase; font-weight: 700;">Acidez Titulável</h4>
+                                <span style="font-size: 1.3em;">🍋</span>
+                            </div>
+                            <div style="font-size: 2.3em; font-weight: 800; color: #1b5e20; line-height: 1.1;" id="lc-acidity-value">-</div>
+                            <div style="margin-top: 6px; font-size: 0.82em; font-weight: 600; color: #2e7d32;">% Acidez no último dia</div>
+                            <div style="margin-top: 8px; font-size: 0.75em; color: #546e7a;" id="lc-acidity-init">Inicial: - %</div>
                         </div>
 
                     </div>
@@ -2221,6 +2296,21 @@
 
                     </div>
 
+                    <!-- GRÁFICO INTERATIVO DE DEGRADAÇÃO (CURVA DE QUALIDADE COM PONTO A E PONTO B) -->
+                    <div style="background: white; border: 2px solid #e0f2f1; border-radius: 16px; padding: 22px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); margin-bottom: 25px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                            <h4 style="color: #00796b; font-weight: 700; margin: 0; font-size: 1.05em; display: flex; align-items: center; gap: 8px;">
+                                <span>📈</span> Curva de Degradação da Qualidade e Prazos Úteis (Ponto A vs Ponto B)
+                            </h4>
+                            <span id="lc-chart-threshold-badge" style="background: #e0f2f1; color: #00796b; font-size: 0.82em; font-weight: 700; padding: 4px 12px; border-radius: 12px; border: 1px solid #b2dfdb;">
+                                Limiar de Aceitação Comercial
+                            </span>
+                        </div>
+                        <div style="position: relative; height: 320px; width: 100%;">
+                            <canvas id="lc-decay-chart"></canvas>
+                        </div>
+                    </div>
+
                     <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 12px; flex-wrap: wrap;">
                         <a id="retailer-lc-json-download" href="#" target="_blank" class="btn-action" style="background: linear-gradient(135deg, #0288d1, #01579b); color: white; padding: 12px 24px; border-radius: 10px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 4px 15px rgba(2, 136, 209, 0.25); font-size: 0.95em;">
                             <span>📥</span> Descarregar JSON Completo (Payload Web Service)
@@ -2236,7 +2326,7 @@
 
             <!-- MODAL DE PREVISÃO DE CICLO DE VIDA (LIFECYCLE WEB SERVICE) -->
             <div id="lifecycleForecastModal" class="modal" style="display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.65); backdrop-filter: blur(6px);">
-                <div class="modal-content" style="background-color: #ffffff; margin: 4% auto; padding: 28px; border-radius: 20px; width: 92%; max-width: 800px; box-shadow: 0 15px 50px rgba(0,0,0,0.35); position: relative;">
+                <div class="modal-content" style="background-color: #ffffff; margin: 3% auto; padding: 28px; border-radius: 20px; width: 92%; max-width: 850px; box-shadow: 0 15px 50px rgba(0,0,0,0.35); position: relative;">
                     
                     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e0f2f1; padding-bottom: 15px; margin-bottom: 20px;">
                         <div>
@@ -2260,31 +2350,54 @@
                     <!-- CONTEÚDO DO MODAL -->
                     <div id="modal-lc-content" style="display: none;">
                         
-                        <!-- 4 KPIS -->
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 20px;">
+                        <!-- SELETOR DE EMBALAGEM / ACONDICIONAMENTO (INTERATIVO - ABORDAGEM B) -->
+                        <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 12px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span style="font-size: 1.3em;">📦</span>
+                                <div>
+                                    <label for="modal-lc-pkg-select" style="font-weight: 700; color: #0f172a; font-size: 0.9em; display: block;">Modo de Embalamento / Acondicionamento:</label>
+                                    <small style="color: #64748b; font-size: 0.78em;">Simule em tempo real o impacto da barreira na validade</small>
+                                </div>
+                            </div>
+                            <select id="modal-lc-pkg-select" onchange="onModalPackagingChanged(this.value)" style="padding: 8px 16px; border-radius: 10px; border: 1.5px solid #00796b; font-weight: 700; font-size: 0.88em; background: #ffffff; color: #004d40; cursor: pointer; outline: none; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                                <option value="bulk">A Granel (bulk - Sem barreira, Fator 1.00)</option>
+                                <option value="open_box">Caixa Aberta / Grades (open_box - Fator 0.85)</option>
+                                <option value="perforated_bag">Saco Perfurado (perforated_bag - Fator 0.45)</option>
+                                <option value="map_sealed">Atmosfera Modificada / MAP (map_sealed - Fator 0.10)</option>
+                            </select>
+                        </div>
+
+                        <!-- 5 KPIS: PONTO A, PONTO B, FIRMEZA, BRIX, ACIDEZ -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px;">
                             
-                            <div style="background: #e0f2f1; border-radius: 12px; padding: 15px; border: 1px solid #80cbc4; text-align: center;">
-                                <span style="font-size: 0.78em; text-transform: uppercase; font-weight: 700; color: #00796b; display: block;">Validade (RSL)</span>
-                                <div style="font-size: 1.8em; font-weight: 800; color: #004d40; margin: 4px 0;" id="modal-lc-rsl">-</div>
-                                <small style="font-size: 0.78em; color: #00796b; font-weight: 600;">dias restantes</small>
+                            <div style="background: #e0f2f1; border-radius: 12px; padding: 14px 10px; border: 1.5px solid #80cbc4; text-align: center;">
+                                <span style="font-size: 0.76em; text-transform: uppercase; font-weight: 800; color: #00796b; display: block;">🟢 Prazo Comercial (Ponto A)</span>
+                                <div style="font-size: 1.7em; font-weight: 800; color: #004d40; margin: 4px 0;" id="modal-lc-point-a">-</div>
+                                <small style="font-size: 0.76em; color: #00796b; font-weight: 600;" id="modal-lc-point-a-sub">dias de venda aceitável</small>
                             </div>
 
-                            <div style="background: #e1f5fe; border-radius: 12px; padding: 15px; border: 1px solid #81d4fa; text-align: center;">
-                                <span style="font-size: 0.78em; text-transform: uppercase; font-weight: 700; color: #0277bd; display: block;">Firmeza Final</span>
-                                <div style="font-size: 1.8em; font-weight: 800; color: #01579b; margin: 4px 0;" id="modal-lc-firmness">-</div>
-                                <small style="font-size: 0.78em; color: #0277bd; font-weight: 600;">N (Último Dia)</small>
+                            <div style="background: #ffebee; border-radius: 12px; padding: 14px 10px; border: 1.5px solid #ffcdd2; text-align: center;">
+                                <span style="font-size: 0.76em; text-transform: uppercase; font-weight: 800; color: #c62828; display: block;">🔴 Prazo Biológico (Ponto B)</span>
+                                <div style="font-size: 1.7em; font-weight: 800; color: #b71c1c; margin: 4px 0;" id="modal-lc-point-b">-</div>
+                                <small style="font-size: 0.76em; color: #c62828; font-weight: 600;">dias até degradação total</small>
                             </div>
 
-                            <div style="background: #fff8e1; border-radius: 12px; padding: 15px; border: 1px solid #ffe082; text-align: center;">
-                                <span style="font-size: 0.78em; text-transform: uppercase; font-weight: 700; color: #d84315; display: block;">Brix Final</span>
-                                <div style="font-size: 1.8em; font-weight: 800; color: #e65100; margin: 4px 0;" id="modal-lc-brix">-</div>
-                                <small style="font-size: 0.78em; color: #d84315; font-weight: 600;">°Bx (Último Dia)</small>
+                            <div style="background: #e1f5fe; border-radius: 12px; padding: 14px 10px; border: 1px solid #81d4fa; text-align: center;">
+                                <span style="font-size: 0.76em; text-transform: uppercase; font-weight: 700; color: #0277bd; display: block;">Firmeza Final</span>
+                                <div style="font-size: 1.7em; font-weight: 800; color: #01579b; margin: 4px 0;" id="modal-lc-firmness">-</div>
+                                <small style="font-size: 0.76em; color: #0277bd; font-weight: 600;">N (Último Dia)</small>
                             </div>
 
-                            <div style="background: #e8f5e9; border-radius: 12px; padding: 15px; border: 1px solid #a5d6a7; text-align: center;">
-                                <span style="font-size: 0.78em; text-transform: uppercase; font-weight: 700; color: #2e7d32; display: block;">Acidez Final</span>
-                                <div style="font-size: 1.8em; font-weight: 800; color: #1b5e20; margin: 4px 0;" id="modal-lc-acidity">-</div>
-                                <small style="font-size: 0.78em; color: #2e7d32; font-weight: 600;">% (Último Dia)</small>
+                            <div style="background: #fff8e1; border-radius: 12px; padding: 14px 10px; border: 1px solid #ffe082; text-align: center;">
+                                <span style="font-size: 0.76em; text-transform: uppercase; font-weight: 700; color: #d84315; display: block;">Brix Final</span>
+                                <div style="font-size: 1.7em; font-weight: 800; color: #e65100; margin: 4px 0;" id="modal-lc-brix">-</div>
+                                <small style="font-size: 0.76em; color: #d84315; font-weight: 600;">°Bx (Último Dia)</small>
+                            </div>
+
+                            <div style="background: #f1f8e9; border-radius: 12px; padding: 14px 10px; border: 1px solid #c5e1a5; text-align: center;">
+                                <span style="font-size: 0.76em; text-transform: uppercase; font-weight: 700; color: #33691e; display: block;">Acidez Final</span>
+                                <div style="font-size: 1.7em; font-weight: 800; color: #1b5e20; margin: 4px 0;" id="modal-lc-acidity">-</div>
+                                <small style="font-size: 0.76em; color: #33691e; font-weight: 600;">% (Último Dia)</small>
                             </div>
 
                         </div>
@@ -2325,24 +2438,39 @@
                             </table>
                         </div>
 
+                        <!-- GRÁFICO INTERATIVO DE QUALIDADE (CURVA PONTO A E PONTO B) -->
+                        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px; margin-bottom: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-size: 0.88em; text-transform: uppercase; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px;">
+                                    📈 Curva de Degradação da Qualidade (Ponto A vs Ponto B)
+                                </span>
+                                <span id="modal-lc-chart-threshold-badge" style="background: #e0f2f1; color: #00796b; font-size: 0.78em; font-weight: 700; padding: 3px 10px; border-radius: 8px;">
+                                    Limiar Comercial
+                                </span>
+                            </div>
+                            <div style="position: relative; height: 230px; width: 100%;">
+                                <canvas id="modal-lc-quality-chart"></canvas>
+                            </div>
+                        </div>
+
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                             <a id="modal-lc-json-btn" href="#" target="_blank" class="btn-action" style="background: linear-gradient(135deg, #0288d1, #01579b); color: white; padding: 10px 18px; border-radius: 8px; font-weight: 600; text-decoration: none; font-size: 0.88em; display: inline-flex; align-items: center; gap: 6px;">
                                 📥 Descarregar JSON
                             </a>
                             <div style="display: flex; gap: 10px;">
                                 <button type="button" id="modal-lc-detail-btn" onclick="" style="background: linear-gradient(135deg, #00796b, #004d40); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.88em;">
-                            🔍 Ver no Separador Lifecycle
-                        </button>
-                        <button type="button" onclick="closeLifecycleModal()" style="background: #e2e8f0; color: #334155; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.88em;">
-                            Fechar
-                        </button>
+                                    🔍 Ver no Separador Lifecycle
+                                </button>
+                                <button type="button" onclick="closeLifecycleModal()" style="background: #e2e8f0; color: #334155; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.88em;">
+                                    Fechar
+                                </button>
+                            </div>
+                        </div>
+
                     </div>
+
                 </div>
-
             </div>
-
-        </div>
-    </div>
 
             <!-- CENTRAL WAREHOUSE MANAGEMENT TAB -->
             <div id="central-warehouse-mgmt" class="tab-content" style="display: none;">
@@ -2431,44 +2559,43 @@
                 </div>
             </div>
 
+        </div>
+    </div>
+
             <!-- JAVASCRIPT DOS FLUXOS DE IA -->
             <script>
                 let forecastChartObj = null;
-                let currentFcArch = 'mlp';
+                const FC_MODEL_NAMES = {modelo_1: 'Modelo Previsão 1', modelo_2: 'Modelo Previsão 2', modelo_3: 'Modelo Previsão 3', modelo_4: 'Modelo Previsão 4'};
+                const FC_CARD_STYLE = {modelo_1: ['#00796b', '#f0fdfa'], modelo_2: ['#6366f1', '#f5f3ff'], modelo_3: ['#0284c7', '#f0f9ff'], modelo_4: ['#c2410c', '#fff7ed']};
+                function normFc(t) {
+                    const s = String(t || '').toLowerCase().trim();
+                    if (s === 'mlp' || s === 'sales_mlp') return 'modelo_1';
+                    if (s === 'autoformer' || s === 'sales_autoformer') return 'modelo_2';
+                    const m = s.match(/(?:modelo[_ ]|previs[ãa]o\s*)(\d)/);
+                    if (m && FC_MODEL_NAMES['modelo_' + m[1]]) return 'modelo_' + m[1];
+                    return FC_MODEL_NAMES[s] ? s : 'modelo_1';
+                }
+                function fcDisplayName(t) { return FC_MODEL_NAMES[normFc(t)]; }
+                let currentFcArch = 'modelo_1';
 
                 function selectModelArch(arch) {
+                    arch = normFc(arch);
                     currentFcArch = arch;
                     const modelTypeInput = document.getElementById('fc-form-model-type');
                     if (modelTypeInput) modelTypeInput.value = arch;
                     const inferModelSelect = document.getElementById('infer-model-type');
                     if (inferModelSelect) inferModelSelect.value = arch;
                     
-                    const cardMlp = document.getElementById('fc-card-mlp');
-                    const cardAutoformer = document.getElementById('fc-card-autoformer');
-                    const radioMlp = document.getElementById('arch-radio-mlp');
-                    const radioAutoformer = document.getElementById('arch-radio-autoformer');
-                    
-                    if (arch === 'mlp') {
-                        if (radioMlp) radioMlp.checked = true;
-                        if (cardMlp) {
-                            cardMlp.style.borderColor = '#00796b';
-                            cardMlp.style.background = '#f0fdfa';
+                    Object.keys(FC_MODEL_NAMES).forEach(key => {
+                        const card = document.getElementById('fc-card-' + key);
+                        const radio = document.getElementById('arch-radio-' + key);
+                        const active = key === arch;
+                        if (radio && active) radio.checked = true;
+                        if (card) {
+                            card.style.borderColor = active ? FC_CARD_STYLE[key][0] : '#e2e8f0';
+                            card.style.background = active ? FC_CARD_STYLE[key][1] : '#ffffff';
                         }
-                        if (cardAutoformer) {
-                            cardAutoformer.style.borderColor = '#e2e8f0';
-                            cardAutoformer.style.background = '#ffffff';
-                        }
-                    } else {
-                        if (radioAutoformer) radioAutoformer.checked = true;
-                        if (cardAutoformer) {
-                            cardAutoformer.style.borderColor = '#6366f1';
-                            cardAutoformer.style.background = '#f5f3ff';
-                        }
-                        if (cardMlp) {
-                            cardMlp.style.borderColor = '#e2e8f0';
-                            cardMlp.style.background = '#ffffff';
-                        }
-                    }
+                    });
                     
                     const inferSelect = document.getElementById('infer-culture-id');
                     const trainSelect = document.getElementById('fc-train-culture-id');
@@ -2527,15 +2654,15 @@
                     dot.style.background = '#94a3b8';
                     text.innerText = 'A verificar status...';
                     
-                    fetch(`/ai/forecast-status/?culture_id=${encodeURIComponent(cultureId)}&model_type=${encodeURIComponent(modelType || 'mlp')}`)
+                    fetch(`/ai/forecast-status/?culture_id=${encodeURIComponent(cultureId)}&model_type=${encodeURIComponent(normFc(modelType))}`)
                     .then(res => res.json())
                     .then(resData => {
                         const statusObj = (resData && resData.data) ? resData.data : (resData || {});
                         const available = statusObj.available_models || [];
-                        const targetArch = (modelType || currentFcArch || 'mlp').toLowerCase();
-                        const isTrained = available.includes(targetArch) || (targetArch === 'mlp' && statusObj.has_model);
+                        const targetArch = normFc(modelType || currentFcArch);
+                        const isTrained = available.map(normFc).includes(targetArch);
                         const count = statusObj.historical_sales_count || 0;
-                        const archName = (targetArch === 'autoformer') ? 'Autoformer' : 'MLP';
+                        const archName = FC_MODEL_NAMES[targetArch];
                         
                         if (isTrained) {
                             badge.style.background = '#ecfdf5';
@@ -2582,7 +2709,7 @@
                         return;
                     }
                     
-                    const arch = currentFcArch || 'mlp';
+                    const arch = currentFcArch || 'modelo_1';
                     formData.set('model_type', arch);
                     
                     const progressCard = document.getElementById('fc-progress-card');
@@ -2727,7 +2854,7 @@
                     const inferCultEl = document.getElementById('infer-culture-id');
                     const trainCultEl = document.getElementById('fc-train-culture-id');
                     const cultureId = (inferCultEl && inferCultEl.value) ? inferCultEl.value : (trainCultEl ? trainCultEl.value : '');
-                    const modelType = (document.getElementById('infer-model-type') ? document.getElementById('infer-model-type').value : (currentFcArch || 'mlp'));
+                    const modelType = (document.getElementById('infer-model-type') ? document.getElementById('infer-model-type').value : (currentFcArch || 'modelo_1'));
                     const horizonDays = (document.getElementById('infer-horizon') ? document.getElementById('infer-horizon').value : 30);
                     
                     if (!cultureId) {
@@ -2793,7 +2920,10 @@
                         if (kpiPeakDate) kpiPeakDate.innerText = metrics.peak_date ? `Pico: ${metrics.peak_date}` : '';
                         
                         const kpiModel = document.getElementById('kpi-model-name');
-                        if (kpiModel) kpiModel.innerText = (metrics.model_type || modelType).toUpperCase();
+                        if (kpiModel) {
+                            const rawType = String(metrics.model_type || modelType || '').toLowerCase();
+                            kpiModel.innerText = fcDisplayName(rawType);
+                        }
                         
                         // 2. Prepare Dual-Series Chart
                         const placeholder = document.getElementById('forecast-placeholder');
@@ -2828,7 +2958,7 @@
                             }
                             
                             const ctx = canvas.getContext('2d');
-                            const isAutoformer = (modelType === 'autoformer' || metrics.model_type === 'AUTOFORMER');
+                            const isAutoformer = ['modelo_2', 'modelo_4'].includes(normFc(modelType));
                             const predColor = isAutoformer ? '#6366f1' : '#059669';
                             const predFill = isAutoformer ? 'rgba(99, 102, 241, 0.08)' : 'rgba(5, 150, 105, 0.08)';
                             
@@ -2848,7 +2978,7 @@
                                             fill: true
                                         },
                                         {
-                                            label: `Previsão (${isAutoformer ? 'Autoformer' : 'MLP'})`,
+                                            label: `Previsão (${fcDisplayName(modelType)})`,
                                             data: predData,
                                             borderColor: predColor,
                                             backgroundColor: predFill,
@@ -2901,7 +3031,7 @@
                             tableBody.innerHTML = '';
                             const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
                             let prevVal = null;
-                            const isAutoformer = (modelType === 'autoformer' || metrics.model_type === 'AUTOFORMER');
+                            const isAutoformer = ['modelo_2', 'modelo_4'].includes(normFc(modelType));
                             const predColor = isAutoformer ? '#6366f1' : '#059669';
                             
                             predictions.forEach((p, idx) => {
@@ -3017,13 +3147,51 @@
                     .then(data => {
                         if (bannerTitle) bannerTitle.innerText = data.culture_name || 'Cultura #' + cultureId;
                         if (presetBadge) presetBadge.innerText = 'Preset: ' + (data.fruit_key || fruitKeySelect?.value || 'maca_gala');
-                        if (bannerCapacity) bannerCapacity.innerText = (data.max_capacity ? data.max_capacity + ' Kg' : '500 Kg');
+                        
+                        if (bannerCapacity) {
+                            if (data.max_capacity && Number(data.max_capacity) > 0) {
+                                bannerCapacity.innerText = data.max_capacity + ' Kg';
+                                bannerCapacity.style.color = '#ffffff';
+                            } else {
+                                bannerCapacity.innerText = 'Sem armazém';
+                                bannerCapacity.style.color = '#fca5a5';
+                            }
+                        }
+
+                        // Controlo de avisos pré-treino
+                        const forecastAlert = document.getElementById('buyer-missing-forecast-alert');
+                        if (forecastAlert) {
+                            forecastAlert.style.display = (data.has_sales_forecast === false) ? 'block' : 'none';
+                        }
+                        const whAlert = document.getElementById('buyer-missing-warehouse-alert');
+                        if (whAlert) {
+                            whAlert.style.display = (!data.max_capacity || Number(data.max_capacity) <= 0) ? 'block' : 'none';
+                        }
+
+                        // Atualizar Seletor Dinâmico do Modelo de Previsão de Procura
+                        const fcSelect = document.getElementById('ppo-forecast-model-select');
+                        const fcHint = document.getElementById('ppo-forecast-model-hint');
+                        const availFc = (data.available_forecast_models || []).map(m => normFc(m));
+
+                        if (fcSelect) {
+                            if (availFc.length > 0) {
+                                fcSelect.innerHTML = availFc.map((k, i) => `<option value="${k}"${i === 0 ? ' selected' : ''}>${FC_MODEL_NAMES[k]}</option>`).join('');
+                                fcSelect.disabled = availFc.length === 1;
+                                if (fcHint) fcHint.innerText = availFc.length === 1
+                                    ? `${FC_MODEL_NAMES[availFc[0]]} selecionado (único disponível).`
+                                    : 'Selecione o modelo de previsão cujas previsões serão usadas no treino.';
+                            } else {
+                                fcSelect.innerHTML = `<option value="" disabled selected>Nenhum modelo disponível</option>`;
+                                fcSelect.disabled = true;
+                                if (fcHint) fcHint.innerText = 'Treine primeiro um modelo na aba Previsão de Vendas.';
+                            }
+                        }
                         
                         if (data.has_model) {
                             if (statusBadge) {
                                 statusBadge.style.background = '#10b981';
                                 statusBadge.style.color = '#ffffff';
-                                statusBadge.innerText = 'Modelo PPO Treinado & Ativo';
+                                statusBadge.innerText = 'Modelo DSAC Treinado & Ativo';
                             }
                             if (bannerProfit) bannerProfit.innerText = data.avg_profit ? Number(data.avg_profit).toFixed(2) + ' €' : '0.00 €';
                             if (bannerLimit) bannerLimit.innerText = data.max_order_limit ? Number(data.max_order_limit).toFixed(1) + ' Kg' : '200.0 Kg';
@@ -3039,7 +3207,7 @@
                             }
                             if (bannerProfit) bannerProfit.innerText = '-- €';
                             if (bannerLimit) bannerLimit.innerText = '-- Kg';
-                            if (bannerSubtitle) bannerSubtitle.innerText = 'Modelo não treinado para esta cultura. Execute o treino PPO abaixo para habilitar a tomada de decisão inteligente.';
+                            if (bannerSubtitle) bannerSubtitle.innerText = 'Modelo não treinado para esta cultura. Execute o treino DSAC abaixo para habilitar a tomada de decisão inteligente.';
                         }
                     })
                     .catch(err => {
@@ -3108,7 +3276,7 @@
                     const decideBtn = document.getElementById('btn-buyer-decide');
                     if (decideBtn) {
                         decideBtn.disabled = true;
-                        decideBtn.innerHTML = '⏳ A calcular decisão PPO no Web Service (:8002)...';
+                        decideBtn.innerHTML = '⏳ A calcular decisão DSAC no Web Service (:8002)...';
                     }
 
                     const formData = new FormData();
@@ -3211,6 +3379,18 @@
                         alert('Por favor, selecione primeiro uma cultura no seletor no topo da página.');
                         return;
                     }
+
+                    const forecastAlert = document.getElementById('buyer-missing-forecast-alert');
+                    if (forecastAlert && forecastAlert.style.display !== 'none') {
+                        alert('Atenção: Não existe modelo de previsão treinado para esta cultura. Aceda primeiro à aba "Previsão de Vendas" para treinar o modelo.');
+                        return;
+                    }
+
+                    const whAlert = document.getElementById('buyer-missing-warehouse-alert');
+                    if (whAlert && whAlert.style.display !== 'none') {
+                        alert('Atenção: Não possui nenhum armazém com capacidade registada. Defina a capacidade do armazém na "Gestão de Armazéns" antes de treinar.');
+                        return;
+                    }
                     
                     const hiddenCultureInput = document.getElementById('ppo-form-culture-id');
                     if (hiddenCultureInput) hiddenCultureInput.value = cultureId;
@@ -3218,6 +3398,15 @@
                     const formData = new FormData(form);
                     formData.set('culture_id', cultureId);
                     formData.set('is_ajax', '1');
+                    
+                    const fcSelect = document.getElementById('ppo-forecast-model-select');
+                    let selectedFcLabel = 'Modelo de Previsão';
+                    if (fcSelect && fcSelect.value) {
+                        formData.set('forecast_model_type', fcSelect.value);
+                        if (fcSelect.options[fcSelect.selectedIndex]) {
+                            selectedFcLabel = fcSelect.options[fcSelect.selectedIndex].text;
+                        }
+                    }
                     
                     const progressCard = document.getElementById('ppo-progress-card');
                     if (progressCard) progressCard.style.display = 'block';
@@ -3245,10 +3434,10 @@
                             } else if (text.includes('[Sucesso]') || text.includes('✓') || text.includes('sucesso')) {
                                 color = '#34d399';
                                 prefix = '✅';
-                            } else if (text.includes('PPO') || text.includes('episódio') || text.includes('Simulação') || text.includes('Lucro')) {
+                            } else if (text.includes('DSAC') || text.includes('episódio') || text.includes('Simulação') || text.includes('Lucro')) {
                                 color = '#38bdf8';
                                 prefix = '⚡';
-                            } else if (text.includes('Web Service') || text.includes('Porta 8002')) {
+                            } else if (text.includes('Web Service') || text.includes('Porta 8002') || text.includes('8001')) {
                                 color = '#fbbf24';
                                 prefix = '🌐';
                             }
@@ -3281,6 +3470,7 @@
                     }
                     
                     setStepActive(1);
+                    addLog(`A obter previsões de procura com o ${selectedFcLabel} (Forecast Web Service :8001)...`);
                     addLog('A iniciar ligação com o Buyer Agent Web Service (Porta 8002)...');
                     if (statusMsg) statusMsg.innerText = '1/4: A preparar dados e contactar Web Service...';
                     
@@ -3296,7 +3486,7 @@
                             }
                             if (currentPct === 60) {
                                 setStepActive(3);
-                                if (statusMsg) statusMsg.innerText = '3/4: Otimização PPO Actor-Critic em execução no Web Service...';
+                                if (statusMsg) statusMsg.innerText = '3/4: Otimização DSAC (Distributional Soft Actor-Critic) em execução no Web Service...';
                             }
                         }
                     }, 500);
@@ -3305,41 +3495,77 @@
                         method: 'POST',
                         body: formData,
                         headers: {
-                            'Accept': 'application/json',
+                            'Accept': 'text/event-stream',
                             'X-Requested-With': 'XMLHttpRequest'
                         }
                     })
                     .then(response => {
-                        clearInterval(progressInterval);
                         if (response.status === 503) {
+                            clearInterval(progressInterval);
                             throw new Error('O Buyer Agent Web Service está offline na porta 8002.');
                         }
-                        if (!response.ok) {
+                        if (!response.ok && !response.headers.get('content-type')?.includes('text/event-stream')) {
+                            clearInterval(progressInterval);
                             return response.json().then(d => { throw new Error(d.message || 'Falha no treino.'); });
                         }
-                        return response.json();
-                    })
-                    .then(data => {
-                        setStepActive(4);
-                        if (statusMsg) statusMsg.innerText = 'Treino concluído com sucesso!';
-                        if (progressBar) progressBar.style.width = '100%';
-                        if (pctMsg) pctMsg.innerText = '100%';
-                        
-                        if (data.logs && Array.isArray(data.logs)) {
-                            data.logs.forEach(l => {
-                                const clean = l.replace('\n', '').trim();
-                                if (clean) addLog(clean);
-                            });
-                        } else {
-                            addLog('✓ Sucesso: Modelo PPO treinado e pesos persistidos no Web Service.');
-                        }
 
-                        if (submitBtn) {
-                            submitBtn.disabled = false;
-                            submitBtn.innerHTML = '🚀 Treinar Agente para esta Cultura';
+                        const reader = response.body.getReader();
+                        const decoder = new TextDecoder();
+                        let buffer = '';
+
+                        function processStream() {
+                            return reader.read().then(({ done, value }) => {
+                                if (done) {
+                                    clearInterval(progressInterval);
+                                    return;
+                                }
+                                buffer += decoder.decode(value, { stream: true });
+                                const lines = buffer.split('\n');
+                                buffer = lines.pop();
+
+                                lines.forEach(line => {
+                                    if (!line.startsWith('data: ')) return;
+                                    let parsed;
+                                    try { parsed = JSON.parse(line.substring(6)); } catch(e) { return; }
+
+                                    if (parsed.type === 'log') {
+                                        addLog(parsed.text);
+                                        // Atualizar barra de progresso com episódio
+                                        const epMatch = parsed.text.match(/Episódio\s+(\d+)\/(\d+)\s+\((\d+)%\)/);
+                                        if (epMatch) {
+                                            const pctVal = parseInt(epMatch[3]);
+                                            if (pctMsg) pctMsg.innerText = pctVal + '%';
+                                            if (progressBar) progressBar.style.width = pctVal + '%';
+                                            currentPct = pctVal;
+                                            if (pctVal < 40) setStepActive(2);
+                                            else if (pctVal < 90) setStepActive(3);
+                                        }
+                                    } else if (parsed.type === 'done') {
+                                        clearInterval(progressInterval);
+                                        setStepActive(4);
+                                        if (statusMsg) statusMsg.innerText = 'Treino concluído com sucesso!';
+                                        if (progressBar) progressBar.style.width = '100%';
+                                        if (pctMsg) pctMsg.innerText = '100%';
+                                        addLog(`✓ ${parsed.message || 'Modelo treinado com sucesso.'}`);
+                                        if (submitBtn) {
+                                            submitBtn.disabled = false;
+                                            submitBtn.innerHTML = '🚀 Treinar Agente para esta Cultura';
+                                        }
+                                        onBuyerCultureSelected(cultureId);
+                                    } else if (parsed.type === 'error') {
+                                        clearInterval(progressInterval);
+                                        addLog(`[ERRO] ${parsed.message}`);
+                                        if (statusMsg) statusMsg.innerText = 'Falha no treino.';
+                                        if (submitBtn) {
+                                            submitBtn.disabled = false;
+                                            submitBtn.innerHTML = '🚀 Treinar Agente para esta Cultura';
+                                        }
+                                    }
+                                });
+                                return processStream();
+                            });
                         }
-                        // Atualizar banner e estado
-                        onBuyerCultureSelected(cultureId);
+                        return processStream();
                     })
                     .catch(err => {
                         clearInterval(progressInterval);
@@ -3797,89 +4023,6 @@
             });
         }
 
-        // TREINO ASSÍNCRONO DE MODELOS
-        let trainingPollInterval = null;
-
-        function startAsyncTraining(event, type) {
-            event.preventDefault();
-            const form = event.target;
-            const formData = new FormData(form);
-            
-            const btn = document.getElementById('btn-start-training');
-            btn.disabled = true;
-            btn.innerHTML = '⏳ Preparando Treino...';
-            
-            const progressCard = document.getElementById('training-progress-card');
-            progressCard.style.display = 'block';
-            
-            const url = type === 'buyer' ? '/api/train-buyer/' : '/api/train-stock/';
-            
-            fetch(url, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                body: formData
-            })
-            .then(res => res.json())
-            .then(json => {
-                if (json.status === 'success') {
-                    if (trainingPollInterval) clearInterval(trainingPollInterval);
-                    trainingPollInterval = setInterval(pollTrainingStatus, 1000);
-                } else {
-                    alert('Erro ao iniciar treino: ' + json.message);
-                    btn.disabled = false;
-                    btn.innerHTML = '🚀 Iniciar Treino dos Modelos';
-                    progressCard.style.display = 'none';
-                }
-            })
-            .catch(err => {
-                alert('Erro de rede: ' + err);
-                btn.disabled = false;
-                btn.innerHTML = '🚀 Iniciar Treino dos Modelos';
-                progressCard.style.display = 'none';
-            });
-        }
-
-        function pollTrainingStatus() {
-            fetch('/api/training-status/')
-            .then(res => res.json())
-            .then(json => {
-                const statusMsg = document.getElementById('train-status-msg');
-                const pct = document.getElementById('train-pct');
-                const progressBar = document.getElementById('train-progress-bar');
-                const epochEl = document.getElementById('train-epoch');
-                const lossEl = document.getElementById('train-loss');
-                
-                if (statusMsg) statusMsg.innerText = json.message;
-                if (pct) pct.innerText = json.progress + '%';
-                if (progressBar) progressBar.style.width = json.progress + '%';
-                if (epochEl) epochEl.innerText = json.epoch;
-                if (lossEl) lossEl.innerText = json.loss;
-                
-                if (json.status === 'completed') {
-                    clearInterval(trainingPollInterval);
-                    const btn = document.getElementById('btn-start-training');
-                    if (btn) {
-                        btn.disabled = false;
-                        btn.innerHTML = '🚀 Iniciar Novo Treino';
-                    }
-                    alert('Treino concluído com sucesso!');
-                } else if (json.status === 'failed') {
-                    clearInterval(trainingPollInterval);
-                    const btn = document.getElementById('btn-start-training');
-                    if (btn) {
-                        btn.disabled = false;
-                        btn.innerHTML = '🚀 Tentar Novamente';
-                    }
-                    alert('O treino falhou: ' + json.message);
-                }
-            })
-            .catch(err => {
-                console.error('Erro ao consultar progresso:', err);
-            });
-        }
-
         function switchSidebarTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => {
                 el.classList.remove('active');
@@ -3890,6 +4033,11 @@
             if (selectedTab) {
                 selectedTab.classList.add('active');
                 selectedTab.style.display = 'block';
+            }
+            // Ao entrar no separador do Buyer Agent, voltar a consultar o estado (previsões/modelo podem ter mudado)
+            if (tabId === 'buyer-agent-training' && typeof onBuyerCultureSelected === 'function') {
+                const buyerSel = document.getElementById('buyer-global-culture-select');
+                if (buyerSel && buyerSel.value) onBuyerCultureSelected(buyerSel.value);
             }
 
             document.querySelectorAll('.menu-item').forEach(item => {
@@ -4458,24 +4606,6 @@
 
                 <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                     <div>
-                        <label style="display:block; margin-bottom:5px; font-weight:600;">📦 Acondicionamento:</label>
-                        <select name="storage_unit" id="edit_wh_storage_unit" class="form-control" style="width:100%; padding:8px; border-radius:6px; border:1px solid #d1d5db;">
-                            <option value="CRATES">Grades (20 Kg / Caixa)</option>
-                            <option value="PALLETS">Paletes (800 Kg / Euro-Palete)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="display:block; margin-bottom:5px; font-weight:600;">🚚 Acesso de Veículo:</label>
-                        <select name="max_vehicle_access" id="edit_wh_max_vehicle_access" class="form-control" style="width:100%; padding:8px; border-radius:6px; border:1px solid #d1d5db;">
-                            <option value="VAN">Apenas Carrinha Ligeira (&lt;= 3.5t)</option>
-                            <option value="RIGID_TRUCK">Até Camião Ligeiro (&lt;= 12t)</option>
-                            <option value="HEAVY_TIR">Todos / Camião TIR (&lt;= 40t)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                    <div>
                         <label style="display:block; margin-bottom:5px; font-weight:600;">Latitude (Opcional):</label>
                         <input type="number" step="0.000001" name="latitude" id="edit_wh_latitude" class="form-control" style="width:100%; padding:8px; border-radius:6px; border:1px solid #d1d5db;">
                     </div>
@@ -4694,6 +4824,9 @@
                 select.value = targetLotId;
             }
 
+            const pkgSelect = document.getElementById('lc-packaging-select');
+            const selectedPkg = pkgSelect ? pkgSelect.value : 'bulk';
+
             // Mostrar container e esconder empty state
             const container = document.getElementById('lc-details-container');
             const emptyState = document.getElementById('lc-empty-state');
@@ -4706,7 +4839,9 @@
                 dlBtn.href = `/api/lot-lifecycle-json/${stockId}/`;
             }
 
-            fetch(`/api/lot-lifecycle-forecast/?stock_id=${stockId}`)
+            const url = `/api/lot-lifecycle-forecast/?stock_id=${stockId}&packaging=${encodeURIComponent(selectedPkg)}`;
+
+            fetch(url)
                 .then(response => {
                     if (!response.ok) {
                         return response.json().then(json => { throw new Error(json.message || `Erro HTTP ${response.status}`); });
@@ -4732,12 +4867,27 @@
                             sBadge.style.background = '#e8f5e9';
                             sBadge.style.borderColor = '#a5d6a7';
                             sBadge.style.color = '#2e7d32';
-                            sBadge.innerHTML = '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#2e7d32;"></span> Lifecycle Web Service (Porta 8003 - Online)';
+                            sBadge.innerHTML = '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#2e7d32;"></span> Lifecycle Web Service (Porta 8003 - Online v0.2.0)';
                         }
 
-                        // 4 Cartões KPI
+                        if (pkgSelect && data.packaging_method && !pkgSelect.value) {
+                            pkgSelect.value = data.packaging_method;
+                        }
+
+                        // Prazos: Ponto A e Ponto B
+                        const ptA = typeof fc.commercial_lifetime_remaining === 'number' 
+                            ? fc.commercial_lifetime_remaining.toFixed(1) 
+                            : (typeof fc.remaining_lifetime === 'number' ? fc.remaining_lifetime.toFixed(1) : '-');
+                        const ptB = typeof fc.biological_lifetime_remaining === 'number' 
+                            ? fc.biological_lifetime_remaining.toFixed(1) 
+                            : '-';
+
+                        const ptAEl = document.getElementById('lc-point-a-value');
+                        if (ptAEl) ptAEl.textContent = ptA;
+                        const ptBEl = document.getElementById('lc-point-b-value');
+                        if (ptBEl) ptBEl.textContent = ptB;
                         const rslEl = document.getElementById('lc-rsl-value');
-                        if (rslEl) rslEl.textContent = typeof fc.remaining_lifetime === 'number' ? fc.remaining_lifetime.toFixed(1) : (fc.remaining_lifetime || '-');
+                        if (rslEl) rslEl.textContent = ptA;
                         
                         const firmEl = document.getElementById('lc-firmness-value');
                         if (firmEl) firmEl.textContent = typeof fc.firmness === 'number' ? fc.firmness.toFixed(1) : (fc.firmness || '-');
@@ -4753,6 +4903,14 @@
                         if (acidEl) acidEl.textContent = typeof fc.acidity === 'number' ? fc.acidity.toFixed(2) : (fc.acidity || '-');
                         const acidInitEl = document.getElementById('lc-acidity-init');
                         if (acidInitEl) acidInitEl.textContent = `Inicial: ${typeof init.acidity === 'number' ? init.acidity.toFixed(2) + ' %' : 'N/A'}`;
+
+                        // Sensores do Armazém
+                        const tVal = document.getElementById('lc-temp-value');
+                        if (tVal) tVal.textContent = typeof data.temp_today === 'number' ? `${data.temp_today.toFixed(1)} ºC` : '- ºC';
+                        const hVal = document.getElementById('lc-hum-value');
+                        if (hVal) hVal.textContent = typeof data.hum_today === 'number' ? `${data.hum_today.toFixed(1)} %` : '- %';
+                        const eVal = document.getElementById('lc-eth-value');
+                        if (eVal) eVal.textContent = typeof data.eth_today === 'number' ? `${data.eth_today.toFixed(3)} ppm` : '0.000 ppm';
 
                         // Qualidade Comercial
                         const qIndex = typeof fc.quality_index === 'number' ? fc.quality_index : (init.quality_score ? (init.quality_score > 10 ? init.quality_score : init.quality_score * 10) : 85);
@@ -4795,32 +4953,23 @@
                         const tInitMold = document.getElementById('lc-tbl-init-mold');
                         if (tInitMold) tInitMold.textContent = '0.0 %';
                         const tFinalMold = document.getElementById('lc-tbl-final-mold');
-                        const moldTrend = document.getElementById('lc-tbl-mold-trend');
                         const moldPct = typeof fc.mold === 'number' ? (fc.mold * 100) : 0.0;
-                        if (tFinalMold) {
-                            tFinalMold.textContent = `${moldPct.toFixed(1)} %`;
-                            if (moldPct >= 3.0) {
-                                tFinalMold.style.color = '#c62828';
-                                if (moldTrend) moldTrend.innerHTML = '<span style="color:#c62828; font-weight:600;">⚠️ Risco de Bolor</span>';
-                            } else if (moldPct > 0.5) {
-                                tFinalMold.style.color = '#e65100';
-                                if (moldTrend) moldTrend.innerHTML = '<span style="color:#e65100; font-weight:600;">🟡 Presença Residual</span>';
+                        if (tFinalMold) tFinalMold.textContent = `${moldPct.toFixed(2)} %`;
+                        const moldTrend = document.getElementById('lc-tbl-mold-trend');
+                        if (moldTrend) {
+                            if (moldPct > 2.0) {
+                                moldTrend.innerHTML = '<span style="color:#c62828; font-weight:700;">⚠️ Risco de Contaminação por Bolor</span>';
                             } else {
-                                tFinalMold.style.color = '#1b5e20';
-                                if (moldTrend) moldTrend.innerHTML = '<span style="color:#2e7d32; font-weight:600;">🛡️ Sem Contaminação</span>';
+                                moldTrend.innerHTML = '<span style="color:#2e7d32; font-weight:600;">🛡️ Sem Contaminação Relevante</span>';
                             }
                         }
 
-                        // Sensores Hoje
-                        const tTemp = document.getElementById('lc-temp-value');
-                        if (tTemp) tTemp.textContent = `${data.temp_today.toFixed(1)} ºC`;
-                        const tHum = document.getElementById('lc-hum-value');
-                        if (tHum) tHum.textContent = `${data.hum_today.toFixed(1)} %`;
-                        const tEth = document.getElementById('lc-eth-value');
-                        if (tEth) tEth.textContent = `${data.eth_today.toFixed(3)} ppm`;
-
+                        // Renderizar o gráfico de degradação da qualidade com Ponto A e Ponto B
+                        if (fc.continuous_data) {
+                            drawLcDecayChart(fc.continuous_data, fc.point_a_day, fc.point_b_day, data.current_owner_type);
+                        }
                     } else {
-                        alert('Erro ao carregar dados do ciclo de vida: ' + (data.message || 'Serviço offline.'));
+                        alert('Erro ao carregar previsão de ciclo de vida: ' + data.message);
                     }
                 })
                 .catch(err => {
@@ -4836,9 +4985,23 @@
                 });
         }
 
-        function openLifecycleModal(lotId, lotType) {
+        let currentModalLotId = null;
+        let currentModalLotType = null;
+        let currentModalPkg = 'bulk';
+        let modalQualityChart = null;
+
+        function openLifecycleModal(lotId, lotType, pkgMethod) {
             const modal = document.getElementById('lifecycleForecastModal');
             if (!modal) return;
+
+            currentModalLotId = lotId;
+            currentModalLotType = lotType;
+            currentModalPkg = pkgMethod || 'bulk';
+
+            const pkgSelect = document.getElementById('modal-lc-pkg-select');
+            if (pkgSelect) {
+                pkgSelect.value = currentModalPkg;
+            }
 
             document.getElementById('modal-lc-loading').style.display = 'block';
             document.getElementById('modal-lc-content').style.display = 'none';
@@ -4851,9 +5014,26 @@
 
             modal.style.display = 'block';
 
-            const queryParam = (lotType === 'stock') ? `stock_id=${lotId}` : `lot_id=${lotId}`;
+            fetchModalLifecycleData(currentModalLotId, currentModalLotType, currentModalPkg, false);
+        }
 
-            fetch(`/api/lot-lifecycle-forecast/?${queryParam}`)
+        function onModalPackagingChanged(newPkg) {
+            currentModalPkg = newPkg;
+            if (currentModalLotId) {
+                fetchModalLifecycleData(currentModalLotId, currentModalLotType, newPkg, true);
+            }
+        }
+
+        function fetchModalLifecycleData(lotId, lotType, pkg, isUpdateOnly) {
+            if (!isUpdateOnly) {
+                document.getElementById('modal-lc-loading').style.display = 'block';
+                document.getElementById('modal-lc-content').style.display = 'none';
+            }
+
+            const queryParam = (lotType === 'stock') ? `stock_id=${lotId}` : `lot_id=${lotId}`;
+            const url = `/api/lot-lifecycle-forecast/?${queryParam}&packaging=${encodeURIComponent(pkg || 'bulk')}`;
+
+            fetch(url)
                 .then(res => {
                     if (!res.ok) {
                         return res.json().then(json => { throw new Error(json.message || `Erro HTTP ${res.status}`); });
@@ -4873,18 +5053,38 @@
                         if (statusBadge) {
                             statusBadge.style.background = '#e8f5e9';
                             statusBadge.style.color = '#2e7d32';
-                            statusBadge.textContent = 'Web Service 8003: Online';
+                            statusBadge.textContent = 'Web Service 8003: Online (v0.2.0)';
                         }
 
-                        // KPIs
-                        document.getElementById('modal-lc-rsl').textContent = typeof fc.remaining_lifetime === 'number' ? fc.remaining_lifetime.toFixed(1) : (fc.remaining_lifetime || '-');
+                        const pkgSelect = document.getElementById('modal-lc-pkg-select');
+                        if (pkgSelect && data.packaging_method && !isUpdateOnly) {
+                            pkgSelect.value = data.packaging_method;
+                            currentModalPkg = data.packaging_method;
+                        }
+
+                        // Prazos: Ponto A e Ponto B
+                        const ptA = typeof fc.commercial_lifetime_remaining === 'number' 
+                            ? fc.commercial_lifetime_remaining.toFixed(1) 
+                            : (typeof fc.remaining_lifetime === 'number' ? fc.remaining_lifetime.toFixed(1) : '-');
+                        const ptB = typeof fc.biological_lifetime_remaining === 'number' 
+                            ? fc.biological_lifetime_remaining.toFixed(1) 
+                            : '-';
+
+                        const elPtA = document.getElementById('modal-lc-point-a');
+                        if (elPtA) elPtA.textContent = ptA;
+                        const elPtB = document.getElementById('modal-lc-point-b');
+                        if (elPtB) elPtB.textContent = ptB;
+                        const elRsl = document.getElementById('modal-lc-rsl');
+                        if (elRsl) elRsl.textContent = ptA;
+
+                        // Firmeza, Brix, Acidez
                         document.getElementById('modal-lc-firmness').textContent = typeof fc.firmness === 'number' ? fc.firmness.toFixed(1) : (fc.firmness || '-');
                         document.getElementById('modal-lc-brix').textContent = typeof fc.brix === 'number' ? fc.brix.toFixed(1) : (fc.brix || '-');
                         document.getElementById('modal-lc-acidity').textContent = typeof fc.acidity === 'number' ? fc.acidity.toFixed(2) : (fc.acidity || '-');
 
-                        // Comparativo
+                        // Comparativo Inicial vs Estimado
                         const initQ = init.quality_score ? (init.quality_score > 10 ? init.quality_score : init.quality_score * 10) : 90;
-                        const finalQ = fc.quality_index || 85;
+                        const finalQ = typeof fc.quality_index === 'number' ? fc.quality_index : 85;
                         document.getElementById('modal-lc-tbl-init-qual').textContent = `${initQ.toFixed(1)} / 100`;
                         document.getElementById('modal-lc-tbl-final-qual').textContent = `${finalQ.toFixed(1)} / 100`;
 
@@ -4896,6 +5096,12 @@
 
                         document.getElementById('modal-lc-tbl-init-acid').textContent = typeof init.acidity === 'number' ? `${init.acidity.toFixed(2)} %` : 'N/A';
                         document.getElementById('modal-lc-tbl-final-acid').textContent = typeof fc.acidity === 'number' ? `${fc.acidity.toFixed(2)} %` : 'N/A';
+
+                        // Gráfico de degradação da qualidade (Ponto A e Ponto B)
+                        if (fc.continuous_data) {
+                            const daysElapsed = (data.export_metadata && data.export_metadata.days_elapsed_total) || 0;
+                            renderModalQualityChart(fc.continuous_data, fc.point_a_day, fc.point_b_day, data.current_owner_type, daysElapsed);
+                        }
                     } else {
                         alert('Erro ao carregar previsão de ciclo de vida: ' + data.message);
                         closeLifecycleModal();
@@ -4908,9 +5114,141 @@
                 });
         }
 
+        function renderModalQualityChart(contData, ptA, ptB, ownerType, daysElapsed) {
+            const canvas = document.getElementById('modal-lc-quality-chart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            if (modalQualityChart) {
+                modalQualityChart.destroy();
+                modalQualityChart = null;
+            }
+
+            if (!contData || !contData.t || !contData.quality || contData.t.length === 0) {
+                return;
+            }
+
+            const tVals = contData.t;
+            const qVals = contData.quality;
+            const labels = tVals.map(t => `Dia ${Math.round(t)}`);
+
+            let threshold = 50;
+            if (ownerType === 'Producer') threshold = 70;
+            else if (ownerType === 'Processor') threshold = 65;
+            else if (ownerType === 'Retailer') threshold = 50;
+            else if (ownerType === 'Industry') threshold = 35;
+
+            const thresholdBadge = document.getElementById('modal-lc-chart-threshold-badge');
+            if (thresholdBadge) {
+                thresholdBadge.textContent = `Limiar ${ownerType || 'Comercial'}: ${threshold}%`;
+            }
+
+            const thresholdData = new Array(tVals.length).fill(threshold);
+
+            const pointRadii = tVals.map(t => {
+                if (ptA !== null && ptA !== undefined && Math.abs(t - ptA) < 0.6) return 7;
+                if (ptB !== null && ptB !== undefined && Math.abs(t - ptB) < 0.6) return 7;
+                return 0;
+            });
+
+            const pointColors = tVals.map(t => {
+                if (ptA !== null && ptA !== undefined && Math.abs(t - ptA) < 0.6) return '#00796b';
+                if (ptB !== null && ptB !== undefined && Math.abs(t - ptB) < 0.6) return '#c62828';
+                return '#00796b';
+            });
+
+            modalQualityChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Qualidade Comercial (%)',
+                            data: qVals,
+                            borderColor: '#00796b',
+                            backgroundColor: 'rgba(0, 121, 107, 0.12)',
+                            borderWidth: 2.5,
+                            fill: true,
+                            tension: 0.35,
+                            pointRadius: pointRadii,
+                            pointBackgroundColor: pointColors,
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointHoverRadius: 8
+                        },
+                        {
+                            label: `Limiar Aceitação (${threshold}%)`,
+                            data: thresholdData,
+                            borderColor: '#f59e0b',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            pointRadius: 0,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            min: 0,
+                            max: 100,
+                            grid: { color: '#f1f5f9' },
+                            title: {
+                                display: true,
+                                text: 'Qualidade (%)',
+                                font: { weight: 'bold', size: 11 },
+                                color: '#475569'
+                            }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                maxTicksLimit: 10,
+                                font: { size: 11 },
+                                color: '#64748b'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Tempo Simulado (Dias desde a Colheita)',
+                                font: { weight: 'bold', size: 11 },
+                                color: '#475569'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { boxWidth: 14, font: { size: 11, weight: '600' } }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const idx = context.dataIndex;
+                                    const t = tVals[idx];
+                                    const val = context.raw;
+                                    if (context.datasetIndex === 0) {
+                                        let note = '';
+                                        if (ptA !== null && ptA !== undefined && Math.abs(t - ptA) < 0.6) note = ' 🟢 [Ponto A - Prazo Comercial]';
+                                        if (ptB !== null && ptB !== undefined && Math.abs(t - ptB) < 0.6) note = ' 🔴 [Ponto B - Prazo Biológico]';
+                                        return `Qualidade: ${val.toFixed(1)}%${note}`;
+                                    }
+                                    return `${context.dataset.label}: ${val}%`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
         function closeLifecycleModal() {
             const modal = document.getElementById('lifecycleForecastModal');
             if (modal) modal.style.display = 'none';
+            if (modalQualityChart) {
+                modalQualityChart.destroy();
+                modalQualityChart = null;
+            }
         }
 
         function goToLifecycleTabWithLot(lotId) {
@@ -4926,31 +5264,78 @@
             }
         }
 
-        function drawLcDecayChart(curve) {
-            const ctx = document.getElementById('lc-decay-chart').getContext('2d');
-            
-            const labels = curve.map(point => point.date);
-            const qualityData = curve.map(point => point.quality);
+        function drawLcDecayChart(contData, ptA, ptB, ownerType) {
+            const canvas = document.getElementById('lc-decay-chart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
             
             if (lcDecayChartObj) {
                 lcDecayChartObj.destroy();
+                lcDecayChartObj = null;
             }
+
+            if (!contData || !contData.t || !contData.quality || contData.t.length === 0) {
+                return;
+            }
+
+            const tVals = contData.t;
+            const qVals = contData.quality;
+            const labels = tVals.map(t => `Dia ${Math.round(t)}`);
+
+            let threshold = 50;
+            if (ownerType === 'Producer') threshold = 70;
+            else if (ownerType === 'Processor') threshold = 65;
+            else if (ownerType === 'Retailer') threshold = 50;
+            else if (ownerType === 'Industry') threshold = 35;
+
+            const tBadge = document.getElementById('lc-chart-threshold-badge');
+            if (tBadge) {
+                tBadge.textContent = `Limiar ${ownerType || 'Comercial'}: ${threshold}% de Qualidade`;
+            }
+
+            const thresholdData = new Array(tVals.length).fill(threshold);
+
+            const pointRadii = tVals.map(t => {
+                if (ptA !== null && ptA !== undefined && Math.abs(t - ptA) < 0.6) return 8;
+                if (ptB !== null && ptB !== undefined && Math.abs(t - ptB) < 0.6) return 8;
+                return 0;
+            });
+
+            const pointColors = tVals.map(t => {
+                if (ptA !== null && ptA !== undefined && Math.abs(t - ptA) < 0.6) return '#00796b';
+                if (ptB !== null && ptB !== undefined && Math.abs(t - ptB) < 0.6) return '#c62828';
+                return '#00796b';
+            });
 
             lcDecayChartObj = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
-                    datasets: [{
-                        label: 'Qualidade Prevista (%)',
-                        data: qualityData,
-                        borderColor: '#00796b',
-                        backgroundColor: 'rgba(0, 121, 107, 0.1)',
-                        borderWidth: 3,
-                        pointBackgroundColor: '#004d40',
-                        pointRadius: 4,
-                        fill: true,
-                        tension: 0.3
-                    }]
+                    datasets: [
+                        {
+                            label: 'Qualidade Comercial (%)',
+                            data: qVals,
+                            borderColor: '#00796b',
+                            backgroundColor: 'rgba(0, 121, 107, 0.12)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.35,
+                            pointRadius: pointRadii,
+                            pointBackgroundColor: pointColors,
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointHoverRadius: 9
+                        },
+                        {
+                            label: `Limiar de Aceitação (${threshold}%)`,
+                            data: thresholdData,
+                            borderColor: '#f59e0b',
+                            borderWidth: 2,
+                            borderDash: [6, 6],
+                            pointRadius: 0,
+                            fill: false
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
@@ -4959,31 +5344,47 @@
                         y: {
                             min: 0,
                             max: 100,
+                            grid: { color: '#f1f5f9' },
                             title: {
                                 display: true,
-                                text: 'Qualidade (%)',
-                                font: { weight: 'bold' }
+                                text: 'Qualidade Comercial (%)',
+                                font: { weight: 'bold', size: 12 },
+                                color: '#334155'
                             }
                         },
                         x: {
+                            grid: { display: false },
+                            ticks: {
+                                maxTicksLimit: 12,
+                                font: { size: 11 },
+                                color: '#64748b'
+                            },
                             title: {
                                 display: true,
-                                text: 'Data',
-                                font: { weight: 'bold' }
+                                text: 'Tempo Simulado (Dias desde a Colheita)',
+                                font: { weight: 'bold', size: 12 },
+                                color: '#334155'
                             }
                         }
                     },
                     plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { boxWidth: 16, font: { size: 12, weight: '600' } }
+                        },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
-                                    const point = curve[context.dataIndex];
-                                    return [
-                                        `Qualidade: ${point.quality}%`,
-                                        `Temp: ${point.temperature.toFixed(1)} ºC`,
-                                        `Humidade: ${point.humidity.toFixed(1)}%`,
-                                        `Etileno: ${point.ethylene.toFixed(3)} ppm`
-                                    ];
+                                    const idx = context.dataIndex;
+                                    const t = tVals[idx];
+                                    const val = context.raw;
+                                    if (context.datasetIndex === 0) {
+                                        let note = '';
+                                        if (ptA !== null && ptA !== undefined && Math.abs(t - ptA) < 0.6) note = ' 🟢 [Ponto A - Prazo Comercial]';
+                                        if (ptB !== null && ptB !== undefined && Math.abs(t - ptB) < 0.6) note = ' 🔴 [Ponto B - Prazo Biológico]';
+                                        return `Qualidade: ${val.toFixed(1)}%${note}`;
+                                    }
+                                    return `${context.dataset.label}: ${val}%`;
                                 }
                             }
                         }

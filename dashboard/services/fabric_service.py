@@ -14,6 +14,8 @@ class FabricService:
     Service para comunicar com a API Middleware em Go (Hyperledger Fabric).
     Suporta Rastreabilidade Física Pública e Sigilo Comercial Bilateral por Interveniente.
     """
+    backend = "fabric"
+    label = "Blockchain (Hyperledger Fabric)"
 
     def create_order(self, order_id, producer_id, culture_type, quantity, harvest_date, additional_data=None, financial_data=None, buyer_id=None):
         """
@@ -225,4 +227,19 @@ class FabricService:
             logger.error(f"[Fabric] Connection Error: {str(e)}")
             return []
 
-fabric_service = FabricService()
+def build_ledger_service():
+    """
+    Escolhe o motor do ledger conforme settings.LEDGER_BACKEND ("fabric" ou "local").
+    O resto da plataforma usa sempre `fabric_service` e não precisa de saber qual está ativo.
+    """
+    backend = str(getattr(settings, 'LEDGER_BACKEND', 'fabric')).strip().lower()
+    if backend == 'local':
+        from dashboard.services.local_ledger_service import LocalLedgerService
+        logger.info("[Ledger] Motor ativo: LOCAL (tabela LedgerEntry)")
+        return LocalLedgerService()
+    if backend != 'fabric':
+        logger.warning(f"[Ledger] LEDGER_BACKEND desconhecido '{backend}', a usar 'fabric'.")
+    return FabricService()
+
+
+fabric_service = build_ledger_service()

@@ -161,6 +161,12 @@ FORECAST_SERVICE_URL = os.getenv('FORECAST_SERVICE_URL', 'http://127.0.0.1:8001'
 BUYER_SERVICE_URL = os.getenv('BUYER_SERVICE_URL', 'http://127.0.0.1:8002')
 LIFECYCLE_SERVICE_URL = os.getenv('LIFECYCLE_SERVICE_URL', 'http://127.0.0.1:8003')
 MARKETPLACE_API_URL = os.getenv('MARKETPLACE_API_URL', 'http://127.0.0.1:8004')
+STOCK_AGENT_SERVICE_URL = os.getenv('STOCK_AGENT_SERVICE_URL', 'http://127.0.0.1:8005')
 FABRIC_API_URL = 'http://localhost:3000'
 
-
+# Motor do ledger de rastreabilidade:
+#   "fabric" -> Hyperledger Fabric real (via middleware Go em FABRIC_API_URL)
+#   "local"  -> tabela LedgerEntry na BD do Django, encadeada por hash (sem blockchain)
+LEDGER_BACKEND = os.getenv('LEDGER_BACKEND', 'local').strip().lower()
+
+

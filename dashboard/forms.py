@@ -384,7 +384,7 @@ class WarehouseRegistrationForm(forms.ModelForm):
     class Meta:
         model = Warehouse
         fields = [
-            'location', 'region', 'control_type', 'storage_unit', 'max_vehicle_access', 
+            'location', 'region', 'control_type', 
             'capacity', 'sensors', 'latitude', 'longitude',
             'meteo_source', 'json_fallback_mode', 'fixed_temperature', 'fixed_humidity'
         ]
@@ -393,8 +393,6 @@ class WarehouseRegistrationForm(forms.ModelForm):
             'location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Armazém Central Lisboa'}),
             'region': forms.Select(attrs={'class': 'form-control'}),
             'control_type': forms.Select(attrs={'class': 'form-control'}),
-            'storage_unit': forms.Select(attrs={'class': 'form-control'}),
-            'max_vehicle_access': forms.Select(attrs={'class': 'form-control'}),
             'capacity': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'placeholder': 'Capacidade em Kg'}),
             'sensors': forms.CheckboxSelectMultiple(),
             'latitude': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.000001', 'placeholder': 'Ex: 38.7223 (Opcional)'}),

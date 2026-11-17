@@ -581,3 +581,52 @@ class StoreProcessorAssociation(models.Model):
 
     def __str__(self):
         return f"{self.processor.username} -> {self.retailer.username} ({self.status})"
+
+# ----------------------------------------------------------------------
+# LEDGER LOCAL (alternativa ao Hyperledger Fabric, LEDGER_BACKEND="local")
+# ----------------------------------------------------------------------
+
+class LedgerEntryQuerySet(models.QuerySet):
+    """Bloqueia alterações e apagamentos em massa: o ledger é append-only."""
+
+    def update(self, **kwargs):
+        raise PermissionError("O ledger local é append-only: não é permitido alterar entradas.")
+
+    def delete(self):
+        raise PermissionError("O ledger local é append-only: não é permitido apagar entradas.")
+
+
+class LedgerEntry(models.Model):
+    """
+    Uma transação do ledger local. Cada entrada guarda o estado completo do lote
+    após a transação (como o putState do Fabric) e está encadeada à anterior por hash.
+    """
+    block_number = models.PositiveBigIntegerField(unique=True)
+    tx_id = models.CharField(max_length=64, unique=True)
+    asset_id = models.CharField(max_length=255, db_index=True)
+    function = models.CharField(max_length=64)
+    actor = models.CharField(max_length=255, blank=True, default="")
+    timestamp = models.DateTimeField()
+    state = models.JSONField()
+    # unique=True impede dois blocos com o mesmo pai (fork em escritas concorrentes)
+    prev_hash = models.CharField(max_length=64, unique=True)
+    hash = models.CharField(max_length=64, unique=True)
+
+    objects = LedgerEntryQuerySet.as_manager()
+
+    class Meta:
+        ordering = ['block_number']
+        verbose_name = "Entrada do Ledger"
+        verbose_name_plural = "Ledger Local"
+        indexes = [models.Index(fields=['asset_id', 'block_number'])]
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None:
+            raise PermissionError("O ledger local é append-only: não é permitido alterar entradas.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise PermissionError("O ledger local é append-only: não é permitido apagar entradas.")
+
+    def __str__(self):
+        return f"#{self.block_number} {self.function} {self.asset_id}"

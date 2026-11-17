@@ -19,16 +19,16 @@ class InitialMetrics(BaseModel):
 
 class LotIdentification(BaseModel):
     lot_id: Union[int, str] = Field(..., description="Unique Lot/Harvest primary key")
-    batch_id: str = Field(..., description="Batch code e.g. LOTE-1234 or STOCK-56")
-    culture_name: str = Field(..., description="Crop/Subfamily name e.g. Gala, Fuji, Rocha")
-    fruit_type: str = Field(..., description="Fruit category e.g. apple, kiwi, strawberry")
-    producer: str = Field(..., description="Origin producer name or identifier")
-    current_owner: str = Field(..., description="Current owner username or entity")
-    current_owner_type: Optional[str] = Field("Retailer (Grocery Store)", description="Stakeholder profile (Producer, Processor, Retailer, Industry)")
-    harvest_date: str = Field(..., description="Harvest date string YYYY-MM-DD")
-    initial_quantity_kg: float = Field(..., description="Initial harvested quantity in kg")
-    current_stock_kg: float = Field(..., description="Current available quantity in kg")
-    delivered_quantity_kg: float = Field(0.0, description="Quantity already delivered to downstream actors")
+    batch_id: Optional[str] = Field("N/A", description="Batch code e.g. LOTE-1234 or STOCK-56")
+    culture_name: Optional[str] = Field("Unknown", description="Crop/Subfamily name e.g. Gala, Fuji, Rocha")
+    fruit_type: Optional[str] = Field("apple", description="Fruit category e.g. apple, kiwi, strawberry")
+    producer: Optional[str] = Field("N/A", description="Origin producer name or identifier")
+    current_owner: Optional[str] = Field("N/A", description="Current owner username or entity")
+    current_owner_type: Optional[str] = Field("Retailer", description="Stakeholder profile (Producer, Processor, Retailer, Industry)")
+    harvest_date: Optional[str] = Field(None, description="Harvest date string YYYY-MM-DD")
+    initial_quantity_kg: Optional[float] = Field(0.0, description="Initial harvested quantity in kg")
+    current_stock_kg: Optional[float] = Field(0.0, description="Current available quantity in kg")
+    delivered_quantity_kg: Optional[float] = Field(0.0, description="Quantity already delivered to downstream actors")
     initial_metrics: InitialMetrics = Field(default_factory=InitialMetrics)
 
 
@@ -47,7 +47,8 @@ class WarehouseHistory(BaseModel):
     meteo_source: str = Field("JSON", description="Meteorology source: FIXED, IPMA, or JSON")
     total_days_recorded: int = Field(0, description="Total days fruit spent in this warehouse/transport segment")
     keptancy_start_date: Optional[str] = Field(None, description="Segment start date YYYY-MM-DD")
-    packaging_method: Optional[str] = Field("Granel (Sem embalagem)", description="Packaging type: Bulk, Cardboard, Perforated, MAP")
+    starting_date: Optional[str] = Field(None, description="Alias for keptancy_start_date YYYY-MM-DD")
+    packaging_method: Optional[str] = Field("bulk", description="Packaging type: bulk, open_box, perforated_bag, map_sealed")
     daily_readings: List[DailyReading] = Field(default_factory=list)
 
 
@@ -62,22 +63,27 @@ class LifecycleDataRequest(BaseModel):
     blockchain_ledger: Dict[str, Any] = Field(default_factory=dict)
     transport_and_logistics: List[Any] = Field(default_factory=list)
     sensor_history_by_warehouse: List[WarehouseHistory] = Field(default_factory=list)
-    plot_info: bool = Field(False, description="Flag to include full temporal continuous curve arrays in response")
+    packaging_method: Optional[str] = Field(None, description="Optional override packaging method for the current batch")
+    plot_info: bool = Field(True, description="Flag to include full temporal continuous curve arrays in response")
 
 
 class ForecastResponse(BaseModel):
-    service: Literal["lifecycle_inference"] = "lifecycle_inference"
+    service: Literal["lifecycle_inference", "inference"] = "lifecycle_inference"
     client_id: str
     store_id: str
     algorithm: Literal["ode", "ode_academic", "ode_new"]
     product_id: str
     quality_index: float = Field(..., description="Predicted quality score (0 to 100)")
-    remaining_lifetime: float = Field(..., description="Estimated remaining shelf-life days")
+    commercial_lifetime_remaining: float = Field(..., description="Estimated remaining commercial shelf-life days (Ponto A)")
+    biological_lifetime_remaining: float = Field(..., description="Estimated remaining biological shelf-life days (Ponto B)")
+    remaining_lifetime: float = Field(..., description="Estimated remaining shelf-life days (Ponto A alias)")
+    point_a_day: float = Field(..., description="Day from harvest when Point A is reached")
+    point_b_day: float = Field(..., description="Day from harvest when Point B is reached")
     firmness: float = Field(..., description="Estimated firmness (N)")
     brix: float = Field(..., description="Estimated soluble solids / sugar (°Brix)")
     acidity: Optional[float] = Field(None, description="Estimated titratable acidity (% malic or citric acid)")
     mold: Optional[float] = Field(0.0, description="Estimated mold / fungal presence fraction (0.0 to 1.0)")
-    continuous_data: Optional[Dict[str, List[float]]] = Field(None, description="Continuous curve series for charts")
+    continuous_data: Optional[Dict[str, Any]] = Field(None, description="Continuous curve series for charts")
 
 
 class StatusResponse(BaseModel):
