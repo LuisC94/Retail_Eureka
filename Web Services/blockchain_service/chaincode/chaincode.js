@@ -80,6 +80,41 @@ function filterOrderPrivacy(order, callerId) {
     }
 }
 
+/**
+ * Campos que só podem crescer (nunca ser apagados ou reescritos) por uma atualização.
+ * Protege contra quem grava de volta um estado já filtrado pelo sigilo (sem os negócios de terceiros).
+ */
+const PROTECTED_KEYS = ['id', 'commercial_deals', 'custody_chain', 'private_data', 'financial_details'];
+
+function mergeProtectedFields(stored, incoming) {
+    const merged = Object.assign({}, incoming);
+
+    // 1. Negócios comerciais: mantêm-se todos os gravados; só se acrescentam dealIds novos
+    const storedDeals = Array.isArray(stored.commercial_deals) ? stored.commercial_deals : [];
+    const knownIds = new Set(storedDeals.map(d => d && d.dealId).filter(Boolean));
+    const newDeals = (Array.isArray(incoming.commercial_deals) ? incoming.commercial_deals : [])
+        .filter(d => d && d.dealId && !knownIds.has(d.dealId));
+    merged.commercial_deals = storedDeals.concat(newDeals);
+
+    // 2. Cadeia de custódia: append-only (só se aceitam entradas além das já gravadas)
+    const storedChain = Array.isArray(stored.custody_chain) ? stored.custody_chain : [];
+    const incomingChain = Array.isArray(incoming.custody_chain) ? incoming.custody_chain : [];
+    merged.custody_chain = storedChain.concat(incomingChain.slice(storedChain.length));
+
+    // 3. Dados privados: um envelope vazio (filtrado) nunca apaga o gravado
+    const storedPrivate = (stored.private_data && typeof stored.private_data === 'object') ? stored.private_data : {};
+    const incomingPrivate = (incoming.private_data && typeof incoming.private_data === 'object') ? incoming.private_data : {};
+    merged.private_data = Object.assign({}, storedPrivate, incomingPrivate);
+    if (Object.keys(merged.private_data).length === 0 && !('private_data' in stored)) {
+        delete merged.private_data;
+    }
+
+    // 4. Dados financeiros nunca ficam na raiz
+    delete merged.financial_details;
+    merged.id = stored.id;
+    return merged;
+}
+
 class Chaincode extends Contract {
 
     async InitLedger(ctx) {
@@ -237,18 +272,61 @@ class Chaincode extends Contract {
 
     /**
      * UpdateOrder: Atualiza um lote existente de forma determinística.
+     * Os negócios comerciais, a cadeia de custódia e os dados privados já gravados são preservados
+     * (ver mergeProtectedFields), mesmo que o estado enviado tenha sido lido com filtro de sigilo.
      */
     async UpdateOrder(ctx, id, orderJSON, callerId) {
         const order = typeof orderJSON === 'string' ? JSON.parse(orderJSON) : orderJSON;
 
-        const exists = await this.OrderExists(ctx, id);
-        if (!exists) {
+        const storedBytes = await ctx.stub.getState(id);
+        if (!storedBytes || storedBytes.length === 0) {
             throw new Error(`The order ${id} does not exist`);
         }
 
         if (order.id !== id) {
             throw new Error(`Order ID mismatch: ${id} vs ${order.id}`);
         }
+
+        const stored = JSON.parse(storedBytes.toString());
+        const merged = mergeProtectedFields(stored, order);
+
+        await ctx.stub.putState(id, Buffer.from(stringify(sortKeysRecursive(merged))));
+        return stringify(sortKeysRecursive(filterOrderPrivacy(merged, callerId)));
+    }
+
+    /**
+     * UpdateOrderStatus: Altera o estado de um lote e acrescenta campos adicionais,
+     * partindo do estado COMPLETO gravado no ledger (sem passar pelo filtro de sigilo).
+     * Os campos protegidos (negócios, custódia, dados privados) não podem ser alterados por aqui.
+     */
+    async UpdateOrderStatus(ctx, id, newStatus, additionalJSON, callerId) {
+        const storedBytes = await ctx.stub.getState(id);
+        if (!storedBytes || storedBytes.length === 0) {
+            throw new Error(`The order ${id} does not exist`);
+        }
+        if (!newStatus) {
+            throw new Error("UpdateOrderStatus exige um novo estado.");
+        }
+
+        let additional = {};
+        if (additionalJSON) {
+            try {
+                additional = typeof additionalJSON === 'string' ? JSON.parse(additionalJSON) : additionalJSON;
+            } catch (e) {
+                throw new Error(`JSON parse error in UpdateOrderStatus: ${e.message}`);
+            }
+        }
+
+        const order = JSON.parse(storedBytes.toString());
+        if (additional && typeof additional === 'object' && !Array.isArray(additional)) {
+            Object.keys(additional).forEach(key => {
+                if (!PROTECTED_KEYS.includes(key)) {
+                    order[key] = additional[key];
+                }
+            });
+        }
+        order.orderStatus = newStatus;
+        order.currentStatus = newStatus;
 
         await ctx.stub.putState(id, Buffer.from(stringify(sortKeysRecursive(order))));
         return stringify(sortKeysRecursive(filterOrderPrivacy(order, callerId)));
@@ -284,18 +362,28 @@ class Chaincode extends Contract {
 
     /**
      * GetOrderHistory: Retorna o histórico de transações do Ledger.
+     * Cada versão do lote passa pelo mesmo filtro de sigilo do ReadOrder, conforme o callerId
+     * (sem callerId = consulta pública, sem dados comerciais).
      */
-    async GetOrderHistory(ctx, id) {
+    async GetOrderHistory(ctx, id, callerId) {
         const historyIterator = await ctx.stub.getHistoryForKey(id);
         const results = [];
         let res = await historyIterator.next();
         while (!res.done) {
             if (res.value) {
+                let value = '';
+                try {
+                    const raw = res.value.value.toString('utf8');
+                    value = raw ? stringify(sortKeysRecursive(filterOrderPrivacy(JSON.parse(raw), callerId))) : '';
+                } catch (e) {
+                    // Valor ilegível: não devolver conteúdo em bruto (poderia expor dados comerciais)
+                    value = '';
+                }
                 const obj = {
                     txId: res.value.txId,
                     timestamp: res.value.timestamp,
                     isDelete: res.value.is_delete,
-                    value: res.value.value.toString('utf8')
+                    value: value
                 };
                 results.push(obj);
             }

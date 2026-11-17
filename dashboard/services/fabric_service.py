@@ -113,34 +113,33 @@ class FabricService:
     def update_order(self, order_id, new_status, additional_data=None, caller_id=None):
         """
         Atualiza o estado de uma Order existente.
+
+        Usa UpdateOrderStatus: o chaincode parte do estado COMPLETO gravado no ledger e só altera
+        o estado e os campos adicionais. Antes, o estado era lido aqui já filtrado pelo sigilo do
+        caller_id e gravado de volta, o que apagava os negócios de terceiros do lote.
         """
         try:
-            current_state = self.get_order(order_id, caller_id=caller_id)
-            if not current_state:
-                return {"status": "error", "message": f"Order {order_id} not found on chain."}
-
-            current_state['orderStatus'] = new_status
-            if additional_data:
-                current_state.update(additional_data)
-
             url = f"{FABRIC_API_URL}/invoke"
             payload = {
                 "channelid": "mychannel",
                 "chaincodeid": "saip",
-                "function": "UpdateOrder",
+                "function": "UpdateOrderStatus",
                 "args": [
-                    str(order_id), 
-                    json.dumps(current_state),
+                    str(order_id),
+                    str(new_status),
+                    json.dumps(additional_data or {}, default=str),
                     str(caller_id or "")
                 ]
             }
-            
+
             response = requests.post(url, data=payload, timeout=15)
             if response.status_code == 200 and not response.text.startswith("Error"):
-                logger.info(f"[Fabric] UpdateOrder Success: {response.text}")
+                logger.info(f"[Fabric] UpdateOrderStatus Success: {response.text}")
                 return {"status": "success", "tx_id": response.text}
             else:
-                logger.error(f"[Fabric] UpdateOrder Failed: {response.text}")
+                logger.error(f"[Fabric] UpdateOrderStatus Failed: {response.text}")
+                if "does not exist" in response.text:
+                    return {"status": "error", "message": f"Order {order_id} not found on chain."}
                 return {"status": "error", "message": response.text}
 
         except Exception as e:
@@ -196,16 +195,19 @@ class FabricService:
         except Exception:
             return []
 
-    def get_asset_history(self, order_id):
+    def get_asset_history(self, order_id, caller_id=None):
         """
         Obtém o histórico imutável completo de alterações na Blockchain (GetOrderHistory).
+        Cada versão vem filtrada pelo sigilo comercial conforme o caller_id
+        (sem caller_id = consulta pública, sem dados comerciais).
         """
         url = f"{FABRIC_API_URL}/query"
         payload = {
             "channelid": "mychannel",
             "chaincodeid": "saip",
             "function": "GetOrderHistory",
-            "args": [str(order_id)]
+            "args": [str(order_id)],
+            "callerid": str(caller_id or "")
         }
         
         try:

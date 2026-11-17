@@ -18,7 +18,7 @@ func (setup OrgSetup) Query(w http.ResponseWriter, r *http.Request) {
 	args := r.Form["args"]
 	callerID := r.FormValue("callerid")
 	if callerID != "" {
-		if function == "ReadOrder" && len(args) == 1 {
+		if (function == "ReadOrder" || function == "GetOrderHistory") && len(args) == 1 {
 			args = append(args, callerID)
 		} else if function == "GetAllOrders" && len(args) == 0 {
 			args = append(args, callerID)

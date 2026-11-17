@@ -2538,7 +2538,7 @@ def get_harvest_history(request, harvest_id):
         asset_id = harvest_str if harvest_str.startswith("LOTE-") else f"LOTE-{harvest_str}"
         
         # 2. Buscar Histórico ao Go Middleware
-        history_data = fabric_service.get_asset_history(asset_id)
+        history_data = fabric_service.get_asset_history(asset_id, caller_id=request.user.username)
         
         # 3. Processar dados para o Template (Parsing de JSON dentro do value, timestamps, etc.)
         # O Go retorna algo como: [{"txId": "...", "value": "{...}", "timestamp": "...", "isDelete": false}]
@@ -4046,7 +4046,7 @@ def build_lot_lifecycle_data(lot_id=None, stock_id=None, user=None, packaging_me
     # Extrair Eventos da Blockchain Real (Hyperledger Fabric)
     blockchain_events = []
     try:
-        fabric_history = fabric_service.get_asset_history(batch_id)
+        fabric_history = fabric_service.get_asset_history(batch_id, caller_id=user.username if user else None)
         if isinstance(fabric_history, list) and fabric_history:
             for idx, h in enumerate(fabric_history):
                 val_data = h.get('value', {})

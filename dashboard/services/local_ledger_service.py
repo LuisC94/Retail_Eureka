@@ -249,8 +249,11 @@ class LocalLedgerService:
             logger.error("[LocalLedger] get_all_orders Error: %s", e)
             return []
 
-    def get_asset_history(self, order_id):
-        """Mesmo formato do GetOrderHistory do chaincode: mais recente primeiro, value em string JSON."""
+    def get_asset_history(self, order_id, caller_id=None):
+        """
+        Mesmo formato do GetOrderHistory do chaincode: mais recente primeiro, value em string JSON.
+        Cada versão passa pelo filtro de sigilo conforme o caller_id (sem caller_id = consulta pública).
+        """
         from dashboard.models import LedgerEntry
         try:
             entries = LedgerEntry.objects.filter(asset_id=str(order_id)).order_by("-block_number")
@@ -258,7 +261,7 @@ class LocalLedgerService:
                 "txId": e.tx_id,
                 "timestamp": _iso(e.timestamp),
                 "isDelete": False,
-                "value": _canonical(e.state),
+                "value": _canonical(filter_order_privacy(e.state, caller_id)),
             } for e in entries]
         except Exception as e:
             logger.error("[LocalLedger] History Error: %s", e)
