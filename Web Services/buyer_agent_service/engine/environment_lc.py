@@ -103,7 +103,9 @@ class StockEnvironmentLC(StockEnvironment):
         if s is not None:
             return s
         # Lote criado pelo ambiente original (chegada / reset): estado inicial LC
-        s = initial_state(self.lc_fruit_key, firmness_0=batch.get("dureza"), brix_0=batch.get("brix"))
+        # "acidez" só existe em lotes criados com medições (inferência); no treino fica o valor por omissão.
+        s = initial_state(self.lc_fruit_key, firmness_0=batch.get("dureza"), brix_0=batch.get("brix"),
+                          acidity_0=batch.get("acidez"))
         s[S_MOLD] = float(batch.get("mold", 0.0))
         s[S_EINT] = float(batch.get("E_int", s[S_EINT]))
         s[S_AGE] = float(batch.get("age", 0.0))
@@ -145,16 +147,35 @@ class StockEnvironmentLC(StockEnvironment):
                                   QUALITY_FLOOR, MAX_PROJECTION_DAYS))
 
     # ------------------------------------------------------------------ utilitários para /decide
-    def make_batch(self, quantity, age_days=0, climate_history=None):
-        """Cria um lote com 'age_days' dias, envelhecido com o clima fornecido (lista de (T, RH, E))."""
+    def make_batch(self, quantity, age_days=0, climate_history=None, firmness=None, brix=None, acidity=None):
+        """
+        Cria um lote com 'age_days' dias, envelhecido com o clima fornecido (lista de (T, RH, E)).
+        firmness/brix/acidity: estado inicial medido (receção ou colheita). Sem valores, usa os valores por omissão
+        da variedade, exatamente como antes.
+        """
         p = self.PRESETS[self.fruit_key]
+
+        def _measured(v):
+            try:
+                v = float(v)
+            except (TypeError, ValueError):
+                return None
+            return v if v > 0 else None
+
+        f0 = _measured(firmness)
+        b0 = _measured(brix)
+        a0 = _measured(acidity)
+        dureza0 = f0 if f0 is not None else p["dureza_0_default"]
+        brix0 = b0 if b0 is not None else p["brix_0_default"]
         b = {
             "lot_id": f"LOT-{self._next_lot_id}", "harvest_date": self._get_current_date_str(),
             "initial_quantity": float(quantity), "quantity": float(quantity),
-            "initial_dureza": p["dureza_0_default"], "dureza": p["dureza_0_default"],
-            "initial_brix": p["brix_0_default"], "brix": p["brix_0_default"],
+            "initial_dureza": dureza0, "dureza": dureza0,
+            "initial_brix": brix0, "brix": brix0,
             "mold": 0.0, "E_int": p["E0_int"], "age": 0.0, "quality": 100.0, "daily_readings": [],
         }
+        if a0 is not None:
+            b["acidez"] = a0
         self._next_lot_id += 1
         clim = list(climate_history or [])
         for d in range(int(max(0, age_days))):

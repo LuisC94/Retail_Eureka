@@ -18,7 +18,6 @@ from django.db import transaction
 from django.utils import timezone
 
 from dashboard.models import ConsolidatedStock, DemandForecast, HistoricalSalesData, TrainedModel, Warehouse, WarehouseSensorReading
-from dashboard.services.marketplace_service import marketplace_service
 
 logger = logging.getLogger(__name__)
 
@@ -267,7 +266,39 @@ def get_buyer_model_status(user, subfamily):
     return data
 
 
+# Nomes de colunas aceites nos ficheiros de histórico (sem distinguir maiúsculas/minúsculas)
+MARKET_COLUMN_ALIASES = {
+    'date': ['date', 'data', 'day', 'dia'],
+    'sales_quantity_kg': ['sales_quantity_kg', 'vendas_kg', 'real_value', 'quantidade_kg', 'vendas', 'sales_kg'],
+    'price_per_kg': ['price_per_kg', 'preco_venda_euro', 'preco_kg', 'price', 'preco', 'preco_eur_kg'],
+    'temperature': ['temperature', 'temperatura', 'temperatura_c', 'temp', 'temp_c'],
+    'humidity': ['humidity', 'humidade', 'humidade_pct', 'humidade_%', 'rh', 'hr'],
+    'ethylene': ['ethylene', 'etileno', 'etileno_ppm', 'ethylene_ppm'],
+}
+
+
+def normalize_market_columns(df):
+    """Uniformiza os nomes das colunas de um ficheiro de histórico (vendas, preço e clima)."""
+    by_lower = {str(c).strip().lower(): c for c in df.columns}
+    rename = {}
+    for target, aliases in MARKET_COLUMN_ALIASES.items():
+        for alias in aliases:
+            if alias in by_lower and target not in rename.values():
+                rename[by_lower[alias]] = target
+                break
+    return df.rename(columns=rename)
+
+
+def _num_or_none(v):
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    return None if pd.isna(f) else f
+
+
 def _normalize_market_df(df):
+    df = normalize_market_columns(df)
     df = df.rename(columns={'sales_quantity_kg': 'real_value', 'price_per_kg': 'price'})
     if 'date' not in df.columns or 'real_value' not in df.columns:
         raise ValueError("Os dados de treino têm de ter a data e as vendas reais (date / sales_quantity_kg).")
@@ -279,7 +310,7 @@ def train_buyer_agent_optimizer_generator(user, subfamily, df_market_data, max_e
     """
     Treina o Buyer Agent DSAC no Buyer Web Service:
       1) obtém as previsões do Forecast Web Service para todos os dias do histórico (obrigatório);
-      2) junta o clima das leituras do armazém;
+      2) junta o clima de cada dia (do ficheiro; nos dias em falta, das leituras do armazém);
       3) envia para /api/buyer/train/stream e reencaminha o progresso.
     """
     yield f"[Django] A preparar dados de treino para a cultura {subfamily.name}...\n"
@@ -308,23 +339,34 @@ def train_buyer_agent_optimizer_generator(user, subfamily, df_market_data, max_e
         raise RuntimeError(f"O Forecast Web Service não devolveu previsões para {len(missing)} dias (ex.: {missing[:3]}). O treino foi cancelado.")
     df['prediction'] = [pred_map[_date_str(d)] for d in df['date']]
 
-    # 2) Clima do armazém
+    # 2) Clima de cada dia: primeiro o do ficheiro de treino; nos dias em falta, as leituras do armazém;
+    #    sem nenhum dos dois, o Buyer Web Service usa os valores por omissão (22 °C / 70 %).
     climate = _climate_by_date(wh, df['date'].min(), df['date'].max())
-    n_climate = sum(1 for d in df['date'] if d in climate)
-    yield f"[Django] [2/3] Previsões obtidas. Leituras de clima do armazém '{wh.location}' disponíveis para {n_climate}/{len(df)} dias.\n"
-
+    n_file = n_wh = n_none = 0
     train_records = []
     for r in df.to_dict('records'):
-        c = climate.get(r['date'])
+        t, h, e = _num_or_none(r.get('temperature')), _num_or_none(r.get('humidity')), _num_or_none(r.get('ethylene'))
+        if t is not None and h is not None:
+            n_file += 1
+        else:
+            c = climate.get(r['date'])
+            if c:
+                t, h = c[0], c[1]
+                e = e if e is not None else c[2]
+                n_wh += 1
+            else:
+                n_none += 1
         train_records.append({
             "date": _date_str(r['date']),
             "real_value": float(r['real_value']),
             "prediction": float(r['prediction']),
-            "price": None if pd.isna(r.get('price')) else float(r['price']),
-            "temperature": c[0] if c else None,
-            "humidity": c[1] if c else None,
-            "ethylene": c[2] if c else None,
+            "price": _num_or_none(r.get('price')),
+            "temperature": t,
+            "humidity": h,
+            "ethylene": e,
         })
+    yield (f"[Django] [2/3] Previsões obtidas. Clima por dia: {n_file} do ficheiro, {n_wh} das leituras do armazém "
+           f"'{wh.location}', {n_none} sem dados (usados 22 °C / 70 % por omissão).\n")
 
     episodes = int(max_episodes) if str(max_episodes or '').strip().isdigit() else BUYER_EPISODES_DEFAULT
     payload = {
@@ -375,47 +417,71 @@ def train_buyer_agent_optimizer(user, subfamily, df_market_data, max_episodes=No
                                                       fruit_key=fruit_key, forecast_model_type=forecast_model_type))
 
 
-def _deal_date(d):
-    for key in ('delivery_date', 'timestamp'):
-        v = d.get(key)
-        if v:
-            try:
-                return datetime.date.fromisoformat(str(v)[:10])
-            except ValueError:
-                continue
-    return None
+def _lot_initial_state(reception, today):
+    """
+    Estado inicial de um lote para o Buyer Agent, por esta ordem:
+      1) medições da receção  -> envelhece desde a data de receção;
+      2) medições da colheita de origem (LOTE-<id>) -> envelhece desde a data de colheita
+         (conta também o tempo entre a colheita e a chegada);
+      3) sem medições -> valores por omissão da variedade, envelhece desde a data de receção.
+    """
+    import re
+    from dashboard.models import Harvest
+
+    def _val(v):
+        return float(v) if v is not None and float(v) > 0 else None
+
+    measured = {"firmness": _val(reception.firmness), "brix": _val(reception.soluble_solids), "acidity": _val(reception.acidity)}
+    if any(v is not None for v in measured.values()):
+        return {"age_days": max(0, (today - reception.received_at).days), **measured, "initial_source": "rececao"}
+
+    m = re.match(r'LOTE-(\d+)$', str(reception.batch_id or ''))
+    origin = Harvest.objects.filter(pk=int(m.group(1))).first() if m else None
+    if origin is not None:
+        harvested = {"firmness": _val(origin.firmness), "brix": _val(origin.soluble_solids), "acidity": _val(origin.acidity)}
+        if any(v is not None for v in harvested.values()):
+            start = origin.harvest_date if origin.harvest_date and origin.harvest_date <= reception.received_at else reception.received_at
+            return {"age_days": max(0, (today - start).days), **harvested, "initial_source": "colheita"}
+
+    return {"age_days": max(0, (today - reception.received_at).days), "initial_source": "omissao"}
 
 
 def _stock_and_transit(user, subfamily, today, stock_total):
     """
-    Lotes em armazém e encomendas em trânsito a partir das transações do Marketplace:
-      - trânsito: deals CONFIRMED / IN_TRANSIT (chegada pela delivery_date);
-      - lotes: as entregas DELIVERED mais recentes até perfazer o stock atual (consumo FEFO), com a idade em dias.
+    Estado de stock para a decisão do Buyer Agent, a partir das receções de mercadoria (DealReception):
+      - em trânsito: receções PENDENTES desta cultura (chegada pela data prevista; sem data, amanhã);
+      - lotes: receções CONFIRMADAS mais recentes até perfazer o stock atual (consumo FEFO: o mais antigo sai primeiro),
+        com o estado inicial medido (receção > colheita > valores por omissão; ver _lot_initial_state). O stock que não corresponde a nenhuma receção (ex.: compra rápida
+        ou ajuste manual) entra como um lote com idade 0.
+      - última encomenda: quantidade do negócio mais recente desta cultura.
     """
-    try:
-        deals = marketplace_service.fetch_deals(buyer_id=user.username, culture_name=subfamily.name) or []
-    except Exception:  # noqa: BLE001
-        deals = []
-    in_transit, delivered = [], []
-    for d in deals:
-        st = d.get('status') or d.get('transport_status')
-        qty = float(d.get('quantity_kg') or 0.0)
-        dd = _deal_date(d)
-        if st in ('CONFIRMED', 'IN_TRANSIT', 'PENDING', 'ACCEPTED', 'PLANNED') and qty > 0:
-            in_transit.append({"quantity_kg": qty, "arrival_in_days": max(0, (dd - today).days) if dd else 1})
-        elif st == 'DELIVERED' and qty > 0 and dd:
-            delivered.append((dd, qty))
+    from dashboard.models import DealReception
+
+    receptions = DealReception.objects.filter(buyer=user, culture=subfamily)
+
+    in_transit = []
+    for r in receptions.filter(status=DealReception.STATUS_PENDING):
+        qty = float(r.quantity_kg or 0.0)
+        if qty <= 0:
+            continue
+        arrival = max(0, (r.expected_date - today).days) if r.expected_date else 1
+        in_transit.append({"quantity_kg": qty, "arrival_in_days": arrival})
+
     lots, remaining = [], float(stock_total)
-    for dd, qty in sorted(delivered, reverse=True):
+    received = receptions.filter(status=DealReception.STATUS_RECEIVED, received_at__lte=today).order_by('-received_at', '-confirmed_at')
+    for r in received:
         if remaining <= 0:
             break
-        take = min(qty, remaining)
-        lots.append({"quantity_kg": round(take, 2), "age_days": max(0, (today - dd).days)})
+        take = min(float(r.received_quantity_kg or r.quantity_kg or 0.0), remaining)
+        if take <= 0:
+            continue
+        lots.append({"quantity_kg": round(take, 2), **_lot_initial_state(r, today)})
         remaining -= take
     if remaining > 0.01:
         lots.append({"quantity_kg": round(remaining, 2), "age_days": 0})
-    dated = [(_deal_date(d) or datetime.date.min, float(d.get('quantity_kg') or 0.0)) for d in deals]
-    last_order = max(dated)[1] if dated else 0.0
+
+    last = receptions.order_by('-created_at').first()
+    last_order = float(last.quantity_kg) if last else 0.0
     return lots, in_transit, last_order
 
 

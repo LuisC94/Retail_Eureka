@@ -93,7 +93,11 @@ class ForecastPoint(BaseModel):
 
 class StockLot(BaseModel):
     quantity_kg: float
-    age_days: int = Field(0, ge=0, description="Dias desde a entrada do lote em armazém")
+    age_days: int = Field(0, ge=0, description="Dias de envelhecimento desde o estado inicial (receção ou colheita)")
+    # Estado inicial medido (opcional). Sem valores, usa os valores por omissão da variedade (comportamento anterior).
+    firmness: Optional[float] = Field(None, description="Firmeza inicial medida (N)")
+    brix: Optional[float] = Field(None, description="Brix inicial medido (°Bx)")
+    acidity: Optional[float] = Field(None, description="Acidez inicial medida")
 
 
 class TransitItem(BaseModel):

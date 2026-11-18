@@ -8,9 +8,10 @@ e pede ao agente a recomendação do dia:
 
 Lotes por perfil:
   - Produtor: cada Harvest com stock e armazém (batch LOTE-<id>).
-  - Retalhista / Processador: o stock (ConsolidatedStock) é agregado; os lotes são reconstruídos a partir dos
-    negócios do Marketplace (batch_id LOTE-<id> -> Harvest de origem), assumindo que o stock mais antigo saiu primeiro.
-    Sem negócios disponíveis, cada registo de ConsolidatedStock é tratado como um lote (como no Lifecycle).
+  - Retalhista / Processador: o stock (ConsolidatedStock) é agregado; os lotes são reconstruídos a partir das
+    receções confirmadas (DealReception), assumindo que o stock mais antigo saiu primeiro (FIFO). Cada lote entra na
+    data de receção com as medições dessa receção; se faltarem, as da colheita de origem (batch_id LOTE-<id>).
+    O stock sem receção associada (compra rápida, ajuste manual) é tratado como um lote com entrada estimada.
 """
 import datetime
 import logging
@@ -127,27 +128,22 @@ def _stock_warehouse(stock):
             or Warehouse.objects.filter(owner=stock.owner).first())
 
 
-def _deal_date(d):
-    raw = d.get('timestamp') or d.get('delivery_date') or d.get('created_at')
-    try:
-        return datetime.datetime.fromisoformat(str(raw).replace('Z', '+00:00')).date()
-    except (TypeError, ValueError):
-        return None
+def _origin_harvest(batch_id):
+    m = re.match(r'LOTE-(\d+)$', str(batch_id or ''))
+    return Harvest.objects.filter(pk=int(m.group(1))).first() if m else None
 
 
 def _buyer_lots(user, subfamily, today, avisos):
-    """Retalhista / Processador: reconstrói os lotes a partir dos negócios do Marketplace (FIFO)."""
+    """
+    Retalhista / Processador: reconstrói os lotes a partir das receções confirmadas (FIFO).
+    O Stock Agent começa cada lote na data de entrada com as medições indicadas, por isso as medições da receção
+    (estado real à chegada) têm prioridade sobre as da colheita.
+    """
+    from dashboard.models import DealReception
+
     stocks = list(ConsolidatedStock.objects.filter(owner=user, culture=subfamily, quantity__gt=0))
-    try:
-        deals = [d for d in marketplace_service.fetch_deals(buyer_id=user.username)
-                 if str(d.get('culture_name', '')).strip().lower() == subfamily.name.strip().lower()
-                 and d.get('status') != 'CANCELLED']
-    except Exception:  # noqa: BLE001
-        deals = []
-    if not deals:
-        avisos.append("Sem negócios do Marketplace para esta cultura: cada registo de stock é tratado como um lote, "
-                      "com entrada estimada há 10 dias (precisão reduzida do tempo de vida).")
     lots, whs = [], {}
+    kg_sem_rececao = 0.0
     for s in stocks:
         wh = _stock_warehouse(s)
         if wh is None:
@@ -155,31 +151,34 @@ def _buyer_lots(user, subfamily, today, avisos):
             continue
         whs[wh.pk] = wh
         remaining = float(s.quantity)
-        mine = [d for d in deals if (d.get('destination_warehouse') or '') == (s.warehouse_location or '')] or \
-               ([d for d in deals] if len(stocks) == 1 else [])
-        mine = sorted([d for d in mine if _deal_date(d) and _deal_date(d) <= today], key=_deal_date, reverse=True)
-        for d in mine:  # o stock restante corresponde às entregas mais recentes
+        receptions = (DealReception.objects.filter(buyer=user, culture=subfamily, stock=s,
+                                                   status=DealReception.STATUS_RECEIVED, received_at__lte=today)
+                      .order_by('-received_at', '-confirmed_at'))
+        for r in receptions:  # o stock restante corresponde às receções mais recentes
             if remaining <= 0:
                 break
-            qty = min(remaining, float(d.get('quantity_kg') or 0.0))
+            qty = min(remaining, float(r.received_quantity_kg or r.quantity_kg or 0.0))
             if qty <= 0:
                 continue
-            entry = _deal_date(d)
-            batch = str(d.get('batch_id') or d.get('deal_id'))
-            origin = None
-            m = re.match(r'LOTE-(\d+)$', batch)
-            if m:
-                origin = Harvest.objects.filter(pk=int(m.group(1))).first()
+            origin = _origin_harvest(r.batch_id)
+
+            def pick(measured, from_origin):
+                if measured is not None:
+                    return _f(measured)
+                return _f(from_origin) if origin is not None else None
+
             lots.append({
-                "lote_id": f"{batch}@{d.get('deal_id', '')}".rstrip('@'), "armazem_id": str(wh.pk),
-                "data_colheita": (origin.harvest_date if origin else entry - datetime.timedelta(days=3)).isoformat(),
-                "data_entrada": entry.isoformat(), "quantidade_kg": round(qty, 2),
-                "firmeza": _f(origin.firmness) if origin else None,
-                "brix": _f(origin.soluble_solids) if origin else (_f(s.avg_soluble_solids) or None),
-                "acidez": _f(origin.acidity) if origin else None, "estado": "armazenado",
+                "lote_id": f"{r.batch_id or 'REC'}@{r.deal_id}", "armazem_id": str(wh.pk),
+                "data_colheita": (origin.harvest_date if origin else r.received_at).isoformat(),
+                "data_entrada": r.received_at.isoformat(), "quantidade_kg": round(qty, 2),
+                "firmeza": pick(r.firmness, origin.firmness if origin else None),
+                "brix": pick(r.soluble_solids, origin.soluble_solids if origin else None) or (_f(s.avg_soluble_solids) or None),
+                "acidez": pick(r.acidity, origin.acidity if origin else None),
+                "estado": "armazenado",
             })
             remaining -= qty
         if remaining > 1e-6:
+            kg_sem_rececao += remaining
             entry = today - datetime.timedelta(days=10)
             lots.append({
                 "lote_id": f"STOCK-{s.pk}", "armazem_id": str(wh.pk),
@@ -187,6 +186,9 @@ def _buyer_lots(user, subfamily, today, avisos):
                 "quantidade_kg": round(remaining, 2), "firmeza": None, "brix": _f(s.avg_soluble_solids) or None,
                 "acidez": None, "estado": "armazenado",
             })
+    if kg_sem_rececao > 0:
+        avisos.append(f"{kg_sem_rececao:.0f} kg sem receção associada (ex.: compra rápida ou ajuste manual): "
+                      "entrada estimada há 10 dias (precisão reduzida do tempo de vida).")
     return lots, whs
 
 

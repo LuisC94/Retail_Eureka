@@ -449,13 +449,10 @@
             </div>
 
             <nav>
-                <a href="#" class="menu-item active" onclick="switchSidebarTab('home-view')">
-                    🏠 Home
-                </a>
                 <a href="{% url 'marketplace_portal' %}" class="menu-item" style="background: rgba(0, 176, 116, 0.15); border-left: 4px solid #00b074; font-weight: 700;">
                     🌐 Marketplace <span style="font-size:0.7em; background:#00b074; color:white; padding:2px 6px; border-radius:4px; margin-left:auto;">PORTAL ↗</span>
                 </a>
-                <a href="#" class="menu-item" onclick="switchSidebarTab('warehouse-management')">
+                <a href="#" class="menu-item active" onclick="switchSidebarTab('warehouse-management')">
                     📦 Warehouse Management
                 </a>
                 <a href="#" class="menu-item" onclick="switchSidebarTab('central-warehouse')">
@@ -512,70 +509,6 @@
 
             {% include "dashboard/partials/reception_banner.html" %}
 
-            <!-- HOME VIEW -->
-            <div id="home-view" class="tab-content active">
-                <h3 style="color: #00796b; margin-bottom: 20px;">Global Supply Chain Map</h3>
-                <div class="supply-map">
-                     - Map Integration Plugin (Leaflet/Google Maps) -
-                </div>
-                
-                <h3 style="color: #00796b; margin-bottom: 20px;">Key Performance Indicators</h3>
-                <div class="kpi-section">
-                    <div class="kpi-card">
-                        <div class="kpi-title">Waste Reduction %</div>
-                        <div class="kpi-value">28.5% ⬆️</div>
-                        <div class="kpi-trend">Up-Trend</div>
-                    </div>
-                    <div class="kpi-card">
-                        <div class="kpi-title">On-Time Delivery Rate</div>
-                        <div class="kpi-value">92.1% ⬆️</div>
-                        <div class="kpi-trend">Up-Trend</div>
-                    </div>
-                    <div class="kpi-card">
-                        <div class="kpi-title">Forecast Accuracy</div>
-                        <div class="kpi-value">88.9% ⬇️</div>
-                        <div class="kpi-trend">Down-Trend</div>
-                    </div>
-                </div>
-
-                <h3 style="color: #00796b; margin-bottom: 20px;">System Alerts</h3>
-                <div class="alert-section">
-                    <div class="report-card" style="display: flex; justify-content: space-between; align-items: center;">
-                        <p style="margin: 0; font-weight: 500;">Receber stock de fornecedor incompleto/danificado (Resolver)</p>
-                        <button class="alert-button">Ação Necessária</button>
-                    </div>
-                </div>
-
-                <div class="life-cycle-stock">
-                    <div class="report-card">
-                        <h3>Life Cycle</h3>
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Stage</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Processing</td>
-                                    <td>Active</td>
-                                </tr>
-                                <tr>
-                                    <td>Quality Check</td>
-                                    <td>Pending</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="report-card">
-                        <h3>Sustainability Report</h3>
-                        <div style="height: 150px; background-color: #f7f7f7; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #888;">
-                            Chart Placeholder
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <!-- STOCK MANAGEMENT VIEW -->
             <div id="stock-view" class="tab-content">
@@ -1446,7 +1379,7 @@
             </div> <!-- End of Marketplace Tab -->
 
             <!-- WAREHOUSE MANAGEMENT TAB -->
-            <div id="warehouse-management" class="tab-content">
+            <div id="warehouse-management" class="tab-content active">
                 <div class="form-section">
                     <h3>
                         <span style="display:inline-block; width:40px; height:40px; background:linear-gradient(135deg, #00796b, #004d40); color:white; border-radius:50%; text-align:center; line-height:40px; margin-right:15px; font-size:1.1em; box-shadow:0 3px 10px rgba(0,121,107,0.4);">📦</span>
@@ -2187,9 +2120,6 @@
                 </div>
             </div>
 
-                </div>
-            </div>
-
             <!-- TABS: CENTRAL WAREHOUSE -->
             <div id="central-warehouse" class="tab-content" style="display: none;">
                 <h3 style="color: #00796b; margin-bottom: 25px;">🏢 Central Warehouse - Associated Stores & Retailers</h3>
@@ -2385,6 +2315,9 @@
                             No authorized store associations at the moment. Send association requests above and wait for approval.
                         </div>
                     {% endif %}
+                </div>
+            </div>
+
                 </div>
             </div>
 
@@ -3548,16 +3481,28 @@
             });
             
             // Restore State on Load
-            const savedSidebar = localStorage.getItem('activeSidebarTab');
-            if(savedSidebar && typeof switchSidebarTab === 'function') {
-                switchSidebarTab(savedSidebar);
+            // Ao entrar/recarregar abre sempre no primeiro separador (Warehouse Management).
+            // Só depois de submeter um formulário desta página se volta ao separador onde se estava
+            // (o localStorage é partilhado entre perfis e podia apontar para um separador inexistente).
+            const restoreTab = sessionStorage.getItem('processorRestoreTab');
+            const restoreInner = sessionStorage.getItem('processorRestoreInner');
+            sessionStorage.removeItem('processorRestoreTab');
+            sessionStorage.removeItem('processorRestoreInner');
+            if (typeof switchSidebarTab === 'function') {
+                switchSidebarTab(restoreTab && document.getElementById(restoreTab) ? restoreTab : 'warehouse-management');
             }
-            
-            const savedInner = localStorage.getItem('activeInnerTab');
-            if(savedInner) {
-                const btn = document.querySelector(`button[onclick*="'${savedInner}'"]`);
+            if (restoreTab && restoreInner) {
+                const btn = document.querySelector(`button[onclick*="'${restoreInner}'"]`);
                 if(btn) btn.click();
             }
+
+            // Guardar o separador atual apenas no momento de submeter um formulário
+            document.addEventListener('submit', function() {
+                const visible = Array.from(document.querySelectorAll('.tab-content')).find(t => t.style.display === 'block' || t.classList.contains('active'));
+                if (visible && visible.id) sessionStorage.setItem('processorRestoreTab', visible.id);
+                const inner = localStorage.getItem('activeInnerTab');
+                if (inner) sessionStorage.setItem('processorRestoreInner', inner);
+            }, true);
 
             // 2. LOADING INDICATOR ON SUBMIT
             // We do NOT prevent default. We let the page reload.

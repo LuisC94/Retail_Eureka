@@ -59,7 +59,7 @@ def build_decision_env(meta, history, today, forecast, stock_lots, in_transit, l
     history:   lista de dias passados [{date, real_value, prediction, price, temperature, humidity, ethylene}]
     today:     {date, prediction, price, temperature, humidity, ethylene}
     forecast:  previsões para os dias seguintes [{date, prediction}] (o ambiente usa até 20 dias)
-    stock_lots:[{quantity_kg, age_days}]
+    stock_lots:[{quantity_kg, age_days, firmness?, brix?, acidity?}] (medições = estado inicial do lote; sem elas, valores por omissão)
     in_transit:[{quantity_kg, arrival_in_days}] com arrival_in_days >= 0 (0 = chega hoje, ainda não recebido)
     """
     fruit = meta["fruit_key"]
@@ -103,7 +103,9 @@ def build_decision_env(meta, history, today, forecast, stock_lots, in_transit, l
         if qty <= 0:
             continue
         age = int(max(0, lot.get("age_days", 0) or 0))
-        env.active_batches.append(env.make_batch(qty, age_days=age, climate_history=clim[-age:] if age else None))
+        env.active_batches.append(env.make_batch(qty, age_days=age, climate_history=clim[-age:] if age else None,
+                                                 firmness=lot.get("firmness"), brix=lot.get("brix"),
+                                                 acidity=lot.get("acidity")))
 
     env.in_transit = {}
     for t in in_transit:

@@ -3126,18 +3126,22 @@ def download_training_template(request):
 
     # Create dynamic template data
     # Template de histórico de vendas (forecast / buyer agent)
+    # Temperatura/Humidade/Etileno são opcionais: usados pelo treino do Buyer Agent (a Previsão de Vendas ignora-os).
     columns = [
-        'Data', 
-        'Cultura_Produto', 
-        'Vendas_Kg', 
-        'Preco_Venda_Euro'
+        'Data',
+        'Cultura_Produto',
+        'Vendas_Kg',
+        'Preco_Venda_Euro',
+        'Temperatura_C',
+        'Humidade_Pct',
+        'Etileno_ppm'
     ]
     data = [
-        ['2026-06-01', culture_name, 250.0, 1.80],
-        ['2026-06-02', culture_name, 270.0, 1.85],
-        ['2026-06-03', culture_name, 310.0, 1.80],
-        ['2026-06-04', culture_name, 150.0, 1.90],
-        ['2026-06-05', culture_name, 400.0, 1.75],
+        ['2026-06-01', culture_name, 250.0, 1.80, 1.0, 90.0, 0.05],
+        ['2026-06-02', culture_name, 270.0, 1.85, 1.2, 91.0, 0.05],
+        ['2026-06-03', culture_name, 310.0, 1.80, 0.9, 90.0, 0.06],
+        ['2026-06-04', culture_name, 150.0, 1.90, 1.1, 89.0, 0.05],
+        ['2026-06-05', culture_name, 400.0, 1.75, 1.0, 90.0, 0.05],
     ]
     filename = f"template_previsao_vendas_{clean_culture_name.lower().replace(' ', '_')}.xlsx"
 
@@ -3523,13 +3527,9 @@ def train_buyer_agent(request):
                 else:
                     df = pd.read_csv(market_file)
                 
-                col_mapping = {
-                    'day': 'date', 'date': 'date', 'data': 'date', 'Date': 'date',
-                    'real_value': 'sales_quantity_kg', 'sales_quantity_kg': 'sales_quantity_kg',
-                    'vendas_kg': 'sales_quantity_kg', 'quantidade_kg': 'sales_quantity_kg',
-                    'price': 'price_per_kg', 'price_per_kg': 'price_per_kg', 'preco_kg': 'price_per_kg'
-                }
-                df = df.rename(columns=col_mapping)
+                # Nomes de colunas em PT/EN, sem distinguir maiúsculas (inclui temperatura/humidade/etileno opcionais)
+                from dashboard.services.agent_service import normalize_market_columns
+                df = normalize_market_columns(df)
                 if 'date' in df.columns:
                     df['date'] = pd.to_datetime(df['date']).dt.date
             else:
