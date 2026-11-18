@@ -263,7 +263,8 @@ def _market(user, subfamily, today, avisos):
             avisos.append(f"Sem previsão de procura para os próximos {FUTURE_DAYS} dias: usada a média de vendas históricas ({base:.0f} kg/dia). "
                           "Gere previsões na aba Previsão de Vendas para recomendações mais precisas.")
         if base is None:
-            return None, "Sem previsão de procura (DemandForecast) nem histórico de vendas para esta cultura."
+            return None, ("Sem previsão de procura nem histórico de vendas para esta cultura. "
+                          "Carregue o histórico de vendas e gere a previsão no separador Previsão de Vendas.")
     fc_default = (sum(future_fc) / len(future_fc)) if future_fc else ref_sales
 
     rows = []

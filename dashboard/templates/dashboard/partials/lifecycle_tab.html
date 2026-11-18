@@ -1,0 +1,213 @@
+{% comment %}
+Separador "Ciclo de Vida" (Producer, Processor, Retailer).
+Parâmetros:
+  tab_class  - classe dos separadores do dashboard ("tab-content" ou "dashboard-tab")
+  lc_source  - "harvest" (Producer: lc_items = colheitas) ou "stock" (Processor/Retailer: lc_items = stock)
+  lc_items   - lista de lotes
+O JavaScript correspondente está em partials/lifecycle_js.html.
+{% endcomment %}
+<div id="lc-analysis" class="{{ tab_class|default:'tab-content' }}" style="display: none;">
+<style>
+    .lcx { --lcx-brand: #0f766e; --lcx-brand-soft: #f0fdfa; --lcx-text: #0f172a; --lcx-muted: #64748b; --lcx-faint: #94a3b8;
+           --lcx-border: #5fb3a6; --lcx-bg: #f8fafc; --lcx-ok: #059669; --lcx-warn: #d97706; --lcx-bad: #dc2626;
+           color: var(--lcx-text); font-size: 14px; }
+    .lcx *, .lcx *::before, .lcx *::after { box-sizing: border-box; }
+    .lcx-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+    .lcx-title { margin: 0; font-size: 1.35em; font-weight: 700; letter-spacing: -0.01em; color: var(--lcx-text); }
+    .lcx-sub { margin: 4px 0 0; color: var(--lcx-muted); font-size: 0.95em; }
+    .lcx-pill { display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px; border-radius: 999px; font-size: 0.8em; font-weight: 600;
+                border: 1px solid var(--lcx-border); background: #fff; color: var(--lcx-muted); white-space: nowrap; }
+    .lcx-pill i { width: 7px; height: 7px; border-radius: 50%; background: var(--lcx-faint); display: inline-block; }
+    .lcx-pill.is-online i { background: var(--lcx-ok); box-shadow: 0 0 0 3px rgba(5,150,105,.15); }
+    .lcx-pill.is-busy i { background: var(--lcx-warn); }
+    .lcx-pill.is-offline { color: var(--lcx-bad); border-color: #fecaca; background: #fef2f2; }
+    .lcx-pill.is-offline i { background: var(--lcx-bad); }
+
+    .lcx-card { background: #fff; border: 2px solid var(--lcx-border); border-radius: 14px; padding: 20px; box-shadow: 0 2px 6px rgba(15,118,110,.10); }
+    .lcx-toolbar { display: grid; grid-template-columns: minmax(240px, 2fr) minmax(200px, 1fr) auto; gap: 12px; align-items: end; margin-bottom: 20px; }
+    .lcx-field span { display: block; font-size: 0.78em; font-weight: 600; color: var(--lcx-muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+    .lcx-field select { width: 100%; height: 42px; padding: 0 12px; border: 1px solid #cbd5e1; border-radius: 10px; background: #fff;
+                        font-size: 0.95em; color: var(--lcx-text); outline: none; transition: border-color .15s, box-shadow .15s; }
+    .lcx-field select:focus { border-color: var(--lcx-brand); box-shadow: 0 0 0 3px rgba(15,118,110,.15); }
+    .lcx-btn { height: 42px; padding: 0 18px; border-radius: 10px; border: 1px solid var(--lcx-brand); background: var(--lcx-brand); color: #fff;
+               font-weight: 600; font-size: 0.92em; cursor: pointer; transition: filter .15s; }
+    .lcx-btn:hover { filter: brightness(1.08); }
+
+    .lcx-empty { border: 1px dashed #cbd5e1; border-radius: 14px; padding: 48px 20px; text-align: center; color: var(--lcx-muted); background: var(--lcx-bg); }
+    .lcx-empty strong { display: block; color: var(--lcx-text); font-size: 1.05em; margin: 10px 0 4px; }
+    .lcx-alert { border: 1px solid #fecaca; background: #fef2f2; color: #991b1b; border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; font-size: 0.92em; }
+
+    #lc-details-container { transition: opacity .2s; }
+    #lc-details-container.is-loading { opacity: .45; pointer-events: none; }
+
+    .lcx-hero { display: flex; justify-content: space-between; gap: 24px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+    .lcx-eyebrow { font-size: 0.75em; font-weight: 700; color: var(--lcx-brand); text-transform: uppercase; letter-spacing: .06em; }
+    .lcx-hero h4 { margin: 4px 0 10px; font-size: 1.35em; font-weight: 700; letter-spacing: -0.01em; color: var(--lcx-text); }
+    .lcx-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .lcx-chip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 999px; background: var(--lcx-bg);
+                border: 1px solid var(--lcx-border); color: #334155; font-size: 0.82em; }
+    .lcx-chip b { color: var(--lcx-muted); font-weight: 500; }
+
+    .lcx-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .lcx-kpi { padding: 16px 18px; }
+    .lcx-kpi-label { font-size: 0.78em; font-weight: 600; color: var(--lcx-muted); text-transform: uppercase; letter-spacing: .04em; }
+    .lcx-kpi-value { font-size: 1.9em; font-weight: 700; letter-spacing: -0.02em; margin-top: 6px; line-height: 1.1; color: var(--lcx-text); }
+    .lcx-kpi-value small { font-size: 0.45em; font-weight: 600; color: var(--lcx-muted); margin-left: 4px; letter-spacing: 0; }
+    .lcx-kpi-sub { font-size: 0.8em; color: var(--lcx-muted); margin-top: 6px; }
+    .lcx-kpi.accent { border-top: 3px solid var(--lcx-brand); }
+
+    .lcx-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); gap: 16px; margin-bottom: 16px; }
+    .lcx-side { display: flex; flex-direction: column; gap: 16px; }
+    .lcx-card-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+    .lcx-card-head h5 { margin: 0; font-size: 1em; font-weight: 700; color: var(--lcx-text); }
+    .lcx-legend { display: flex; gap: 12px; font-size: 0.78em; color: var(--lcx-muted); flex-wrap: wrap; }
+    .lcx-legend span { display: inline-flex; align-items: center; gap: 5px; }
+    .lcx-legend i { width: 10px; height: 2px; display: inline-block; }
+    .lcx-table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+    .lcx-table th { text-align: right; font-size: 0.75em; font-weight: 600; color: var(--lcx-faint); text-transform: uppercase; letter-spacing: .04em; padding: 0 0 8px; }
+    .lcx-table th:first-child, .lcx-table td:first-child { text-align: left; }
+    .lcx-table td { text-align: right; padding: 10px 0; border-top: 1px solid #f1f5f9; color: #334155; font-variant-numeric: tabular-nums; }
+    .lcx-table td:first-child { color: var(--lcx-text); font-weight: 600; }
+    .lcx-table td small { color: var(--lcx-faint); font-weight: 500; }
+    .lcx-delta { font-size: 0.85em; color: var(--lcx-muted); }
+    .lcx-conds { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .lcx-cond { background: var(--lcx-bg); border-radius: 10px; padding: 10px 12px; }
+    .lcx-cond span { display: block; font-size: 0.75em; color: var(--lcx-muted); }
+    .lcx-cond strong { font-size: 1.05em; font-variant-numeric: tabular-nums; }
+    .lcx-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; color: var(--lcx-faint); font-size: 0.8em; }
+    .lcx-link { color: var(--lcx-brand); font-weight: 600; text-decoration: none; }
+    .lcx-link:hover { text-decoration: underline; }
+
+    @media (max-width: 1100px) { .lcx-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 720px) { .lcx-toolbar { grid-template-columns: 1fr; } .lcx-btn { width: 100%; } }
+</style>
+
+<div class="lcx">
+    <header class="lcx-head">
+        <div>
+            <h3 class="lcx-title">Ciclo de Vida</h3>
+            <p class="lcx-sub">Vida útil prevista de cada lote, a partir das condições reais de armazenamento.</p>
+        </div>
+        <span id="lc-service-status" class="lcx-pill"><i></i><span>Modelo de ciclo de vida</span></span>
+    </header>
+
+    <div class="lcx-toolbar">
+        <label class="lcx-field">
+            <span>Lote</span>
+            <select id="lc-stock-select" onchange="loadLcDecayData()">
+                <option value="" disabled selected>Selecionar lote…</option>
+                {% if lc_source == 'harvest' %}
+                    {% for h in lc_items %}{% if h.current_stock_kg > 0 %}
+                    <option value="{{ h.pk }}">LOTE-{{ h.pk }} · {{ h.subfamily.name }} · {{ h.warehouse.location|default:"sem armazém" }} · {{ h.current_stock_kg|floatformat:0 }} kg</option>
+                    {% endif %}{% endfor %}
+                {% else %}
+                    {% for item in lc_items %}
+                    <option value="{{ item.pk }}">{{ item.culture }} · {{ item.warehouse }} · {{ item.quantity|floatformat:0 }} kg</option>
+                    {% endfor %}
+                {% endif %}
+            </select>
+        </label>
+        <label class="lcx-field">
+            <span>Acondicionamento</span>
+            <select id="lc-packaging-select" onchange="loadLcDecayData()">
+                <option value="bulk">Granel</option>
+                <option value="open_box">Caixa aberta</option>
+                <option value="perforated_bag">Saco perfurado</option>
+                <option value="map_sealed">Atmosfera modificada (MAP)</option>
+            </select>
+        </label>
+        <button type="button" class="lcx-btn" onclick="loadLcDecayData()">Atualizar</button>
+    </div>
+
+    <div id="lc-error" class="lcx-alert" style="display: none;"></div>
+
+    <div id="lc-empty-state" class="lcx-empty">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 3v18h18"/><path d="M7 14c3-6 7-8 13-8"/><circle cx="7" cy="14" r="1.5"/><circle cx="20" cy="6" r="1.5"/>
+        </svg>
+        <strong>Selecione um lote</strong>
+        <span>Escolha um lote em stock para ver a vida útil prevista.</span>
+    </div>
+
+    <div id="lc-details-container" style="display: none;">
+        <!-- Resumo do lote -->
+        <section class="lcx-card lcx-hero">
+            <div>
+                <div class="lcx-eyebrow" id="lc-hero-eyebrow">—</div>
+                <h4 id="lc-banner-title">—</h4>
+                <div class="lcx-chips" id="lc-banner-meta"></div>
+            </div>
+        </section>
+
+        <!-- Indicadores principais -->
+        <section class="lcx-kpis">
+            <div class="lcx-card lcx-kpi accent">
+                <div class="lcx-kpi-label">Vida comercial restante</div>
+                <div class="lcx-kpi-value"><span id="lc-point-a-value">—</span><small>dias</small></div>
+                <div class="lcx-kpi-sub" id="lc-point-a-sub">—</div>
+            </div>
+            <div class="lcx-card lcx-kpi">
+                <div class="lcx-kpi-label">Vida biológica restante</div>
+                <div class="lcx-kpi-value"><span id="lc-point-b-value">—</span><small>dias</small></div>
+                <div class="lcx-kpi-sub" id="lc-point-b-sub">—</div>
+            </div>
+            <div class="lcx-card lcx-kpi">
+                <div class="lcx-kpi-label">Índice de qualidade</div>
+                <div class="lcx-kpi-value"><span id="lc-quality-score">—</span><small>/ 100</small></div>
+                <div class="lcx-kpi-sub" id="lc-quality-sub">Qualidade comercial hoje</div>
+            </div>
+            <div class="lcx-card lcx-kpi">
+                <div class="lcx-kpi-label">Bolor</div>
+                <div class="lcx-kpi-value"><span id="lc-mold-value">—</span><small>%</small></div>
+                <div class="lcx-kpi-sub" id="lc-mold-sub">—</div>
+            </div>
+        </section>
+
+        <section class="lcx-grid">
+            <!-- Curva de qualidade -->
+            <div class="lcx-card">
+                <div class="lcx-card-head">
+                    <h5>Evolução da qualidade</h5>
+                    <div class="lcx-legend">
+                        <span><i style="background:#0f766e;"></i>Ponto A · fim da vida comercial</span>
+                        <span><i style="background:#dc2626;"></i>Ponto B · fim da vida biológica</span>
+                        <span><i style="background:#475569;"></i>Hoje</span>
+                    </div>
+                </div>
+                <div style="position: relative; height: 320px; width: 100%;">
+                    <canvas id="lc-decay-chart"></canvas>
+                </div>
+            </div>
+
+            <div class="lcx-side">
+                <!-- Indicadores físico-químicos -->
+                <div class="lcx-card">
+                    <div class="lcx-card-head"><h5>Indicadores físico-químicos</h5></div>
+                    <table class="lcx-table">
+                        <thead><tr><th>Indicador</th><th>Inicial</th><th>Hoje</th><th>Variação</th></tr></thead>
+                        <tbody>
+                            <tr><td>Firmeza <small>N</small></td><td id="lc-tbl-init-firm">—</td><td id="lc-tbl-final-firm">—</td><td class="lcx-delta" id="lc-tbl-delta-firm">—</td></tr>
+                            <tr><td>Brix <small>°Bx</small></td><td id="lc-tbl-init-brix">—</td><td id="lc-tbl-final-brix">—</td><td class="lcx-delta" id="lc-tbl-delta-brix">—</td></tr>
+                            <tr><td>Acidez <small>%</small></td><td id="lc-tbl-init-acid">—</td><td id="lc-tbl-final-acid">—</td><td class="lcx-delta" id="lc-tbl-delta-acid">—</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Condições do armazém -->
+                <div class="lcx-card">
+                    <div class="lcx-card-head"><h5>Condições do armazém</h5></div>
+                    <div class="lcx-conds">
+                        <div class="lcx-cond"><span>Temperatura</span><strong id="lc-temp-value">—</strong></div>
+                        <div class="lcx-cond"><span>Humidade</span><strong id="lc-hum-value">—</strong></div>
+                        <div class="lcx-cond"><span>Etileno</span><strong id="lc-eth-value">—</strong></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer class="lcx-foot">
+            <span id="lc-anchor-note"></span>
+            <a id="lc-json-download" href="#" target="_blank" class="lcx-link">Exportar dados (JSON)</a>
+        </footer>
+    </div>
+</div>
+</div>

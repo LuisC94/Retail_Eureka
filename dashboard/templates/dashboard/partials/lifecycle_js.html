@@ -1,0 +1,240 @@
+{% comment %}
+JavaScript do separador "Ciclo de Vida" (partials/lifecycle_tab.html). Incluir DENTRO de um bloco <script>.
+Parâmetro: lc_query_param - "lot_id" (Producer, colheitas) ou "stock_id" (Processor/Retailer, stock).
+Mantém os nomes loadLcDecayData(targetLotId) e drawLcDecayChart(...) usados pelo resto da página.
+{% endcomment %}
+        let lcDecayChartObj = null;
+        let lcRequestSeq = 0;
+        const LC_QUERY_PARAM = '{{ lc_query_param|default:"stock_id" }}';
+        const LC_ANCHOR_LABELS = {
+            HARVEST: 'Colheita',
+            RECEPTION_MEASURED: 'Receção (com medições)',
+            ORIGIN_HARVEST: 'Colheita de origem',
+            ESTIMATED: 'Estimado'
+        };
+
+        function lcNum(v, d) { return (typeof v === 'number' && isFinite(v)) ? v.toFixed(d) : null; }
+        function lcSet(id, text) { const el = document.getElementById(id); if (el) el.textContent = text; }
+        function lcFmtDate(iso) {
+            if (!iso) return '—';
+            const p = String(iso).slice(0, 10).split('-');
+            return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : iso;
+        }
+        function lcEscape(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+        }
+        function lcServiceStatus(state) {
+            const pill = document.getElementById('lc-service-status');
+            if (!pill) return;
+            pill.classList.remove('is-online', 'is-offline', 'is-busy');
+            const label = pill.querySelector('span');
+            if (state === 'online') { pill.classList.add('is-online'); if (label) label.textContent = 'Modelo de ciclo de vida ativo'; }
+            else if (state === 'busy') { pill.classList.add('is-busy'); if (label) label.textContent = 'A calcular…'; }
+            else if (state === 'offline') { pill.classList.add('is-offline'); if (label) label.textContent = 'Modelo de ciclo de vida indisponível'; }
+        }
+        function lcShowError(msg) {
+            const box = document.getElementById('lc-error');
+            if (!box) return;
+            box.textContent = msg || '';
+            box.style.display = msg ? 'block' : 'none';
+        }
+        function lcDelta(init, now, d) {
+            if (typeof init !== 'number' || typeof now !== 'number') return '—';
+            const diff = now - init;
+            const sign = diff > 0 ? '+' : (diff < 0 ? '−' : '');
+            return `${sign}${Math.abs(diff).toFixed(d)}`;
+        }
+
+        function loadLcDecayData(targetLotId) {
+            const select = document.getElementById('lc-stock-select');
+            if (select && targetLotId) select.value = targetLotId;
+            const stockId = targetLotId || (select ? select.value : null);
+            if (!stockId) return;
+
+            const pkgSelect = document.getElementById('lc-packaging-select');
+            const selectedPkg = pkgSelect ? pkgSelect.value : 'bulk';
+
+            const container = document.getElementById('lc-details-container');
+            const emptyState = document.getElementById('lc-empty-state');
+            if (emptyState) emptyState.style.display = 'none';
+            if (container) { container.style.display = 'block'; container.classList.add('is-loading'); }
+            lcShowError('');
+            lcServiceStatus('busy');
+
+            const dl = document.getElementById('lc-json-download');
+            if (dl) dl.href = `/api/lot-lifecycle-json/${encodeURIComponent(stockId)}/`;
+
+            const seq = ++lcRequestSeq;
+            const url = `/api/lot-lifecycle-forecast/?${LC_QUERY_PARAM}=${encodeURIComponent(stockId)}&packaging=${encodeURIComponent(selectedPkg)}`;
+
+            fetch(url, {credentials: 'same-origin'})
+                .then(r => r.json().catch(() => ({})).then(json => {
+                    if (!r.ok || json.status !== 'success') {
+                        const err = new Error(json.message || `Erro ${r.status}`);
+                        err.offline = r.status === 503 || json.service_status === 'OFFLINE';
+                        throw err;
+                    }
+                    return json;
+                }))
+                .then(data => {
+                    if (seq !== lcRequestSeq) return;  // resposta de um pedido antigo
+                    lcRender(data);
+                    lcServiceStatus('online');
+                })
+                .catch(err => {
+                    if (seq !== lcRequestSeq) return;
+                    console.error('Ciclo de vida:', err);
+                    lcServiceStatus(err.offline ? 'offline' : 'online');
+                    lcShowError(err.offline
+                        ? 'O modelo de ciclo de vida está indisponível. Verifique se o serviço está ligado e tente novamente.'
+                        : (err.message || 'Não foi possível calcular o ciclo de vida deste lote.'));
+                    if (container) container.style.display = 'none';
+                    if (emptyState) emptyState.style.display = 'block';
+                })
+                .finally(() => {
+                    if (seq === lcRequestSeq && container) container.classList.remove('is-loading');
+                });
+        }
+
+        function lcRender(data) {
+            const fc = data.forecast || {};
+            const init = data.initial_metrics || {};
+            const elapsed = (data.export_metadata && data.export_metadata.days_elapsed_total) || 0;
+            const ptADay = typeof fc.point_a_day === 'number' ? fc.point_a_day : 0;
+            const ptBDay = typeof fc.point_b_day === 'number' ? fc.point_b_day : 0;
+            const anchor = data.lifecycle_anchor || {};
+
+            // Resumo do lote
+            lcSet('lc-hero-eyebrow', [data.fruit_type, data.producer && data.producer !== data.current_owner ? `Origem: ${data.producer}` : null].filter(Boolean).join(' · ') || 'Lote');
+            lcSet('lc-banner-title', `${data.culture_name || 'Lote'} · ${data.batch_id || ('#' + data.lot_id)}`);
+            const chips = [
+                ['Armazém', data.warehouse_location],
+                ['Stock', typeof data.current_stock_kg === 'number' ? `${data.current_stock_kg.toLocaleString('pt-PT', {maximumFractionDigits: 0})} kg` : data.current_stock_kg],
+                ['Início', `${lcFmtDate(data.harvest_date)}${LC_ANCHOR_LABELS[anchor.type] ? ' · ' + LC_ANCHOR_LABELS[anchor.type] : ''}`],
+                ['Idade', `${elapsed} ${elapsed === 1 ? 'dia' : 'dias'}`],
+            ].filter(c => c[1] !== undefined && c[1] !== null && c[1] !== '');
+            const meta = document.getElementById('lc-banner-meta');
+            if (meta) meta.innerHTML = chips.map(c => `<span class="lcx-chip"><b>${lcEscape(c[0])}</b>${lcEscape(c[1])}</span>`).join('');
+
+            // Indicadores principais
+            const remA = typeof fc.commercial_lifetime_remaining === 'number' ? fc.commercial_lifetime_remaining : fc.remaining_lifetime;
+            lcSet('lc-point-a-value', lcNum(remA, 0) ?? '—');
+            lcSet('lc-point-a-sub', ptADay > 0 ? `Ponto A ao dia ${Math.round(ptADay)}` : '—');
+            lcSet('lc-point-b-value', lcNum(fc.biological_lifetime_remaining, 0) ?? '—');
+            lcSet('lc-point-b-sub', ptBDay > 0 ? `Ponto B ao dia ${Math.round(ptBDay)}` : '—');
+            lcSet('lc-quality-score', lcNum(fc.quality_index, 0) ?? '—');
+            const moldPct = typeof fc.mold === 'number' ? fc.mold * 100 : null;
+            lcSet('lc-mold-value', moldPct === null ? '—' : moldPct.toFixed(moldPct < 10 ? 1 : 0));
+            lcSet('lc-mold-sub', moldPct === null ? '—' : (moldPct > 2 ? 'Risco de contaminação' : 'Sem contaminação relevante'));
+            const moldSub = document.getElementById('lc-mold-sub');
+            if (moldSub) moldSub.style.color = moldPct !== null && moldPct > 2 ? '#b91c1c' : '';
+
+            // Indicadores físico-químicos
+            const rows = [
+                ['firm', init.firmness, fc.firmness, 1],
+                ['brix', init.soluble_solids_brix, fc.brix, 1],
+                ['acid', init.acidity, fc.acidity, 2],
+            ];
+            rows.forEach(([k, a, b, d]) => {
+                lcSet(`lc-tbl-init-${k}`, lcNum(a, d) ?? '—');
+                lcSet(`lc-tbl-final-${k}`, lcNum(b, d) ?? '—');
+                lcSet(`lc-tbl-delta-${k}`, lcDelta(a, b, d));
+            });
+
+            // Condições do armazém
+            lcSet('lc-temp-value', lcNum(data.temp_today, 1) !== null ? `${lcNum(data.temp_today, 1)} °C` : '—');
+            lcSet('lc-hum-value', lcNum(data.hum_today, 0) !== null ? `${lcNum(data.hum_today, 0)} %` : '—');
+            lcSet('lc-eth-value', lcNum(data.eth_today, 2) !== null ? `${lcNum(data.eth_today, 2)} ppm` : '—');
+
+            lcSet('lc-anchor-note', anchor.type === 'RECEPTION_MEASURED'
+                ? 'Calculado a partir da receção, com as medições registadas nesse dia.'
+                : (anchor.type === 'ESTIMATED' ? 'Data de início estimada: sem colheita ou receção associada.' : ''));
+
+            drawLcDecayChart(fc.continuous_data, fc.point_a_day, fc.point_b_day, data.current_owner_type, elapsed);
+        }
+
+        function drawLcDecayChart(contData, ptA, ptB, ownerType, todayDay) {
+            const canvas = document.getElementById('lc-decay-chart');
+            if (!canvas || typeof Chart === 'undefined') return;
+            if (lcDecayChartObj) { lcDecayChartObj.destroy(); lcDecayChartObj = null; }
+            if (!contData || !contData.t || !contData.quality || contData.t.length === 0) return;
+
+            const tVals = contData.t;
+            const points = tVals.map((t, i) => ({x: t, y: contData.quality[i]}));
+            const ctx = canvas.getContext('2d');
+            const grad = ctx.createLinearGradient(0, 0, 0, canvas.clientHeight || 320);
+            grad.addColorStop(0, 'rgba(15, 118, 110, 0.22)');
+            grad.addColorStop(1, 'rgba(15, 118, 110, 0.0)');
+
+            const markers = [
+                {x: ptA, color: '#0f766e', label: 'A', dash: []},
+                {x: ptB, color: '#dc2626', label: 'B', dash: []},
+                {x: todayDay, color: '#475569', label: 'Hoje', dash: [4, 4]},
+            ].filter(m => typeof m.x === 'number' && m.x > 0);
+
+            const markerPlugin = {
+                id: 'lcMarkers',
+                afterDatasetsDraw(chart) {
+                    const {ctx: c, chartArea: area, scales: {x}} = chart;
+                    markers.forEach(m => {
+                        const px = x.getPixelForValue(m.x);
+                        if (px < area.left || px > area.right) return;
+                        c.save();
+                        c.strokeStyle = m.color; c.lineWidth = 1.5; c.setLineDash(m.dash);
+                        c.beginPath(); c.moveTo(px, area.top + 14); c.lineTo(px, area.bottom); c.stroke();
+                        c.setLineDash([]); c.fillStyle = m.color;
+                        c.font = '600 11px system-ui, -apple-system, Segoe UI, sans-serif';
+                        c.textAlign = 'center'; c.fillText(m.label, px, area.top + 10);
+                        c.restore();
+                    });
+                }
+            };
+
+            lcDecayChartObj = new Chart(ctx, {
+                type: 'line',
+                data: {datasets: [{
+                    label: 'Qualidade',
+                    data: points,
+                    parsing: false,
+                    borderColor: '#0f766e',
+                    backgroundColor: grad,
+                    borderWidth: 2.5,
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
+                    pointHoverBackgroundColor: '#0f766e',
+                }]},
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {mode: 'index', intersect: false},
+                    scales: {
+                        x: {
+                            type: 'linear', min: 0,
+                            grid: {display: false},
+                            border: {color: '#e2e8f0'},
+                            ticks: {color: '#94a3b8', font: {size: 11}, maxTicksLimit: 10, callback: v => `${Math.round(v)}`},
+                            title: {display: true, text: 'Dias desde o início', color: '#64748b', font: {size: 11, weight: '600'}}
+                        },
+                        y: {
+                            min: 0, max: 100,
+                            grid: {color: '#f1f5f9'},
+                            border: {display: false},
+                            ticks: {color: '#94a3b8', font: {size: 11}, stepSize: 25, callback: v => `${v}%`}
+                        }
+                    },
+                    plugins: {
+                        legend: {display: false},
+                        tooltip: {
+                            backgroundColor: '#0f172a', padding: 10, displayColors: false,
+                            callbacks: {
+                                title: items => `Dia ${Math.round(items[0].parsed.x)}`,
+                                label: item => `Qualidade ${item.parsed.y.toFixed(1)}%`
+                            }
+                        }
+                    }
+                },
+                plugins: [markerPlugin]
+            });
+        }

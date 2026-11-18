@@ -757,13 +757,15 @@ class ProducerDashboardView(View):
         product_subfamilies = ProductSubFamily.objects.all().order_by('fruit_type', 'name')
         
         producer_warehouses_qs = Warehouse.objects.filter(owner=user).order_by('warehouse_id')
-        producer_warehouses = list(producer_warehouses_qs)
+        producer_warehouses = list(producer_warehouses_qs.prefetch_related('sensors'))
+        # O stock do produtor está nas colheitas (Harvest), não no ConsolidatedStock dos compradores
+        stock_by_wh = {}
+        for h in Harvest.objects.filter(producer=user, warehouse__isnull=False):
+            stock_by_wh[h.warehouse_id] = stock_by_wh.get(h.warehouse_id, 0.0) + max(0.0, float(h.current_stock_kg))
         for wh in producer_warehouses:
-            wh_stock = ConsolidatedStock.objects.filter(
-                Q(warehouse_location=wh.location) | Q(warehouse_location__contains=f"WH:{wh.warehouse_id}") | Q(warehouse_location__contains=f"WH: {wh.warehouse_id}")
-            ).filter(owner=user).aggregate(total=Sum('quantity'))['total'] or 0
-            wh.current_stock = float(wh_stock)
-            wh.occupancy_percentage = min(100.0, round((float(wh_stock) / float(wh.capacity)) * 100.0, 2)) if wh.capacity > 0 else 0.0
+            wh_stock = stock_by_wh.get(wh.warehouse_id, 0.0)
+            wh.current_stock = wh_stock
+            wh.occupancy_percentage = min(100.0, round((wh_stock / float(wh.capacity)) * 100.0, 2)) if wh.capacity > 0 else 0.0
         all_sensors = Sensor.objects.all().order_by('sensor_id')
 
         # 5. MARKETPLACE DATA
@@ -3764,6 +3766,7 @@ def get_lot_lifecycle_forecast(request):
         'current_owner': lot_info.get('current_owner'),
         'current_owner_type': lot_info.get('current_owner_type', 'Retailer'),
         'harvest_date': lot_info.get('harvest_date'),
+        'lifecycle_anchor': lot_info.get('lifecycle_anchor'),
         'current_stock_kg': lot_info.get('current_stock_kg'),
         'warehouse_location': warehouse_info.get('location', 'N/A'),
         'warehouse_region': warehouse_info.get('region', 'PT-LVT'),

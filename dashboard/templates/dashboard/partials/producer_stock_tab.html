@@ -1,0 +1,119 @@
+{% comment %}
+Separador "Stock" do Producer (antigo "Product Quantity"). Mantém os IDs usados pelo JavaScript do producerDash.html:
+  #filter-qty-warehouse, #filter-qty-culture, #qty-summary-table (linhas com data-warehouse/data-culture),
+  openLifecycleModal(pk, 'harvest'), openHistoryModal(pk), #adjust-stock-form + submitStockAdjustment(), #adj-*.
+Estilos em partials/producer_ui_css.html.
+{% endcomment %}
+<div id="product-quantity-view" class="dashboard-tab" style="display:none;">
+<div class="rg rg-rich">
+    <header class="rg-hero">
+        <div class="rg-hero-main">
+            <span class="rg-hero-icon">⚖️</span>
+            <div>
+                <h3>Stock</h3>
+                <p>Quantidades colhidas, saídas e disponíveis, por armazém e por lote.</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Stock por armazém e cultura -->
+    <section class="rg-card rg-table-card">
+        <div class="rg-table-head">
+            <h4>Por armazém e cultura</h4>
+            <div class="rg-filters">
+                <select id="filter-qty-warehouse" aria-label="Filtrar por armazém"><option value="">Todos os armazéns</option></select>
+                <select id="filter-qty-culture" aria-label="Filtrar por cultura" disabled><option value="">Todas as culturas</option></select>
+            </div>
+        </div>
+        {% if harvest_sums %}
+        <div class="rg-scroll">
+            <table class="rg-table" id="qty-summary-table">
+                <thead><tr><th>Armazém</th><th>Cultura</th><th class="num">Colhido (kg)</th><th class="num">Saídas (kg)</th><th class="num">Disponível (kg)</th></tr></thead>
+                <tbody>
+                {% for item in harvest_sums %}
+                    <tr data-warehouse="{{ item.warehouse__location|default:'No Warehouse' }}" data-culture="{{ item.subfamily__name|default:'N/A' }}"{% if not item.current_stock %} class="is-empty"{% endif %}>
+                        <td class="strong">{{ item.warehouse__location|default:"Sem armazém" }}</td>
+                        <td>{{ item.subfamily__name|default:"—" }}</td>
+                        <td class="num">{{ item.total_kg|floatformat:0 }}</td>
+                        <td class="num">{{ item.utilized_kg|default:0|floatformat:0 }}</td>
+                        <td class="num strong">{{ item.current_stock|floatformat:0 }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}<div class="rg-empty">Ainda não há colheitas registadas.</div>{% endif %}
+    </section>
+
+    <!-- Lotes -->
+    <section class="rg-card rg-table-card">
+        <div class="rg-table-head"><h4>Lotes<span class="rg-count">{{ harvest_records|length }}</span></h4></div>
+        {% if harvest_records %}
+        <div class="rg-scroll">
+            <table class="rg-table">
+                <thead><tr>
+                    <th>Lote</th><th>Cultura</th><th>Armazém</th><th>Colheita</th>
+                    <th class="num">Colhido (kg)</th><th class="num">Saídas (kg)</th><th class="num">Disponível (kg)</th><th></th>
+                </tr></thead>
+                <tbody>
+                {% for record in harvest_records %}
+                    <tr{% if not record.current_stock_kg %} class="is-empty"{% endif %}>
+                        <td class="strong">LOTE-{{ record.pk }}</td>
+                        <td>{% if record.subfamily %}{{ record.subfamily.name }}{% else %}<span class="rg-muted">—</span>{% endif %}</td>
+                        <td>{% if record.warehouse %}{{ record.warehouse.location }}{% else %}<span class="rg-muted">—</span>{% endif %}</td>
+                        <td>{{ record.harvest_date|date:"d/m/Y" }}</td>
+                        <td class="num">{{ record.harvest_quantity_kg|floatformat:0 }}</td>
+                        <td class="num">{{ record.utilized_quantity_kg|default:0|floatformat:0 }}</td>
+                        <td class="num strong">{{ record.current_stock_kg|floatformat:0 }}</td>
+                        <td>
+                            <div class="rg-actions-cell">
+                                <button type="button" class="rg-mini" onclick="openLifecycleModal('{{ record.pk }}', 'harvest')">Ciclo de vida</button>
+                                <button type="button" class="rg-mini" onclick="openHistoryModal('{{ record.pk }}')">Rastreabilidade</button>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}<div class="rg-empty">Ainda não há lotes.</div>{% endif %}
+    </section>
+
+    <!-- Ajuste manual -->
+    <details class="rg-card rg-optional" style="padding: 0;">
+        <summary>Ajuste manual de stock<span>correções pontuais</span></summary>
+        <form id="adjust-stock-form" onsubmit="submitStockAdjustment(event)" style="padding: 0 16px 16px;">
+            {% csrf_token %}
+            <div class="rg-fields">
+                <div class="rg-field">
+                    <label for="adj-culture-id">Cultura <em>*</em></label>
+                    <select name="culture_id" id="adj-culture-id" required>
+                        <option value="">Selecionar cultura…</option>
+                        {% for item in product_subfamilies %}<option value="{{ item.pk }}">{{ item.name }} ({{ item.fruit_type }})</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="rg-field">
+                    <label for="adj-warehouse-location">Armazém <em>*</em></label>
+                    <select name="warehouse_location" id="adj-warehouse-location" required>
+                        <option value="">Selecionar armazém…</option>
+                        {% for w in producer_warehouses %}<option value="{{ w.location }}">{{ w.location }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="rg-field">
+                    <label for="adj-quantity">Quantidade (kg) <em>*</em></label>
+                    <input type="number" step="0.01" name="quantity" id="adj-quantity" placeholder="Ex.: 500" required>
+                </div>
+                <div class="rg-field">
+                    <label for="adj-adjustment-type">Tipo de ajuste <em>*</em></label>
+                    <select name="adjustment_type" id="adj-adjustment-type" required>
+                        <option value="set" selected>Definir valor (substituir)</option>
+                        <option value="add">Adicionar quantidade</option>
+                        <option value="subtract">Retirar quantidade</option>
+                    </select>
+                </div>
+            </div>
+            <div class="rg-actions"><button type="submit" class="rg-submit">Gravar ajuste</button></div>
+        </form>
+    </details>
+</div>
+</div>

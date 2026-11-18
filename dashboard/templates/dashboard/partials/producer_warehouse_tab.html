@@ -1,0 +1,168 @@
+{% comment %}
+Separador "Armazéns" do Producer. Mantém os IDs usados pelo JavaScript do producerDash.html:
+  #id_meteo_source, #id_json_fallback_mode, #producer-wh-json-upload-box, #producer-wh-fallback-box, #producer-wh-fixed-box,
+  openSensorModal(), openEditWarehouseModal(...), #sensor-sheet-* (RuuviTag, só ProducerBraga).
+Estilos em partials/producer_ui_css.html.
+{% endcomment %}
+<div id="warehouse-management" class="dashboard-tab" style="display:none;">
+<div class="rg rg-rich">
+    <header class="rg-hero">
+        <div class="rg-hero-main">
+            <span class="rg-hero-icon">🏬</span>
+            <div>
+                <h3>Armazéns</h3>
+                <p><b>{{ producer_warehouses|length }}</b> armazé{{ producer_warehouses|length|pluralize:"m,ns" }} registado{{ producer_warehouses|length|pluralize }} · as condições de cada armazém alimentam o ciclo de vida dos lotes</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Novo armazém -->
+    <section class="rg-card">
+        <div class="rg-card-head">
+            <span class="rg-section-icon">＋</span>
+            <div>
+                <h4>Novo armazém</h4>
+                <p>Localização, capacidade, sensores e condições ambientais (temperatura e humidade).</p>
+            </div>
+        </div>
+        <form method="post" action="{% url 'producer_submit_warehouse' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="rg-fields">
+                {% include "dashboard/partials/rg_field.html" with field=warehouse_form.location %}
+                <div class="rg-field">
+                    <label for="{{ warehouse_form.region.id_for_label }}">{{ warehouse_form.region.label }} <em>*</em></label>
+                    {{ warehouse_form.region }}
+                    <button type="button" class="rg-link-btn" onclick="const g=this.nextElementSibling; g.style.display = g.style.display === 'none' ? 'block' : 'none';">Que região escolher?</button>
+                    <div class="rg-guide" style="display: none;">
+                        <ul>
+                            <li><b>Norte Litoral:</b> Porto, Viana do Castelo, Gaia, Braga (litoral), Matosinhos</li>
+                            <li><b>Norte Interior:</b> Vila Real, Bragança, Chaves, Mirandela</li>
+                            <li><b>Centro Litoral:</b> Coimbra, Aveiro, Leiria, Figueira da Foz, Peniche</li>
+                            <li><b>Centro Interior:</b> Viseu, Guarda, Castelo Branco, Covilhã</li>
+                            <li><b>Lisboa e Vale do Tejo:</b> Lisboa, Sintra, Cascais, Loures, Almada, Santarém, Setúbal</li>
+                            <li><b>Alentejo:</b> Évora, Beja, Portalegre, Elvas, Sines, Odemira</li>
+                            <li><b>Algarve:</b> Faro, Portimão, Albufeira, Lagos, Tavira</li>
+                            <li><b>Serra / Montanha:</b> Covilhã (serra), Manteigas, Seia, Gouveia</li>
+                            <li><b>Madeira:</b> Funchal, Câmara de Lobos, Machico, Porto Santo</li>
+                            <li><b>Açores:</b> Ponta Delgada, Angra do Heroísmo, Horta</li>
+                        </ul>
+                    </div>
+                    {% if warehouse_form.region.errors %}<div class="rg-error">{{ warehouse_form.region.errors|join:" " }}</div>{% endif %}
+                </div>
+                {% include "dashboard/partials/rg_field.html" with field=warehouse_form.control_type %}
+                {% include "dashboard/partials/rg_field.html" with field=warehouse_form.capacity %}
+                {% include "dashboard/partials/rg_field.html" with field=warehouse_form.latitude %}
+                {% include "dashboard/partials/rg_field.html" with field=warehouse_form.longitude %}
+            </div>
+
+            <div class="rg-group-title" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>Sensores instalados</span>
+                <button type="button" class="rg-btn-sec" onclick="openSensorModal()" style="text-transform: none; letter-spacing: 0;">+ Novo sensor</button>
+            </div>
+            <div class="rg-checks">
+                {{ warehouse_form.sensors }}
+                {% if not all_sensors %}<span class="rg-muted" style="font-size: 0.85em;">Ainda não há sensores registados.</span>{% endif %}
+                {% if warehouse_form.sensors.errors %}<div class="rg-error">{{ warehouse_form.sensors.errors.0 }}</div>{% endif %}
+            </div>
+
+            <div class="rg-group-title">Condições ambientais</div>
+            <div class="rg-fields">
+                {% include "dashboard/partials/rg_field.html" with field=warehouse_form.meteo_source %}
+            </div>
+            <div id="producer-wh-json-upload-box" class="rg-sub-box" style="display: none;">
+                <div class="rg-field">
+                    <label>Ficheiro de leituras dos sensores (JSON, CSV ou Excel)</label>
+                    <input type="file" name="sensor_file" accept=".json,.csv,.xlsx,.xls">
+                    <small>Pode carregar agora ou mais tarde, no cartão do armazém.</small>
+                </div>
+            </div>
+            <div id="producer-wh-fallback-box" class="rg-sub-box" style="display: none;">
+                <div class="rg-fields">
+                    <div class="rg-field">
+                        <label for="{{ warehouse_form.json_fallback_mode.id_for_label }}">{{ warehouse_form.json_fallback_mode.label }}</label>
+                        {{ warehouse_form.json_fallback_mode }}
+                        <small>Usado nos dias sem leituras no ficheiro.</small>
+                    </div>
+                </div>
+            </div>
+            <div id="producer-wh-fixed-box" class="rg-fields rg-sub-box" style="display: grid;">
+                {% include "dashboard/partials/rg_field.html" with field=warehouse_form.fixed_temperature %}
+                {% include "dashboard/partials/rg_field.html" with field=warehouse_form.fixed_humidity %}
+            </div>
+
+            <div class="rg-actions"><button type="submit" class="rg-submit">Registar armazém</button></div>
+        </form>
+    </section>
+
+    <!-- Armazéns registados -->
+    <div class="rg-section-title">Armazéns registados <span class="rg-count">{{ producer_warehouses|length }}</span></div>
+    {% if producer_warehouses %}
+    <div class="rg-wh-grid">
+        {% for warehouse in producer_warehouses %}
+        <article class="rg-card rg-wh">
+            <div class="rg-wh-top">
+                <div class="rg-wh-title">
+                    <span class="rg-wh-icon">🏬</span>
+                    <div>
+                        <h5>{{ warehouse.location }}</h5>
+                        <small>WH-{{ warehouse.warehouse_id }}{% if warehouse.latitude and warehouse.longitude %} · {{ warehouse.latitude }}, {{ warehouse.longitude }}{% endif %}</small>
+                    </div>
+                </div>
+                <span class="rg-chip brand">{{ warehouse.get_control_type_display }}</span>
+            </div>
+
+            <div class="rg-chips">
+                <span class="rg-chip">{{ warehouse.get_region_display }}</span>
+                <span class="rg-chip">{% if warehouse.meteo_source == 'JSON' %}Sensores (ficheiro){% elif warehouse.meteo_source == 'IPMA' %}IPMA{% else %}Valores fixos{% if warehouse.fixed_temperature is not None %} · {{ warehouse.fixed_temperature }} °C{% endif %}{% if warehouse.fixed_humidity is not None %} · {{ warehouse.fixed_humidity }} %{% endif %}{% endif %}</span>
+                {% for sensor in warehouse.sensors.all %}<span class="rg-chip">{{ sensor.sensor_id }} · {{ sensor.get_sensor_type_display }}</span>{% endfor %}
+            </div>
+
+            <div>
+                <div class="rg-occ-row">
+                    <span>Ocupação</span>
+                    <span><b>{{ warehouse.current_stock|default:0|floatformat:0 }}</b> de {{ warehouse.capacity|floatformat:0 }} kg · <b>{{ warehouse.occupancy_percentage|floatformat:0 }}%</b></span>
+                </div>
+                <div class="rg-occ"><div style="width: {{ warehouse.occupancy_percentage }}%; background: {% if warehouse.occupancy_percentage > 90 %}#dc2626{% elif warehouse.occupancy_percentage > 70 %}#d97706{% else %}#0f766e{% endif %};"></div></div>
+            </div>
+
+            <div class="rg-wh-foot">
+                {% if warehouse.meteo_source == 'JSON' %}
+                <form method="post" action="{% url 'import_sensor_readings' warehouse.warehouse_id %}" enctype="multipart/form-data" class="rg-inline-upload">
+                    {% csrf_token %}
+                    <input type="file" name="sensor_file" accept=".json,.xlsx,.xls,.csv" required aria-label="Ficheiro de leituras">
+                    <button type="submit" class="rg-btn-sec">Importar leituras</button>
+                </form>
+                {% else %}
+                <span class="rg-muted" style="font-size: 0.82em;">{% if warehouse.meteo_source == 'IPMA' %}Dados automáticos do IPMA{% else %}Condições definidas manualmente{% endif %}</span>
+                {% endif %}
+                <button type="button" class="rg-btn-sec" onclick="openEditWarehouseModal('{{ warehouse.warehouse_id }}', '{{ warehouse.location|escapejs }}', '{{ warehouse.region|escapejs }}', '{{ warehouse.control_type|escapejs }}', '{{ warehouse.storage_unit|escapejs }}', '{{ warehouse.max_vehicle_access|escapejs }}', '{{ warehouse.capacity }}', '{{ warehouse.latitude|default:'' }}', '{{ warehouse.longitude|default:'' }}', '{{ warehouse.meteo_source|escapejs }}', '{{ warehouse.json_fallback_mode|escapejs }}', '{{ warehouse.fixed_temperature|default:'4.0' }}', '{{ warehouse.fixed_humidity|default:'90.0' }}', '{% for s in warehouse.sensors.all %}{{ s.sensor_id }}{% if not forloop.last %},{% endif %}{% endfor %}')">Editar</button>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <section class="rg-card rg-empty">Ainda não há armazéns registados. Use o formulário acima para registar o primeiro.</section>
+    {% endif %}
+
+    {% if username == 'ProducerBraga' %}
+    <style>@keyframes rg-spin { to { transform: rotate(360deg); } }</style>
+    <section class="rg-card rg-table-card">
+        <div class="rg-table-head"><h4>Sensores RuuviTag · tempo real</h4></div>
+        <div id="sensor-sheet-loading" class="rg-empty">
+            <span style="display: inline-block; width: 18px; height: 18px; border: 2px solid #9fd1c8; border-top-color: #0f766e; border-radius: 50%; animation: rg-spin 1s linear infinite; vertical-align: middle; margin-right: 8px;"></span>
+            A carregar leituras…
+        </div>
+        <div id="sensor-sheet-error" class="lcx-alert" style="display: none; margin: 16px 20px; border: 1px solid #fecaca; background: #fef2f2; color: #991b1b; border-radius: 12px; padding: 12px 16px;">Não foi possível carregar as leituras dos sensores.</div>
+        <div id="sensor-sheet-table-wrapper" class="rg-scroll" style="display: none; max-height: 450px; overflow-y: auto;">
+            <table class="rg-table" id="sensor-sheet-table">
+                <thead><tr>
+                    <th>Data/hora</th><th>Sensor</th><th class="num">Temperatura</th><th class="num">Humidade</th>
+                    <th class="num">Humidade absoluta</th><th class="num">Ponto de orvalho</th><th class="num">Bateria</th><th class="num">Sinal (RSSI)</th>
+                </tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </section>
+    {% endif %}
+</div>
+</div>

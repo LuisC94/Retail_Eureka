@@ -1,0 +1,1 @@
+{% comment %}Todos os campos de um formulário em grelha (parâmetro: form).{% endcomment %}{% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}{% for field in form.visible_fields %}{% include "dashboard/partials/rg_field.html" with field=field %}{% endfor %}

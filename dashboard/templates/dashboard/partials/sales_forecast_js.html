@@ -1,0 +1,514 @@
+{% comment %}
+JavaScript do separador "Previsão de Vendas". Incluir DENTRO de um bloco <script>.
+{% endcomment %}
+                let forecastChartObj = null;
+                const FC_MODEL_NAMES = {modelo_1: 'Modelo Previsão 1', modelo_2: 'Modelo Previsão 2', modelo_3: 'Modelo Previsão 3', modelo_4: 'Modelo Previsão 4'};
+                const FC_CARD_STYLE = {modelo_1: ['#00796b', '#f0fdfa'], modelo_2: ['#6366f1', '#f5f3ff'], modelo_3: ['#0284c7', '#f0f9ff'], modelo_4: ['#c2410c', '#fff7ed']};
+                function normFc(t) {
+                    const s = String(t || '').toLowerCase().trim();
+                    if (s === 'mlp' || s === 'sales_mlp') return 'modelo_1';
+                    if (s === 'autoformer' || s === 'sales_autoformer') return 'modelo_2';
+                    const m = s.match(/(?:modelo[_ ]|previs[ãa]o\s*)(\d)/);
+                    if (m && FC_MODEL_NAMES['modelo_' + m[1]]) return 'modelo_' + m[1];
+                    return FC_MODEL_NAMES[s] ? s : 'modelo_1';
+                }
+                function fcDisplayName(t) { return FC_MODEL_NAMES[normFc(t)]; }
+                let currentFcArch = 'modelo_1';
+
+                function selectModelArch(arch) {
+                    arch = normFc(arch);
+                    currentFcArch = arch;
+                    const modelTypeInput = document.getElementById('fc-form-model-type');
+                    if (modelTypeInput) modelTypeInput.value = arch;
+                    const inferModelSelect = document.getElementById('infer-model-type');
+                    if (inferModelSelect) inferModelSelect.value = arch;
+                    
+                    Object.keys(FC_MODEL_NAMES).forEach(key => {
+                        const card = document.getElementById('fc-card-' + key);
+                        const radio = document.getElementById('arch-radio-' + key);
+                        const active = key === arch;
+                        if (radio && active) radio.checked = true;
+                        if (card) {
+                            card.style.borderColor = active ? FC_CARD_STYLE[key][0] : '#e2e8f0';
+                            card.style.background = active ? FC_CARD_STYLE[key][1] : '#ffffff';
+                        }
+                    });
+                    
+                    const inferSelect = document.getElementById('infer-culture-id');
+                    const trainSelect = document.getElementById('fc-train-culture-id');
+                    const cultureId = (trainSelect && trainSelect.value) ? trainSelect.value : (inferSelect ? inferSelect.value : null);
+                    if (cultureId) {
+                        checkForecastModelStatus(cultureId, arch);
+                    }
+                }
+
+                function onForecastCultureChange(cultureId) {
+                    if (!cultureId) return;
+                    const inferSelect = document.getElementById('infer-culture-id');
+                    if (inferSelect) {
+                        let exists = false;
+                        for (let i = 0; i < inferSelect.options.length; i++) {
+                            if (inferSelect.options[i].value == cultureId) {
+                                exists = true;
+                                break;
+                            }
+                        }
+                        if (!exists) {
+                            const trainSelect = document.getElementById('fc-train-culture-id');
+                            const text = trainSelect && trainSelect.selectedOptions[0] ? trainSelect.selectedOptions[0].text.split(' (')[0] : `Cultura #${cultureId}`;
+                            if (inferSelect.options.length === 1 && inferSelect.options[0].disabled) {
+                                inferSelect.innerHTML = '';
+                            }
+                            const opt = document.createElement('option');
+                            opt.value = cultureId;
+                            opt.text = text;
+                            inferSelect.appendChild(opt);
+                        }
+                        inferSelect.value = cultureId;
+                    }
+                    checkForecastModelStatus(cultureId, currentFcArch);
+                }
+
+                function syncInferenceCulture(cultureId) {
+                    if (!cultureId) return;
+                    const trainSelect = document.getElementById('fc-train-culture-id');
+                    if (trainSelect) {
+                        trainSelect.value = cultureId;
+                    }
+                    const modelType = (document.getElementById('infer-model-type') ? document.getElementById('infer-model-type').value : currentFcArch);
+                    checkForecastModelStatus(cultureId, modelType);
+                }
+
+                function checkForecastModelStatus(cultureId, modelType) {
+                    if (!cultureId) return;
+                    const badge = document.getElementById('fc-model-status-badge');
+                    const dot = document.getElementById('fc-badge-dot');
+                    const text = document.getElementById('fc-badge-text');
+                    if (!badge || !dot || !text) return;
+                    
+                    badge.style.background = '#f1f5f9';
+                    badge.style.color = '#64748b';
+                    dot.style.background = '#94a3b8';
+                    text.innerText = 'A verificar status...';
+                    
+                    fetch(`/ai/forecast-status/?culture_id=${encodeURIComponent(cultureId)}&model_type=${encodeURIComponent(normFc(modelType))}`)
+                    .then(res => res.json())
+                    .then(resData => {
+                        const statusObj = (resData && resData.data) ? resData.data : (resData || {});
+                        const available = statusObj.available_models || [];
+                        const targetArch = normFc(modelType || currentFcArch);
+                        const isTrained = available.map(normFc).includes(targetArch);
+                        const count = statusObj.historical_sales_count || 0;
+                        const archName = FC_MODEL_NAMES[targetArch];
+                        
+                        if (isTrained) {
+                            badge.style.background = '#ecfdf5';
+                            badge.style.color = '#065f46';
+                            badge.style.border = '1px solid #a7f3d0';
+                            dot.style.background = '#10b981';
+                            text.innerHTML = `Treinado (${archName} - ${count} amostras)`;
+                        } else {
+                            badge.style.background = '#fffbeb';
+                            badge.style.color = '#92400e';
+                            badge.style.border = '1px solid #fde68a';
+                            dot.style.background = '#f59e0b';
+                            text.innerHTML = `Sem Treino (${count} registos)`;
+                        }
+                    })
+                    .catch(err => {
+                        badge.style.background = '#fef2f2';
+                        badge.style.color = '#991b1b';
+                        badge.style.border = '1px solid #fecaca';
+                        dot.style.background = '#ef4444';
+                        text.innerText = 'Erro de comunicação';
+                    });
+                }
+
+                function submitForecastTraining(event) {
+                    if (event) event.preventDefault();
+                    const form = document.getElementById('fc-training-form');
+                    if (!form) return;
+                    const formData = new FormData(form);
+                    
+                    let cultureId = formData.get('culture_id');
+                    if (!cultureId) {
+                        const trainSelect = document.getElementById('fc-train-culture-id');
+                        const inferSelect = document.getElementById('infer-culture-id');
+                        cultureId = (trainSelect && trainSelect.value) ? trainSelect.value : ((inferSelect && inferSelect.value) ? inferSelect.value : '');
+                        if (cultureId) {
+                            formData.set('culture_id', cultureId);
+                            if (trainSelect) trainSelect.value = cultureId;
+                        }
+                    }
+                    
+                    if (!cultureId) {
+                        alert('Por favor selecione um lote em stock para treinar o modelo.');
+                        return;
+                    }
+                    
+                    const arch = currentFcArch || 'modelo_1';
+                    formData.set('model_type', arch);
+                    
+                    const progressCard = document.getElementById('fc-progress-card');
+                    if (progressCard) {
+                        progressCard.style.display = 'block';
+                        progressCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                    
+                    const submitBtn = document.getElementById('fc-btn-train');
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.style.opacity = '0.7';
+                        submitBtn.innerText = `A treinar ${arch.toUpperCase()}...`;
+                    }
+                    
+                    const statusMsg = document.getElementById('fc-status-msg');
+                    const pctMsg = document.getElementById('fc-pct');
+                    const progressBar = document.getElementById('fc-progress-bar');
+                    const logsConsole = document.getElementById('fc-logs-console');
+                    
+                    if (logsConsole) logsConsole.innerHTML = '';
+                    
+                    function addLog(msg, color) {
+                        if (!logsConsole) return;
+                        const timeStr = new Date().toLocaleTimeString();
+                        const colorStyle = color ? `style="color: ${color};"` : '';
+                        logsConsole.innerHTML += `<div ${colorStyle}>[${timeStr}] ${msg}</div>`;
+                        logsConsole.scrollTop = logsConsole.scrollHeight;
+                    }
+                    
+                    let currentPct = 10;
+                    if (pctMsg) pctMsg.innerText = currentPct + '%';
+                    if (progressBar) progressBar.style.width = currentPct + '%';
+                    addLog('A validar dados históricos...', '#93c5fd');
+                    if (statusMsg) statusMsg.innerText = 'A processar histórico...';
+                    
+                    let simInterval = setInterval(() => {
+                        if (currentPct < 85) {
+                            currentPct += Math.floor(Math.random() * 8) + 4;
+                            if (currentPct > 85) currentPct = 85;
+                            if (pctMsg) pctMsg.innerText = currentPct + '%';
+                            if (progressBar) progressBar.style.width = currentPct + '%';
+                            
+                            if (currentPct >= 30 && currentPct < 60) {
+                                if (statusMsg) statusMsg.innerText = `A otimizar ${arch.toUpperCase()}...`;
+                                addLog(`Convergência de pesos da arquitetura ${arch.toUpperCase()}...`, '#67e8f9');
+                            } else if (currentPct >= 60) {
+                                if (statusMsg) statusMsg.innerText = 'A serializar modelo treinado...';
+                            }
+                        }
+                    }, 140);
+                    
+                    fetch(form.action, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(async res => {
+                        clearInterval(simInterval);
+                        const data = await res.json();
+                        if (!res.ok || data.status === 'error') {
+                            throw new Error(data.message || 'Falha no treino do modelo.');
+                        }
+                        return data;
+                    })
+                    .then(data => {
+                        if (progressBar) {
+                            progressBar.style.width = '100%';
+                            progressBar.style.background = '#16a34a';
+                        }
+                        if (pctMsg) pctMsg.innerText = '100%';
+                        if (statusMsg) statusMsg.innerText = 'Treino concluído com sucesso!';
+                        addLog(`Sucesso: ${data.message || 'Modelo treinado e disponível.'}`, '#4ade80');
+                        
+                        const trainSelect = document.getElementById('fc-train-culture-id');
+                        let cultureName = data.culture_name;
+                        if (!cultureName && trainSelect && trainSelect.selectedOptions[0]) {
+                            cultureName = trainSelect.selectedOptions[0].text.split(' (')[0];
+                        }
+                        
+                        // Atualizar Dropdown de Inferência se não contiver a cultura
+                        const inferSelect = document.getElementById('infer-culture-id');
+                        if (inferSelect) {
+                            let exists = false;
+                            for (let i = 0; i < inferSelect.options.length; i++) {
+                                if (inferSelect.options[i].value == cultureId) {
+                                    exists = true;
+                                    break;
+                                }
+                            }
+                            if (!exists) {
+                                if (inferSelect.options.length === 1 && inferSelect.options[0].disabled) {
+                                    inferSelect.innerHTML = '';
+                                }
+                                const opt = document.createElement('option');
+                                opt.value = cultureId;
+                                opt.text = cultureName || `Cultura #${cultureId}`;
+                                inferSelect.appendChild(opt);
+                            }
+                            inferSelect.value = cultureId;
+                        }
+                        
+                        checkForecastModelStatus(cultureId, arch);
+                        
+                        setTimeout(() => {
+                            runSalesForecast();
+                        }, 500);
+                    })
+                    .catch(err => {
+                        clearInterval(simInterval);
+                        if (progressBar) {
+                            progressBar.style.width = '100%';
+                            progressBar.style.background = '#ef4444';
+                        }
+                        if (pctMsg) pctMsg.innerText = '100%';
+                        if (statusMsg) statusMsg.innerText = 'Erro no processo de treino';
+                        addLog(`[ERRO] ${err.message}`, '#f87171');
+                    })
+                    .finally(() => {
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.style.opacity = '1';
+                            submitBtn.innerText = 'Treinar Modelo';
+                        }
+                    });
+                }
+
+                document.addEventListener('DOMContentLoaded', function() {
+                    const trainSelect = document.getElementById('fc-train-culture-id');
+                    if (trainSelect) {
+                        const validOpts = Array.from(trainSelect.options).filter(opt => opt.value && !opt.disabled);
+                        if (validOpts.length === 1 && !trainSelect.value) {
+                            trainSelect.value = validOpts[0].value;
+                            onForecastCultureChange(validOpts[0].value);
+                        }
+                    }
+                });
+
+                function runSalesForecast() {
+                    const inferCultEl = document.getElementById('infer-culture-id');
+                    const trainCultEl = document.getElementById('fc-train-culture-id');
+                    const cultureId = (inferCultEl && inferCultEl.value) ? inferCultEl.value : (trainCultEl ? trainCultEl.value : '');
+                    const modelType = (document.getElementById('infer-model-type') ? document.getElementById('infer-model-type').value : (currentFcArch || 'modelo_1'));
+                    const horizonDays = (document.getElementById('infer-horizon') ? document.getElementById('infer-horizon').value : 30);
+                    
+                    if (!cultureId) {
+                        alert('Por favor selecione um modelo treinado para inferir a procura.');
+                        return;
+                    }
+                    
+                    const inferBtn = document.getElementById('fc-btn-infer');
+                    if (inferBtn) {
+                        inferBtn.disabled = true;
+                        inferBtn.innerText = 'A calcular...';
+                    }
+                    
+                    const formData = new FormData();
+                    formData.append('culture_id', cultureId);
+                    formData.append('model_type', modelType);
+                    formData.append('horizon_days', horizonDays);
+                    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+                    
+                    fetch('/ai/infer-sales/', {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(async response => {
+                        const data = await response.json();
+                        if (!response.ok || data.status === 'error') {
+                            throw new Error(data.message || 'Erro ao gerar previsão.');
+                        }
+                        return data;
+                    })
+                    .then(data => {
+                        if (inferBtn) {
+                            inferBtn.disabled = false;
+                            inferBtn.innerText = 'Inferir Procura';
+                        }
+                        
+                        const predictions = data.predictions || [];
+                        const historical = data.recent_history || data.historical || [];
+                        const metrics = data.kpis || data.metrics || {};
+                        
+                        if (!predictions.length) {
+                            alert('Nenhuma previsão retornada pelo modelo.');
+                            return;
+                        }
+                        
+                        // 1. Update KPI Cards
+                        const kpiContainer = document.getElementById('fc-kpi-container');
+                        if (kpiContainer) kpiContainer.style.display = 'block';
+                        
+                        const kpiTotal = document.getElementById('kpi-total-demand');
+                        if (kpiTotal) kpiTotal.innerText = (metrics.total_predicted_kg || 0).toLocaleString('pt-PT', { maximumFractionDigits: 1 }) + ' kg';
+                        
+                        const kpiAvg = document.getElementById('kpi-daily-avg');
+                        if (kpiAvg) kpiAvg.innerText = (metrics.daily_avg_kg || 0).toLocaleString('pt-PT', { maximumFractionDigits: 1 }) + ' kg/dia';
+                        
+                        const kpiPeakVal = document.getElementById('kpi-peak-val');
+                        if (kpiPeakVal) kpiPeakVal.innerText = (metrics.peak_val_kg || 0).toLocaleString('pt-PT', { maximumFractionDigits: 1 }) + ' kg';
+                        
+                        const kpiPeakDate = document.getElementById('kpi-peak-date');
+                        if (kpiPeakDate) kpiPeakDate.innerText = metrics.peak_date ? `Pico: ${metrics.peak_date}` : '';
+                        
+                        const kpiModel = document.getElementById('kpi-model-name');
+                        if (kpiModel) {
+                            const rawType = String(metrics.model_type || modelType || '').toLowerCase();
+                            kpiModel.innerText = fcDisplayName(rawType);
+                        }
+                        
+                        // 2. Prepare Dual-Series Chart
+                        const placeholder = document.getElementById('forecast-placeholder');
+                        if (placeholder) placeholder.style.display = 'none';
+                        const chartContainer = document.getElementById('forecast-chart-container');
+                        if (chartContainer) chartContainer.style.display = 'block';
+                        
+                        const labels = [];
+                        const histData = [];
+                        const predData = [];
+                        
+                        historical.forEach(h => {
+                            labels.push(h.date);
+                            histData.push(h.value);
+                            predData.push(null);
+                        });
+                        
+                        if (historical.length > 0 && predictions.length > 0) {
+                            predData[predData.length - 1] = historical[historical.length - 1].value;
+                        }
+                        
+                        predictions.forEach(p => {
+                            labels.push(p.date);
+                            histData.push(null);
+                            predData.push(p.value);
+                        });
+                        
+                        const canvas = document.getElementById('forecastChart');
+                        if (canvas) {
+                            if (forecastChartObj) {
+                                forecastChartObj.destroy();
+                            }
+                            
+                            const ctx = canvas.getContext('2d');
+                            const isAutoformer = ['modelo_2', 'modelo_4'].includes(normFc(modelType));
+                            const predColor = isAutoformer ? '#6366f1' : '#059669';
+                            const predFill = isAutoformer ? 'rgba(99, 102, 241, 0.08)' : 'rgba(5, 150, 105, 0.08)';
+                            
+                            forecastChartObj = new Chart(ctx, {
+                                type: 'line',
+                                data: {
+                                    labels: labels,
+                                    datasets: [
+                                        {
+                                            label: 'Histórico Real',
+                                            data: histData,
+                                            borderColor: '#64748b',
+                                            backgroundColor: 'rgba(100, 116, 139, 0.05)',
+                                            borderWidth: 2,
+                                            pointRadius: 2.5,
+                                            tension: 0.2,
+                                            fill: true
+                                        },
+                                        {
+                                            label: `Previsão (${fcDisplayName(modelType)})`,
+                                            data: predData,
+                                            borderColor: predColor,
+                                            backgroundColor: predFill,
+                                            borderWidth: 2.5,
+                                            pointRadius: 3.5,
+                                            tension: 0.25,
+                                            fill: true
+                                        }
+                                    ]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: {
+                                            position: 'top',
+                                            labels: {
+                                                font: { size: 12, weight: '600' },
+                                                usePointStyle: true,
+                                                padding: 12
+                                            }
+                                        },
+                                        tooltip: {
+                                            callbacks: {
+                                                label: function(context) {
+                                                    return ` ${context.dataset.label}: ${Number(context.raw).toLocaleString('pt-PT')} kg`;
+                                                }
+                                            }
+                                        }
+                                    },
+                                    scales: {
+                                        x: {
+                                            grid: { color: 'rgba(226, 232, 240, 0.6)' },
+                                            ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 12 }
+                                        },
+                                        y: {
+                                            beginAtZero: true,
+                                            grid: { color: 'rgba(226, 232, 240, 0.6)' },
+                                            title: { display: true, text: 'Kg', font: { weight: '600' } }
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                        
+                        // 3. Render Table
+                        const tableContainer = document.getElementById('fc-table-container');
+                        const tableBody = document.getElementById('fc-table-body');
+                        if (tableContainer && tableBody) {
+                            tableBody.innerHTML = '';
+                            const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+                            let prevVal = null;
+                            const isAutoformer = ['modelo_2', 'modelo_4'].includes(normFc(modelType));
+                            const predColor = isAutoformer ? '#6366f1' : '#059669';
+                            
+                            predictions.forEach((p, idx) => {
+                                const dt = new Date(p.date);
+                                const dayName = isNaN(dt.getDay()) ? '-' : dayNames[dt.getDay()];
+                                let varBadge = `<span style="color: #64748b;">-</span>`;
+                                
+                                if (prevVal !== null && prevVal > 0) {
+                                    const diff = p.value - prevVal;
+                                    const diffPct = ((diff / prevVal) * 100).toFixed(1);
+                                    if (diff > 0) {
+                                        varBadge = `<span style="color: #10b981; font-weight: 600;">+${diff.toFixed(1)} kg (+${diffPct}%)</span>`;
+                                    } else if (diff < 0) {
+                                        varBadge = `<span style="color: #ef4444; font-weight: 600;">${diff.toFixed(1)} kg (${diffPct}%)</span>`;
+                                    } else {
+                                        varBadge = `<span style="color: #64748b;">0%</span>`;
+                                    }
+                                }
+                                prevVal = p.value;
+                                
+                                const rowBg = (idx % 2 === 0) ? '#ffffff' : '#f8fafc';
+                                tableBody.innerHTML += `
+                                    <tr style="background: ${rowBg}; border-bottom: 1px solid #f1f5f9;">
+                                        <td style="padding: 8px 14px; font-weight: 600; color: #0f172a;">${p.date}</td>
+                                        <td style="padding: 8px 14px; color: #64748b;">${dayName}</td>
+                                        <td style="padding: 8px 14px; font-weight: 700; color: ${predColor};">${Number(p.value).toLocaleString('pt-PT', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} kg</td>
+                                        <td style="padding: 8px 14px;">${varBadge}</td>
+                                    </tr>
+                                `;
+                            });
+                            tableContainer.style.display = 'block';
+                        }
+                    })
+                    .catch(err => {
+                        if (inferBtn) {
+                            inferBtn.disabled = false;
+                            inferBtn.innerText = 'Inferir Procura';
+                        }
+                        alert('Erro ao inferir procura: ' + err.message);
+                    });
+                }
+
+                // ==================== BUYER AGENT AI STUDIO ====================

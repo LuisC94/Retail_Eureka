@@ -601,3 +601,69 @@ class ProcessorProcessingForm(forms.Form):
         widget=forms.Select(attrs={'class': 'form-control'}),
         label='Tratamento de Conservação'
     )
+
+# ----------------------------------------------------------------------
+# RÓTULOS EM PORTUGUÊS (formulários do perfil Producer)
+# Aplicados aos base_fields: não alteram modelos nem dados, só o texto mostrado.
+# ----------------------------------------------------------------------
+_PT_LABELS = {
+    'PlantationPlanForm': {'location': 'Localização'},
+    'PlantationCropForm': {
+        'plantation': 'Plantação', 'subfamily': 'Cultura', 'avg_plant_age_years': 'Idade média das plantas (anos)',
+        'rootstock': 'Porta-enxerto (se aplicável)', 'density_plants_ha': 'Densidade de plantação (plantas/m²)',
+        'irrigation_system': 'Sistema de rega',
+    },
+    'PlantationEventForm': {
+        'plantation': 'Plantação', 'subfamily': 'Cultura', 'event_date': 'Data do evento',
+        'event_type': 'Tipo de evento', 'notes': 'Notas',
+    },
+    'HarvestForm': {
+        'plantation': 'Plantação', 'subfamily': 'Cultura / variedade', 'harvest_date': 'Data da colheita',
+        'harvest_quantity_kg': 'Quantidade colhida (kg)', 'utilized_quantity_kg': 'Desperdício (kg)',
+        'warehouse': 'Armazém de destino', 'firmness': 'Firmeza (N)', 'soluble_solids': 'Brix (°Bx)',
+        'acidity': 'Acidez (g/L ou %)', 'caliber': 'Calibre (mm)',
+    },
+    'FertilizerSyntheticForm': {
+        'commercial_product': 'Produto comercial', 'form_npk': 'Fórmula (NPK, etc.)', 'n_content': 'Teor de N (%)',
+        'p2o5_content': 'Teor de P₂O₅ (%)', 'k2o_content': 'Teor de K₂O (%)', 'total_dose_kg_ha_year': 'Dose total (kg/ha/ano)',
+        'num_applications': 'N.º de aplicações', 'application_season': 'Época de aplicação (mês)',
+    },
+    'FertilizerOrganicForm': {
+        'organic_fertilizer_type': 'Tipo de fertilizante orgânico', 'origin': 'Origem (pecuária, composto, etc.)',
+        'n_content_kgt': 'Teor de N (kg/t ou %)', 'p_content_kgt': 'Teor de P (kg/t ou %)', 'k_content_kgt': 'Teor de K (kg/t ou %)',
+        'dose_tha_year': 'Dose (t/ha/ano)', 'application_mode': 'Modo de aplicação',
+    },
+    'SoilCorrectiveForm': {
+        'commercial_product': 'Produto comercial', 'corrective_type': 'Tipo (calcário, dolomite, gesso, etc.)',
+        'caco3_content': 'Equivalente em CaCO₃ (%)', 'dose_kg_ha_year': 'Dose (kg/ha/ano)',
+        'frequency_years': 'Frequência (anos)', 'observations': 'Observações',
+    },
+    'PestControlForm': {
+        'commercial_product': 'Produto comercial', 'active_substance': 'Substância ativa',
+        'pest_type': 'Tipo (fungicida, inseticida, etc.)', 'dose_per_application': 'Dose por aplicação (kg ou L/ha)',
+        'num_applications_year': 'N.º de aplicações por ano', 'application_mode': 'Modo de aplicação',
+    },
+    'MachineryForm': {
+        'machinery_type': 'Tipo de máquina', 'main_operation': 'Operação principal', 'hours_per_year': 'Horas por ano',
+        'power': 'Potência (kW ou CV)', 'observations': 'Observações',
+    },
+    'FuelForm': {
+        'fuel_type': 'Tipo de combustível', 'annual_consumption': 'Consumo anual', 'unit': 'Unidade',
+        'main_usage_season': 'Época de maior utilização', 'notes': 'Notas',
+    },
+    'ElectricEnergyForm': {
+        'main_usage': 'Utilização principal', 'total_consumption_kwh_year': 'Consumo total (kWh/ano)', 'percent_grid': '% Rede elétrica',
+        'percent_photovoltaic': '% Fotovoltaico (autoconsumo)', 'percent_other_renewable': '% Outras renováveis', 'notes': 'Notas',
+    },
+    'IrrigationWaterForm': {
+        'water_source': 'Origem da água', 'volume_m3_year': 'Volume (m³/ano)', 'extraction_method': 'Método de captação',
+        'pumping_height_m': 'Altura de bombagem (m)', 'irrigation_system': 'Sistema de rega', 'estimated_efficiency': 'Eficiência estimada (%)',
+    },
+}
+for _form_name, _labels in _PT_LABELS.items():
+    _form_cls = globals().get(_form_name)
+    if _form_cls is None:
+        continue
+    for _field_name, _label in _labels.items():
+        if _field_name in _form_cls.base_fields:
+            _form_cls.base_fields[_field_name].label = _label

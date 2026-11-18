@@ -1,0 +1,206 @@
+{% comment %}
+Separador "Previsão de Vendas" (Producer, Processor, Retailer).
+Parâmetros: fc_stock (lista com culture_id, culture, quantity, warehouse, has_sales_model) e tab_class.
+O JavaScript correspondente está em partials/sales_forecast_js.html.
+{% endcomment %}
+            <div id="sales-forecasting" class="{{ tab_class|default:'tab-content' }}" style="display: none;">
+                <!-- Header with Status Badge -->
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                    <div>
+                        <h3 style="color: #00796b; margin: 0; font-weight: 700; font-size: 1.25em;">
+                            Previsão de Vendas & Procura
+                        </h3>
+                    </div>
+                    <div id="fc-model-status-badge" style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px; font-size: 0.82em; font-weight: 600; background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0;">
+                        <span id="fc-badge-dot" style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #94a3b8;"></span>
+                        <span id="fc-badge-text">Selecione um lote</span>
+                    </div>
+                </div>
+
+                <div class="form-section" style="border-top: 3px solid #00796b; padding: 20px; background: #ffffff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.03);">
+                    
+                    <!-- Arquitetura do Modelo -->
+                    <div style="margin-bottom: 18px;">
+                        <label style="font-weight: 700; font-size: 0.88em; color: #334155; margin-bottom: 8px; display: block;">Arquitetura:</label>
+                        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                            <div id="fc-card-modelo_1" onclick="selectModelArch('modelo_1')" style="flex: 1; min-width: 160px; border: 2px solid #00796b; background: #f0fdfa; border-radius: 8px; padding: 12px 16px; cursor: pointer; transition: all 0.2s ease;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <div style="font-weight: 700; font-size: 0.95em; color: #004d40;">Modelo Previsão 1</div>
+                                    </div>
+                                    <input type="radio" name="fc_arch_choice" id="arch-radio-modelo_1" value="modelo_1" checked onchange="selectModelArch('modelo_1')" style="accent-color: #00796b; cursor: pointer;">
+                                </div>
+                            </div>
+                            <div id="fc-card-modelo_2" onclick="selectModelArch('modelo_2')" style="flex: 1; min-width: 160px; border: 2px solid #e2e8f0; background: #ffffff; border-radius: 8px; padding: 12px 16px; cursor: pointer; transition: all 0.2s ease;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <div style="font-weight: 700; font-size: 0.95em; color: #1e1b4b;">Modelo Previsão 2</div>
+                                    </div>
+                                    <input type="radio" name="fc_arch_choice" id="arch-radio-modelo_2" value="modelo_2" onchange="selectModelArch('modelo_2')" style="accent-color: #6366f1; cursor: pointer;">
+                                </div>
+                            </div>
+                            <div id="fc-card-modelo_3" onclick="selectModelArch('modelo_3')" style="flex: 1; min-width: 160px; border: 2px solid #e2e8f0; background: #ffffff; border-radius: 8px; padding: 12px 16px; cursor: pointer; transition: all 0.2s ease;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <div style="font-weight: 700; font-size: 0.95em; color: #0c4a6e;">Modelo Previsão 3</div>
+                                    </div>
+                                    <input type="radio" name="fc_arch_choice" id="arch-radio-modelo_3" value="modelo_3" onchange="selectModelArch('modelo_3')" style="accent-color: #0284c7; cursor: pointer;">
+                                </div>
+                            </div>
+                            <div id="fc-card-modelo_4" onclick="selectModelArch('modelo_4')" style="flex: 1; min-width: 160px; border: 2px solid #e2e8f0; background: #ffffff; border-radius: 8px; padding: 12px 16px; cursor: pointer; transition: all 0.2s ease;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <div style="font-weight: 700; font-size: 0.95em; color: #7c2d12;">Modelo Previsão 4</div>
+                                    </div>
+                                    <input type="radio" name="fc_arch_choice" id="arch-radio-modelo_4" value="modelo_4" onchange="selectModelArch('modelo_4')" style="accent-color: #c2410c; cursor: pointer;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 1. Treino do Modelo -->
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 18px; margin-bottom: 22px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+                            <strong style="color: #004d40; font-size: 0.95em;">1. Treino do Modelo</strong>
+                            <a href="{% url 'download_training_template' %}?type=buyer" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; padding: 5px 12px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.82em; display: inline-flex; align-items: center; gap: 5px;">
+                                Download Template
+                            </a>
+                        </div>
+
+                        <form id="fc-training-form" method="POST" action="{% url 'upload_sales_history' %}" enctype="multipart/form-data" onsubmit="submitForecastTraining(event)">
+                            {% csrf_token %}
+                            <input type="hidden" name="model_type" id="fc-form-model-type" value="modelo_1">
+                            
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 14px;">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label style="display:block; font-weight:600; font-size:0.85em; margin-bottom:6px; color: #334155;">Lote em Stock:</label>
+                                    <select name="culture_id" id="fc-train-culture-id" class="form-control" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.9em; background: #ffffff;" onchange="onForecastCultureChange(this.value)">
+                                        <option value="" disabled selected>-- Selecionar Lote em Stock --</option>
+                                        {% for item in fc_stock %}
+                                            <option value="{{ item.culture_id }}">{{ item.culture }} ({{ item.quantity }} kg - {{ item.warehouse }})</option>
+                                        {% empty %}
+                                            <option value="" disabled>-- Sem lotes em stock --</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label style="display:block; font-weight:600; font-size:0.85em; margin-bottom:6px; color: #334155;">Ficheiro de Histórico (.xlsx / .csv):</label>
+                                    <input type="file" name="sales_file" accept=".xlsx,.csv" style="padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 6px; width: 100%; font-size: 0.88em; background: #ffffff;">
+                                </div>
+                            </div>
+
+                            <button type="submit" id="fc-btn-train" class="submit-button" onclick="submitForecastTraining(event)" style="background: #00796b; color: white; padding: 10px 20px; font-size: 0.9em; width: auto; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                                Treinar Modelo
+                            </button>
+                        </form>
+
+                        <!-- Progress Bar & Terminal Logs -->
+                        <div id="fc-progress-card" style="display: none; margin-top: 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 14px;">
+                            <div style="display: flex; justify-content: space-between; font-weight: 600; font-size: 0.84em; color: #166534; margin-bottom: 6px;">
+                                <span id="fc-status-msg">A inicializar treino...</span>
+                                <span id="fc-pct">0%</span>
+                            </div>
+                            <div style="width: 100%; background: #dcfce7; height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: 10px;">
+                                <div id="fc-progress-bar" style="width: 0%; background: #16a34a; height: 100%; transition: width 0.2s ease;"></div>
+                            </div>
+                            <div id="fc-logs-console" style="background: #0f172a; color: #4ade80; font-family: monospace; padding: 8px 12px; border-radius: 6px; font-size: 0.8em; max-height: 80px; overflow-y: auto;"></div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Inferência Preditiva -->
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 18px; margin-bottom: 22px;">
+                        <strong style="color: #004d40; font-size: 0.95em; display: block; margin-bottom: 14px;">2. Previsão da Procura</strong>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; align-items: flex-end;">
+                            <div>
+                                <label style="display:block; font-weight:600; font-size:0.85em; margin-bottom:6px; color: #334155;">Modelo Treinado:</label>
+                                <select id="infer-culture-id" class="form-control" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.9em; background: #ffffff;" onchange="syncInferenceCulture(this.value)">
+                                    <option value="" disabled selected>-- Selecionar Modelo Treinado --</option>
+                                    {% for item in fc_stock %}
+                                        {% if item.has_sales_model %}
+                                            <option value="{{ item.culture_id }}">{{ item.culture }}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div>
+                                <label style="display:block; font-weight:600; font-size:0.85em; margin-bottom:6px; color: #334155;">Arquitetura:</label>
+                                <select id="infer-model-type" class="form-control" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.9em; background: #ffffff;" onchange="selectModelArch(this.value)">
+                                    <option value="modelo_1" selected>Modelo Previsão 1</option>
+                                    <option value="modelo_2">Modelo Previsão 2</option>
+                                    <option value="modelo_3">Modelo Previsão 3</option>
+                                    <option value="modelo_4">Modelo Previsão 4</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="display:block; font-weight:600; font-size:0.85em; margin-bottom:6px; color: #334155;">Horizonte:</label>
+                                <select id="infer-horizon" class="form-control" style="width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.9em; background: #ffffff;">
+                                    <option value="15">15 dias</option>
+                                    <option value="30" selected>30 dias</option>
+                                    <option value="45">45 dias</option>
+                                    <option value="60">60 dias</option>
+                                </select>
+                            </div>
+                            <div>
+                                <button type="button" id="fc-btn-infer" onclick="runSalesForecast()" class="submit-button" style="background: #2563eb; color: white; width: 100%; padding: 10px 16px; font-size: 0.9em; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 38px; margin-top: 0;">
+                                    Inferir Procura
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- KPI Cards -->
+                    <div id="fc-kpi-container" style="display: none; margin-bottom: 20px;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+                            <div style="background: #065f46; color: white; padding: 14px; border-radius: 8px;">
+                                <div style="font-size: 0.75em; text-transform: uppercase; font-weight: 700; opacity: 0.85;">Procura Total</div>
+                                <div id="kpi-total-demand" style="font-size: 1.4em; font-weight: 800; margin-top: 2px;">-- kg</div>
+                            </div>
+                            <div style="background: #1e40af; color: white; padding: 14px; border-radius: 8px;">
+                                <div style="font-size: 0.75em; text-transform: uppercase; font-weight: 700; opacity: 0.85;">Média Diária</div>
+                                <div id="kpi-daily-avg" style="font-size: 1.4em; font-weight: 800; margin-top: 2px;">-- kg/dia</div>
+                            </div>
+                            <div style="background: #c2410c; color: white; padding: 14px; border-radius: 8px;">
+                                <div style="font-size: 0.75em; text-transform: uppercase; font-weight: 700; opacity: 0.85;">Pico Máximo</div>
+                                <div id="kpi-peak-val" style="font-size: 1.4em; font-weight: 800; margin-top: 2px;">-- kg</div>
+                                <div id="kpi-peak-date" style="font-size: 0.72em; opacity: 0.85; margin-top: 2px;"></div>
+                            </div>
+                            <div style="background: #4338ca; color: white; padding: 14px; border-radius: 8px;">
+                                <div style="font-size: 0.75em; text-transform: uppercase; font-weight: 700; opacity: 0.85;">Modelo</div>
+                                <div id="kpi-model-name" style="font-size: 1.2em; font-weight: 800; margin-top: 2px;">--</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chart Canvas -->
+                    <div style="background: #ffffff; border-radius: 8px; padding: 16px; border: 1px solid #e2e8f0; min-height: 280px; margin-bottom: 20px; position: relative;">
+                        <div id="forecast-chart-container" style="display: none; width: 100%; height: 320px;">
+                            <canvas id="forecastChart"></canvas>
+                        </div>
+                        <div id="forecast-placeholder" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 240px; color: #94a3b8; text-align: center;">
+                            <strong style="color: #64748b; font-size: 0.95em;">Nenhuma previsão gerada</strong>
+                            <span style="font-size: 0.82em; margin-top: 4px;">Selecione um modelo treinado e clique em "Inferir Procura".</span>
+                        </div>
+                    </div>
+
+                    <!-- Daily Data Table -->
+                    <div id="fc-table-container" style="display: none;">
+                        <strong style="color: #004d40; font-size: 0.92em; display: block; margin-bottom: 10px;">Projeção Diária Detalhada</strong>
+                        <div style="overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 6px;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.85em; text-align: left;">
+                                <thead>
+                                    <tr style="background: #f8fafc; color: #334155; font-weight: 600; border-bottom: 1px solid #e2e8f0;">
+                                        <th style="padding: 9px 14px;">Data</th>
+                                        <th style="padding: 9px 14px;">Dia</th>
+                                        <th style="padding: 9px 14px;">Procura Prevista (Kg)</th>
+                                        <th style="padding: 9px 14px;">Variação</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="fc-table-body">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </div>

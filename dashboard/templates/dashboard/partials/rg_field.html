@@ -1,0 +1,7 @@
+{% comment %}Um campo de formulário no estilo do separador Register (parâmetro: field).{% endcomment %}
+<div class="rg-field{% if field.name == 'notes' or field.name == 'observations' %} rg-wide{% endif %}">
+    <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <em>*</em>{% endif %}</label>
+    {{ field }}
+    {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+    {% if field.errors %}<div class="rg-error">{{ field.errors|join:" " }}</div>{% endif %}
+</div>

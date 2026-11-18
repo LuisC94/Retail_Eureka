@@ -1,0 +1,335 @@
+{% comment %}
+Separador "Register" do Producer: novo registo (plantação, cultura, evento, colheita) e consulta de registos.
+Mantém os nomes/IDs usados pelo JavaScript existente do producerDash.html:
+  openTab(), validateBaseEventForm(), #baseEventForm, #dynamic-detail-forms .detail-form-container (detail_<tipo>),
+  #harvest_plantation_select/#harvest_subfamily_select, #event_plantation_select/#event_subfamily_select,
+  #live-quality-text/#live-quality-bar, #filter-plantation/#filter-culture/#view-events-table.
+{% endcomment %}
+<div id="main-dashboard" class="dashboard-tab" style="display:block;">
+{# Estilos em partials/producer_ui_css.html #}
+
+<div class="rg rg-rich">
+    <header class="rg-hero">
+        <div class="rg-hero-main">
+            <span class="rg-hero-icon">🌳</span>
+            <div>
+                <h3>Registos</h3>
+                <p>Plantações, culturas, eventos no pomar e colheitas.</p>
+            </div>
+        </div>
+        <div class="rg-seg">
+            <button type="button" class="tab-link active" onclick="openTab(event, 'insert-info')">Novo registo</button>
+            <button type="button" class="tab-link" onclick="openTab(event, 'data-view')">Consultar registos</button>
+        </div>
+    </header>
+
+    <!-- ===================== NOVO REGISTO ===================== -->
+    <div id="insert-info" class="tab-content" style="display: block;">
+        <nav class="rg-steps" aria-label="Tipo de registo">
+            <button type="button" class="rg-step active" data-step="plantation" onclick="rgShowStep('plantation')">
+                <span class="rg-step-num">1</span><span><strong>Plantação</strong><small>Pomar e solo</small></span>
+            </button>
+            <button type="button" class="rg-step" data-step="crop" onclick="rgShowStep('crop')">
+                <span class="rg-step-num">2</span><span><strong>Cultura</strong><small>Variedade na plantação</small></span>
+            </button>
+            <button type="button" class="rg-step" data-step="event" onclick="rgShowStep('event')">
+                <span class="rg-step-num">3</span><span><strong>Evento</strong><small>Tratamentos e consumos</small></span>
+            </button>
+            <button type="button" class="rg-step" data-step="harvest" onclick="rgShowStep('harvest')">
+                <span class="rg-step-num">4</span><span><strong>Colheita</strong><small>Lote e qualidade</small></span>
+            </button>
+        </nav>
+
+        <!-- 1. PLANTAÇÃO -->
+        <section class="rg-card rg-panel" data-panel="plantation">
+            <div class="rg-card-head">
+                <h4>Nova plantação</h4>
+                <p>Registe o pomar. As culturas são associadas no passo seguinte.</p>
+            </div>
+            <form method="POST" action="{% url 'producer_submit_plantation' %}" id="plantationForm">
+                {% csrf_token %}
+                <div class="rg-fields">{% include "dashboard/partials/rg_fields.html" with form=plantation_plan_form %}</div>
+                <details class="rg-optional">
+                    <summary>Características do solo<span>opcional</span></summary>
+                    <div class="rg-fields">{% include "dashboard/partials/rg_fields.html" with form=plantation_detail_form %}</div>
+                </details>
+                <div class="rg-actions"><button type="submit" class="rg-submit">Registar plantação</button></div>
+            </form>
+        </section>
+
+        <!-- 2. CULTURA -->
+        <section class="rg-card rg-panel" data-panel="crop" style="display: none;">
+            <div class="rg-card-head">
+                <h4>Associar cultura a uma plantação</h4>
+                <p>Indique que variedade está plantada e as características do cultivo.</p>
+            </div>
+            <form method="POST" action="{% url 'producer_submit_plantation_crop' %}">
+                {% csrf_token %}
+                <div class="rg-fields">{% include "dashboard/partials/rg_fields.html" with form=plantation_crop_form %}</div>
+                <div class="rg-actions"><button type="submit" class="rg-submit">Associar cultura</button></div>
+            </form>
+        </section>
+
+        <!-- 3. EVENTO -->
+        <section class="rg-card rg-panel" data-panel="event" style="display: none;">
+            <div class="rg-card-head">
+                <h4>Novo evento no pomar</h4>
+                <p>Escolha o tipo de evento e preencha os respetivos detalhes.</p>
+            </div>
+            <form method="POST" action="{% url 'producer_submit_event' %}" id="baseEventForm">
+                {% csrf_token %}
+                <div class="rg-fields">{% include "dashboard/partials/rg_fields.html" with form=plantation_event_form %}</div>
+            </form>
+
+            <div id="dynamic-detail-forms">
+                <div id="detail_Fert_Min" class="detail-form-container rg-detail" style="display: none;" data-event-type="Fert_Min">
+                    <h5>Fertilizante sintético</h5>
+                    <form method="POST" action="{% url 'producer_submit_fertilizer_synth' %}" id="detailForm_Fert_Min">
+                        {% csrf_token %}
+                        <div class="rg-fields">{% include "dashboard/partials/rg_fields.html" with form=fertilizer_synthetic_form %}</div>
+                        <div class="rg-actions"><button type="submit" class="rg-submit" onclick="return validateBaseEventForm(this);">Registar evento</button></div>
+                    </form>
+                </div>
+                <div id="detail_Fert_Org" class="detail-form-container rg-detail" style="display: none;" data-event-type="Fert_Org">
+                    <h5>Fertilizante orgânico</h5>
+                    <form method="POST" action="{% url 'producer_submit_fertilizer_org' %}" id="detailForm_Fert_Org">
+                        {% csrf_token %}
+                        <div class="rg-fields">{% include "dashboard/partials/rg_fields.html" with form=fertilizer_organic_form %}</div>
+                        <div class="rg-actions"><button type="submit" class="rg-submit" onclick="return validateBaseEventForm(this);">Registar evento</button></div>
+                    </form>
+                </div>
+                <div id="detail_Soil_Corr" class="detail-form-container rg-detail" style="display: none;" data-event-type="Soil_Corr">
+                    <h5>Corretivo do solo</h5>
+                    <form method="POST" action="{% url 'producer_submit_soil_corrective' %}" id="detailForm_Soil_Corr">
+                        {% csrf_token %}
+                        <div class="rg-fields">{% include "dashboard/partials/rg_fields.html" with form=soil_corrective_form %}</div>
+                        <div class="rg-actions"><button type="submit" class="rg-submit" onclick="return validateBaseEventForm(this);">Registar evento</button></div>
+                    </form>
+                </div>
+                <div id="detail_Pest" class="detail-form-container rg-detail" style="display: none;" data-event-type="Pest">
+                    <h5>Produto fitofarmacêutico</h5>
+                    <form method="POST" action="{% url 'producer_submit_pest_control' %}" id="detailForm_Pest">
+                        {% csrf_token %}
+                        <div class="rg-fields">{% include "dashboard/partials/rg_fields.html" with form=pest_control_form %}</div>
+                        <div class="rg-actions"><button type="submit" class="rg-submit" onclick="return validateBaseEventForm(this);">Registar evento</button></div>
+                    </form>
+                </div>
+                <div id="detail_Machine_Hrs" class="detail-form-container rg-detail" style="display: none;" data-event-type="Machine_Hrs">
+                    <h5>Maquinaria</h5>
+                    <form method="POST" action="{% url 'producer_submit_machinery' %}" id="detailForm_Machine_Hrs">
+                        {% csrf_token %}
+                        <div class="rg-fields">{% include "dashboard/partials/rg_fields.html" with form=machinery_form %}</div>
+                        <div class="rg-actions"><button type="submit" class="rg-submit" onclick="return validateBaseEventForm(this);">Registar evento</button></div>
+                    </form>
+                </div>
+                <div id="detail_Fuel" class="detail-form-container rg-detail" style="display: none;" data-event-type="Fuel">
+                    <h5>Combustível</h5>
+                    <form method="POST" action="{% url 'producer_submit_fuel' %}" id="detailForm_Fuel">
+                        {% csrf_token %}
+                        <div class="rg-fields">{% include "dashboard/partials/rg_fields.html" with form=fuel_form %}</div>
+                        <div class="rg-actions"><button type="submit" class="rg-submit" onclick="return validateBaseEventForm(this);">Registar evento</button></div>
+                    </form>
+                </div>
+                <div id="detail_Electric" class="detail-form-container rg-detail" style="display: none;" data-event-type="Electric">
+                    <h5>Energia elétrica</h5>
+                    <form method="POST" action="{% url 'producer_submit_electric' %}" id="detailForm_Electric">
+                        {% csrf_token %}
+                        <div class="rg-fields">{% include "dashboard/partials/rg_fields.html" with form=electric_energy_form %}</div>
+                        <div class="rg-actions"><button type="submit" class="rg-submit" onclick="return validateBaseEventForm(this);">Registar evento</button></div>
+                    </form>
+                </div>
+                <div id="detail_Water" class="detail-form-container rg-detail" style="display: none;" data-event-type="Water">
+                    <h5>Água de rega</h5>
+                    <form method="POST" action="{% url 'producer_submit_water' %}" id="detailForm_Water">
+                        {% csrf_token %}
+                        <div class="rg-fields">{% include "dashboard/partials/rg_fields.html" with form=irrigation_water_form %}</div>
+                        <div class="rg-actions"><button type="submit" class="rg-submit" onclick="return validateBaseEventForm(this);">Registar evento</button></div>
+                    </form>
+                </div>
+            </div>
+            <div class="rg-hint" id="rg-event-hint">Selecione o tipo de evento para ver os campos de detalhe.</div>
+        </section>
+
+        <!-- Filtro de culturas por plantação (formulários de colheita e evento) -->
+        {{ plantation_subfamilies_map|json_script:"plantation-subs-map" }}
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const subsMap = JSON.parse(document.getElementById('plantation-subs-map').textContent);
+                function setupDynamicFiltering(plantationSelectId, subfamilySelectId) {
+                    const plantationSelect = document.getElementById(plantationSelectId);
+                    const subfamilySelect = document.getElementById(subfamilySelectId);
+                    if (!plantationSelect || !subfamilySelect) return;
+                    function updateSubfamilies() {
+                        const availableSubs = subsMap[plantationSelect.value] || [];
+                        const placeholder = subfamilySelect.options[0];
+                        subfamilySelect.innerHTML = '';
+                        if (placeholder) subfamilySelect.appendChild(placeholder);
+                        if (availableSubs.length > 0) {
+                            availableSubs.forEach(sub => {
+                                const option = document.createElement('option');
+                                option.value = sub.id;
+                                option.textContent = sub.name;
+                                subfamilySelect.appendChild(option);
+                            });
+                            subfamilySelect.disabled = false;
+                        } else {
+                            const option = document.createElement('option');
+                            option.text = '(sem culturas nesta plantação)';
+                            subfamilySelect.appendChild(option);
+                            subfamilySelect.disabled = true;
+                        }
+                    }
+                    plantationSelect.addEventListener('change', updateSubfamilies);
+                }
+                setupDynamicFiltering('harvest_plantation_select', 'harvest_subfamily_select');
+                setupDynamicFiltering('event_plantation_select', 'event_subfamily_select');
+            });
+        </script>
+
+        <!-- 4. COLHEITA -->
+        <section class="rg-card rg-panel" data-panel="harvest" style="display: none;">
+            <div class="rg-card-head">
+                <h4>Nova colheita</h4>
+                <p>Cada colheita dá origem a um lote, registado no ledger de rastreabilidade.</p>
+            </div>
+            <form method="POST" action="{% url 'producer_submit_harvest' %}">
+                {% csrf_token %}
+                {% for hidden in harvest_form.hidden_fields %}{{ hidden }}{% endfor %}
+                <div class="rg-fields">
+                    {% include "dashboard/partials/rg_field.html" with field=harvest_form.plantation %}
+                    {% include "dashboard/partials/rg_field.html" with field=harvest_form.subfamily %}
+                    {% include "dashboard/partials/rg_field.html" with field=harvest_form.harvest_date %}
+                    {% include "dashboard/partials/rg_field.html" with field=harvest_form.harvest_quantity_kg %}
+                    {% include "dashboard/partials/rg_field.html" with field=harvest_form.utilized_quantity_kg %}
+                    {% include "dashboard/partials/rg_field.html" with field=harvest_form.warehouse %}
+                </div>
+                <div class="rg-group-title">Medições de qualidade</div>
+                <div class="rg-fields">
+                    {% include "dashboard/partials/rg_field.html" with field=harvest_form.firmness %}
+                    {% include "dashboard/partials/rg_field.html" with field=harvest_form.soluble_solids %}
+                    {% include "dashboard/partials/rg_field.html" with field=harvest_form.acidity %}
+                    {% include "dashboard/partials/rg_field.html" with field=harvest_form.caliber %}
+                </div>
+                <div class="rg-quality" id="live-quality-badge">
+                    <div class="rg-quality-row"><span>Qualidade estimada</span><span id="live-quality-text">—</span></div>
+                    <div class="rg-quality-track"><div id="live-quality-bar"></div></div>
+                </div>
+                <div class="rg-actions"><button type="submit" class="rg-submit">Registar colheita</button></div>
+            </form>
+        </section>
+    </div>
+
+    <!-- ===================== CONSULTAR REGISTOS ===================== -->
+    <div id="data-view" class="tab-content" style="display: none;">
+
+        <section class="rg-card rg-table-card">
+            <div class="rg-table-head"><h4>Plantações<span class="rg-count">{{ plantation_plans|length }}</span></h4></div>
+            {% if plantation_plans %}
+            <div class="rg-scroll">
+                <table class="rg-table">
+                    <thead><tr>
+                        <th>Nome</th><th>Culturas</th><th>Localização</th><th>Plantação</th><th class="num">Árvores</th><th class="num">Área (m²)</th>
+                        <th>Agricultura</th><th>Químicos</th><th>Solo</th>
+                    </tr></thead>
+                    <tbody>
+                    {% for plan in plantation_plans %}
+                        <tr>
+                            <td class="strong">{{ plan.plantation_name|default:"—" }}</td>
+                            <td>{% for crop in plan.crops.all %}<span class="rg-tag">{{ crop.subfamily.name }}</span>{% empty %}<span class="rg-muted">—</span>{% endfor %}</td>
+                            <td>{{ plan.location|default:"—" }}</td>
+                            <td>{{ plan.plantation_date|date:"d/m/Y" }}</td>
+                            <td class="num">{{ plan.quantity_of_trees|default:"—" }}</td>
+                            <td class="num">{{ plan.area|default:"—" }}</td>
+                            <td>{{ plan.get_production_type_display }}</td>
+                            <td>{{ plan.get_chemical_use_display }}</td>
+                            <td>{% if plan.ph_soil or plan.get_soil_type_display or plan.organic_matter_percent %}{% if plan.get_soil_type_display %}{{ plan.get_soil_type_display }}{% endif %}{% if plan.ph_soil %} · pH {{ plan.ph_soil }}{% endif %}{% if plan.organic_matter_percent %} · MO {{ plan.organic_matter_percent }}%{% endif %}{% else %}<span class="rg-muted">—</span>{% endif %}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}<div class="rg-empty">Ainda não há plantações registadas.</div>{% endif %}
+        </section>
+
+        <section class="rg-card rg-table-card">
+            <div class="rg-table-head">
+                <h4>Eventos no pomar<span class="rg-count">{{ plantation_events|length }}</span></h4>
+                <div class="rg-filters">
+                    <select id="filter-plantation" aria-label="Filtrar por plantação"><option value="">Todas as plantações</option></select>
+                    <select id="filter-culture" aria-label="Filtrar por cultura" disabled><option value="">Todas as culturas</option></select>
+                </div>
+            </div>
+            {% if plantation_events %}
+            <div class="rg-scroll">
+                <table class="rg-table" id="view-events-table">
+                    <thead><tr><th>Data</th><th>Plantação</th><th>Cultura</th><th>Tipo</th></tr></thead>
+                    <tbody>
+                    {% for event in plantation_events %}
+                        <tr data-plantation="{% if event.plantation %}{{ event.plantation.plantation_name }}{% else %}N/A{% endif %}"
+                            data-culture="{% if event.plantation and event.subfamily %}{{ event.subfamily.name }}{% elif event.plantation %}{{ event.plantation.product.name|default:'(No Culture)' }}{% else %}N/A{% endif %}">
+                            <td>{{ event.event_date|date:"d/m/Y" }}</td>
+                            <td class="strong">{% if event.plantation %}{{ event.plantation.plantation_name }}{% else %}<span class="rg-muted">—</span>{% endif %}</td>
+                            <td>{% if event.subfamily %}{{ event.subfamily.name }}{% else %}<span class="rg-muted">—</span>{% endif %}</td>
+                            <td>{{ event.get_event_type_display }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}<div class="rg-empty">Ainda não há eventos registados.</div>{% endif %}
+        </section>
+
+        <section class="rg-card rg-table-card">
+            <div class="rg-table-head"><h4>Colheitas<span class="rg-count">{{ harvest_records|length }}</span></h4></div>
+            {% if harvest_records %}
+            <div class="rg-scroll">
+                <table class="rg-table">
+                    <thead><tr>
+                        <th>Lote</th><th>Data</th><th>Plantação</th><th>Cultura</th><th class="num">Colhido (kg)</th><th class="num">Desperdício (kg)</th>
+                        <th class="num">Firmeza</th><th class="num">Brix</th><th class="num">Acidez</th><th class="num">Calibre</th><th class="num">Qualidade</th>
+                    </tr></thead>
+                    <tbody>
+                    {% for record in harvest_records %}
+                        <tr>
+                            <td class="strong">LOTE-{{ record.pk }}</td>
+                            <td>{{ record.harvest_date|date:"d/m/Y" }}</td>
+                            <td>{% if record.plantation %}{{ record.plantation.plantation_name }}{% else %}<span class="rg-muted">—</span>{% endif %}</td>
+                            <td>{% if record.subfamily %}{{ record.subfamily.name }}{% else %}<span class="rg-muted">—</span>{% endif %}</td>
+                            <td class="num">{{ record.harvest_quantity_kg|floatformat:0 }}</td>
+                            <td class="num">{{ record.utilized_quantity_kg|floatformat:0 }}</td>
+                            <td class="num">{{ record.firmness|default:"—" }}</td>
+                            <td class="num">{{ record.soluble_solids|default:"—" }}</td>
+                            <td class="num">{{ record.acidity|default:"—" }}</td>
+                            <td class="num">{{ record.caliber|default:"—" }}</td>
+                            <td class="num"><span class="rg-score {% if record.avg_quality_score >= 7.5 %}ok{% elif record.avg_quality_score >= 5.0 %}mid{% else %}low{% endif %}">{{ record.avg_quality_score|floatformat:1 }}</span></td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}<div class="rg-empty">Ainda não há colheitas registadas.</div>{% endif %}
+        </section>
+    </div>
+</div>
+
+<script>
+    // Passos do "Novo registo": mostra um formulário de cada vez e volta ao mesmo passo depois de gravar.
+    function rgShowStep(step) {
+        document.querySelectorAll('.rg-panel').forEach(p => { p.style.display = p.dataset.panel === step ? 'block' : 'none'; });
+        document.querySelectorAll('.rg-step').forEach(b => b.classList.toggle('active', b.dataset.step === step));
+    }
+    document.addEventListener('DOMContentLoaded', function () {
+        const saved = sessionStorage.getItem('producerRegStep');
+        sessionStorage.removeItem('producerRegStep');
+        if (saved && document.querySelector(`.rg-panel[data-panel="${saved}"]`)) rgShowStep(saved);
+        document.querySelectorAll('.rg-panel').forEach(panel => {
+            panel.addEventListener('submit', () => sessionStorage.setItem('producerRegStep', panel.dataset.panel), true);
+        });
+        // Dica do evento: escondida quando há um tipo de evento escolhido
+        const typeSel = document.getElementById('id_event_type');
+        const hint = document.getElementById('rg-event-hint');
+        const syncHint = () => { if (hint && typeSel) hint.style.display = typeSel.value ? 'none' : 'block'; };
+        if (typeSel) { typeSel.addEventListener('change', syncHint); syncHint(); }
+    });
+</script>
+</div>
