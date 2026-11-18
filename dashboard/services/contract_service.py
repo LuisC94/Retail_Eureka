@@ -23,8 +23,13 @@ def get_culture_shelf_life(subfamily):
         return subfamily.default_shelf_life_days
     return 10  # Padrão: 10 dias se não estiver parametrizado
 
-def process_instant_purchase(buyer, producer, subfamily, quantity_kg, warehouse_location=None):
-    """Executa uma compra rápida e instantânea comunicando com o Marketplace Web Service."""
+def process_instant_purchase(buyer, producer, subfamily, quantity_kg, warehouse_location=None,
+                             firmness=None, brix=None, acidity=None, caliber=None):
+    """
+    Executa uma compra rápida e instantânea comunicando com o Marketplace Web Service.
+    A mercadoria entra logo em stock e fica registada como receção confirmada, com as medições à chegada
+    (opcionais): os agentes e o ciclo de vida usam-nas; sem elas, usam os valores por omissão da variedade.
+    """
     with transaction.atomic():
         # 1. Obter armazém do produtor
         warehouse = get_default_warehouse(producer)
@@ -91,6 +96,15 @@ def process_instant_purchase(buyer, producer, subfamily, quantity_kg, warehouse_
         )
         stock_obj.quantity = float(stock_obj.quantity) + float(quantity_kg)
         stock_obj.save()
+
+        # 6b. Lote rastreável (receção já confirmada) com as medições à chegada, se existirem
+        from dashboard.services.reception_service import register_received_lot
+        reception = register_received_lot(
+            buyer=buyer, culture=subfamily, stock=stock_obj, quantity_kg=quantity_kg,
+            deal_id=(deal_info or {}).get("deal_id") or f"INSTANT-{harvest.pk}", deal_type='INSTANT_PURCHASE',
+            seller_id=producer.username, batch_id=f"LOTE-{harvest.pk}",
+            firmness=firmness, brix=brix, acidity=acidity, caliber=caliber,
+        )
         
         # 7. Gravar na Blockchain Real (Hyperledger Fabric)
         try:
@@ -126,7 +140,7 @@ def process_instant_purchase(buyer, producer, subfamily, quantity_kg, warehouse_
         except Exception as blockchain_err:
             print(f"[Contract Service] Blockchain sync error in instant buy: {blockchain_err}")
             
-        return deal_info
+        return {"deal": deal_info, "harvest_id": harvest.pk, "reception": reception}
 
 def process_pending_contracts():
     """Verifica contratos pendentes no Marketplace Web Service."""

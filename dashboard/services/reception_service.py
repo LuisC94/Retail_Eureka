@@ -254,3 +254,67 @@ def lifecycle_reception_for_stock(stock):
         anchor = r
         remaining -= Decimal(str(r.received_quantity_kg or 0))
     return anchor
+
+
+def origin_harvest(batch_id):
+    """Colheita de origem de um negócio (batch_id 'LOTE-<id>'), ou None."""
+    import re
+    from dashboard.models import Harvest
+    m = re.match(r'LOTE-(\d+)$', str(batch_id or ''))
+    return Harvest.objects.filter(pk=int(m.group(1))).first() if m else None
+
+
+def reception_initial_state(reception):
+    """
+    Estado inicial de um lote recebido, comum ao Buyer Agent e ao Stock Agent:
+      1) medições da receção (conjunto da receção, sem misturar com a colheita) -> início na data de receção;
+      2) medições da colheita de origem -> início na data de colheita (conta o tempo até à chegada);
+      3) sem medições -> valores por omissão da variedade (None), início na data de receção.
+    Devolve {"start_date", "harvest_date", "firmness", "brix", "acidity", "source"}.
+    """
+    def _val(v):
+        return float(v) if v is not None and float(v) > 0 else None
+
+    origin = origin_harvest(reception.batch_id)
+    harvest_date = origin.harvest_date if origin and origin.harvest_date else reception.received_at
+
+    measured = {"firmness": _val(reception.firmness), "brix": _val(reception.soluble_solids), "acidity": _val(reception.acidity)}
+    if any(v is not None for v in measured.values()):
+        return {"start_date": reception.received_at, "harvest_date": harvest_date, **measured, "source": "rececao"}
+
+    if origin is not None:
+        harvested = {"firmness": _val(origin.firmness), "brix": _val(origin.soluble_solids), "acidity": _val(origin.acidity)}
+        if any(v is not None for v in harvested.values()):
+            start = harvest_date if harvest_date <= reception.received_at else reception.received_at
+            return {"start_date": start, "harvest_date": harvest_date, **harvested, "source": "colheita"}
+
+    return {"start_date": reception.received_at, "harvest_date": harvest_date,
+            "firmness": None, "brix": None, "acidity": None, "source": "omissao"}
+
+
+def register_received_lot(buyer, culture, stock, quantity_kg, deal_id, deal_type, received_at=None, seller_id='',
+                          batch_id='', firmness=None, brix=None, acidity=None, caliber=None, notes=''):
+    """
+    Regista um lote que entrou em stock SEM passar pela confirmação de receção (compra rápida, ajuste manual).
+    Fica como receção já confirmada, para seguir a mesma regra dos agentes e do ciclo de vida:
+    com medições usa-as a partir da data de entrada; sem medições usa os valores por omissão da variedade.
+    Não altera o stock (quem chama já o atualizou).
+    """
+    from dashboard.models import DealReception
+    from dashboard.services.lc_service import calculate_harvest_quality
+
+    f, b, a, c = (_to_decimal(firmness, "Firmeza"), _to_decimal(brix, "Brix"),
+                  _to_decimal(acidity, "Acidez"), _to_decimal(caliber, "Calibre"))
+    quality = None
+    if any(v is not None for v in (f, b, a)):
+        quality = Decimal(str(round(calculate_harvest_quality(culture.name, f, b, a) / 10.0, 1)))
+    now = timezone.now()
+    return DealReception.objects.create(
+        deal_id=str(deal_id), deal_type=deal_type, buyer=buyer, seller_id=str(seller_id or ''),
+        culture=culture, culture_name=culture.name, batch_id=str(batch_id or ''),
+        quantity_kg=Decimal(str(quantity_kg)), destination_warehouse=stock.warehouse_location,
+        delivery_mode=DealReception.DELIVERY_OWN, status=DealReception.STATUS_RECEIVED,
+        received_at=received_at or now.date(), received_quantity_kg=Decimal(str(quantity_kg)),
+        firmness=f, soluble_solids=b, acidity=a, caliber=c, quality_score=quality,
+        notes=notes, stock=stock, confirmed_at=now,
+    )

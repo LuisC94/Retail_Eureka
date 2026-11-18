@@ -418,32 +418,14 @@ def train_buyer_agent_optimizer(user, subfamily, df_market_data, max_episodes=No
 
 
 def _lot_initial_state(reception, today):
-    """
-    Estado inicial de um lote para o Buyer Agent, por esta ordem:
-      1) medições da receção  -> envelhece desde a data de receção;
-      2) medições da colheita de origem (LOTE-<id>) -> envelhece desde a data de colheita
-         (conta também o tempo entre a colheita e a chegada);
-      3) sem medições -> valores por omissão da variedade, envelhece desde a data de receção.
-    """
-    import re
-    from dashboard.models import Harvest
-
-    def _val(v):
-        return float(v) if v is not None and float(v) > 0 else None
-
-    measured = {"firmness": _val(reception.firmness), "brix": _val(reception.soluble_solids), "acidity": _val(reception.acidity)}
-    if any(v is not None for v in measured.values()):
-        return {"age_days": max(0, (today - reception.received_at).days), **measured, "initial_source": "rececao"}
-
-    m = re.match(r'LOTE-(\d+)$', str(reception.batch_id or ''))
-    origin = Harvest.objects.filter(pk=int(m.group(1))).first() if m else None
-    if origin is not None:
-        harvested = {"firmness": _val(origin.firmness), "brix": _val(origin.soluble_solids), "acidity": _val(origin.acidity)}
-        if any(v is not None for v in harvested.values()):
-            start = origin.harvest_date if origin.harvest_date and origin.harvest_date <= reception.received_at else reception.received_at
-            return {"age_days": max(0, (today - start).days), **harvested, "initial_source": "colheita"}
-
-    return {"age_days": max(0, (today - reception.received_at).days), "initial_source": "omissao"}
+    """Estado inicial do lote para o Buyer Agent (regra comum: reception_service.reception_initial_state)."""
+    from dashboard.services.reception_service import reception_initial_state
+    st = reception_initial_state(reception)
+    lot = {"age_days": max(0, (today - st["start_date"]).days), "initial_source": st["source"]}
+    for k in ("firmness", "brix", "acidity"):
+        if st[k] is not None:
+            lot[k] = st[k]
+    return lot
 
 
 def _stock_and_transit(user, subfamily, today, stock_total):

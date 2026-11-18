@@ -2977,6 +2977,16 @@ def adjust_stock_manually(request):
         stock.quantity = new_qty
         if b_val is not None:
             stock.avg_soluble_solids = round(b_val, 2)
+        # Comprador (Processor/Retailer) a ADICIONAR stock: fica um lote rastreável (receção confirmada hoje)
+        # com as medições indicadas, para os agentes e o ciclo de vida o usarem.
+        if adjustment_type == 'add' and quantity > 0 and not request.user.groups.filter(name='Producer').exists():
+            import uuid
+            from dashboard.services.reception_service import register_received_lot
+            register_received_lot(
+                buyer=request.user, culture=culture, stock=stock, quantity_kg=quantity,
+                deal_id=f"ADJ-{uuid.uuid4().hex[:10].upper()}", deal_type='ADJUSTMENT',
+                firmness=f_val, brix=b_val, acidity=a_val, caliber=c_val, notes='Ajuste manual de stock',
+            )
         if calculated_score is not None:
             stock.avg_quality_score = round(calculated_score, 1)
         if c_val is not None:
@@ -3210,14 +3220,21 @@ def buy_direct_makro(request):
                 producer=producer_user,
                 subfamily=subfamily,
                 quantity_kg=qty,
-                warehouse_location=warehouse_loc
+                warehouse_location=warehouse_loc,
+                firmness=request.POST.get('firmness'),
+                brix=request.POST.get('soluble_solids'),
+                acidity=request.POST.get('acidity'),
+                caliber=request.POST.get('caliber'),
             )
             
             # Obter o tempo de vida calculado para mostrar na mensagem
             from dashboard.services.contract_service import get_culture_shelf_life
             days = get_culture_shelf_life(subfamily)
             
-            messages.success(request, f"Compra rápida efetuada com sucesso! Lote {order.harvest_origin.pk} adicionado ao stock. Fornecedor: {producer_user.username}. Validade: {days} dias.")
+            measured = order["reception"].has_measurements
+            messages.success(request, f"Compra rápida efetuada com sucesso! Lote LOTE-{order['harvest_id']} adicionado ao stock. "
+                                      f"Fornecedor: {producer_user.username}. Validade: {days} dias."
+                                      + (" Ciclo de vida calculado com as medições à chegada." if measured else ""))
         except Exception as e:
             messages.error(request, f"Erro ao processar compra rápida: {e}")
             

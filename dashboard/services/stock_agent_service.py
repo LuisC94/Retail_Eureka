@@ -9,8 +9,8 @@ e pede ao agente a recomendação do dia:
 Lotes por perfil:
   - Produtor: cada Harvest com stock e armazém (batch LOTE-<id>).
   - Retalhista / Processador: o stock (ConsolidatedStock) é agregado; os lotes são reconstruídos a partir das
-    receções confirmadas (DealReception), assumindo que o stock mais antigo saiu primeiro (FIFO). Cada lote entra na
-    data de receção com as medições dessa receção; se faltarem, as da colheita de origem (batch_id LOTE-<id>).
+    receções confirmadas (DealReception), assumindo que o stock mais antigo saiu primeiro (FIFO). O estado inicial de
+    cada lote segue a mesma regra do Buyer Agent: medições da receção > da colheita de origem > valores por omissão.
     O stock sem receção associada (compra rápida, ajuste manual) é tratado como um lote com entrada estimada.
 """
 import datetime
@@ -128,18 +128,14 @@ def _stock_warehouse(stock):
             or Warehouse.objects.filter(owner=stock.owner).first())
 
 
-def _origin_harvest(batch_id):
-    m = re.match(r'LOTE-(\d+)$', str(batch_id or ''))
-    return Harvest.objects.filter(pk=int(m.group(1))).first() if m else None
-
-
 def _buyer_lots(user, subfamily, today, avisos):
     """
     Retalhista / Processador: reconstrói os lotes a partir das receções confirmadas (FIFO).
-    O Stock Agent começa cada lote na data de entrada com as medições indicadas, por isso as medições da receção
-    (estado real à chegada) têm prioridade sobre as da colheita.
+    Estado inicial de cada lote = regra comum com o Buyer Agent (reception_service.reception_initial_state):
+    medições da receção (início na receção) > da colheita (início na colheita) > valores por omissão.
     """
     from dashboard.models import DealReception
+    from dashboard.services.reception_service import reception_initial_state
 
     stocks = list(ConsolidatedStock.objects.filter(owner=user, culture=subfamily, quantity__gt=0))
     lots, whs = [], {}
@@ -160,35 +156,28 @@ def _buyer_lots(user, subfamily, today, avisos):
             qty = min(remaining, float(r.received_quantity_kg or r.quantity_kg or 0.0))
             if qty <= 0:
                 continue
-            origin = _origin_harvest(r.batch_id)
-
-            def pick(measured, from_origin):
-                if measured is not None:
-                    return _f(measured)
-                return _f(from_origin) if origin is not None else None
-
+            st = reception_initial_state(r)   # regra comum com o Buyer Agent
             lots.append({
                 "lote_id": f"{r.batch_id or 'REC'}@{r.deal_id}", "armazem_id": str(wh.pk),
-                "data_colheita": (origin.harvest_date if origin else r.received_at).isoformat(),
-                "data_entrada": r.received_at.isoformat(), "quantidade_kg": round(qty, 2),
-                "firmeza": pick(r.firmness, origin.firmness if origin else None),
-                "brix": pick(r.soluble_solids, origin.soluble_solids if origin else None) or (_f(s.avg_soluble_solids) or None),
-                "acidez": pick(r.acidity, origin.acidity if origin else None),
+                "data_colheita": st["harvest_date"].isoformat(),
+                "data_entrada": st["start_date"].isoformat(), "quantidade_kg": round(qty, 2),
+                "firmeza": st["firmness"], "brix": st["brix"], "acidez": st["acidity"],
                 "estado": "armazenado",
             })
             remaining -= qty
         if remaining > 1e-6:
             kg_sem_rececao += remaining
-            entry = today - datetime.timedelta(days=10)
+            # Mesma regra do Buyer Agent: sem receção nem medições, o lote é acompanhado a partir de hoje
+            # com os valores por omissão da variedade (idade 0).
             lots.append({
                 "lote_id": f"STOCK-{s.pk}", "armazem_id": str(wh.pk),
-                "data_colheita": (entry - datetime.timedelta(days=3)).isoformat(), "data_entrada": entry.isoformat(),
-                "quantidade_kg": round(remaining, 2), "firmeza": None, "brix": _f(s.avg_soluble_solids) or None,
+                "data_colheita": today.isoformat(), "data_entrada": today.isoformat(),
+                "quantidade_kg": round(remaining, 2), "firmeza": None, "brix": None,
                 "acidez": None, "estado": "armazenado",
             })
     if kg_sem_rececao > 0:
         avisos.append(f"{kg_sem_rececao:.0f} kg sem receção associada (ex.: compra rápida ou ajuste manual): "
-                      "entrada estimada há 10 dias (precisão reduzida do tempo de vida).")
+                      "tratados como acabados de chegar, com os valores por omissão da variedade.")
     return lots, whs
 
 
