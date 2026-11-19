@@ -114,8 +114,10 @@ def train_sales_forecaster(user, subfamily, df_data, model_type='modelo_1'):
         owner=user, culture=subfamily, model_type=_FC_MARKER[model_key],
         file_name=f'culture_{subfamily.pk}_{model_key}', defaults={'file_data': b'web_service_remote_model'})
 
+    # O ficheiro substitui só os dias que cobre: vendas registadas fora desse intervalo mantêm-se
     with transaction.atomic():
-        HistoricalSalesData.objects.filter(owner=user, culture=subfamily).delete()
+        HistoricalSalesData.objects.filter(owner=user, culture=subfamily,
+                                           date__gte=rows[0]['date'], date__lte=rows[-1]['date']).delete()
         HistoricalSalesData.objects.bulk_create([
             HistoricalSalesData(owner=user, culture=subfamily, date=r['date'], sales_quantity_kg=r['sales_quantity_kg'],
                                 price_per_kg=r['price_per_kg'])

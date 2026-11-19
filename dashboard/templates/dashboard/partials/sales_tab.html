@@ -1,0 +1,242 @@
+{% comment %}
+Separador "Vendas" do Processor e do Retailer: registar vendas a partir do stock e ver as últimas vendas.
+Contexto (services/sales_service.sales_context): sale_stock_options, sale_buyers, recent_sales,
+sales_today_kg, sales_today_eur, today_iso. Estilos em partials/producer_ui_css.html.
+{% endcomment %}
+<div id="sales-records" class="tab-content" style="display: none;">
+<div class="rg rg-rich">
+    <header class="rg-hero">
+        <div class="rg-hero-main">
+            <span class="rg-hero-icon">🧾</span>
+            <div>
+                <h3>Vendas</h3>
+                <p>Registe as vendas a partir do stock. O stock desce no armazém de saída e o total do dia entra no histórico de vendas.</p>
+            </div>
+        </div>
+        <div class="rg-chips">
+            <span class="rg-chip brand">Hoje: {{ sales_today_kg|floatformat:0 }} kg</span>
+            <span class="rg-chip brand">{{ sales_today_eur|floatformat:2 }} €</span>
+        </div>
+    </header>
+
+    <!-- Registar venda -->
+    <section class="rg-card">
+        <div class="rg-card-head">
+            <span class="rg-section-icon">➕</span>
+            <div><h4>Registar venda</h4><p>Sai diretamente do stock, sem passar pelo marketplace. Os lotes mais antigos saem primeiro.</p></div>
+        </div>
+        {% if sale_stock_options %}
+        <form method="POST" action="{% url 'register_sale' %}" id="sale-form">
+            {% csrf_token %}
+            <div class="rg-fields">
+                <div class="rg-field" style="grid-column: span 2;">
+                    <label for="sale-stock">Cultura e armazém <em>*</em></label>
+                    <select name="stock_id" id="sale-stock" required onchange="updateSaleForm()">
+                        <option value="" disabled selected>Selecionar stock…</option>
+                        {% for s in sale_stock_options %}
+                        <option value="{{ s.pk }}" data-available="{{ s.quantity|stringformat:'.2f' }}">{{ s.culture }} · {{ s.warehouse }} · {{ s.quantity|floatformat:0 }} kg disponíveis</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="rg-field">
+                    <label for="sale-date">Data da venda <em>*</em></label>
+                    <input type="date" name="sale_date" id="sale-date" value="{{ today_iso }}" max="{{ today_iso }}" required>
+                </div>
+                <div class="rg-field">
+                    <label for="sale-qty">Quantidade (kg) <em>*</em></label>
+                    <input type="number" step="0.01" min="0.01" name="quantity_kg" id="sale-qty" placeholder="Ex.: 120" required oninput="updateSaleForm()">
+                    <small id="sale-available"></small>
+                </div>
+                <div class="rg-field">
+                    <label for="sale-price">Preço (€/kg) <em>*</em></label>
+                    <input type="number" step="0.01" min="0" name="price_per_kg" id="sale-price" placeholder="Ex.: 1.45" required oninput="updateSaleForm()">
+                    <small id="sale-total"></small>
+                </div>
+                <div class="rg-field">
+                    <label for="sale-buyer">Comprador <em>*</em></label>
+                    <select name="buyer_id" id="sale-buyer" onchange="updateSaleForm()">
+                        <option value="" selected>Cliente externo (fora da plataforma)</option>
+                        {% for b in sale_buyers %}<option value="{{ b.pk }}">{{ b.username }}</option>{% endfor %}
+                    </select>
+                    <small id="sale-buyer-hint"></small>
+                </div>
+                <div class="rg-field" id="sale-customer-field">
+                    <label for="sale-customer">Nome do cliente</label>
+                    <input type="text" name="customer_name" id="sale-customer" maxlength="150" placeholder="Opcional. Ex.: Restaurante X">
+                </div>
+                <div class="rg-field">
+                    <label for="sale-invoice">Nº fatura</label>
+                    <input type="text" name="invoice_ref" id="sale-invoice" maxlength="100" placeholder="Opcional. Evita duplicados">
+                </div>
+            </div>
+            <details class="rg-optional">
+                <summary>Notas<span>opcional</span></summary>
+                <div style="padding: 0 16px 16px;">
+                    <div class="rg-field"><textarea name="notes" id="sale-notes" placeholder="Observações sobre a venda"></textarea></div>
+                </div>
+            </details>
+            <div class="rg-actions"><button type="submit" class="rg-submit" id="sale-submit">Registar venda</button></div>
+        </form>
+        {% else %}
+        <div class="rg-empty">Não tem stock disponível para vender. O stock entra quando confirma uma receção, faz uma compra rápida ou um ajuste manual.</div>
+        {% endif %}
+    </section>
+
+    <!-- Upload Excel -->
+    <section class="rg-card">
+        <div class="rg-card-head">
+            <span class="rg-section-icon">📤</span>
+            <div><h4>Carregar Excel de vendas</h4><p>Todas as culturas e armazéns numa folha. Primeiro vê a pré-visualização; só grava quando confirmar.</p></div>
+        </div>
+        {% if not sales_upload %}
+        <form method="POST" action="{% url 'upload_sales_file' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="preview">
+            <div class="rg-fields" style="grid-template-columns: minmax(240px, 420px) auto auto; align-items: end;">
+                <div class="rg-field">
+                    <label for="sales-file">Ficheiro (.xlsx, .xls ou .csv) <em>*</em></label>
+                    <input type="file" name="sales_file" id="sales-file" accept=".xlsx,.xls,.csv" required>
+                </div>
+                <div><button type="submit" class="rg-submit">Pré-visualizar</button></div>
+                <div><a href="{% url 'download_sales_template' %}" class="rg-btn-sec" style="height: 40px; display: inline-flex; align-items: center; text-decoration: none;">⬇️ Descarregar modelo</a></div>
+            </div>
+            <small class="rg-muted" style="display: block; margin-top: 8px; font-size: 0.8em;">
+                Colunas: Data, Cultura, Armazem, Quantidade_Kg, Preco_Venda_Euro (obrigatórias) · Comprador, Nome_Cliente, Fatura (opcionais).
+                Comprador vazio = cliente externo. Os lotes mais antigos saem primeiro.
+            </small>
+        </form>
+        {% else %}
+        {% with s=sales_upload.summary %}
+        <div class="rg-chips" style="margin-bottom: 12px;">
+            <span class="rg-chip">📄 {{ sales_upload.file_name }}</span>
+            <span class="rg-chip">{{ s.rows }} linhas</span>
+            <span class="rg-score ok">{{ s.valid }} válidas</span>
+            {% if s.errors %}<span class="rg-score low">{{ s.errors }} com erro</span>{% endif %}
+            {% if s.duplicates %}<span class="rg-score mid">{{ s.duplicates }} já registadas (ignoradas)</span>{% endif %}
+        </div>
+
+        {% if sales_upload.errors %}
+        <div class="rg-group-title" style="margin-top: 0; color: #b91c1c;">Erros: corrija o ficheiro e volte a carregar (nada foi gravado)</div>
+        <div class="rg-scroll" style="border: 1.5px solid #fecaca; border-radius: 10px; max-height: 320px; margin-bottom: 14px;">
+            <table class="rg-table">
+                <thead><tr><th class="num">Linha</th><th>Motivo</th></tr></thead>
+                <tbody>{% for e in sales_upload.errors %}<tr><td class="num strong">{{ e.line }}</td><td>{{ e.message }}</td></tr>{% endfor %}</tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        {% if s.valid %}
+        <div class="rg-group-title" style="margin-top: 0;">Resumo por cultura{% if s.date_from %} · {{ s.date_from }}{% if s.date_to != s.date_from %} a {{ s.date_to }}{% endif %}{% endif %}</div>
+        <div class="rg-scroll" style="border: 1.5px solid #d5ece8; border-radius: 10px; margin-bottom: 14px;">
+            <table class="rg-table">
+                <thead><tr><th>Cultura</th><th class="num">Linhas</th><th class="num">Kg</th><th class="num">Total (€)</th></tr></thead>
+                <tbody>
+                {% for c in s.by_culture %}<tr><td class="strong">{{ c.culture }}</td><td class="num">{{ c.rows }}</td><td class="num">{{ c.kg }}</td><td class="num">{{ c.eur }}</td></tr>{% endfor %}
+                <tr><td class="strong">Total</td><td class="num strong">{{ s.valid }}</td><td class="num strong">{{ s.kg }}</td><td class="num strong">{{ s.eur }}</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <details class="rg-optional" style="margin-top: 0; margin-bottom: 14px;">
+            <summary>Linhas válidas<span>{% if s.valid > 100 %}primeiras 100 de {{ s.valid }}{% else %}{{ s.valid }}{% endif %}</span></summary>
+            <div class="rg-scroll" style="max-height: 360px;">
+                <table class="rg-table">
+                    <thead><tr><th class="num">Linha</th><th>Data</th><th>Cultura</th><th>Armazém</th><th class="num">Kg</th><th class="num">€/kg</th><th>Comprador</th><th>Fatura</th></tr></thead>
+                    <tbody>{% for v in sales_upload.valid_sample %}<tr>
+                        <td class="num">{{ v.line }}</td><td>{{ v.date }}</td><td class="strong">{{ v.culture_name }}</td><td>WH-{{ v.warehouse_id }}</td>
+                        <td class="num">{{ v.quantity }}</td><td class="num">{{ v.price }}</td><td>{{ v.buyer_name }}</td><td>{{ v.invoice|default:"—" }}</td>
+                    </tr>{% endfor %}</tbody>
+                </table>
+            </div>
+        </details>
+        {% endif %}
+
+        {% if sales_upload.duplicates %}
+        <details class="rg-optional" style="margin-top: 0; margin-bottom: 14px;">
+            <summary>Linhas já registadas<span>não voltam a descontar stock</span></summary>
+            <div class="rg-scroll" style="max-height: 260px;">
+                <table class="rg-table">
+                    <thead><tr><th class="num">Linha</th><th>Venda</th></tr></thead>
+                    <tbody>{% for d in sales_upload.duplicates %}<tr><td class="num">{{ d.line }}</td><td>{{ d.message }}</td></tr>{% endfor %}</tbody>
+                </table>
+            </div>
+        </details>
+        {% endif %}
+
+        <div class="rg-actions" style="gap: 8px;">
+            <form method="POST" action="{% url 'upload_sales_file' %}" style="margin: 0;">
+                {% csrf_token %}<input type="hidden" name="action" value="cancel">
+                <button type="submit" class="rg-btn-sec" style="height: 40px;">{% if s.errors %}Carregar outro ficheiro{% else %}Cancelar{% endif %}</button>
+            </form>
+            {% if not s.errors and s.valid %}
+            <form method="POST" action="{% url 'upload_sales_file' %}" style="margin: 0;">
+                {% csrf_token %}<input type="hidden" name="action" value="confirm">
+                <button type="submit" class="rg-submit">Confirmar e gravar {{ s.valid }} vendas</button>
+            </form>
+            {% endif %}
+        </div>
+        {% endwith %}
+        {% endif %}
+    </section>
+
+    <!-- Últimas vendas -->
+    <section class="rg-card rg-table-card">
+        <div class="rg-table-head"><h4>Últimas vendas<span class="rg-count">{{ recent_sales|length }}</span></h4></div>
+        {% if recent_sales %}
+        <div class="rg-scroll">
+            <table class="rg-table">
+                <thead><tr>
+                    <th>Data</th><th>Cultura</th><th>Armazém</th><th class="num">Kg</th><th class="num">€/kg</th><th class="num">Total (€)</th>
+                    <th>Comprador</th><th>Origem</th><th>Fatura</th>
+                </tr></thead>
+                <tbody>
+                {% for s in recent_sales %}
+                    <tr>
+                        <td>{{ s.sale_date|date:"d/m/Y" }}</td>
+                        <td class="strong">{{ s.culture.name }}</td>
+                        <td>{{ s.warehouse_location|default:"—" }}</td>
+                        <td class="num strong">{{ s.quantity_kg|floatformat:2 }}</td>
+                        <td class="num">{{ s.price_per_kg|floatformat:2 }}</td>
+                        <td class="num">{{ s.total_amount|floatformat:2 }}</td>
+                        <td>
+                            {{ s.buyer_display }}
+                            {% if s.reception %}<br>{% if s.reception.status == 'RECEIVED' %}<span class="rg-score ok">Recebido a {{ s.reception.received_at|date:"d/m" }}</span>{% else %}<span class="rg-score mid">Receção pendente</span>{% endif %}{% endif %}
+                        </td>
+                        <td><span class="rg-chip">{{ s.get_source_display }}</span></td>
+                        <td>{{ s.invoice_ref|default:"—" }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}<div class="rg-empty">Ainda não registou vendas.</div>{% endif %}
+    </section>
+</div>
+</div>
+
+<script>
+function updateSaleForm() {
+    var stockSel = document.getElementById('sale-stock');
+    if (!stockSel) return;
+    var opt = stockSel.options[stockSel.selectedIndex];
+    var available = opt && opt.dataset.available ? parseFloat(opt.dataset.available) : null;
+    var qtyEl = document.getElementById('sale-qty');
+    var qty = parseFloat(qtyEl.value);
+    var price = parseFloat(document.getElementById('sale-price').value);
+    var availEl = document.getElementById('sale-available');
+    if (available !== null) {
+        qtyEl.max = available;
+        availEl.textContent = 'Disponível: ' + available.toLocaleString('pt-PT', {maximumFractionDigits: 2}) + ' kg';
+        availEl.style.color = (!isNaN(qty) && qty > available) ? '#dc2626' : '';
+    } else {
+        availEl.textContent = '';
+    }
+    var totalEl = document.getElementById('sale-total');
+    totalEl.textContent = (!isNaN(qty) && !isNaN(price)) ? 'Total: ' + (qty * price).toLocaleString('pt-PT', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' €' : '';
+    var buyerSel = document.getElementById('sale-buyer');
+    var external = !buyerSel.value;
+    document.getElementById('sale-customer-field').style.display = external ? '' : 'none';
+    document.getElementById('sale-buyer-hint').textContent = external ? '' :
+        'O comprador recebe uma receção pendente; o stock só lhe entra quando a confirmar.';
+}
+document.addEventListener('DOMContentLoaded', updateSaleForm);
+</script>

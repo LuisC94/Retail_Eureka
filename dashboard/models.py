@@ -702,3 +702,59 @@ class DealReception(models.Model):
 
     def __str__(self):
         return f"Receção {self.deal_id} ({self.get_status_display()}) - {self.buyer.username}"
+
+
+class SaleRecord(models.Model):
+    """
+    Venda individual de um Processor/Retailer. Sai diretamente do stock (ConsolidatedStock) do armazém escolhido.
+    O total diário por cultura alimenta o HistoricalSalesData (histórico usado pelo forecast e pelos agentes).
+    Comprador vazio = cliente externo (fora da plataforma). Venda a um utilizador da plataforma cria
+    uma receção pendente do lado dele (o stock só entra quando a confirmar).
+    """
+    SOURCE_MANUAL = 'MANUAL'
+    SOURCE_UPLOAD = 'UPLOAD'
+    SOURCE_MARKETPLACE = 'MARKETPLACE'
+    SOURCE_CHOICES = [
+        (SOURCE_MANUAL, 'Registo manual'),
+        (SOURCE_UPLOAD, 'Upload Excel'),
+        (SOURCE_MARKETPLACE, 'Marketplace'),
+    ]
+
+    seller = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sales', verbose_name="Vendedor")
+    sale_date = models.DateField(verbose_name="Data da Venda", db_index=True)
+    culture = models.ForeignKey('ProductSubFamily', on_delete=models.PROTECT, verbose_name="Cultura")
+    stock = models.ForeignKey('ConsolidatedStock', on_delete=models.SET_NULL, null=True, blank=True, related_name='sales')
+    warehouse_location = models.CharField(max_length=255, blank=True, default="", verbose_name="Armazém de Saída")
+    quantity_kg = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Quantidade (Kg)")
+    price_per_kg = models.DecimalField(max_digits=8, decimal_places=2, verbose_name="Preço de Venda (€/Kg)")
+    buyer = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='recorded_purchases',
+                              verbose_name="Comprador (plataforma)")
+    customer_name = models.CharField(max_length=150, blank=True, default="", verbose_name="Cliente Externo")
+    invoice_ref = models.CharField(max_length=100, blank=True, default="", verbose_name="Nº Fatura")
+    notes = models.TextField(blank=True, default="")
+    source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default=SOURCE_MANUAL)
+    deal_id = models.CharField(max_length=100, blank=True, default="", verbose_name="Negócio (Marketplace)")
+    reception = models.ForeignKey('DealReception', on_delete=models.SET_NULL, null=True, blank=True, related_name='sales')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'sale_records'
+        ordering = ['-sale_date', '-created_at']
+        verbose_name = "Venda"
+        verbose_name_plural = "Vendas"
+        constraints = [
+            models.UniqueConstraint(fields=['deal_id'], condition=~models.Q(deal_id=''), name='unique_sale_deal_id'),
+        ]
+
+    @property
+    def total_amount(self):
+        return self.quantity_kg * self.price_per_kg
+
+    @property
+    def buyer_display(self):
+        if self.buyer_id:
+            return self.buyer.username
+        return self.customer_name or "Cliente externo"
+
+    def __str__(self):
+        return f"Venda {self.pk} - {self.seller.username} {self.culture.name} {self.quantity_kg}kg ({self.sale_date})"

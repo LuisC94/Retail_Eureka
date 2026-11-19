@@ -453,7 +453,13 @@ def _reception_context(user):
         'delivery_mode_choices': DealReception.DELIVERY_MODE_CHOICES,
         'default_delivery_mode': default_delivery_mode(),
         'today_iso': timezone.now().date().isoformat(),
+        **_sales_context(user),
     }
+
+
+def _sales_context(user):
+    from dashboard.services.sales_service import sales_context
+    return sales_context(user)
 
 
 # Processor Dashboard
@@ -589,6 +595,7 @@ class ProcessorDashboardView(View):
 
             # Receções de mercadoria
             **_reception_context(user),
+            'sales_upload': _sales_upload_preview(request),
         }
         return render(request, 'dashboard/processorDash.html', context)
 
@@ -699,6 +706,7 @@ class RetailerDashboardView(View):
 
             # Receções de mercadoria
             **_reception_context(user),
+            'sales_upload': _sales_upload_preview(request),
         }
         return render(request, 'dashboard/retailerDash.html', context)
 
@@ -1234,7 +1242,14 @@ def _deduct_seller_stock_from_deal(deal):
     
     if deal_qty <= 0:
         return
-        
+
+    # Venda de Processor/Retailer: fica registada nas Vendas do vendedor e no histórico diário
+    try:
+        from dashboard.services.sales_service import record_marketplace_sale
+        record_marketplace_sale(deal)
+    except Exception as err:
+        logger.error(f"[Vendas] Falha ao registar a venda do negócio {deal.get('deal_id')}: {err}")
+
     if batch_id and str(batch_id).startswith("LOTE-"):
         try:
             h_id = int(str(batch_id).replace("LOTE-", ""))
@@ -1333,6 +1348,128 @@ def confirm_deal_reception(request):
         logger.exception("[Reception] Erro ao confirmar receção")
         messages.error(request, f"Erro ao confirmar receção: {e}")
     return redirect(request.META.get('HTTP_REFERER') or fallback)
+
+
+@login_required
+@role_required(['Processor', 'Retailer'])
+def register_sale_view(request):
+    """Regista uma venda a partir do stock (formulário da aba Vendas)."""
+    fallback = 'processor_dashboard' if request.user.groups.filter(name='Processor').exists() else 'retailer_dashboard'
+    if request.method != 'POST':
+        return redirect(fallback)
+    from dashboard.services.sales_service import register_sale, SaleError
+    try:
+        sale = register_sale(
+            seller=request.user,
+            stock_id=request.POST.get('stock_id'),
+            quantity_kg=request.POST.get('quantity_kg'),
+            price_per_kg=request.POST.get('price_per_kg'),
+            sale_date=request.POST.get('sale_date'),
+            buyer_id=request.POST.get('buyer_id'),
+            customer_name=request.POST.get('customer_name', ''),
+            invoice_ref=request.POST.get('invoice_ref', ''),
+            notes=request.POST.get('notes', ''),
+        )
+        msg = (f"Venda registada: {sale.quantity_kg} kg de {sale.culture.name} a {sale.buyer_display} "
+               f"({sale.total_amount:.2f} €). O stock de {sale.warehouse_location} foi atualizado.")
+        if sale.reception:
+            msg += f" O comprador {sale.buyer.username} tem uma receção pendente para confirmar."
+        messages.success(request, msg)
+    except SaleError as e:
+        messages.error(request, str(e))
+    except Exception as e:
+        logger.exception("[Vendas] Erro ao registar venda")
+        messages.error(request, f"Erro ao registar a venda: {e}")
+    return redirect(fallback)
+
+
+SALES_UPLOAD_SESSION_KEY = 'sales_upload_preview'
+
+
+def _sales_upload_preview(request):
+    """Pré-visualização do upload de vendas guardada na sessão (só do próprio utilizador)."""
+    data = request.session.get(SALES_UPLOAD_SESSION_KEY)
+    return data if data and data.get('user_id') == request.user.pk else None
+
+
+@login_required
+@role_required(['Processor', 'Retailer'])
+def download_sales_template(request):
+    from django.http import HttpResponse
+    from dashboard.services.sales_upload_service import build_template
+    response = HttpResponse(build_template(request.user),
+                            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="modelo_vendas_diarias.xlsx"'
+    return response
+
+
+@login_required
+@role_required(['Processor', 'Retailer'])
+def upload_sales_file(request):
+    """
+    Upload do Excel global de vendas em dois passos:
+      action=preview  -> lê e valida (nada é gravado) e guarda a pré-visualização na sessão;
+      action=confirm  -> volta a validar e grava tudo ou nada;
+      action=cancel   -> descarta a pré-visualização.
+    """
+    fallback = 'processor_dashboard' if request.user.groups.filter(name='Processor').exists() else 'retailer_dashboard'
+    if request.method != 'POST':
+        return redirect(fallback)
+    from dashboard.services.sales_upload_service import preview_upload, commit_upload, UploadError
+
+    action = request.POST.get('action', 'preview')
+    if action == 'cancel':
+        request.session.pop(SALES_UPLOAD_SESSION_KEY, None)
+        return redirect(fallback)
+
+    if action == 'confirm':
+        preview = _sales_upload_preview(request)
+        if not preview:
+            messages.error(request, "A pré-visualização expirou. Carregue o ficheiro outra vez.")
+            return redirect(fallback)
+        try:
+            ok, result = commit_upload(request.user, preview['rows'])
+        except Exception as e:
+            logger.exception("[Vendas] Erro ao gravar o upload")
+            messages.error(request, f"Erro ao gravar as vendas: nada foi gravado. {e}")
+            return redirect(fallback)
+        if not ok:
+            preview.update(_preview_payload(result))
+            request.session[SALES_UPLOAD_SESSION_KEY] = preview
+            messages.error(request, "Os dados mudaram desde a pré-visualização (ex.: stock). Nada foi gravado; veja os erros.")
+            return redirect(fallback)
+        request.session.pop(SALES_UPLOAD_SESSION_KEY, None)
+        s = result['summary']
+        msg = f"{s['valid']} vendas registadas a partir de {preview['file_name']} ({s['kg']} kg, {s['eur']} €). O stock e o histórico diário foram atualizados."
+        if s['duplicates']:
+            msg += f" {s['duplicates']} linhas já estavam registadas e foram ignoradas."
+        messages.success(request, msg)
+        return redirect(fallback)
+
+    uploaded = request.FILES.get('sales_file')
+    if not uploaded:
+        messages.error(request, "Escolha o ficheiro de vendas (.xlsx, .xls ou .csv).")
+        return redirect(fallback)
+    try:
+        result = preview_upload(request.user, uploaded)
+    except UploadError as e:
+        request.session.pop(SALES_UPLOAD_SESSION_KEY, None)
+        messages.error(request, str(e))
+        return redirect(fallback)
+    except Exception as e:
+        logger.exception("[Vendas] Erro ao ler o upload")
+        request.session.pop(SALES_UPLOAD_SESSION_KEY, None)
+        messages.error(request, f"Erro ao ler o ficheiro: {e}")
+        return redirect(fallback)
+    request.session[SALES_UPLOAD_SESSION_KEY] = {
+        'user_id': request.user.pk, 'file_name': result['file_name'], 'rows': result['rows'], **_preview_payload(result),
+    }
+    return redirect(fallback)
+
+
+def _preview_payload(result):
+    return {'summary': result['summary'], 'errors': result['errors'], 'duplicates': result['duplicates'],
+            'valid_sample': result['valid'][:100]}
 
 
 def _reception_hint(reception):

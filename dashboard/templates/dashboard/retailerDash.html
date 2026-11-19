@@ -415,6 +415,9 @@
                  <a href="#" class="menu-item" onclick="switchSidebarTab('stock-view')">
                     📊 Stock
                 </a>
+                <a href="#" class="menu-item" onclick="switchSidebarTab('sales-records')">
+                    🧾 Vendas
+                </a>
 
                 <a href="#" class="menu-item" onclick="switchSidebarTab('sales-forecasting')">
                     📈 Previsão de Vendas
@@ -642,6 +645,7 @@
             </div>
 
             {% include "dashboard/partials/retailer_associations_tab.html" %}
+            {% include "dashboard/partials/sales_tab.html" %}
 
         </div>
     </div>

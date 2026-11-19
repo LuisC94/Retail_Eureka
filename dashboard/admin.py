@@ -20,6 +20,15 @@ class HistoricalSalesDataAdmin(admin.ModelAdmin):
     list_filter = ('date', 'culture')
     search_fields = ('owner__username', 'culture__name')
 
+from .models import SaleRecord
+
+
+@admin.register(SaleRecord)
+class SaleRecordAdmin(admin.ModelAdmin):
+    list_display = ('sale_date', 'seller', 'culture', 'warehouse_location', 'quantity_kg', 'price_per_kg', 'buyer', 'customer_name', 'source')
+    list_filter = ('source', 'sale_date', 'culture')
+    search_fields = ('seller__username', 'culture__name', 'customer_name', 'invoice_ref', 'deal_id')
+
 @admin.register(DemandForecast)
 class DemandForecastAdmin(admin.ModelAdmin):
     list_display = ('owner', 'culture', 'date', 'predicted_quantity_kg', 'created_at')
