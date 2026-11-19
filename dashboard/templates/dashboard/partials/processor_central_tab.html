@@ -1,0 +1,148 @@
+{% comment %}
+Separador "Armazém Central" do Processor: pedir acesso a lojas, estado dos pedidos e visão das lojas autorizadas
+(armazéns, stock e últimos negócios com o estado da receção). Estilos em partials/producer_ui_css.html.
+{% endcomment %}
+<div id="central-warehouse" class="tab-content" style="display: none;">
+<style>
+    .cw-store { margin-bottom: 18px; }
+    .cw-store-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 16px 20px;
+                     background: linear-gradient(180deg, #f0fdfa 0%, #e6f7f3 100%); border-bottom: 2px solid var(--rg-border); }
+    .cw-store-head h4 { margin: 0; font-size: 1.1em; color: #134e4a; display: flex; align-items: center; gap: 10px; }
+    .cw-body { padding: 16px 20px; }
+    .cw-wh { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+    .cw-wh > div { border: 1.5px solid #d5ece8; border-radius: 10px; padding: 10px 12px; background: #fff; }
+    .cw-wh h6 { margin: 0 0 6px; font-size: 0.95em; color: #134e4a; }
+    .cw-sub { border: 1.5px solid #d5ece8; border-radius: 10px; overflow: hidden; }
+</style>
+
+<div class="rg rg-rich">
+    <header class="rg-hero">
+        <div class="rg-hero-main">
+            <span class="rg-hero-icon">🏢</span>
+            <div>
+                <h3>Armazém Central</h3>
+                <p>Lojas associadas: veja os armazéns, o stock e os negócios de cada loja que autorizou o acesso.</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Pedir acesso -->
+    <section class="rg-card">
+        <div class="rg-card-head">
+            <span class="rg-section-icon">🔗</span>
+            <div><h4>Pedir acesso a uma loja</h4><p>A loja recebe o pedido e decide se autoriza o acesso.</p></div>
+        </div>
+        <form method="POST" action="{% url 'processor_request_association' %}">
+            {% csrf_token %}
+            <div class="rg-fields" style="grid-template-columns: minmax(240px, 420px) auto; align-items: end;">
+                <div class="rg-field">
+                    <label for="cw-retailer">Loja</label>
+                    <select name="retailer_id" id="cw-retailer" required>
+                        <option value="" disabled selected>Selecionar loja…</option>
+                        {% for ret in available_retailers %}<option value="{{ ret.id }}">{{ ret.username }}</option>
+                        {% empty %}<option value="" disabled>Sem lojas por associar</option>{% endfor %}
+                    </select>
+                </div>
+                <div><button type="submit" class="rg-submit" {% if not available_retailers %}disabled{% endif %}>Pedir acesso</button></div>
+            </div>
+        </form>
+    </section>
+
+    <!-- Pedidos -->
+    <section class="rg-card rg-table-card">
+        <div class="rg-table-head"><h4>Pedidos de associação<span class="rg-count">{{ my_associations|length }}</span></h4></div>
+        {% if my_associations %}
+        <div class="rg-scroll">
+            <table class="rg-table">
+                <thead><tr><th>Loja</th><th>Pedido em</th><th>Estado</th></tr></thead>
+                <tbody>
+                {% for assoc in my_associations %}
+                    <tr>
+                        <td class="strong">{{ assoc.retailer.username }}</td>
+                        <td>{{ assoc.created_at|date:"d/m/Y H:i" }}</td>
+                        <td><span class="rg-score {% if assoc.status == 'APPROVED' %}ok{% elif assoc.status == 'PENDING' %}mid{% else %}low{% endif %}">{% if assoc.status == 'APPROVED' %}Autorizado{% elif assoc.status == 'PENDING' %}A aguardar{% else %}Recusado{% endif %}</span></td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}<div class="rg-empty">Ainda não fez pedidos de associação.</div>{% endif %}
+    </section>
+
+    <!-- Lojas autorizadas -->
+    <div class="rg-section-title">Lojas autorizadas <span class="rg-count">{{ approved_stores_data|length }}</span></div>
+    {% for store_data in approved_stores_data %}
+    <section class="rg-card rg-table-card cw-store">
+        <div class="cw-store-head">
+            <h4><span class="rg-wh-icon">🛒</span>{{ store_data.store.username }}</h4>
+            <span class="rg-chip brand">Acesso autorizado</span>
+        </div>
+        <div class="cw-body">
+            <div class="rg-group-title" style="margin-top: 0;">Armazéns</div>
+            {% if store_data.warehouses %}
+            <div class="cw-wh">
+                {% for wh in store_data.warehouses %}
+                <div>
+                    <h6>{{ wh.location }} <span class="rg-muted" style="font-weight: 500;">· WH-{{ wh.warehouse_id }}</span></h6>
+                    <div class="rg-chips" style="margin-bottom: 8px;">
+                        <span class="rg-chip">{{ wh.get_control_type_display }}</span>
+                        {% for sensor in wh.sensors.all %}<span class="rg-chip">{{ sensor.sensor_id }}</span>{% endfor %}
+                    </div>
+                    <div class="rg-occ-row"><span>Ocupação</span><span><b>{{ wh.current_stock|floatformat:0 }}</b> de {{ wh.capacity|floatformat:0 }} kg · <b>{{ wh.occupancy_percentage|floatformat:0 }}%</b></span></div>
+                    <div class="rg-occ"><div style="width: {{ wh.occupancy_percentage }}%; background: {% if wh.occupancy_percentage > 90 %}#dc2626{% elif wh.occupancy_percentage > 70 %}#d97706{% else %}#0f766e{% endif %};"></div></div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}<div class="rg-muted" style="font-size: 0.88em;">A loja ainda não registou armazéns.</div>{% endif %}
+
+            <div class="rg-group-title">Stock</div>
+            {% if store_data.stock %}
+            <div class="cw-sub rg-scroll">
+                <table class="rg-table">
+                    <thead><tr><th>Cultura</th><th>Armazém</th><th class="num">Disponível (kg)</th><th class="num">Brix médio</th><th class="num">Calibre médio</th><th class="num">Qualidade</th></tr></thead>
+                    <tbody>
+                    {% for stk in store_data.stock %}
+                        <tr>
+                            <td class="strong">{{ stk.culture.name }}</td>
+                            <td>{{ stk.warehouse_location }}</td>
+                            <td class="num strong">{{ stk.quantity|floatformat:0 }}</td>
+                            <td class="num">{% if stk.avg_soluble_solids %}{{ stk.avg_soluble_solids|floatformat:1 }}{% else %}<span class="rg-muted">—</span>{% endif %}</td>
+                            <td class="num">{% if stk.avg_caliber %}{{ stk.avg_caliber|floatformat:0 }} mm{% else %}<span class="rg-muted">—</span>{% endif %}</td>
+                            <td class="num">{% if stk.avg_quality_score %}<span class="rg-score {% if stk.avg_quality_score >= 7.5 %}ok{% elif stk.avg_quality_score >= 5 %}mid{% else %}low{% endif %}">{{ stk.avg_quality_score|floatformat:1 }}</span>{% else %}<span class="rg-muted">—</span>{% endif %}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}<div class="rg-muted" style="font-size: 0.88em;">A loja não tem stock disponível.</div>{% endif %}
+
+            <div class="rg-group-title">Últimas compras</div>
+            {% if store_data.orders %}
+            <div class="cw-sub rg-scroll">
+                <table class="rg-table">
+                    <thead><tr><th>Data</th><th>Cultura</th><th>Fornecedor</th><th class="num">Quantidade (kg)</th><th>Receção</th></tr></thead>
+                    <tbody>
+                    {% for ord in store_data.orders %}
+                        <tr>
+                            <td>{{ ord.created_at|date:"d/m/Y" }}</td>
+                            <td class="strong">{{ ord.culture.name }}</td>
+                            <td>{{ ord.fulfilled_by.username }}</td>
+                            <td class="num">{{ ord.quantity_kg|floatformat:0 }}</td>
+                            <td>
+                                {% if ord.reception and ord.reception.status == 'RECEIVED' %}<span class="rg-score ok">Recebido a {{ ord.reception.received_at|date:"d/m" }}</span>
+                                {% elif ord.reception %}<span class="rg-score {% if ord.reception.is_overdue %}low{% else %}mid{% endif %}">{% if ord.reception.is_overdue %}Atrasado{% else %}A receber{% endif %}</span>
+                                {% else %}<span class="rg-muted">—</span>{% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}<div class="rg-muted" style="font-size: 0.88em;">Sem compras registadas.</div>{% endif %}
+        </div>
+    </section>
+    {% empty %}
+    <section class="rg-card rg-empty">Ainda não há lojas autorizadas. Peça acesso acima e aguarde a aprovação da loja.</section>
+    {% endfor %}
+</div>
+</div>

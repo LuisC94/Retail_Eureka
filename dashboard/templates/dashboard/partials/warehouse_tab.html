@@ -1,17 +1,21 @@
 {% comment %}
-Separador "Armazéns" do Producer. Mantém os IDs usados pelo JavaScript do producerDash.html:
-  #id_meteo_source, #id_json_fallback_mode, #producer-wh-json-upload-box, #producer-wh-fallback-box, #producer-wh-fixed-box,
-  openSensorModal(), openEditWarehouseModal(...), #sensor-sheet-* (RuuviTag, só ProducerBraga).
+Separador "Armazéns" (Producer, Processor, Retailer). Parâmetros:
+  tab_class     - classe dos separadores do dashboard ("dashboard-tab" ou "tab-content")
+  wh_list       - lista de armazéns do utilizador (com current_stock e occupancy_percentage)
+  wh_submit_url - nome do URL do formulário de registo (ex.: "producer_submit_warehouse")
+  wh_prefix     - prefixo dos IDs das caixas de meteorologia ("producer", "processor", "retailer")
+  tab_active    - True se for o separador visível ao abrir a página
+Usa as funções openSensorModal() e openEditWarehouseModal(...) de cada dashboard.
 Estilos em partials/producer_ui_css.html.
 {% endcomment %}
-<div id="warehouse-management" class="dashboard-tab" style="display:none;">
+<div id="warehouse-management" class="{{ tab_class|default:'tab-content' }}{% if tab_active %} active{% endif %}" style="display:{% if tab_active %}block{% else %}none{% endif %};">
 <div class="rg rg-rich">
     <header class="rg-hero">
         <div class="rg-hero-main">
             <span class="rg-hero-icon">🏬</span>
             <div>
                 <h3>Armazéns</h3>
-                <p><b>{{ producer_warehouses|length }}</b> armazé{{ producer_warehouses|length|pluralize:"m,ns" }} registado{{ producer_warehouses|length|pluralize }} · as condições de cada armazém alimentam o ciclo de vida dos lotes</p>
+                <p><b>{{ wh_list|length }}</b> armazé{{ wh_list|length|pluralize:"m,ns" }} registado{{ wh_list|length|pluralize }} · as condições de cada armazém alimentam o ciclo de vida dos lotes</p>
             </div>
         </div>
     </header>
@@ -25,7 +29,7 @@ Estilos em partials/producer_ui_css.html.
                 <p>Localização, capacidade, sensores e condições ambientais (temperatura e humidade).</p>
             </div>
         </div>
-        <form method="post" action="{% url 'producer_submit_warehouse' %}" enctype="multipart/form-data">
+        <form method="post" action="{% url wh_submit_url %}" enctype="multipart/form-data">
             {% csrf_token %}
             <div class="rg-fields">
                 {% include "dashboard/partials/rg_field.html" with field=warehouse_form.location %}
@@ -69,14 +73,14 @@ Estilos em partials/producer_ui_css.html.
             <div class="rg-fields">
                 {% include "dashboard/partials/rg_field.html" with field=warehouse_form.meteo_source %}
             </div>
-            <div id="producer-wh-json-upload-box" class="rg-sub-box" style="display: none;">
+            <div id="{{ wh_prefix }}-wh-json-upload-box" class="rg-sub-box" style="display: none;">
                 <div class="rg-field">
                     <label>Ficheiro de leituras dos sensores (JSON, CSV ou Excel)</label>
                     <input type="file" name="sensor_file" accept=".json,.csv,.xlsx,.xls">
                     <small>Pode carregar agora ou mais tarde, no cartão do armazém.</small>
                 </div>
             </div>
-            <div id="producer-wh-fallback-box" class="rg-sub-box" style="display: none;">
+            <div id="{{ wh_prefix }}-wh-fallback-box" class="rg-sub-box" style="display: none;">
                 <div class="rg-fields">
                     <div class="rg-field">
                         <label for="{{ warehouse_form.json_fallback_mode.id_for_label }}">{{ warehouse_form.json_fallback_mode.label }}</label>
@@ -85,7 +89,7 @@ Estilos em partials/producer_ui_css.html.
                     </div>
                 </div>
             </div>
-            <div id="producer-wh-fixed-box" class="rg-fields rg-sub-box" style="display: grid;">
+            <div id="{{ wh_prefix }}-wh-fixed-box" class="rg-fields rg-sub-box" style="display: grid;">
                 {% include "dashboard/partials/rg_field.html" with field=warehouse_form.fixed_temperature %}
                 {% include "dashboard/partials/rg_field.html" with field=warehouse_form.fixed_humidity %}
             </div>
@@ -95,10 +99,10 @@ Estilos em partials/producer_ui_css.html.
     </section>
 
     <!-- Armazéns registados -->
-    <div class="rg-section-title">Armazéns registados <span class="rg-count">{{ producer_warehouses|length }}</span></div>
-    {% if producer_warehouses %}
+    <div class="rg-section-title">Armazéns registados <span class="rg-count">{{ wh_list|length }}</span></div>
+    {% if wh_list %}
     <div class="rg-wh-grid">
-        {% for warehouse in producer_warehouses %}
+        {% for warehouse in wh_list %}
         <article class="rg-card rg-wh">
             <div class="rg-wh-top">
                 <div class="rg-wh-title">
@@ -165,4 +169,29 @@ Estilos em partials/producer_ui_css.html.
     </section>
     {% endif %}
 </div>
+<script>
+    // Mostra só os campos de condições ambientais da fonte escolhida (valores fixos, IPMA ou ficheiro de sensores)
+    (function () {
+        function refresh() {
+            const tab = document.getElementById('warehouse-management');
+            if (!tab) return;
+            const src = tab.querySelector('[name="meteo_source"]');
+            const fb = tab.querySelector('[name="json_fallback_mode"]');
+            const json = document.getElementById('{{ wh_prefix }}-wh-json-upload-box');
+            const fallback = document.getElementById('{{ wh_prefix }}-wh-fallback-box');
+            const fixed = document.getElementById('{{ wh_prefix }}-wh-fixed-box');
+            if (!src) return;
+            const v = src.value, f = fb ? fb.value : 'FIXED';
+            if (json) json.style.display = v === 'JSON' ? 'block' : 'none';
+            if (fallback) fallback.style.display = v === 'JSON' ? 'block' : 'none';
+            if (fixed) fixed.style.display = (v === 'FIXED' || (v === 'JSON' && f === 'FIXED')) ? 'grid' : 'none';
+        }
+        document.addEventListener('DOMContentLoaded', function () {
+            const tab = document.getElementById('warehouse-management');
+            if (!tab) return;
+            tab.querySelectorAll('[name="meteo_source"], [name="json_fallback_mode"]').forEach(el => el.addEventListener('change', refresh));
+            refresh();
+        });
+    })();
+</script>
 </div>

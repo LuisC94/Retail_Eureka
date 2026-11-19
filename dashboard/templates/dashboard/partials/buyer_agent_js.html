@@ -1,0 +1,520 @@
+{% comment %}
+JavaScript do separador "Buyer Agent" (partials/buyer_agent_tab.html). Incluir DENTRO de um bloco <script>.
+{% endcomment %}
+                function checkBuyerServiceHealth() {
+                    const cultId = document.getElementById('buyer-global-culture-select')?.value || '1';
+                    fetch('/ai/buyer-agent-status/?culture_id=' + cultId)
+                    .then(res => res.json())
+                    .then(data => {
+                        const badgeDot = document.getElementById('buyer-service-dot');
+                        const badgeText = document.getElementById('buyer-service-text');
+                        const alertBox = document.getElementById('buyer-service-offline-alert');
+                        if (data.service_online !== false && data.status !== 'error') {
+                            if (badgeDot) badgeDot.style.background = '#2e7d32';
+                            if (badgeText) badgeText.innerText = 'Serviço ativo';
+                            if (alertBox) alertBox.style.display = 'none';
+                        } else {
+                            if (badgeDot) badgeDot.style.background = '#dc2626';
+                            if (badgeText) badgeText.innerText = 'Serviço indisponível';
+                            if (alertBox) alertBox.style.display = 'block';
+                        }
+                    })
+                    .catch(() => {
+                        const badgeDot = document.getElementById('buyer-service-dot');
+                        const badgeText = document.getElementById('buyer-service-text');
+                        const alertBox = document.getElementById('buyer-service-offline-alert');
+                        if (badgeDot) badgeDot.style.background = '#dc2626';
+                        if (badgeText) badgeText.innerText = 'Serviço indisponível';
+                        if (alertBox) alertBox.style.display = 'block';
+                    });
+                }
+
+                function onBuyerCultureSelected(cultureId) {
+                    if (!cultureId) return;
+                    
+                    // Sincronizar campo oculto do form de treino
+                    const ppoFormId = document.getElementById('ppo-form-culture-id');
+                    if (ppoFormId) ppoFormId.value = cultureId;
+                    
+                    // Atualizar preset biológico sugerido
+                    const fruitKeySelect = document.getElementById('ppo-fruit-key');
+                    const globalSelect = document.getElementById('buyer-global-culture-select');
+                    const cultureText = (globalSelect?.options[globalSelect.selectedIndex]?.text || '').toLowerCase();
+                    if (fruitKeySelect) {
+                        if (cultureText.includes('fuji')) fruitKeySelect.value = 'maca_fuji';
+                        else if (cultureText.includes('kiwi') || cultureText.includes('hayward')) fruitKeySelect.value = 'kiwi_hayward';
+                        else if (cultureText.includes('golden')) fruitKeySelect.value = 'maca_golden';
+                        else if (cultureText.includes('reineta')) fruitKeySelect.value = 'maca_reineta';
+                        else fruitKeySelect.value = 'maca_gala';
+                    }
+
+                    // Consultar Web Service para obter metadados do modelo
+                    const statusBadge = document.getElementById('buyer-status-badge');
+                    const presetBadge = document.getElementById('buyer-preset-badge');
+                    const bannerTitle = document.getElementById('buyer-banner-title');
+                    const bannerSubtitle = document.getElementById('buyer-banner-subtitle');
+                    const bannerProfit = document.getElementById('buyer-banner-profit');
+                    const bannerLimit = document.getElementById('buyer-banner-limit');
+                    const bannerCapacity = document.getElementById('buyer-banner-capacity');
+                    const alertBox = document.getElementById('buyer-service-offline-alert');
+
+                    if (bannerTitle) bannerTitle.innerText = 'A consultar o serviço…';
+
+                    fetch(`/ai/buyer-agent-status/?culture_id=${cultureId}`)
+                    .then(res => {
+                        if (res.status === 503) {
+                            if (alertBox) alertBox.style.display = 'block';
+                            throw new Error('Buyer Agent Web Service offline na porta 8002.');
+                        }
+                        if (!res.ok) throw new Error('Falha ao consultar estado do modelo.');
+                        if (alertBox) alertBox.style.display = 'none';
+                        return res.json();
+                    })
+                    .then(data => {
+                        if (bannerTitle) bannerTitle.innerText = data.culture_name || 'Cultura #' + cultureId;
+                        if (presetBadge) presetBadge.innerText = 'Preset: ' + (data.fruit_key || fruitKeySelect?.value || 'maca_gala');
+                        
+                        if (bannerCapacity) {
+                            if (data.max_capacity && Number(data.max_capacity) > 0) {
+                                bannerCapacity.innerText = data.max_capacity + ' Kg';
+                                bannerCapacity.style.color = '#ffffff';
+                            } else {
+                                bannerCapacity.innerText = 'Sem armazém';
+                                bannerCapacity.style.color = '#fca5a5';
+                            }
+                        }
+
+                        // Controlo de avisos pré-treino
+                        const forecastAlert = document.getElementById('buyer-missing-forecast-alert');
+                        if (forecastAlert) {
+                            forecastAlert.style.display = (data.has_sales_forecast === false) ? 'block' : 'none';
+                        }
+                        const whAlert = document.getElementById('buyer-missing-warehouse-alert');
+                        if (whAlert) {
+                            whAlert.style.display = (!data.max_capacity || Number(data.max_capacity) <= 0) ? 'block' : 'none';
+                        }
+
+                        // Atualizar Seletor Dinâmico do Modelo de Previsão de Procura
+                        const fcSelect = document.getElementById('ppo-forecast-model-select');
+                        const fcHint = document.getElementById('ppo-forecast-model-hint');
+                        const availFc = (data.available_forecast_models || []).map(m => normFc(m));
+
+                        if (fcSelect) {
+                            if (availFc.length > 0) {
+                                fcSelect.innerHTML = availFc.map((k, i) => `<option value="${k}"${i === 0 ? ' selected' : ''}>${FC_MODEL_NAMES[k]}</option>`).join('');
+                                fcSelect.disabled = availFc.length === 1;
+                                if (fcHint) fcHint.innerText = availFc.length === 1
+                                    ? `${FC_MODEL_NAMES[availFc[0]]} selecionado (único disponível).`
+                                    : 'Selecione o modelo de previsão cujas previsões serão usadas no treino.';
+                            } else {
+                                fcSelect.innerHTML = `<option value="" disabled selected>Nenhum modelo disponível</option>`;
+                                fcSelect.disabled = true;
+                                if (fcHint) fcHint.innerText = 'Treine primeiro um modelo na aba Previsão de Vendas.';
+                            }
+                        }
+                        
+                        if (data.has_model) {
+                            if (statusBadge) {
+                                statusBadge.style.background = '#10b981';
+                                statusBadge.style.color = '#ffffff';
+                                statusBadge.innerText = 'Modelo treinado';
+                            }
+                            if (bannerProfit) bannerProfit.innerText = data.avg_profit ? Number(data.avg_profit).toFixed(2) + ' €' : '0.00 €';
+                            if (bannerLimit) bannerLimit.innerText = data.max_order_limit ? Number(data.max_order_limit).toFixed(1) + ' Kg' : '200.0 Kg';
+                            if (bannerSubtitle) {
+                                const dtStr = data.last_trained ? new Date(data.last_trained).toLocaleString('pt-PT') : 'Recente';
+                                bannerSubtitle.innerText = `Treino verificado no Web Service. Última calibração: ${dtStr}`;
+                            }
+                        } else {
+                            if (statusBadge) {
+                                statusBadge.style.background = '#f59e0b';
+                                statusBadge.style.color = '#ffffff';
+                                statusBadge.innerText = 'Por treinar';
+                            }
+                            if (bannerProfit) bannerProfit.innerText = '-- €';
+                            if (bannerLimit) bannerLimit.innerText = '-- Kg';
+                            if (bannerSubtitle) bannerSubtitle.innerText = 'Modelo não treinado para esta cultura. Execute o treino DSAC abaixo para habilitar a tomada de decisão inteligente.';
+                        }
+                    })
+                    .catch(err => {
+                        if (bannerTitle) bannerTitle.innerText = 'Serviço do Buyer Agent indisponível';
+                        if (bannerSubtitle) bannerSubtitle.innerText = err.message;
+                        if (statusBadge) {
+                            statusBadge.style.background = '#ef4444';
+                            statusBadge.style.color = '#ffffff';
+                            statusBadge.innerText = 'Serviço indisponível';
+                        }
+                    });
+                }
+
+                function toggleBuyerAgentAutonomous() {
+                    const btn = document.getElementById('buyer-auto-toggle-btn');
+                    if (btn) btn.disabled = true;
+
+                    const formData = new FormData();
+                    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                    fetch('/ai/toggle-buyer-agent/', {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (btn) {
+                            btn.disabled = false;
+                            if (data.buyer_agent_active) {
+                                btn.style.background = '#10b981';
+                                btn.innerText = 'ATIVADO';
+                            } else {
+                                btn.style.background = '#94a3b8';
+                                btn.innerText = 'DESATIVADO';
+                            }
+                        }
+                    })
+                    .catch(err => {
+                        if (btn) btn.disabled = false;
+                        alert('Erro ao alternar compras autónomas: ' + err.message);
+                    });
+                }
+
+                function runBuyerAgentAction() {
+                    const globalSelect = document.getElementById('buyer-global-culture-select');
+                    let cultureId = globalSelect ? globalSelect.value : '';
+                    if (!cultureId && globalSelect && globalSelect.options.length > 0) {
+                        for (let i = 0; i < globalSelect.options.length; i++) {
+                            if (globalSelect.options[i].value && !globalSelect.options[i].disabled) {
+                                cultureId = globalSelect.options[i].value;
+                                globalSelect.value = cultureId;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!cultureId) {
+                        alert('Selecione primeiro uma cultura no topo do separador.');
+                        return;
+                    }
+
+                    const decideBtn = document.getElementById('btn-buyer-decide');
+                    if (decideBtn) {
+                        decideBtn.disabled = true;
+                        decideBtn.innerHTML = '⏳ A calcular decisão DSAC no Web Service (:8002)...';
+                    }
+
+                    const formData = new FormData();
+                    formData.append('culture_id', cultureId);
+                    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                    fetch('/ai/run-buyer-agent/', {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(response => {
+                        if (response.status === 503) {
+                            throw new Error('O Buyer Agent Web Service está offline na porta 8002. Inicie o microserviço para executar a decisão.');
+                        }
+                        if (!response.ok) {
+                            return response.json().then(d => { throw new Error(d.message || 'Erro ao consultar decisão'); });
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (decideBtn) {
+                            decideBtn.disabled = false;
+                            decideBtn.innerHTML = '⚡ Obter Decisão do Agente';
+                        }
+
+                        const resultContainer = document.getElementById('buyer-decision-container');
+                        if (resultContainer) resultContainer.style.display = 'block';
+
+                        // 1. Hero Card
+                        const heroQty = document.getElementById('dec-hero-qty');
+                        const heroCulture = document.getElementById('dec-hero-culture');
+                        const heroPct = document.getElementById('dec-hero-pct');
+                        const heroDate = document.getElementById('dec-hero-date');
+                        if (heroQty) heroQty.innerText = `${data.recommended_order_kg} Kg`;
+                        if (heroCulture) heroCulture.innerText = `de ${data.culture_name || 'Produto'}`;
+                        if (heroPct) heroPct.innerText = `${Math.round((data.order_percentage || 0) * 100)}% da capacidade`;
+                        if (heroDate) heroDate.innerText = `Data: ${data.decision_date || new Date().toISOString().split('T')[0]}`;
+
+                        // 2. State Vector KPIs
+                        const state = data.state_summary || {};
+                        const elTotalStock = document.getElementById('kpi-total-stock');
+                        const elCoverage = document.getElementById('kpi-coverage-days');
+                        const elInTransit = document.getElementById('kpi-in-transit');
+                        const elForecastToday = document.getElementById('kpi-forecast-today');
+                        const elForecastTomorrow = document.getElementById('kpi-forecast-tomorrow');
+                        const elMarketPrice = document.getElementById('kpi-market-price');
+                        const elUrgency = document.getElementById('kpi-urgency');
+
+                        if (elTotalStock) elTotalStock.innerText = `${state.total_stock_kg || 0} Kg`;
+                        if (elCoverage) elCoverage.innerText = `${state.coverage_days || 0} dias`;
+                        if (elInTransit) elInTransit.innerText = `${state.in_transit_kg || 0} Kg`;
+                        if (elForecastToday) elForecastToday.innerText = `${state.forecast_today_kg || 0} Kg`;
+                        if (elForecastTomorrow) elForecastTomorrow.innerText = `${state.forecast_tomorrow_kg || 0} Kg`;
+                        if (elMarketPrice) elMarketPrice.innerText = `${(data.price_today || 2.0).toFixed(2)} €/Kg`;
+                        if (elUrgency) elUrgency.innerText = `Urgência: ${Math.round((state.urgency_index || 0) * 100)}%`;
+
+                        // 3. Multi-Policy Comparison
+                        const heur = data.heuristics_comparison || {};
+                        const cmpPpo = document.getElementById('cmp-ppo-qty');
+                        const cmpDos = document.getElementById('cmp-dos-qty');
+                        const cmpCnn = document.getElementById('cmp-cnn-qty');
+                        const cmpMinmax = document.getElementById('cmp-minmax-qty');
+
+                        if (cmpPpo) cmpPpo.innerText = `${data.recommended_order_kg} Kg`;
+                        if (cmpDos) cmpDos.innerText = `${heur.dos_3d_kg || 0} Kg`;
+                        if (cmpCnn) cmpCnn.innerText = `${heur.cnn_naive_kg || 0} Kg`;
+                        if (cmpMinmax) cmpMinmax.innerText = `${heur.min_max_kg || 0} Kg`;
+
+                        resultContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    })
+                    .catch(err => {
+                        if (decideBtn) {
+                            decideBtn.disabled = false;
+                            decideBtn.innerHTML = '⚡ Obter Decisão do Agente';
+                        }
+                        alert('Erro ao consultar decisão: ' + err.message);
+                    });
+                }
+
+                function submitPpoTraining() {
+                    const form = document.getElementById('ppo-training-form');
+                    const globalSelect = document.getElementById('buyer-global-culture-select');
+                    let cultureId = globalSelect ? globalSelect.value : (document.getElementById('ppo-form-culture-id')?.value || '');
+                    
+                    if (!cultureId && globalSelect && globalSelect.options.length > 0) {
+                        for (let i = 0; i < globalSelect.options.length; i++) {
+                            if (globalSelect.options[i].value && !globalSelect.options[i].disabled) {
+                                cultureId = globalSelect.options[i].value;
+                                globalSelect.value = cultureId;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (!cultureId) {
+                        alert('Selecione primeiro uma cultura no topo do separador.');
+                        return;
+                    }
+
+                    const forecastAlert = document.getElementById('buyer-missing-forecast-alert');
+                    if (forecastAlert && forecastAlert.style.display !== 'none') {
+                        alert('Atenção: Não existe modelo de previsão treinado para esta cultura. Aceda primeiro à aba "Previsão de Vendas" para treinar o modelo.');
+                        return;
+                    }
+
+                    const whAlert = document.getElementById('buyer-missing-warehouse-alert');
+                    if (whAlert && whAlert.style.display !== 'none') {
+                        alert('Atenção: Não possui nenhum armazém com capacidade registada. Defina a capacidade do armazém na "Gestão de Armazéns" antes de treinar.');
+                        return;
+                    }
+                    
+                    const hiddenCultureInput = document.getElementById('ppo-form-culture-id');
+                    if (hiddenCultureInput) hiddenCultureInput.value = cultureId;
+
+                    const formData = new FormData(form);
+                    formData.set('culture_id', cultureId);
+                    formData.set('is_ajax', '1');
+                    
+                    const fcSelect = document.getElementById('ppo-forecast-model-select');
+                    let selectedFcLabel = 'Modelo de Previsão';
+                    if (fcSelect && fcSelect.value) {
+                        formData.set('forecast_model_type', fcSelect.value);
+                        if (fcSelect.options[fcSelect.selectedIndex]) {
+                            selectedFcLabel = fcSelect.options[fcSelect.selectedIndex].text;
+                        }
+                    }
+                    
+                    const progressCard = document.getElementById('ppo-progress-card');
+                    if (progressCard) progressCard.style.display = 'block';
+                    
+                    const submitBtn = document.getElementById('ppo-btn-train');
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = '⏳ A treinar no Web Service (:8002)...';
+                    }
+                    
+                    const statusMsg = document.getElementById('ppo-status-msg');
+                    const pctMsg = document.getElementById('ppo-pct');
+                    const progressBar = document.getElementById('ppo-progress-bar');
+                    const logsConsole = document.getElementById('ppo-logs-console');
+                    
+                    if (logsConsole) logsConsole.innerHTML = '';
+                    
+                    function addLog(text) {
+                        if (logsConsole) {
+                            let color = '#4ade80';
+                            let prefix = 'ℹ️';
+                            if (text.includes('[ERRO]') || text.includes('Error') || text.includes('Falha') || text.includes('ConnectionError')) {
+                                color = '#f87171';
+                                prefix = '❌';
+                            } else if (text.includes('[Sucesso]') || text.includes('✓') || text.includes('sucesso')) {
+                                color = '#34d399';
+                                prefix = '✅';
+                            } else if (text.includes('DSAC') || text.includes('episódio') || text.includes('Simulação') || text.includes('Lucro')) {
+                                color = '#38bdf8';
+                                prefix = '⚡';
+                            } else if (text.includes('Web Service') || text.includes('Porta 8002') || text.includes('8001')) {
+                                color = '#fbbf24';
+                                prefix = '🌐';
+                            }
+                            const logLine = document.createElement('div');
+                            logLine.style.color = color;
+                            logLine.style.marginBottom = '4px';
+                            logLine.style.lineHeight = '1.4';
+                            logLine.innerHTML = `<span style="opacity:0.6; font-size:0.85em; font-family: monospace;">[${new Date().toLocaleTimeString()}]</span> ${prefix} ${text}`;
+                            logsConsole.appendChild(logLine);
+                            logsConsole.scrollTop = logsConsole.scrollHeight;
+                        }
+                    }
+
+                    function setStepActive(stepNum) {
+                        for (let i = 1; i <= 4; i++) {
+                            const badge = document.getElementById(`step-badge-${i}`);
+                            if (badge) {
+                                if (i === stepNum) {
+                                    badge.style.background = '#dcfce7';
+                                    badge.style.borderColor = '#16a34a';
+                                    badge.style.color = '#166534';
+                                    badge.style.fontWeight = '700';
+                                } else if (i < stepNum) {
+                                    badge.style.background = '#f0fdf4';
+                                    badge.style.borderColor = '#86efac';
+                                    badge.style.color = '#15803d';
+                                }
+                            }
+                        }
+                    }
+                    
+                    setStepActive(1);
+                    addLog(`A obter previsões de procura com o ${selectedFcLabel} (Forecast Web Service :8001)...`);
+                    addLog('A iniciar ligação com o serviço do Buyer Agent...');
+                    if (statusMsg) statusMsg.innerText = '1/4: A preparar dados e contactar Web Service...';
+                    
+                    let currentPct = 10;
+                    const progressInterval = setInterval(() => {
+                        if (currentPct < 90) {
+                            currentPct += 5;
+                            if (pctMsg) pctMsg.innerText = currentPct + '%';
+                            if (progressBar) progressBar.style.width = currentPct + '%';
+                            if (currentPct === 30) {
+                                setStepActive(2);
+                                if (statusMsg) statusMsg.innerText = '2/4: A aplicar cinéticas FruitModel2 (FEFO)...';
+                            }
+                            if (currentPct === 60) {
+                                setStepActive(3);
+                                if (statusMsg) statusMsg.innerText = '3/4: Otimização DSAC (Distributional Soft Actor-Critic) em execução no Web Service...';
+                            }
+                        }
+                    }, 500);
+
+                    fetch(form.action, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'Accept': 'text/event-stream',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => {
+                        if (response.status === 503) {
+                            clearInterval(progressInterval);
+                            throw new Error('O Buyer Agent Web Service está offline na porta 8002.');
+                        }
+                        if (!response.ok && !response.headers.get('content-type')?.includes('text/event-stream')) {
+                            clearInterval(progressInterval);
+                            return response.json().then(d => { throw new Error(d.message || 'Falha no treino.'); });
+                        }
+
+                        const reader = response.body.getReader();
+                        const decoder = new TextDecoder();
+                        let buffer = '';
+
+                        function processStream() {
+                            return reader.read().then(({ done, value }) => {
+                                if (done) {
+                                    clearInterval(progressInterval);
+                                    return;
+                                }
+                                buffer += decoder.decode(value, { stream: true });
+                                const lines = buffer.split('\n');
+                                buffer = lines.pop();
+
+                                lines.forEach(line => {
+                                    if (!line.startsWith('data: ')) return;
+                                    let parsed;
+                                    try { parsed = JSON.parse(line.substring(6)); } catch(e) { return; }
+
+                                    if (parsed.type === 'log') {
+                                        addLog(parsed.text);
+                                        // Atualizar barra de progresso com episódio
+                                        const epMatch = parsed.text.match(/Episódio\s+(\d+)\/(\d+)\s+\((\d+)%\)/);
+                                        if (epMatch) {
+                                            const pctVal = parseInt(epMatch[3]);
+                                            if (pctMsg) pctMsg.innerText = pctVal + '%';
+                                            if (progressBar) progressBar.style.width = pctVal + '%';
+                                            currentPct = pctVal;
+                                            if (pctVal < 40) setStepActive(2);
+                                            else if (pctVal < 90) setStepActive(3);
+                                        }
+                                    } else if (parsed.type === 'done') {
+                                        clearInterval(progressInterval);
+                                        setStepActive(4);
+                                        if (statusMsg) statusMsg.innerText = 'Treino concluído com sucesso!';
+                                        if (progressBar) progressBar.style.width = '100%';
+                                        if (pctMsg) pctMsg.innerText = '100%';
+                                        addLog(`✓ ${parsed.message || 'Modelo treinado com sucesso.'}`);
+                                        if (submitBtn) {
+                                            submitBtn.disabled = false;
+                                            submitBtn.innerHTML = '🚀 Treinar Agente para esta Cultura';
+                                        }
+                                        onBuyerCultureSelected(cultureId);
+                                    } else if (parsed.type === 'error') {
+                                        clearInterval(progressInterval);
+                                        addLog(`[ERRO] ${parsed.message}`);
+                                        if (statusMsg) statusMsg.innerText = 'Falha no treino.';
+                                        if (submitBtn) {
+                                            submitBtn.disabled = false;
+                                            submitBtn.innerHTML = '🚀 Treinar Agente para esta Cultura';
+                                        }
+                                    }
+                                });
+                                return processStream();
+                            });
+                        }
+                        return processStream();
+                    })
+                    .catch(err => {
+                        clearInterval(progressInterval);
+                        addLog(`[ERRO] ${err.message}`);
+                        if (statusMsg) statusMsg.innerText = 'Falha no treino.';
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = '🚀 Treinar Agente para esta Cultura';
+                        }
+                    });
+                }
+
+                // Verificar e inicializar Buyer Agent
+                document.addEventListener("DOMContentLoaded", () => {
+                    const globalBuyerSelect = document.getElementById('buyer-global-culture-select');
+                    if (globalBuyerSelect) {
+                        const validOpts = Array.from(globalBuyerSelect.options).filter(opt => opt.value && !opt.disabled);
+                        if (validOpts.length > 0) {
+                            if (!globalBuyerSelect.value) {
+                                globalBuyerSelect.value = validOpts[0].value;
+                            }
+                            onBuyerCultureSelected(globalBuyerSelect.value);
+                        }
+                    }
+                    checkBuyerServiceHealth();
+                });

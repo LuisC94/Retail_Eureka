@@ -845,7 +845,7 @@
 
             <!-- ====================== PÁGINA DE GESTÃO DE ARMAZÉNS ====================== -->
             <!-- GESTÃO DE ARMAZÉNS -->
-            {% include "dashboard/partials/producer_warehouse_tab.html" %}
+            {% include "dashboard/partials/warehouse_tab.html" with tab_class="dashboard-tab" wh_list=producer_warehouses wh_submit_url="producer_submit_warehouse" wh_prefix="producer" %}
 
             <!-- MARKETPLACE TAB -->
             <div id="marketplace-dashboard" class="dashboard-tab" style="display:none;">

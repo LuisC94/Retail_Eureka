@@ -1,0 +1,121 @@
+{% comment %}
+Separador "Stock" do Processor e do Retailer. Parâmetros:
+  stock_items      - linhas de stock (pk, culture, warehouse, quantity, avg_brix, avg_caliber, avg_score)
+  stock_warehouses - armazéns do utilizador (para o ajuste manual)
+Contexto também usado: contracts (com .reception), product_subfamilies e o do painel de receções.
+Usa openMakroModal(), openContractModal(), openLifecycleModal(pk, 'stock') e submitStockAdjustment() de cada dashboard.
+Estilos em partials/producer_ui_css.html.
+{% endcomment %}
+<div id="stock-view" class="tab-content">
+<div class="rg rg-rich">
+    <header class="rg-hero">
+        <div class="rg-hero-main">
+            <span class="rg-hero-icon">📊</span>
+            <div>
+                <h3>Stock</h3>
+                <p>Receções por confirmar, stock disponível por armazém e contratos de fornecimento.</p>
+            </div>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button type="button" class="rg-btn-sec" style="height: 40px; background: #fff;" onclick="openMakroModal()">🛒 Compra rápida</button>
+            <button type="button" class="rg-btn-sec" style="height: 40px; background: #fff;" onclick="openContractModal()">📜 Contrato de fornecimento</button>
+        </div>
+    </header>
+
+    {% include "dashboard/partials/receptions_panel.html" %}
+
+    <!-- Stock atual -->
+    <section class="rg-card rg-table-card">
+        <div class="rg-table-head"><h4>Stock atual<span class="rg-count">{{ stock_items|length }}</span></h4></div>
+        {% if stock_items %}
+        <div class="rg-scroll">
+            <table class="rg-table">
+                <thead><tr>
+                    <th>Cultura</th><th>Armazém</th><th class="num">Disponível (kg)</th><th class="num">Brix médio</th>
+                    <th class="num">Calibre médio</th><th class="num">Qualidade</th><th></th>
+                </tr></thead>
+                <tbody>
+                {% for item in stock_items %}
+                    <tr>
+                        <td class="strong">{{ item.culture }}</td>
+                        <td>{{ item.warehouse|default:"—" }}</td>
+                        <td class="num strong">{{ item.quantity|floatformat:0 }}</td>
+                        <td class="num">{% if item.avg_brix %}{{ item.avg_brix|floatformat:1 }}{% else %}<span class="rg-muted">—</span>{% endif %}</td>
+                        <td class="num">{% if item.avg_caliber %}{{ item.avg_caliber|floatformat:0 }} mm{% else %}<span class="rg-muted">—</span>{% endif %}</td>
+                        <td class="num">{% if item.avg_score %}<span class="rg-score {% if item.avg_score >= 7.5 %}ok{% elif item.avg_score >= 5 %}mid{% else %}low{% endif %}">{{ item.avg_score|floatformat:1 }}</span>{% else %}<span class="rg-muted">—</span>{% endif %}</td>
+                        <td><div class="rg-actions-cell"><button type="button" class="rg-mini" onclick="openLifecycleModal('{{ item.pk }}', 'stock')">Ciclo de vida</button></div></td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}<div class="rg-empty">Ainda não há stock. O stock entra quando confirma uma receção, faz uma compra rápida ou um ajuste manual.</div>{% endif %}
+    </section>
+
+    <!-- Contratos de fornecimento -->
+    <section class="rg-card rg-table-card">
+        <div class="rg-table-head"><h4>Contratos de fornecimento<span class="rg-count">{{ contracts|length }}</span></h4></div>
+        {% if contracts %}
+        <div class="rg-scroll">
+            <table class="rg-table">
+                <thead><tr><th>Contrato</th><th>Fornecedor</th><th>Cultura</th><th class="num">Quantidade (kg)</th><th>Entrega prevista</th><th>Estado</th></tr></thead>
+                <tbody>
+                {% for contract in contracts %}
+                    <tr>
+                        <td class="strong">{{ contract.id|truncatechars:16 }}</td>
+                        <td>{{ contract.producer.username }}</td>
+                        <td>{{ contract.subfamily.name }}</td>
+                        <td class="num">{{ contract.quantity_kg|floatformat:0 }}</td>
+                        <td>{{ contract.delivery_date|date:"d/m/Y" }}</td>
+                        <td>
+                            {% if contract.reception and contract.reception.status == 'RECEIVED' %}<span class="rg-score ok">Recebido a {{ contract.reception.received_at|date:"d/m" }}</span>
+                            {% elif contract.reception %}<span class="rg-score {% if contract.reception.is_overdue %}low{% else %}mid{% endif %}">{% if contract.reception.is_overdue %}Atrasado{% else %}A receber{% endif %}</span>
+                            {% elif contract.status == 'CANCELLED' %}<span class="rg-score low">Cancelado</span>
+                            {% else %}<span class="rg-score mid">Pendente</span>{% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}<div class="rg-empty">Sem contratos de fornecimento.</div>{% endif %}
+    </section>
+
+    <!-- Ajuste manual -->
+    <details class="rg-card rg-optional" style="padding: 0;">
+        <summary>Ajuste manual de stock<span>correções pontuais</span></summary>
+        <form id="adjust-stock-form" onsubmit="submitStockAdjustment(event)" style="padding: 0 16px 16px;">
+            {% csrf_token %}
+            <div class="rg-fields">
+                <div class="rg-field">
+                    <label for="adj-culture-id">Cultura <em>*</em></label>
+                    <select name="culture_id" id="adj-culture-id" required>
+                        <option value="">Selecionar cultura…</option>
+                        {% for item in product_subfamilies %}<option value="{{ item.pk }}">{{ item.name }} ({{ item.fruit_type }})</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="rg-field">
+                    <label for="adj-warehouse-location">Armazém <em>*</em></label>
+                    <select name="warehouse_location" id="adj-warehouse-location" required>
+                        <option value="">Selecionar armazém…</option>
+                        {% for w in stock_warehouses %}<option value="{{ w.location }} (WH: {{ w.warehouse_id }})">{{ w.location }} (WH: {{ w.warehouse_id }})</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="rg-field">
+                    <label for="adj-quantity">Quantidade (kg) <em>*</em></label>
+                    <input type="number" step="0.01" name="quantity" id="adj-quantity" placeholder="Ex.: 500" required>
+                </div>
+                <div class="rg-field">
+                    <label for="adj-adjustment-type">Tipo de ajuste <em>*</em></label>
+                    <select name="adjustment_type" id="adj-adjustment-type" required>
+                        <option value="set" selected>Definir valor (substituir)</option>
+                        <option value="add">Adicionar quantidade</option>
+                        <option value="subtract">Retirar quantidade</option>
+                    </select>
+                </div>
+            </div>
+            <div class="rg-actions"><button type="submit" class="rg-submit">Gravar ajuste</button></div>
+        </form>
+    </details>
+</div>
+</div>

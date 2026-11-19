@@ -1,0 +1,205 @@
+{% comment %}
+Separador "Buyer Agent" (Processor, Retailer). Parâmetros: buyer_stock (linhas de stock com culture_id, culture,
+quantity, warehouse) e tab_class. O JavaScript está em partials/buyer_agent_js.html (mantém os IDs usados aqui).
+Estilos em partials/producer_ui_css.html.
+{% endcomment %}
+<div id="buyer-agent-training" class="{{ tab_class|default:'tab-content' }}" style="display: none;">
+<style>
+    .ba-pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; font-size: 0.82em; font-weight: 600;
+               background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.25); color: #fff; }
+    .ba-pill span:first-child { width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; display: inline-block; }
+    .ba-toggle { display: inline-flex; align-items: center; gap: 10px; padding: 5px 6px 5px 14px; border-radius: 999px; font-size: 0.82em; font-weight: 600;
+                 background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.25); color: #fff; }
+    .ba-toggle button { border: none; color: #fff; padding: 5px 12px; border-radius: 999px; font-size: 0.85em; font-weight: 700; cursor: pointer; }
+    .ba-status { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 16px; padding-top: 16px; border-top: 1.5px solid #d5ece8; }
+    .ba-status h5 { margin: 6px 0 2px; font-size: 1.1em; font-weight: 700; color: #134e4a; }
+    .ba-status p { margin: 0; font-size: 0.86em; color: #64748b; }
+    .ba-badge { display: inline-block; font-size: 0.72em; font-weight: 700; padding: 4px 10px; border-radius: 999px; text-transform: uppercase; letter-spacing: .04em; background: #e2e8f0; color: #475569; }
+    .ba-stats { display: flex; gap: 10px; flex-wrap: wrap; }
+    .ba-stat { background: #f0fdfa; border: 1.5px solid #9fd1c8; border-radius: 10px; padding: 8px 14px; min-width: 110px; text-align: center; }
+    .ba-stat span { display: block; font-size: 0.72em; color: #64748b; text-transform: uppercase; letter-spacing: .04em; }
+    .ba-stat strong { font-size: 1.05em; color: #134e4a; }
+    .ba-alert { display: none; border-radius: 10px; padding: 12px 16px; margin-bottom: 14px; font-size: 0.9em; }
+    .ba-alert-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .ba-hero-rec { background: linear-gradient(120deg, #0f766e 0%, #134e4a 100%); color: #fff; border-radius: 14px; padding: 20px 24px;
+                   display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+    .ba-hero-rec small { opacity: .8; text-transform: uppercase; letter-spacing: .05em; font-size: 0.75em; }
+    .ba-hero-rec h2 { margin: 4px 0 0; font-size: 2.2em; font-weight: 800; color: #fff; }
+    .ba-state { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; }
+    .ba-state > div { background: #f8fafc; border: 1.5px solid #d5ece8; border-radius: 10px; padding: 10px 12px; }
+    .ba-state span { display: block; font-size: 0.72em; color: #64748b; text-transform: uppercase; letter-spacing: .04em; }
+    .ba-state strong { font-size: 1.1em; color: #134e4a; font-variant-numeric: tabular-nums; }
+    .ba-cmp { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+    .ba-cmp > div { border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; background: #fff; }
+    .ba-cmp > div.best { border: 2px solid #0f766e; background: #f0fdfa; }
+    .ba-cmp strong { font-size: 0.86em; color: #334155; }
+    .ba-cmp .qty { font-size: 1.4em; font-weight: 800; color: #134e4a; margin: 4px 0; font-variant-numeric: tabular-nums; }
+    .ba-cmp p { font-size: 0.76em; color: #64748b; margin: 0; }
+    .ba-console-head { background: #0f172a; padding: 6px 12px; font-size: 0.75em; color: #94a3b8; font-family: ui-monospace, Consolas, monospace; border-radius: 8px 8px 0 0; }
+    .ba-console { background: #090d16; color: #5eead4; font-family: ui-monospace, Consolas, monospace; padding: 10px 12px; font-size: 0.8em; line-height: 1.5;
+                  min-height: 120px; max-height: 240px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; border-radius: 0 0 8px 8px; }
+</style>
+
+<div class="rg rg-rich">
+    <header class="rg-hero">
+        <div class="rg-hero-main">
+            <span class="rg-hero-icon">🤖</span>
+            <div>
+                <h3>Buyer Agent</h3>
+                <p>Recomenda quanto encomendar de cada cultura, tendo em conta a procura prevista, o stock e a vida útil da fruta.</p>
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+            <div id="buyer-service-badge" class="ba-pill"><span id="buyer-service-dot"></span><span id="buyer-service-text">Serviço do Buyer Agent</span></div>
+            <div class="ba-toggle">
+                Compras autónomas
+                <button type="button" id="buyer-auto-toggle-btn" onclick="toggleBuyerAgentAutonomous()" style="background: {% if user.userprofile.buyer_agent_active %}#10b981{% else %}#94a3b8{% endif %};">{% if user.userprofile.buyer_agent_active %}ATIVADO{% else %}DESATIVADO{% endif %}</button>
+            </div>
+        </div>
+    </header>
+
+    <div id="buyer-service-offline-alert" class="ba-alert" style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b;">
+        <strong>O serviço do Buyer Agent está indisponível.</strong> Inicie o serviço em <code>Web Services/buyer_agent_service</code> para treinar e obter recomendações.
+    </div>
+
+    <!-- Cultura e estado do modelo -->
+    <section class="rg-card">
+        <div class="rg-fields" style="grid-template-columns: minmax(260px, 520px);">
+            <div class="rg-field">
+                <label for="buyer-global-culture-select">Cultura</label>
+                <select id="buyer-global-culture-select" onchange="onBuyerCultureSelected(this.value)">
+                    {% if buyer_stock %}
+                        {% for item in buyer_stock %}
+                            <option value="{{ item.culture_id }}" {% if forloop.first %}selected{% endif %}>{{ item.culture }} · {{ item.quantity|floatformat:0 }} kg em {{ item.warehouse }}</option>
+                        {% endfor %}
+                    {% else %}
+                        <option value="" disabled selected>Sem stock em armazém</option>
+                    {% endif %}
+                </select>
+            </div>
+        </div>
+        <div id="buyer-model-status-card" class="ba-status">
+            <div>
+                <span id="buyer-status-badge" class="ba-badge">A aguardar seleção</span>
+                <h5 id="buyer-banner-title">Selecione uma cultura</h5>
+                <p id="buyer-banner-subtitle">Estado do modelo treinado para a cultura escolhida.</p>
+            </div>
+            <div class="ba-stats">
+                <div class="ba-stat"><span>Lucro médio</span><strong id="buyer-banner-profit">— €</strong></div>
+                <div class="ba-stat"><span>Limite diário</span><strong id="buyer-banner-limit">— kg</strong></div>
+                <div class="ba-stat"><span>Capacidade</span><strong id="buyer-banner-capacity">— kg</strong></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 1. Treino -->
+    <section class="rg-card">
+        <div class="rg-card-head">
+            <span class="rg-section-icon">1</span>
+            <div style="flex: 1;"><h4>Treinar o agente</h4><p>Treino com o histórico de vendas, preço e clima da cultura selecionada.</p></div>
+            <a href="{% url 'download_training_template' %}?type=buyer" class="rg-btn-sec" style="text-decoration: none;">Modelo de ficheiro</a>
+        </div>
+
+        <div id="buyer-missing-forecast-alert" class="ba-alert" style="background: #fffbeb; border: 1px solid #fde68a; color: #92400e;">
+            <div class="ba-alert-row">
+                <span><strong>Falta o modelo de previsão.</strong> Treine primeiro um modelo de previsão para esta cultura.</span>
+                <button type="button" class="rg-btn-sec" onclick="switchSidebarTab('sales-forecasting');">Ir para Previsão de Vendas →</button>
+            </div>
+        </div>
+        <div id="buyer-missing-warehouse-alert" class="ba-alert" style="background: #fef2f2; border: 1px solid #fecaca; color: #991b1b;">
+            <div class="ba-alert-row">
+                <span><strong>Falta a capacidade do armazém.</strong> Registe a capacidade de um armazém para definir os limites de encomenda.</span>
+                <button type="button" class="rg-btn-sec" onclick="switchSidebarTab('warehouse-management');">Ir para Armazéns →</button>
+            </div>
+        </div>
+
+        <form id="ppo-training-form" method="POST" action="{% url 'train_buyer_agent' %}" enctype="multipart/form-data" onsubmit="return false;">
+            {% csrf_token %}
+            <input type="hidden" name="culture_id" id="ppo-form-culture-id" value="{% if buyer_stock %}{{ buyer_stock.0.culture_id }}{% endif %}">
+            <div class="rg-fields">
+                <div class="rg-field" id="ppo-forecast-model-group">
+                    <label for="ppo-forecast-model-select">Modelo de previsão</label>
+                    <select name="forecast_model_type" id="ppo-forecast-model-select">
+                        <option value="modelo_1">Modelo Previsão 1</option>
+                        <option value="modelo_2">Modelo Previsão 2</option>
+                        <option value="modelo_3">Modelo Previsão 3</option>
+                        <option value="modelo_4">Modelo Previsão 4</option>
+                    </select>
+                    <small id="ppo-forecast-model-hint">A verificar modelos disponíveis…</small>
+                </div>
+                <div class="rg-field">
+                    <label for="ppo-episodes">Episódios de treino</label>
+                    <input type="number" name="max_episodes" id="ppo-episodes" min="10" max="5000" step="10" value="350">
+                    <small>Mais episódios: treino mais longo e, em geral, melhores decisões.</small>
+                </div>
+                <div class="rg-field">
+                    <label>Histórico (opcional)</label>
+                    <input type="file" name="market_file" accept=".xlsx,.csv">
+                    <small>Sem ficheiro, usa o histórico já carregado na Previsão de Vendas.</small>
+                </div>
+            </div>
+            <div class="rg-actions">
+                <button type="button" id="ppo-btn-train" onclick="submitPpoTraining()" class="rg-submit">Treinar agente</button>
+            </div>
+        </form>
+
+        <div id="ppo-progress-card" style="display: none; margin-top: 16px;">
+            <div class="fc-progress-row" style="display: flex; justify-content: space-between; font-weight: 600; font-size: 0.86em; color: #134e4a; margin-bottom: 6px;">
+                <span id="ppo-status-msg">A iniciar treino…</span><span id="ppo-pct">0%</span>
+            </div>
+            <div style="height: 8px; background: #d5ece8; border-radius: 999px; overflow: hidden; margin-bottom: 12px;">
+                <div id="ppo-progress-bar" style="height: 100%; width: 0; background: #0f766e; transition: width .3s;"></div>
+            </div>
+            <div class="ba-console-head">Registo do treino</div>
+            <div id="ppo-logs-console" class="ba-console">A aguardar início do treino…</div>
+        </div>
+    </section>
+
+    <!-- 2. Recomendação -->
+    <section class="rg-card">
+        <div class="rg-card-head">
+            <span class="rg-section-icon">2</span>
+            <div style="flex: 1;"><h4>Recomendação do dia</h4><p>Quanto encomendar hoje, comparado com regras de reposição clássicas.</p></div>
+            <button type="button" id="btn-buyer-decide" onclick="runBuyerAgentAction()" class="rg-submit">Obter recomendação</button>
+        </div>
+
+        <div id="buyer-decision-container" style="display: none;">
+            <div class="ba-hero-rec">
+                <div>
+                    <small>Encomendar hoje</small>
+                    <div style="display: flex; align-items: baseline; gap: 10px;">
+                        <h2 id="dec-hero-qty">0 kg</h2>
+                        <span id="dec-hero-culture" style="font-size: 1.05em; opacity: .9;">—</span>
+                    </div>
+                    <p id="dec-hero-subtitle" style="margin: 4px 0 0; font-size: 0.85em; opacity: .85;">Respeita a capacidade do armazém e a vida útil da fruta.</p>
+                </div>
+                <div style="text-align: right;">
+                    <div style="background: rgba(255,255,255,.14); padding: 8px 16px; border-radius: 10px;">
+                        <span style="font-size: 0.75em; opacity: .85; display: block;">Utilização do limite</span>
+                        <strong id="dec-hero-pct" style="font-size: 1.15em;">0%</strong>
+                    </div>
+                    <span id="dec-hero-date" style="font-size: 0.75em; opacity: .8; display: block; margin-top: 6px;">Data: —</span>
+                </div>
+            </div>
+
+            <div class="rg-group-title" style="margin-top: 0;">Situação considerada</div>
+            <div class="ba-state">
+                <div><span>Stock</span><strong id="kpi-total-stock">0 kg</strong></div>
+                <div><span>Cobertura</span><strong id="kpi-coverage-days">0 dias</strong></div>
+                <div><span>A caminho</span><strong id="kpi-in-transit">0 kg</strong></div>
+                <div><span>Procura hoje</span><strong id="kpi-forecast-today">0 kg</strong></div>
+                <div><span>Procura amanhã</span><strong id="kpi-forecast-tomorrow">0 kg</strong></div>
+                <div><span>Preço</span><strong id="kpi-market-price">0.00 €/kg</strong><span id="kpi-urgency" style="text-transform: none;">Urgência: —</span></div>
+            </div>
+
+            <div class="rg-group-title">Comparação com regras clássicas</div>
+            <div class="ba-cmp">
+                <div class="best"><strong>Buyer Agent</strong><div class="qty" id="cmp-ppo-qty">0 kg</div><p>Equilibra margem, falta de produto e desperdício.</p></div>
+                <div><strong>Cobertura de 3 dias</strong><div class="qty" id="cmp-dos-qty">0 kg</div><p>Cobre 3 dias de procura, sem considerar a validade.</p></div>
+                <div><strong>Reposição do défice</strong><div class="qty" id="cmp-cnn-qty">0 kg</div><p>Repõe só o que falta para amanhã.</p></div>
+                <div><strong>Mín-Máx</strong><div class="qty" id="cmp-minmax-qty">0 kg</div><p>Encomenda até 50% da capacidade quando o stock desce abaixo de 20%.</p></div>
+            </div>
+        </div>
+    </section>
+</div>
+</div>

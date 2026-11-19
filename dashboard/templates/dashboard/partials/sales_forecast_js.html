@@ -328,41 +328,18 @@ JavaScript do separador "Previsão de Vendas". Incluir DENTRO de um bloco <scrip
                     .then(data => {
                         if (inferBtn) {
                             inferBtn.disabled = false;
-                            inferBtn.innerText = 'Inferir Procura';
+                            inferBtn.innerText = 'Prever procura';
                         }
                         
                         const predictions = data.predictions || [];
                         const historical = data.recent_history || data.historical || [];
-                        const metrics = data.kpis || data.metrics || {};
                         
                         if (!predictions.length) {
                             alert('Nenhuma previsão retornada pelo modelo.');
                             return;
                         }
                         
-                        // 1. Update KPI Cards
-                        const kpiContainer = document.getElementById('fc-kpi-container');
-                        if (kpiContainer) kpiContainer.style.display = 'block';
-                        
-                        const kpiTotal = document.getElementById('kpi-total-demand');
-                        if (kpiTotal) kpiTotal.innerText = (metrics.total_predicted_kg || 0).toLocaleString('pt-PT', { maximumFractionDigits: 1 }) + ' kg';
-                        
-                        const kpiAvg = document.getElementById('kpi-daily-avg');
-                        if (kpiAvg) kpiAvg.innerText = (metrics.daily_avg_kg || 0).toLocaleString('pt-PT', { maximumFractionDigits: 1 }) + ' kg/dia';
-                        
-                        const kpiPeakVal = document.getElementById('kpi-peak-val');
-                        if (kpiPeakVal) kpiPeakVal.innerText = (metrics.peak_val_kg || 0).toLocaleString('pt-PT', { maximumFractionDigits: 1 }) + ' kg';
-                        
-                        const kpiPeakDate = document.getElementById('kpi-peak-date');
-                        if (kpiPeakDate) kpiPeakDate.innerText = metrics.peak_date ? `Pico: ${metrics.peak_date}` : '';
-                        
-                        const kpiModel = document.getElementById('kpi-model-name');
-                        if (kpiModel) {
-                            const rawType = String(metrics.model_type || modelType || '').toLowerCase();
-                            kpiModel.innerText = fcDisplayName(rawType);
-                        }
-                        
-                        // 2. Prepare Dual-Series Chart
+                        // Gráfico: histórico real + previsão
                         const placeholder = document.getElementById('forecast-placeholder');
                         if (placeholder) placeholder.style.display = 'none';
                         const chartContainer = document.getElementById('forecast-chart-container');
@@ -461,51 +438,11 @@ JavaScript do separador "Previsão de Vendas". Incluir DENTRO de um bloco <scrip
                             });
                         }
                         
-                        // 3. Render Table
-                        const tableContainer = document.getElementById('fc-table-container');
-                        const tableBody = document.getElementById('fc-table-body');
-                        if (tableContainer && tableBody) {
-                            tableBody.innerHTML = '';
-                            const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-                            let prevVal = null;
-                            const isAutoformer = ['modelo_2', 'modelo_4'].includes(normFc(modelType));
-                            const predColor = isAutoformer ? '#6366f1' : '#059669';
-                            
-                            predictions.forEach((p, idx) => {
-                                const dt = new Date(p.date);
-                                const dayName = isNaN(dt.getDay()) ? '-' : dayNames[dt.getDay()];
-                                let varBadge = `<span style="color: #64748b;">-</span>`;
-                                
-                                if (prevVal !== null && prevVal > 0) {
-                                    const diff = p.value - prevVal;
-                                    const diffPct = ((diff / prevVal) * 100).toFixed(1);
-                                    if (diff > 0) {
-                                        varBadge = `<span style="color: #10b981; font-weight: 600;">+${diff.toFixed(1)} kg (+${diffPct}%)</span>`;
-                                    } else if (diff < 0) {
-                                        varBadge = `<span style="color: #ef4444; font-weight: 600;">${diff.toFixed(1)} kg (${diffPct}%)</span>`;
-                                    } else {
-                                        varBadge = `<span style="color: #64748b;">0%</span>`;
-                                    }
-                                }
-                                prevVal = p.value;
-                                
-                                const rowBg = (idx % 2 === 0) ? '#ffffff' : '#f8fafc';
-                                tableBody.innerHTML += `
-                                    <tr style="background: ${rowBg}; border-bottom: 1px solid #f1f5f9;">
-                                        <td style="padding: 8px 14px; font-weight: 600; color: #0f172a;">${p.date}</td>
-                                        <td style="padding: 8px 14px; color: #64748b;">${dayName}</td>
-                                        <td style="padding: 8px 14px; font-weight: 700; color: ${predColor};">${Number(p.value).toLocaleString('pt-PT', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} kg</td>
-                                        <td style="padding: 8px 14px;">${varBadge}</td>
-                                    </tr>
-                                `;
-                            });
-                            tableContainer.style.display = 'block';
-                        }
                     })
                     .catch(err => {
                         if (inferBtn) {
                             inferBtn.disabled = false;
-                            inferBtn.innerText = 'Inferir Procura';
+                            inferBtn.innerText = 'Prever procura';
                         }
                         alert('Erro ao inferir procura: ' + err.message);
                     });

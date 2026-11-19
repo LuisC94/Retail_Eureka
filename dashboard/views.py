@@ -472,6 +472,7 @@ class ProcessorDashboardView(View):
         instant_producers = User.objects.filter(groups__name='Producer', userprofile__producer_type='instant').order_by('username')
         contract_producers = User.objects.filter(groups__name='Producer', userprofile__producer_type='contract').order_by('username')
         contracts = marketplace_service.get_contracts_adapted(buyer_username=user.username)
+        _annotate_contract_receptions(contracts, user)
         
         open_orders = marketplace_service.get_open_orders_adapted()
         closed_orders = marketplace_service.get_closed_deals_adapted(username=user.username)
@@ -550,6 +551,10 @@ class ProcessorDashboardView(View):
             
             # Fetch store daily orders (from marketplace web service)
             store_orders = marketplace_service.get_closed_deals_adapted(username=store.username)
+            # Últimos negócios em que a loja comprou, com o estado da receção na loja
+            store_orders = sorted([o for o in store_orders if o.requester.username == store.username],
+                                  key=lambda o: o.created_at or timezone.now(), reverse=True)[:10]
+            _annotate_contract_receptions(store_orders, store)
             
             approved_stores_data.append({
                 'store': store,
@@ -602,6 +607,7 @@ class RetailerDashboardView(View):
         instant_producers = User.objects.filter(groups__name='Producer', userprofile__producer_type='instant').order_by('username')
         contract_producers = User.objects.filter(groups__name='Producer', userprofile__producer_type='contract').order_by('username')
         contracts = marketplace_service.get_contracts_adapted(buyer_username=user.username)
+        _annotate_contract_receptions(contracts, user)
 
         open_orders = marketplace_service.get_open_orders_adapted()[:50]
         closed_orders = marketplace_service.get_closed_deals_adapted(username=user.username)[:50]
@@ -1120,6 +1126,7 @@ def producer_submit_warehouse(request):
                 messages.error(request, db_error)
         else:
             print(f"[ERRO FORMULARIO PRODUCER WAREHOUSE]: {form.errors}")
+            messages.error(request, f"Armazém não registado. {_form_errors_text(form)}")
 
         return redirect('producer_dashboard')
         
@@ -1179,6 +1186,7 @@ def processor_submit_warehouse(request):
                 messages.error(request, db_error)
         else:
             print(f"[ERRO FORMULARIO PROCESSOR WAREHOUSE]: {form.errors}")
+            messages.error(request, f"Armazém não registado. {_form_errors_text(form)}")
 
         return redirect('processor_dashboard')
         
@@ -1253,6 +1261,24 @@ def _deduct_seller_stock_from_deal(deal):
                 if stk:
                     stk.quantity = max(0.0, float(stk.quantity) - deal_qty)
                     stk.save()
+
+def _annotate_contract_receptions(contracts, user):
+    """Liga cada contrato de fornecimento à sua receção (estado: a receber / recebido / atrasado)."""
+    from dashboard.models import DealReception
+    by_deal = {r.deal_id: r for r in DealReception.objects.filter(buyer=user, deal_id__in=[str(c.id) for c in contracts])}
+    for c in contracts:
+        c.reception = by_deal.get(str(c.id))
+    return contracts
+
+
+def _form_errors_text(form):
+    """Erros de um formulário Django em texto legível: 'Rótulo: erro; ...'."""
+    parts = []
+    for name, errs in form.errors.items():
+        label = form.fields[name].label if name in form.fields else ''
+        parts.append(f"{label + ': ' if label else ''}{' '.join(str(e) for e in errs)}")
+    return '; '.join(parts)
+
 
 def _open_reception_for_deal(request, deal, dest_wh, expected_date=None, culture=None):
     """Cria a receção pendente do negócio com o modo de entrega escolhido no formulário."""
@@ -1395,6 +1421,7 @@ def retailer_submit_warehouse(request):
                 messages.error(request, db_error)
         else:
             print(f"[ERRO FORMULARIO RETAILER WAREHOUSE]: {form.errors}")
+            messages.error(request, f"Armazém não registado. {_form_errors_text(form)}")
 
         return redirect('retailer_dashboard')
     return redirect('retailer_dashboard')
@@ -2995,7 +3022,10 @@ def adjust_stock_manually(request):
         
         # Atualizar parâmetros meteorológicos do Armazém se fornecidos (qualquer utilizador com Armazém)
         from dashboard.models import Warehouse
-        warehouse_obj = Warehouse.objects.filter(owner=request.user, location=warehouse_location).first()
+        import re as _re
+        _wh_match = _re.search(r'\(WH:\s*(\d+)\)', warehouse_location or '')
+        warehouse_obj = (Warehouse.objects.filter(owner=request.user, pk=int(_wh_match.group(1))).first() if _wh_match else None) \
+            or Warehouse.objects.filter(owner=request.user, location=warehouse_location).first()
         if not warehouse_obj:
             warehouse_obj = Warehouse.objects.filter(owner=request.user).first()
             
@@ -3136,10 +3166,10 @@ def download_training_template(request):
 
     # Create dynamic template data
     # Template de histórico de vendas (forecast / buyer agent)
-    # Temperatura/Humidade/Etileno são opcionais: usados pelo treino do Buyer Agent (a Previsão de Vendas ignora-os).
+    # Só data, vendas e preço (obrigatórios) + clima (opcional, usado pelo Buyer Agent; a Previsão de Vendas ignora-o).
+    # A cultura não vai no ficheiro: é a escolhida no formulário.
     columns = [
         'Data',
-        'Cultura_Produto',
         'Vendas_Kg',
         'Preco_Venda_Euro',
         'Temperatura_C',
@@ -3147,11 +3177,11 @@ def download_training_template(request):
         'Etileno_ppm'
     ]
     data = [
-        ['2026-06-01', culture_name, 250.0, 1.80, 1.0, 90.0, 0.05],
-        ['2026-06-02', culture_name, 270.0, 1.85, 1.2, 91.0, 0.05],
-        ['2026-06-03', culture_name, 310.0, 1.80, 0.9, 90.0, 0.06],
-        ['2026-06-04', culture_name, 150.0, 1.90, 1.1, 89.0, 0.05],
-        ['2026-06-05', culture_name, 400.0, 1.75, 1.0, 90.0, 0.05],
+        ['2026-06-01', 250.0, 1.80, 1.0, 90.0, 0.05],
+        ['2026-06-02', 270.0, 1.85, 1.2, 91.0, 0.05],
+        ['2026-06-03', 310.0, 1.80, 0.9, 90.0, 0.06],
+        ['2026-06-04', 150.0, 1.90, 1.1, 89.0, 0.05],
+        ['2026-06-05', 400.0, 1.75, 1.0, 90.0, 0.05],
     ]
     filename = f"template_previsao_vendas_{clean_culture_name.lower().replace(' ', '_')}.xlsx"
 

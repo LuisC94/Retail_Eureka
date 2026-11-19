@@ -1,0 +1,84 @@
+{% comment %}
+Separador "Associações" do Retailer: autorizar, recusar ou revogar o acesso de armazéns centrais (processadores).
+Estilos em partials/producer_ui_css.html.
+{% endcomment %}
+<div id="central-warehouse-mgmt" class="tab-content" style="display: none;">
+<div class="rg rg-rich">
+    <header class="rg-hero">
+        <div class="rg-hero-main">
+            <span class="rg-hero-icon">🏢</span>
+            <div>
+                <h3>Associações</h3>
+                <p>Armazéns centrais que pedem acesso aos seus armazéns, stock e compras.</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Pedidos pendentes -->
+    <section class="rg-card rg-table-card">
+        <div class="rg-table-head"><h4>Pedidos pendentes<span class="rg-count">{{ incoming_associations|length }}</span></h4></div>
+        {% if incoming_associations %}
+        <div class="rg-scroll">
+            <table class="rg-table">
+                <thead><tr><th>Armazém central</th><th>Pedido em</th><th></th></tr></thead>
+                <tbody>
+                {% for assoc in incoming_associations %}
+                    <tr>
+                        <td class="strong">{{ assoc.processor.username }}</td>
+                        <td>{{ assoc.created_at|date:"d/m/Y H:i" }}</td>
+                        <td>
+                            <div class="rg-actions-cell">
+                                <form method="POST" action="{% url 'retailer_respond_association' %}" style="margin: 0;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="association_id" value="{{ assoc.id }}">
+                                    <input type="hidden" name="action" value="approve">
+                                    <button type="submit" class="rg-mini" style="background: #0f766e; color: #fff; border-color: #0f766e;">Autorizar</button>
+                                </form>
+                                <form method="POST" action="{% url 'retailer_respond_association' %}" style="margin: 0;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="association_id" value="{{ assoc.id }}">
+                                    <input type="hidden" name="action" value="reject">
+                                    <button type="submit" class="rg-mini" style="color: #b91c1c; border-color: #fecaca;">Recusar</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}<div class="rg-empty">Não há pedidos pendentes.</div>{% endif %}
+    </section>
+
+    <!-- Acessos ativos -->
+    <section class="rg-card rg-table-card">
+        <div class="rg-table-head"><h4>Acessos autorizados<span class="rg-count">{{ active_associations|length }}</span></h4></div>
+        {% if active_associations %}
+        <div class="rg-scroll">
+            <table class="rg-table">
+                <thead><tr><th>Armazém central</th><th>Autorizado em</th><th></th></tr></thead>
+                <tbody>
+                {% for assoc in active_associations %}
+                    <tr>
+                        <td class="strong">{{ assoc.processor.username }}</td>
+                        <td>{{ assoc.updated_at|date:"d/m/Y H:i" }}</td>
+                        <td>
+                            <div class="rg-actions-cell">
+                                <form method="POST" action="{% url 'retailer_respond_association' %}" style="margin: 0;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="association_id" value="{{ assoc.id }}">
+                                    <input type="hidden" name="action" value="revoke">
+                                    <button type="submit" class="rg-mini" style="color: #b91c1c; border-color: #fecaca;"
+                                            onclick="return confirm('Revogar o acesso deste armazém central aos seus dados?')">Revogar acesso</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}<div class="rg-empty">Ainda não autorizou nenhum armazém central.</div>{% endif %}
+    </section>
+</div>
+</div>

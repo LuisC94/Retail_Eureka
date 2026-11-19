@@ -1,139 +1,136 @@
 {% comment %}
 Painel de receções de mercadoria (Processor / Retailer).
-Contexto: pending_receptions, received_receptions, today_iso.
+Contexto: pending_receptions, received_receptions, buyer_warehouses, today_iso.
 O stock só entra quando a receção é confirmada. As medições são opcionais.
+Estilos base em partials/producer_ui_css.html (classes rg-*).
 {% endcomment %}
 <style>
-    .rcp-row-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; align-items: end; margin-top: 10px; }
-    .rcp-row-form label { display: block; font-size: 0.8em; font-weight: 600; color: #455a64; margin-bottom: 4px; }
-    .rcp-row-form input, .rcp-row-form textarea { width: 100%; padding: 8px; border: 1px solid #cfd8dc; border-radius: 6px; font-size: 0.9em; box-sizing: border-box; }
-    .rcp-card { border: 1px solid #e0e0e0; border-left: 5px solid #00796b; border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; background: #fff; }
-    .rcp-card.rcp-overdue { border-left-color: #c62828; background: #fffafa; }
+    .rcp-list { padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+    .rcp-card { border: 2px solid #9fd1c8; border-left: 6px solid #0f766e; border-radius: 12px; padding: 14px 16px; background: #fff; }
+    .rcp-card.rcp-overdue { border-color: #fecaca; border-left-color: #dc2626; background: #fffafa; }
     .rcp-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: baseline; }
-    .rcp-meta { color: #607d8b; font-size: 0.85em; }
-    .rcp-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.75em; font-weight: 600; }
-    .rcp-badge-own { background: #e0f2f1; color: #00695c; }
-    .rcp-badge-carrier { background: #e3f2fd; color: #1565c0; }
-    .rcp-badge-late { background: #ffebee; color: #c62828; }
-    .rcp-badge-measured { background: #f3e5f5; color: #6a1b9a; }
-    .rcp-details summary { cursor: pointer; color: #00796b; font-weight: 600; font-size: 0.85em; margin-top: 10px; }
-    .rcp-submit { background: #2e7d32; color: #fff; border: none; border-radius: 6px; padding: 9px 16px; font-weight: 600; cursor: pointer; }
+    .rcp-head strong { color: #134e4a; font-size: 1.02em; }
+    .rcp-meta { color: #64748b; font-size: 0.84em; }
+    .rcp-badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 0.75em; font-weight: 600; margin-left: 4px; }
+    .rcp-badge-own { background: #ecfdf5; color: #047857; }
+    .rcp-badge-carrier { background: #eff6ff; color: #1d4ed8; }
+    .rcp-badge-late { background: #fef2f2; color: #b91c1c; }
+    .rcp-badge-measured { background: #f0fdfa; color: #0f766e; border: 1px solid #9fd1c8; }
+    .rcp-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px 14px; align-items: end; margin-top: 12px; }
+    .rcp-form .rg-field { margin: 0; }
+    .rcp-details { margin-top: 12px; border-top: 1.5px dashed #9fd1c8; padding-top: 8px; }
+    .rcp-details summary { cursor: pointer; color: #0f766e; font-weight: 600; font-size: 0.85em; }
+    .rcp-warning { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 12px 14px; border-radius: 10px; }
 </style>
 
-<div class="data-table-container" id="receptions-panel" style="margin-bottom: 30px;">
-    <h3>📥 Receções Pendentes</h3>
-    {% if pending_receptions and not buyer_warehouses %}
-    <div style="background:#fff3e0; border:1px solid #ffcc80; color:#e65100; padding:12px 15px; border-radius:8px; margin-bottom:15px;">
-        ⚠️ Tem de registar pelo menos um armazém (separador <strong>Warehouse Management</strong>) antes de confirmar receções.
-    </div>
-    {% endif %}
+<section class="rg-card rg-table-card" id="receptions-panel">
+    <div class="rg-table-head"><h4>Receções pendentes<span class="rg-count">{{ pending_receptions|length }}</span></h4></div>
+    <div class="rcp-list">
+        {% if pending_receptions and not buyer_warehouses %}
+        <div class="rcp-warning">Tem de registar pelo menos um armazém (separador <strong>Armazéns</strong>) antes de confirmar receções.</div>
+        {% endif %}
 
-    {% for r in pending_receptions %}
-    <div class="rcp-card{% if r.is_overdue %} rcp-overdue{% endif %}">
-        <div class="rcp-head">
-            <div>
-                <strong>{{ r.culture_name }}</strong> · {{ r.quantity_kg }} kg
-                <span class="rcp-badge {% if r.delivery_mode == 'own' %}rcp-badge-own{% else %}rcp-badge-carrier{% endif %}">{{ r.get_delivery_mode_display }}</span>
-                {% if r.is_overdue %}<span class="rcp-badge rcp-badge-late">Atrasada</span>{% endif %}
+        {% for r in pending_receptions %}
+        <div class="rcp-card{% if r.is_overdue %} rcp-overdue{% endif %}">
+            <div class="rcp-head">
+                <div>
+                    <strong>{{ r.culture_name }} · {{ r.quantity_kg|floatformat:0 }} kg</strong>
+                    <span class="rcp-badge {% if r.delivery_mode == 'own' %}rcp-badge-own{% else %}rcp-badge-carrier{% endif %}">{{ r.get_delivery_mode_display }}</span>
+                    {% if r.is_overdue %}<span class="rcp-badge rcp-badge-late">Atrasada</span>{% endif %}
+                </div>
+                <div class="rcp-meta">
+                    Negócio {{ r.deal_id|truncatechars:16 }}{% if r.seller_id %} · {{ r.seller_id }}{% endif %}{% if r.batch_id %} · {{ r.batch_id }}{% endif %}
+                </div>
             </div>
-            <div class="rcp-meta">
-                Negócio #{{ r.deal_id|truncatechars:14 }}{% if r.seller_id %} · Fornecedor: {{ r.seller_id }}{% endif %}
-                {% if r.batch_id %} · Lote {{ r.batch_id }}{% endif %}
+            <div class="rcp-meta" style="margin-top: 4px;">
+                Destino: {{ r.destination_warehouse|default:"—" }} ·
+                Previsto: {% if r.expected_date %}{{ r.expected_date|date:"d/m/Y" }}{% else %}—{% endif %} ·
+                Fechado a {{ r.created_at|date:"d/m/Y" }}
             </div>
+
+            <form method="POST" action="{% url 'confirm_deal_reception' %}">
+                {% csrf_token %}
+                <input type="hidden" name="reception_id" value="{{ r.pk }}">
+                <div class="rcp-form">
+                    <div class="rg-field">
+                        <label for="rcp-wh-{{ r.pk }}">Armazém que recebeu <em>*</em></label>
+                        <select id="rcp-wh-{{ r.pk }}" name="warehouse_id" required>
+                            {% for wh in buyer_warehouses %}
+                                <option value="{{ wh.pk }}" {% if wh.pk == r.default_warehouse_id %}selected{% endif %}>{{ wh.location }} (WH: {{ wh.warehouse_id }})</option>
+                            {% empty %}
+                                <option value="" selected disabled>Sem armazéns registados</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="rg-field">
+                        <label for="rcp-date-{{ r.pk }}">Data de receção <em>*</em></label>
+                        <input type="date" id="rcp-date-{{ r.pk }}" name="received_at" value="{{ today_iso }}" max="{{ today_iso }}" required>
+                    </div>
+                    <div class="rg-field">
+                        <label for="rcp-qty-{{ r.pk }}">Quantidade recebida (kg)</label>
+                        <input type="number" id="rcp-qty-{{ r.pk }}" name="received_quantity_kg" step="0.01" min="0.01" placeholder="{{ r.quantity_kg }}">
+                    </div>
+                    <div>
+                        <button type="submit" class="rg-submit" style="width: 100%;" {% if not buyer_warehouses %}disabled{% endif %}>Confirmar receção</button>
+                    </div>
+                </div>
+                <details class="rcp-details">
+                    <summary>Medições à chegada (opcional)</summary>
+                    <div class="rcp-form">
+                        <div class="rg-field">
+                            <label for="rcp-brix-{{ r.pk }}">Brix (°Bx)</label>
+                            <input type="number" id="rcp-brix-{{ r.pk }}" name="soluble_solids" step="0.01" min="0" placeholder="Ex.: 14.5">
+                        </div>
+                        <div class="rg-field">
+                            <label for="rcp-firm-{{ r.pk }}">Firmeza (N)</label>
+                            <input type="number" id="rcp-firm-{{ r.pk }}" name="firmness" step="0.01" min="0" placeholder="Ex.: 45">
+                        </div>
+                        <div class="rg-field">
+                            <label for="rcp-acid-{{ r.pk }}">Acidez</label>
+                            <input type="number" id="rcp-acid-{{ r.pk }}" name="acidity" step="0.001" min="0" placeholder="Ex.: 0.45">
+                        </div>
+                        <div class="rg-field">
+                            <label for="rcp-cal-{{ r.pk }}">Calibre (mm)</label>
+                            <input type="number" id="rcp-cal-{{ r.pk }}" name="caliber" step="0.1" min="0" placeholder="Ex.: 75">
+                        </div>
+                        <div class="rg-field" style="grid-column: 1 / -1;">
+                            <label for="rcp-notes-{{ r.pk }}">Notas (quebras, danos, etc.)</label>
+                            <textarea id="rcp-notes-{{ r.pk }}" name="notes" rows="2"></textarea>
+                        </div>
+                    </div>
+                </details>
+            </form>
         </div>
-        <div class="rcp-meta" style="margin-top:4px;">
-            Destino no negócio: {{ r.destination_warehouse|default:"—" }} ·
-            Previsto: {% if r.expected_date %}{{ r.expected_date|date:"d/m/Y" }}{% else %}—{% endif %} ·
-            Negócio fechado em {{ r.created_at|date:"d/m/Y" }}
-        </div>
-
-        <form method="POST" action="{% url 'confirm_deal_reception' %}">
-            {% csrf_token %}
-            <input type="hidden" name="reception_id" value="{{ r.pk }}">
-            <div class="rcp-row-form">
-                <div>
-                    <label for="rcp-wh-{{ r.pk }}">Armazém que recebeu</label>
-                    <select id="rcp-wh-{{ r.pk }}" name="warehouse_id" required style="width:100%; padding:8px; border:1px solid #cfd8dc; border-radius:6px; font-size:0.9em;">
-                        {% for wh in buyer_warehouses %}
-                            <option value="{{ wh.pk }}" {% if wh.pk == r.default_warehouse_id %}selected{% endif %}>{{ wh.location }} (WH: {{ wh.warehouse_id }})</option>
-                        {% empty %}
-                            <option value="" selected disabled>Sem armazéns registados</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div>
-                    <label for="rcp-date-{{ r.pk }}">Data de receção</label>
-                    <input type="date" id="rcp-date-{{ r.pk }}" name="received_at" value="{{ today_iso }}" max="{{ today_iso }}" required>
-                </div>
-                <div>
-                    <label for="rcp-qty-{{ r.pk }}">Quantidade recebida (kg)</label>
-                    <input type="number" id="rcp-qty-{{ r.pk }}" name="received_quantity_kg" step="0.01" min="0.01" placeholder="{{ r.quantity_kg }}">
-                </div>
-                <div>
-                    <button type="submit" class="rcp-submit" {% if not buyer_warehouses %}disabled style="background:#b0bec5; cursor:not-allowed;"{% endif %}>✓ Recebido</button>
-                </div>
-            </div>
-            <details class="rcp-details">
-                <summary>Medições à chegada (opcional)</summary>
-                <div class="rcp-row-form">
-                    <div>
-                        <label for="rcp-brix-{{ r.pk }}">Brix (°Bx)</label>
-                        <input type="number" id="rcp-brix-{{ r.pk }}" name="soluble_solids" step="0.01" min="0" placeholder="Ex: 14.5">
-                    </div>
-                    <div>
-                        <label for="rcp-acid-{{ r.pk }}">Acidez (g/L / %)</label>
-                        <input type="number" id="rcp-acid-{{ r.pk }}" name="acidity" step="0.001" min="0" placeholder="Ex: 0.45">
-                    </div>
-                    <div>
-                        <label for="rcp-firm-{{ r.pk }}">Firmeza</label>
-                        <input type="number" id="rcp-firm-{{ r.pk }}" name="firmness" step="0.01" min="0" placeholder="Ex: 45">
-                    </div>
-                    <div>
-                        <label for="rcp-cal-{{ r.pk }}">Calibre (mm)</label>
-                        <input type="number" id="rcp-cal-{{ r.pk }}" name="caliber" step="0.1" min="0" placeholder="Ex: 75">
-                    </div>
-                </div>
-                <div style="margin-top:10px;">
-                    <label for="rcp-notes-{{ r.pk }}" style="display:block; font-size:0.8em; font-weight:600; color:#455a64; margin-bottom:4px;">Notas (quebras, danos, etc.)</label>
-                    <textarea id="rcp-notes-{{ r.pk }}" name="notes" rows="2" style="width:100%; padding:8px; border:1px solid #cfd8dc; border-radius:6px; box-sizing:border-box;"></textarea>
-                </div>
-            </details>
-        </form>
+        {% empty %}
+        <div class="rg-empty" style="padding: 12px 0;">Não há receções pendentes.</div>
+        {% endfor %}
     </div>
-    {% empty %}
-    <p style="color:#666; font-style:italic; padding:10px 0;">Não existem receções pendentes.</p>
-    {% endfor %}
+</section>
 
-    {% if received_receptions %}
-    <h4 style="margin-top:25px; color:#455a64;">Últimas receções confirmadas</h4>
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th>Data</th>
-                <th>Cultura</th>
-                <th>Recebido (kg)</th>
-                <th>Destino</th>
-                <th>Medições</th>
-            </tr>
-        </thead>
-        <tbody>
+{% if received_receptions %}
+<section class="rg-card rg-table-card">
+    <div class="rg-table-head"><h4>Últimas entradas em stock<span class="rg-count">{{ received_receptions|length }}</span></h4></div>
+    <div class="rg-scroll">
+        <table class="rg-table">
+            <thead><tr><th>Data</th><th>Origem</th><th>Cultura</th><th class="num">Recebido (kg)</th><th>Armazém</th><th>Medições</th></tr></thead>
+            <tbody>
             {% for r in received_receptions %}
-            <tr>
-                <td>{{ r.received_at|date:"d/m/Y" }}</td>
-                <td>{{ r.culture_name }}</td>
-                <td>{{ r.received_quantity_kg }}{% if r.received_quantity_kg != r.quantity_kg %} <span class="rcp-meta">(negociado {{ r.quantity_kg }})</span>{% endif %}</td>
-                <td>{{ r.destination_warehouse }}</td>
-                <td>
-                    {% if r.has_measurements %}
-                        <span class="rcp-badge rcp-badge-measured">Medido</span>
-                        <span class="rcp-meta">{% if r.soluble_solids is not None %}Brix {{ r.soluble_solids }} {% endif %}{% if r.acidity is not None %}· Acidez {{ r.acidity }} {% endif %}{% if r.firmness is not None %}· Firmeza {{ r.firmness }}{% endif %}</span>
-                    {% else %}
-                        <span class="rcp-meta">—</span>
-                    {% endif %}
-                </td>
-            </tr>
+                <tr>
+                    <td>{{ r.received_at|date:"d/m/Y" }}</td>
+                    <td>{% if r.deal_type == 'INSTANT_PURCHASE' %}Compra rápida{% elif r.deal_type == 'ADJUSTMENT' %}Ajuste manual{% elif r.deal_type == 'CONTRACT' %}Contrato{% else %}Marketplace{% endif %}</td>
+                    <td class="strong">{{ r.culture_name }}</td>
+                    <td class="num">{{ r.received_quantity_kg|floatformat:0 }}{% if r.received_quantity_kg != r.quantity_kg %} <span class="rg-muted">/ {{ r.quantity_kg|floatformat:0 }}</span>{% endif %}</td>
+                    <td>{{ r.destination_warehouse }}</td>
+                    <td>
+                        {% if r.has_measurements %}
+                            <span class="rcp-badge rcp-badge-measured" style="margin-left: 0;">Medido</span>
+                            <span class="rcp-meta">{% if r.soluble_solids is not None %}Brix {{ r.soluble_solids|floatformat:1 }}{% endif %}{% if r.firmness is not None %} · Firmeza {{ r.firmness|floatformat:1 }}{% endif %}{% if r.acidity is not None %} · Acidez {{ r.acidity|floatformat:2 }}{% endif %}</span>
+                        {% else %}<span class="rg-muted">—</span>{% endif %}
+                    </td>
+                </tr>
             {% endfor %}
-        </tbody>
-    </table>
-    {% endif %}
-</div>
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}

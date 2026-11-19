@@ -10,3 +10,6 @@ env/
 staticfiles/
 storage/
 scratch/
+
+# Dados reais (não versionar)
+Dados/
