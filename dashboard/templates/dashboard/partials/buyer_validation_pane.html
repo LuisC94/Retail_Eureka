@@ -1,0 +1,270 @@
+{% comment %}
+Mini-separador "Validação" do Buyer Agent (incluído em partials/buyer_agent_tab.html).
+Simula o modelo já treinado e as regras clássicas nos últimos N % do histórico (por omissão 20 %).
+Não treina nada nem altera o modelo.
+Usa a cultura escolhida no topo do separador (#buyer-global-culture-select) e o Chart.js da página.
+{% endcomment %}
+<div id="ba-pane-validation" class="ba-pane" style="display: none;">
+<style>
+    .bv-table td.best { background: #f0fdfa; color: #0f766e; font-weight: 700; }
+    .bv-summary { background: linear-gradient(120deg, #0f766e 0%, #134e4a 100%); color: #fff; border-radius: 14px; padding: 18px 22px; margin-bottom: 14px; }
+    .bv-summary h4 { margin: 0 0 6px; color: #fff; font-size: 1.05em; }
+    .bv-summary p { margin: 2px 0; font-size: 0.9em; opacity: .92; }
+    .bv-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; margin-top: 14px; }
+    .bv-charts > div { border: 1.5px solid #d5ece8; border-radius: 10px; padding: 12px; background: #fff; height: 300px; position: relative; }
+    .bv-note { font-size: 0.8em; color: #64748b; margin-top: 12px; line-height: 1.5; }
+</style>
+
+<section class="rg-card">
+    <div class="rg-card-head">
+        <span class="rg-section-icon">✓</span>
+        <div style="flex: 1;"><h4>Validar com os últimos dias do histórico</h4>
+            <p>Simula o modelo já treinado nos últimos dias do histórico, dia a dia, com as vendas, preços e clima reais, e compara-o com as regras clássicas. Não treina nem altera o modelo.</p></div>
+    </div>
+    <form id="bv-form" onsubmit="return false;">
+        <div class="rg-fields">
+            <div class="rg-field">
+                <label for="bv-test-pct">Período de teste (% final do histórico)</label>
+                <input type="number" id="bv-test-pct" name="test_pct" min="5" max="50" step="5" value="20">
+                <small>Por omissão, os últimos 20 % dos dias.</small>
+            </div>
+            <div class="rg-field">
+                <label for="bv-fc-model">Modelo de previsão</label>
+                <select id="bv-fc-model" name="forecast_model_type">
+                    <option value="modelo_1">Modelo Previsão 1</option>
+                    <option value="modelo_2">Modelo Previsão 2</option>
+                    <option value="modelo_3">Modelo Previsão 3</option>
+                    <option value="modelo_4">Modelo Previsão 4</option>
+                </select>
+            </div>
+            <div class="rg-field">
+                <label for="bv-file">Histórico (opcional)</label>
+                <input type="file" id="bv-file" name="market_file" accept=".xlsx,.xls,.csv">
+                <small>Sem ficheiro, usa o histórico de vendas guardado (sem clima). Para usar o clima real, anexe o ficheiro do treino.</small>
+            </div>
+        </div>
+        <div class="rg-actions"><button type="button" id="bv-btn" class="rg-submit" onclick="runBuyerValidation()">Validar</button></div>
+    </form>
+
+    <div id="bv-progress" style="display: none; margin-top: 16px;">
+        <div style="display: flex; justify-content: space-between; font-weight: 600; font-size: 0.86em; color: #134e4a; margin-bottom: 6px;">
+            <span id="bv-status">A preparar…</span><span id="bv-pct">0%</span>
+        </div>
+        <div style="height: 8px; background: #d5ece8; border-radius: 999px; overflow: hidden; margin-bottom: 12px;">
+            <div id="bv-bar" style="height: 100%; width: 0; background: #0f766e; transition: width .3s;"></div>
+        </div>
+        <div class="ba-console-head">Registo da validação</div>
+        <div id="bv-console" class="ba-console"></div>
+    </div>
+</section>
+
+<section class="rg-card" id="bv-results-card">
+    <div id="bv-empty" class="rg-empty">Ainda não há validação para esta cultura.</div>
+    <div id="bv-results" style="display: none;">
+        <div class="bv-summary">
+            <h4 id="bv-sum-title">—</h4>
+            <p id="bv-sum-period">—</p>
+            <p id="bv-sum-text">—</p>
+            <p id="bv-sum-overlap" style="margin-top: 8px; font-size: 0.82em;"></p>
+        </div>
+        <div class="rg-group-title" style="margin-top: 0;">Resultados no período de teste</div>
+        <div class="rg-scroll" style="border: 1.5px solid #d5ece8; border-radius: 10px;">
+            <table class="rg-table bv-table">
+                <thead><tr><th>Política</th><th class="num">Lucro (€)</th><th class="num">Nível de serviço</th><th class="num">Vendas perdidas (kg)</th>
+                    <th class="num">Desperdício (kg)</th><th class="num">Dias com falta</th><th class="num">Stock médio (kg)</th><th class="num">Encomendado (kg)</th></tr></thead>
+                <tbody id="bv-tbody"></tbody>
+            </table>
+        </div>
+        <div class="bv-charts">
+            <div><canvas id="bv-chart-profit"></canvas></div>
+            <div><canvas id="bv-chart-stock"></canvas></div>
+        </div>
+        <p class="bv-note" id="bv-note"></p>
+    </div>
+</section>
+</div>
+
+<script>
+(function () {
+    const COLORS = { buyer_agent: '#0f766e', forecast_tomorrow: '#d97706', cover_3d: '#2563eb', min_max: '#9333ea' };
+    const charts = {};
+    const fmt = (v, d = 0) => Number(v || 0).toLocaleString('pt-PT', { minimumFractionDigits: d, maximumFractionDigits: d });
+    const cultureId = () => document.getElementById('buyer-global-culture-select')?.value || '';
+    const fmtDate = s => s ? s.split('-').reverse().join('/') : '—';
+
+    window.switchBuyerPane = function (pane) {
+        document.querySelectorAll('#buyer-agent-training .ba-pane').forEach(p => p.style.display = (p.id === pane ? '' : 'none'));
+        document.querySelectorAll('#buyer-agent-training .ba-subtab').forEach(b => b.classList.toggle('active', b.dataset.pane === pane));
+        if (pane === 'ba-pane-validation') loadBuyerValidation();
+        if (pane === 'ba-pane-simulation' && window.loadBuyerSimulation) loadBuyerSimulation();
+    };
+
+    function log(text, color) {
+        const c = document.getElementById('bv-console');
+        const line = document.createElement('div');
+        line.style.color = color || '#5eead4';
+        line.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+        c.appendChild(line);
+        c.scrollTop = c.scrollHeight;
+    }
+
+    function setProgress(pct, status) {
+        document.getElementById('bv-bar').style.width = pct + '%';
+        document.getElementById('bv-pct').innerText = Math.round(pct) + '%';
+        if (status) document.getElementById('bv-status').innerText = status;
+    }
+
+    window.loadBuyerValidation = function () {
+        const id = cultureId();
+        if (!id) return;
+        fetch('/ai/buyer-agent-validation/?culture_id=' + encodeURIComponent(id))
+            .then(r => r.json())
+            .then(d => {
+                if (d.status === 'success' && d.has_report) renderReport(d.report);
+                else showEmpty(d.status === 'error' ? d.message : (d.is_running ? 'Há uma validação a decorrer para esta cultura.' : null));
+            })
+            .catch(() => showEmpty('O serviço do Buyer Agent está indisponível.'));
+    };
+
+    function showEmpty(msg) {
+        document.getElementById('bv-results').style.display = 'none';
+        const e = document.getElementById('bv-empty');
+        e.style.display = '';
+        e.innerText = msg || 'Ainda não há validação para esta cultura.';
+    }
+
+    function renderReport(r) {
+        document.getElementById('bv-empty').style.display = 'none';
+        document.getElementById('bv-results').style.display = '';
+        const pols = r.policies;
+        const agent = pols[0].totals;
+
+        document.getElementById('bv-sum-title').innerText = `Teste nos últimos ${Math.round(r.test_fraction * 100)} % do histórico (${r.simulated_days} dias simulados)`;
+        const m = r.model || {};
+        document.getElementById('bv-sum-period').innerText =
+            `Teste: ${fmtDate(r.test_from)} a ${fmtDate(r.test_to)} · Modelo treinado em ${m.trained_at || '—'} (${m.episodes || '—'} episódios) · Validado em ${r.created_at}`;
+        const ov = {
+            none: `O período de teste é posterior a todos os dias usados no treino do modelo: é um teste limpo.`,
+            selection: `O modelo nunca treinou com estes dias, mas eles fizeram parte do período usado no treino para escolher a melhor versão do modelo (${fmtDate(m.selection_from)} a ${fmtDate(m.selection_to)}). O resultado pode ser ligeiramente otimista.`,
+            weights: `Atenção: parte do período de teste foi usada para treinar o modelo (até ${fmtDate(m.weights_train_to)}). O resultado é otimista; valide com dias posteriores ao treino.`,
+        };
+        document.getElementById('bv-sum-overlap').innerText = r.overlap ? ov[r.overlap] :
+            `O treino usa os primeiros 60 % dos dias para aprender e os restantes 40 % para escolher a melhor versão do modelo. Se o histórico é o mesmo do treino, os últimos 20 % nunca serviram para aprender, mas contaram nessa escolha. Volte a treinar para esta informação passar a ser verificada automaticamente.`;
+        const ref = pols.find(p => p.key === 'forecast_tomorrow') || pols[1];
+        const others = pols.slice(1);
+        const bestOther = others.reduce((a, b) => (b.totals.profit > a.totals.profit ? b : a));
+        const diff = agent.profit - bestOther.totals.profit;
+        let txt = diff >= 0
+            ? `O Buyer Agent teria tido ${fmt(diff, 2)} € mais lucro do que a melhor regra clássica (${bestOther.label}).`
+            : `O Buyer Agent teria tido ${fmt(-diff, 2)} € menos lucro do que a melhor regra clássica (${bestOther.label}).`;
+        const dw = ref.totals.waste_kg - agent.waste_kg, dm = ref.totals.missed_kg - agent.missed_kg;
+        txt += ` Face à ${ref.label}: ${dw >= 0 ? fmt(dw, 1) + ' kg menos' : fmt(-dw, 1) + ' kg mais'} desperdício e ${dm >= 0 ? fmt(dm, 1) + ' kg menos' : fmt(-dm, 1) + ' kg mais'} vendas perdidas.`;
+        document.getElementById('bv-sum-text').innerText = txt;
+
+        // Tabela, com o melhor valor de cada coluna destacado
+        const cols = [
+            ['profit', v => fmt(v, 2), 'max'], ['service_level_pct', v => fmt(v, 1) + ' %', 'max'], ['missed_kg', v => fmt(v, 1), 'min'],
+            ['waste_kg', v => fmt(v, 1), 'min'], ['stockout_days', v => fmt(v), 'min'], ['avg_stock_kg', v => fmt(v, 1), null], ['ordered_kg', v => fmt(v, 1), null],
+        ];
+        const best = {};
+        cols.forEach(([k, , mode]) => {
+            if (!mode) return;
+            const vals = pols.map(p => p.totals[k]);
+            best[k] = mode === 'max' ? Math.max(...vals) : Math.min(...vals);
+        });
+        document.getElementById('bv-tbody').innerHTML = pols.map(p => `<tr>
+            <td class="strong"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${COLORS[p.key]};margin-right:8px;"></span>${p.label}</td>
+            ${cols.map(([k, f, mode]) => `<td class="num${mode && p.totals[k] === best[k] ? ' best' : ''}">${f(p.totals[k])}</td>`).join('')}
+        </tr>`).join('');
+
+        const labels = r.daily.dates.map(fmtDate);
+        const series = (field) => pols.map(p => ({
+            label: p.label, data: r.daily[p.key][field], borderColor: COLORS[p.key], backgroundColor: COLORS[p.key],
+            borderWidth: p.key === 'buyer_agent' ? 3 : 1.5, pointRadius: 0, tension: 0.2,
+        }));
+        drawChart('bv-chart-profit', labels, series('cum_profit'), 'Lucro acumulado (€)');
+        const stockSets = series('stock');
+        stockSets.push({ label: 'Procura real', data: r.daily.demand, borderColor: '#94a3b8', backgroundColor: '#94a3b8', borderDash: [4, 4], borderWidth: 1.5, pointRadius: 0 });
+        drawChart('bv-chart-stock', labels, stockSets, 'Stock no fim do dia (kg)');
+
+        document.getElementById('bv-note').innerText =
+            `Como ler: todas as políticas partem do mesmo stock inicial e enfrentam as mesmas vendas reais, preços e clima do período de teste, ` +
+            `com o mesmo simulador (Lifecycle LC), o mesmo limite de encomenda (${fmt(r.max_order_limit)} kg/dia) e a mesma capacidade (${fmt(r.max_capacity)} kg). ` +
+            `O lucro inclui custos de transporte, armazém, desperdício e vendas perdidas. ` +
+            `As previsões de procura usadas são as do modelo de previsão atual; se esse modelo foi treinado com todo o histórico, ` +
+            `as previsões do período de teste são um pouco mais otimistas do que seriam na realidade, para todas as políticas por igual.`;
+    }
+
+    function drawChart(id, labels, datasets, title) {
+        if (typeof Chart === 'undefined') return;
+        if (charts[id]) charts[id].destroy();
+        charts[id] = new Chart(document.getElementById(id), {
+            type: 'line', data: { labels, datasets },
+            options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+                plugins: { title: { display: true, text: title }, legend: { position: 'bottom', labels: { boxWidth: 12 } } },
+                scales: { x: { ticks: { maxTicksLimit: 8 } } } },
+        });
+    }
+
+    window.runBuyerValidation = function () {
+        const id = cultureId();
+        if (!id) { alert('Selecione primeiro uma cultura no topo do separador.'); return; }
+        const btn = document.getElementById('bv-btn');
+        const fd = new FormData(document.getElementById('bv-form'));
+        fd.set('culture_id', id);
+        fd.set('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+        btn.disabled = true; btn.innerText = 'A validar…';
+        document.getElementById('bv-progress').style.display = '';
+        document.getElementById('bv-console').innerHTML = '';
+        setProgress(2, 'A preparar dados e previsões…');
+
+        const finish = () => { btn.disabled = false; btn.innerText = 'Validar'; };
+        fetch('/ai/validate-buyer-agent/', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(resp => {
+                const ct = resp.headers.get('content-type') || '';
+                if (!ct.includes('text/event-stream')) {
+                    return resp.json().then(d => { throw new Error(d.message || 'Erro ao iniciar a validação.'); });
+                }
+                const reader = resp.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                const pump = () => reader.read().then(({ done, value }) => {
+                    if (done) { finish(); return; }
+                    buffer += decoder.decode(value, { stream: true });
+                    const parts = buffer.split('\n\n');
+                    buffer = parts.pop();
+                    parts.forEach(chunk => {
+                        if (!chunk.startsWith('data: ')) return;
+                        let msg;
+                        try { msg = JSON.parse(chunk.slice(6)); } catch (e) { return; }
+                        if (msg.type === 'log') {
+                            log(msg.text);
+                            const bt = msg.text.match(/Simulação no período de teste (\d+)\/(\d+)/);
+                            if (bt) setProgress(30 + 70 * ((+bt[1] - 1) / +bt[2]), `A simular: ${msg.text.split(': ').pop()} (${bt[1]}/${bt[2]})`);
+                            else if (msg.text.includes('[2/3]')) setProgress(20, 'Previsões obtidas');
+                            else if (msg.text.includes('Período de teste')) setProgress(30, 'A simular o período de teste…');
+                        } else if (msg.type === 'error') {
+                            log(msg.message, '#f87171');
+                            setProgress(0, 'Erro na validação');
+                        } else if (msg.type === 'done') {
+                            setProgress(100, 'Validação concluída');
+                            renderReport(msg.report);
+                        }
+                    });
+                    return pump();
+                });
+                return pump();
+            })
+            .catch(err => { log(err.message, '#f87171'); setProgress(0, 'Erro na validação'); finish(); });
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const sel = document.getElementById('buyer-global-culture-select');
+        if (sel) sel.addEventListener('change', function () {
+            const pane = document.getElementById('ba-pane-validation');
+            if (pane && pane.style.display !== 'none') loadBuyerValidation();
+        });
+    });
+})();
+</script>

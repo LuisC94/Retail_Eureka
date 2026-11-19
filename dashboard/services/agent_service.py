@@ -308,12 +308,12 @@ def _normalize_market_df(df):
     return df
 
 
-def train_buyer_agent_optimizer_generator(user, subfamily, df_market_data, max_episodes=None, fruit_key=None, forecast_model_type=None):
+def _prepare_buyer_payload(user, subfamily, df_market_data, max_episodes, fruit_key, forecast_model_type, out):
     """
-    Treina o Buyer Agent DSAC no Buyer Web Service:
+    Prepara o pedido de treino do Buyer Agent (comum ao treino e à validação) e devolve-o em out['payload']:
       1) obtém as previsões do Forecast Web Service para todos os dias do histórico (obrigatório);
-      2) junta o clima de cada dia (do ficheiro; nos dias em falta, das leituras do armazém);
-      3) envia para /api/buyer/train/stream e reencaminha o progresso.
+      2) junta o clima de cada dia (do ficheiro; nos dias em falta, das leituras do armazém).
+    Vai devolvendo (yield) as mensagens de progresso.
     """
     yield f"[Django] A preparar dados de treino para a cultura {subfamily.name}...\n"
     df = _normalize_market_df(df_market_data.copy())
@@ -376,6 +376,21 @@ def train_buyer_agent_optimizer_generator(user, subfamily, df_market_data, max_e
         "owner_type": _owner_type(user), "max_capacity": capacity, "episodes": episodes, "risk_factor": 0.85,
         "train_data": train_records,
     }
+    out['payload'] = payload
+    out['capacity'] = capacity
+    out['episodes'] = episodes
+
+
+def train_buyer_agent_optimizer_generator(user, subfamily, df_market_data, max_episodes=None, fruit_key=None, forecast_model_type=None):
+    """
+    Treina o Buyer Agent DSAC no Buyer Web Service:
+      1) obtém as previsões do Forecast Web Service para todos os dias do histórico (obrigatório);
+      2) junta o clima de cada dia (do ficheiro; nos dias em falta, das leituras do armazém);
+      3) envia para /api/buyer/train/stream e reencaminha o progresso.
+    """
+    prepared = {}
+    yield from _prepare_buyer_payload(user, subfamily, df_market_data, max_episodes, fruit_key, forecast_model_type, prepared)
+    payload, capacity, episodes = prepared['payload'], prepared['capacity'], prepared['episodes']
     yield f"[Django] [3/3] A treinar o Buyer Agent DSAC Limitado (30 variáveis, {episodes} episódios, capacidade {capacity:.0f} Kg) no Buyer Web Service :8002...\n"
 
     try:
@@ -417,6 +432,100 @@ def train_buyer_agent_optimizer_generator(user, subfamily, df_market_data, max_e
 def train_buyer_agent_optimizer(user, subfamily, df_market_data, max_episodes=None, fruit_key=None, forecast_model_type=None):
     return list(train_buyer_agent_optimizer_generator(user, subfamily, df_market_data, max_episodes=max_episodes,
                                                       fruit_key=fruit_key, forecast_model_type=forecast_model_type))
+
+
+def validate_buyer_agent_generator(user, subfamily, df_market_data, fruit_key=None, forecast_model_type=None,
+                                   test_fraction=0.2):
+    """
+    Validação do Buyer Agent JÁ TREINADO nos últimos `test_fraction` dias do histórico
+    (Buyer Web Service /api/buyer/validate/stream): simula o agente e as regras clássicas nesse período.
+    Não treina nem altera o modelo. Devolve (yield) mensagens de progresso em texto e, no fim, o relatório (dict).
+    """
+    prepared = {}
+    yield from _prepare_buyer_payload(user, subfamily, df_market_data, None, fruit_key, forecast_model_type, prepared)
+    payload = {"user_id": user.id, "culture_id": subfamily.pk, "test_fraction": float(test_fraction),
+               "train_data": prepared['payload']['train_data']}
+    yield (f"[Django] [3/3] A simular o modelo treinado nos últimos {round(100 * test_fraction)} % do histórico "
+           f"no Buyer Web Service :8002...\n")
+    try:
+        resp = requests.post(f"{BUYER_SERVICE_URL}/api/buyer/validate/stream", json=payload, timeout=(10, 1800), stream=True)
+    except requests.exceptions.ConnectionError:
+        raise ConnectionError(f"Não foi possível ligar ao Buyer Agent Web Service em {BUYER_SERVICE_URL}. O serviço deve estar online para validar.")
+    if resp.status_code != 200:
+        raise RuntimeError(f"Erro no Buyer Agent Web Service: {_service_error(resp)}")
+
+    report = None
+    for line in resp.iter_lines(decode_unicode=True):
+        if not line or not line.startswith('data: '):
+            continue
+        try:
+            data = json.loads(line[6:])
+        except ValueError:
+            continue
+        ev = data.get('event')
+        if ev == 'split':
+            yield f"[WS:8002] Período de teste: {data['days_test']} dias ({data['test_from']} a {data['test_to']})\n"
+        elif ev == 'backtest':
+            yield f"[WS:8002] Simulação no período de teste {data['step']}/{data['total_steps']}: {data['policy']}\n"
+        elif ev == 'error':
+            raise RuntimeError(f"Erro no Buyer Agent Web Service: {data.get('detail')}")
+        elif ev == 'done':
+            report = data.get('report')
+    if report is None:
+        raise RuntimeError("A validação terminou sem relatório.")
+    yield "[Django] [Sucesso] Validação concluída.\n"
+    yield report
+
+
+def get_buyer_validation_report(user, subfamily):
+    try:
+        resp = requests.get(f"{BUYER_SERVICE_URL}/api/buyer/validation",
+                            params={"user_id": user.id, "culture_id": subfamily.pk}, timeout=10)
+    except requests.exceptions.ConnectionError:
+        raise ConnectionError(f"O Buyer Agent Web Service está inacessível em {BUYER_SERVICE_URL}.")
+    if resp.status_code != 200:
+        raise RuntimeError(f"Erro no Buyer Web Service ({resp.status_code}): {_service_error(resp)}")
+    return resp.json()
+
+
+def start_buyer_simulation(user, subfamily, df_market_data, start_date=None, initial_stock_kg=None,
+                           fruit_key=None, forecast_model_type=None):
+    """
+    Começa a simulação dia a dia do Buyer Agent já treinado (Buyer Web Service /api/buyer/simulation/start).
+    Prepara o histórico como no treino (previsões do Forecast e clima) e devolve (mensagens, resposta do serviço).
+    """
+    prepared = {}
+    messages_out = [m.strip() for m in _prepare_buyer_payload(user, subfamily, df_market_data, None, fruit_key,
+                                                              forecast_model_type, prepared)]
+    payload = {"user_id": user.id, "culture_id": subfamily.pk, "start_date": start_date or None,
+               "initial_stock_kg": initial_stock_kg, "train_data": prepared['payload']['train_data']}
+    try:
+        resp = requests.post(f"{BUYER_SERVICE_URL}/api/buyer/simulation/start", json=payload, timeout=(10, 300))
+    except requests.exceptions.ConnectionError:
+        raise ConnectionError(f"Não foi possível ligar ao Buyer Agent Web Service em {BUYER_SERVICE_URL}.")
+    if resp.status_code != 200:
+        raise RuntimeError(_service_error(resp))
+    return messages_out, resp.json()
+
+
+def buyer_simulation_call(user, subfamily, action, data=None):
+    """Ações da simulação dia a dia: state | today | step | undo | reset."""
+    params = {"user_id": user.id, "culture_id": subfamily.pk}
+    url = f"{BUYER_SERVICE_URL}/api/buyer/simulation"
+    try:
+        if action == 'state':
+            resp = requests.get(url, params=params, timeout=60)
+        elif action == 'reset':
+            resp = requests.delete(url, params=params, timeout=30)
+        elif action in ('today', 'step', 'undo'):
+            resp = requests.post(f"{url}/{action}", json={**params, **(data or {})}, timeout=120)
+        else:
+            raise ValueError("Ação desconhecida.")
+    except requests.exceptions.ConnectionError:
+        raise ConnectionError(f"O Buyer Agent Web Service está inacessível em {BUYER_SERVICE_URL}.")
+    if resp.status_code != 200:
+        raise RuntimeError(_service_error(resp))
+    return resp.json()
 
 
 def _lot_initial_state(reception, today):

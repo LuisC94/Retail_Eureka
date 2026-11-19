@@ -36,6 +36,10 @@ Estilos em partials/producer_ui_css.html.
     .ba-cmp .qty { font-size: 1.4em; font-weight: 800; color: #134e4a; margin: 4px 0; font-variant-numeric: tabular-nums; }
     .ba-cmp p { font-size: 0.76em; color: #64748b; margin: 0; }
     .ba-console-head { background: #0f172a; padding: 6px 12px; font-size: 0.75em; color: #94a3b8; font-family: ui-monospace, Consolas, monospace; border-radius: 8px 8px 0 0; }
+    .ba-subtabs { display: flex; gap: 6px; margin: 4px 0 16px; border-bottom: 2px solid #d5ece8; }
+    .ba-subtab { background: none; border: none; padding: 10px 16px; font-weight: 600; font-size: 0.92em; color: #64748b; cursor: pointer;
+                 border-bottom: 3px solid transparent; margin-bottom: -2px; }
+    .ba-subtab.active { color: #0f766e; border-bottom-color: #0f766e; }
     .ba-console { background: #090d16; color: #5eead4; font-family: ui-monospace, Consolas, monospace; padding: 10px 12px; font-size: 0.8em; line-height: 1.5;
                   min-height: 120px; max-height: 240px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; border-radius: 0 0 8px 8px; }
 </style>
@@ -92,6 +96,14 @@ Estilos em partials/producer_ui_css.html.
         </div>
     </section>
 
+    <!-- Mini-separadores -->
+    <div class="ba-subtabs" role="tablist">
+        <button type="button" class="ba-subtab active" data-pane="ba-pane-main" onclick="switchBuyerPane('ba-pane-main')">Treino e recomendação</button>
+        <button type="button" class="ba-subtab" data-pane="ba-pane-validation" onclick="switchBuyerPane('ba-pane-validation')">Validação</button>
+        <button type="button" class="ba-subtab" data-pane="ba-pane-simulation" onclick="switchBuyerPane('ba-pane-simulation')">Simulação dia a dia</button>
+    </div>
+
+    <div id="ba-pane-main" class="ba-pane">
     <!-- 1. Treino -->
     <section class="rg-card">
         <div class="rg-card-head">
@@ -197,9 +209,13 @@ Estilos em partials/producer_ui_css.html.
                 <div class="best"><strong>Buyer Agent</strong><div class="qty" id="cmp-ppo-qty">0 kg</div><p>Equilibra margem, falta de produto e desperdício.</p></div>
                 <div><strong>Cobertura de 3 dias</strong><div class="qty" id="cmp-dos-qty">0 kg</div><p>Cobre 3 dias de procura, sem considerar a validade.</p></div>
                 <div><strong>Reposição do défice</strong><div class="qty" id="cmp-cnn-qty">0 kg</div><p>Repõe só o que falta para amanhã.</p></div>
-                <div><strong>Mín-Máx</strong><div class="qty" id="cmp-minmax-qty">0 kg</div><p>Encomenda até 50% da capacidade quando o stock desce abaixo de 20%.</p></div>
+                <div><strong>Mín-Máx</strong><div class="qty" id="cmp-minmax-qty">0 kg</div><p>Quando stock e encomendas a caminho descem abaixo de 2 dias de procura, repõe até 5 dias.</p></div>
             </div>
         </div>
     </section>
+    </div>
+
+    {% include "dashboard/partials/buyer_validation_pane.html" %}
+    {% include "dashboard/partials/buyer_simulation_pane.html" %}
 </div>
 </div>

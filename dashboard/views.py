@@ -3787,6 +3787,183 @@ def train_buyer_agent(request):
 
 @login_required
 @role_required(['Retailer', 'Processor'])
+def validate_buyer_agent(request):
+    """
+    Validação do Buyer Agent já treinado nos últimos N % do histórico (stream SSE para a interface).
+    Não treina: simula o modelo atual e as regras clássicas nesse período.
+    Usa o ficheiro enviado ou, sem ficheiro, o histórico de vendas guardado (o mesmo do treino).
+    """
+    import json as _json
+    import pandas as pd
+    from django.http import StreamingHttpResponse
+
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Método não permitido.'}, status=405)
+    culture_id = str(request.POST.get('culture_id') or '').strip()
+    subfamily = ProductSubFamily.objects.filter(pk=int(culture_id)).first() if culture_id.isdigit() else None
+    if subfamily is None:
+        return JsonResponse({'status': 'error', 'message': 'Selecione uma cultura.'}, status=400)
+    try:
+        test_pct = float(str(request.POST.get('test_pct') or '20').replace(',', '.'))
+    except ValueError:
+        test_pct = 20.0
+    if not 5 <= test_pct <= 50:
+        return JsonResponse({'status': 'error', 'message': 'A percentagem de teste tem de estar entre 5 e 50 %.'}, status=400)
+
+    market_file = request.FILES.get('market_file')
+    try:
+        if market_file:
+            df = pd.read_excel(market_file) if market_file.name.lower().endswith(('.xlsx', '.xls')) else pd.read_csv(market_file)
+            from dashboard.services.agent_service import normalize_market_columns
+            df = normalize_market_columns(df)
+            if 'date' in df.columns:
+                df['date'] = pd.to_datetime(df['date']).dt.date
+        else:
+            sales_qs = HistoricalSalesData.objects.filter(owner=request.user, culture=subfamily)
+            if not sales_qs.exists():
+                return JsonResponse({'status': 'error', 'message': f"Não existe histórico de vendas para {subfamily.name}. Anexe o ficheiro de histórico."}, status=400)
+            df = pd.DataFrame(list(sales_qs.values('date', 'sales_quantity_kg', 'price_per_kg')))
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': f"Não foi possível ler o ficheiro: {e}"}, status=400)
+
+    from dashboard.services.agent_service import validate_buyer_agent_generator
+
+    def stream():
+        try:
+            for item in validate_buyer_agent_generator(
+                    request.user, subfamily, df,
+                    fruit_key=request.POST.get('fruit_key'), forecast_model_type=request.POST.get('forecast_model_type'),
+                    test_fraction=test_pct / 100.0):
+                if isinstance(item, dict):
+                    yield f"data: {_json.dumps({'type': 'done', 'report': item})}\n\n"
+                else:
+                    clean = item.replace('\n', '').strip()
+                    if clean:
+                        yield f"data: {_json.dumps({'type': 'log', 'text': clean})}\n\n"
+        except Exception as ex:
+            yield f"data: {_json.dumps({'type': 'error', 'message': str(ex)})}\n\n"
+
+    response = StreamingHttpResponse(stream(), content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache'
+    response['X-Accel-Buffering'] = 'no'
+    return response
+
+
+@login_required
+@role_required(['Retailer', 'Processor'])
+def buyer_agent_validation_report(request):
+    """Último relatório de validação do Buyer Agent para a cultura (JSON)."""
+    culture_id = str(request.GET.get('culture_id') or '').strip()
+    subfamily = ProductSubFamily.objects.filter(pk=int(culture_id)).first() if culture_id.isdigit() else None
+    if subfamily is None:
+        return JsonResponse({'status': 'error', 'message': 'Selecione uma cultura.'}, status=400)
+    from dashboard.services.agent_service import get_buyer_validation_report
+    try:
+        data = get_buyer_validation_report(request.user, subfamily)
+    except (ConnectionError, RuntimeError) as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=503)
+    return JsonResponse({'status': 'success', **data})
+
+
+def _buyer_sim_culture(data):
+    culture_id = str(data.get('culture_id') or '').strip()
+    return ProductSubFamily.objects.filter(pk=int(culture_id)).first() if culture_id.isdigit() else None
+
+
+@login_required
+@role_required(['Retailer', 'Processor'])
+def buyer_simulation_start(request):
+    """Começa a simulação dia a dia do Buyer Agent (modelo já treinado; não treina)."""
+    import pandas as pd
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Método não permitido.'}, status=405)
+    subfamily = _buyer_sim_culture(request.POST)
+    if subfamily is None:
+        return JsonResponse({'status': 'error', 'message': 'Selecione uma cultura.'}, status=400)
+    stock_raw = str(request.POST.get('initial_stock_kg') or '').replace(',', '.').strip()
+    try:
+        initial_stock = float(stock_raw) if stock_raw else None
+    except ValueError:
+        return JsonResponse({'status': 'error', 'message': 'O stock inicial tem de ser um número.'}, status=400)
+
+    market_file = request.FILES.get('market_file')
+    try:
+        if market_file:
+            df = pd.read_excel(market_file) if market_file.name.lower().endswith(('.xlsx', '.xls')) else pd.read_csv(market_file)
+            from dashboard.services.agent_service import normalize_market_columns
+            df = normalize_market_columns(df)
+            if 'date' in df.columns:
+                df['date'] = pd.to_datetime(df['date']).dt.date
+        else:
+            sales_qs = HistoricalSalesData.objects.filter(owner=request.user, culture=subfamily)
+            if not sales_qs.exists():
+                return JsonResponse({'status': 'error', 'message': f"Não existe histórico de vendas para {subfamily.name}. Anexe o ficheiro de histórico."}, status=400)
+            df = pd.DataFrame(list(sales_qs.values('date', 'sales_quantity_kg', 'price_per_kg')))
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': f"Não foi possível ler o ficheiro: {e}"}, status=400)
+
+    from dashboard.services.agent_service import start_buyer_simulation
+    try:
+        log, data = start_buyer_simulation(request.user, subfamily, df, start_date=request.POST.get('start_date') or None,
+                                           initial_stock_kg=initial_stock, fruit_key=request.POST.get('fruit_key'),
+                                           forecast_model_type=request.POST.get('forecast_model_type'))
+    except (ValueError, RuntimeError, ConnectionError) as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+    return JsonResponse({**data, 'status': 'success', 'log': log})
+
+
+@login_required
+@role_required(['Retailer', 'Processor'])
+def buyer_simulation_action(request):
+    """
+    GET  ?culture_id=        -> estado da simulação dia a dia
+    POST {culture_id, action: today|step|undo|reset, ...} (JSON)
+    """
+    import json as _json
+    if request.method == 'GET':
+        data, action = request.GET, 'state'
+    elif request.method == 'POST':
+        try:
+            data = _json.loads(request.body or b'{}')
+        except ValueError:
+            return JsonResponse({'status': 'error', 'message': 'Pedido inválido.'}, status=400)
+        action = data.get('action')
+        if action not in ('today', 'step', 'undo', 'reset'):
+            return JsonResponse({'status': 'error', 'message': 'Ação desconhecida.'}, status=400)
+    else:
+        return JsonResponse({'status': 'error', 'message': 'Método não permitido.'}, status=405)
+    subfamily = _buyer_sim_culture(data)
+    if subfamily is None:
+        return JsonResponse({'status': 'error', 'message': 'Selecione uma cultura.'}, status=400)
+
+    fields = {
+        'today': ('prediction', 'prediction_tomorrow', 'price', 'temperature', 'humidity'),
+        'step': ('order_kg', 'demand_kg'),
+    }.get(action, ())
+    body = {}
+    for k in fields:
+        v = data.get(k)
+        if v in (None, ''):
+            continue
+        try:
+            body[k] = float(str(v).replace(',', '.'))
+        except ValueError:
+            return JsonResponse({'status': 'error', 'message': f"Valor inválido em '{k}'."}, status=400)
+    if action == 'step' and len(body) < 2:
+        return JsonResponse({'status': 'error', 'message': 'Indique a encomenda feita e a procura real do dia.'}, status=400)
+
+    from dashboard.services.agent_service import buyer_simulation_call
+    try:
+        result = buyer_simulation_call(request.user, subfamily, action, body)
+    except ConnectionError as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=503)
+    except (RuntimeError, ValueError) as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+    return JsonResponse({**result, 'status': 'success'})
+
+
+@login_required
+@role_required(['Retailer', 'Processor'])
 def toggle_buyer_agent_status(request):
     if request.method == "POST":
         profile = request.user.userprofile

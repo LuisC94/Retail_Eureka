@@ -1,0 +1,383 @@
+{% comment %}
+Mini-separador "Simulação dia a dia" do Buyer Agent (incluído em partials/buyer_agent_tab.html).
+Com o modelo já treinado (não treina): pede a recomendação do dia, regista a encomenda feita e a procura real,
+avança um dia (stock, lotes e encomendas a caminho atualizados pelo simulador LC) e pede a nova recomendação.
+As condições de cada dia (previsões, preço, clima) vêm do histórico e podem ser alteradas.
+Usa a cultura escolhida no topo do separador (#buyer-global-culture-select) e o Chart.js da página.
+{% endcomment %}
+<div id="ba-pane-simulation" class="ba-pane" style="display: none;">
+<style>
+    .bs-day-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+                   background: linear-gradient(120deg, #0f766e 0%, #134e4a 100%); color: #fff; border-radius: 14px; padding: 16px 20px; margin-bottom: 14px; }
+    .bs-day-head h4 { margin: 0; color: #fff; font-size: 1.15em; }
+    .bs-day-head p { margin: 4px 0 0; font-size: 0.85em; opacity: .9; }
+    .bs-day-head .rg-btn-sec { background: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.35); }
+    .bs-day-head .rg-btn-sec:hover { background: rgba(255,255,255,.22); }
+    .bs-badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.75em; font-weight: 700; background: rgba(255,255,255,.18); margin-left: 8px; vertical-align: middle; }
+    .bs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+    .bs-box { border: 1.5px solid #d5ece8; border-radius: 12px; padding: 14px 16px; background: #fff; }
+    .bs-box h5 { margin: 0 0 10px; font-size: 0.92em; color: #134e4a; }
+    .bs-cond { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; }
+    .bs-cond label { display: block; font-size: 0.74em; font-weight: 600; color: #64748b; margin-bottom: 3px; }
+    .bs-cond input { width: 100%; height: 34px; border: 1.5px solid #d5ece8; border-radius: 8px; padding: 0 8px; font-variant-numeric: tabular-nums; box-sizing: border-box; }
+    .bs-cond input.edited { border-color: #d97706; background: #fffbeb; }
+    .bs-cond small { display: block; font-size: 0.7em; color: #94a3b8; margin-top: 2px; min-height: 1em; }
+    .bs-rec { text-align: center; padding: 6px 0 10px; }
+    .bs-rec .qty { font-size: 2.4em; font-weight: 800; color: #0f766e; font-variant-numeric: tabular-nums; line-height: 1.1; }
+    .bs-rec p { margin: 4px 0 0; font-size: 0.78em; color: #64748b; }
+    .bs-rules { list-style: none; margin: 8px 0 0; padding: 0; font-size: 0.84em; }
+    .bs-rules li { display: flex; justify-content: space-between; padding: 6px 0; border-top: 1px dashed #e2e8f0; }
+    .bs-rules li strong { font-variant-numeric: tabular-nums; color: #334155; }
+    .bs-lots { width: 100%; font-size: 0.8em; border-collapse: collapse; margin-top: 8px; }
+    .bs-lots th { text-align: left; color: #64748b; font-weight: 600; padding: 4px 6px; border-bottom: 1px solid #e2e8f0; }
+    .bs-lots td { padding: 4px 6px; border-bottom: 1px solid #f1f5f9; font-variant-numeric: tabular-nums; }
+    .bs-lots .num, .bs-lots th.num { text-align: right; }
+    .bs-close { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-top: 14px; padding: 14px 16px; border-radius: 12px; background: #f0fdfa; border: 1.5px solid #99f6e4; }
+    .bs-close .rg-field { margin: 0; min-width: 180px; }
+    .bs-close .rg-submit { margin: 0; }
+    .bs-chart { border: 1.5px solid #d5ece8; border-radius: 10px; padding: 12px; background: #fff; height: 300px; position: relative; margin-top: 14px; }
+    .bs-table td.diff { color: #b45309; font-weight: 600; }
+    .bs-msg { margin-top: 10px; font-size: 0.85em; }
+    .bs-msg.err { color: #b91c1c; }
+    .bs-warn { background: #fffbeb; border: 1.5px solid #fcd34d; color: #92400e; border-radius: 10px; padding: 10px 14px; font-size: 0.84em; margin-bottom: 12px; }
+</style>
+
+<section class="rg-card" id="bs-start-card">
+    <div class="rg-card-head">
+        <span class="rg-section-icon">▶</span>
+        <div style="flex: 1;"><h4 id="bs-start-title">Começar uma simulação dia a dia</h4>
+            <p>Usa o modelo já treinado: em cada dia pede a recomendação, regista o que encomendou e a procura real, e passa ao dia seguinte. Não treina nem altera o modelo.</p></div>
+    </div>
+    <form id="bs-start-form" onsubmit="return false;">
+        <div class="rg-fields">
+            <div class="rg-field">
+                <label for="bs-start-date">Primeiro dia</label>
+                <input type="date" id="bs-start-date" name="start_date">
+                <small>Vazio: o primeiro dia dos últimos 20 % do histórico (o período de teste da validação).</small>
+            </div>
+            <div class="rg-field">
+                <label for="bs-initial-stock">Stock inicial (kg)</label>
+                <input type="number" id="bs-initial-stock" name="initial_stock_kg" min="0" step="1" value="100">
+                <small>Um lote novo. Por omissão 100 kg, como no treino.</small>
+            </div>
+            <div class="rg-field">
+                <label for="bs-fc-model">Modelo de previsão</label>
+                <select id="bs-fc-model" name="forecast_model_type">
+                    <option value="modelo_1">Modelo Previsão 1</option>
+                    <option value="modelo_2">Modelo Previsão 2</option>
+                    <option value="modelo_3">Modelo Previsão 3</option>
+                    <option value="modelo_4">Modelo Previsão 4</option>
+                </select>
+            </div>
+            <div class="rg-field">
+                <label for="bs-file">Histórico (opcional)</label>
+                <input type="file" id="bs-file" name="market_file" accept=".xlsx,.xls,.csv">
+                <small>Sem ficheiro, usa o histórico de vendas guardado (sem clima). Para usar o clima real, anexe o ficheiro do treino.</small>
+            </div>
+        </div>
+        <div class="rg-actions"><button type="button" id="bs-start-btn" class="rg-submit" onclick="startBuyerSimulation()">Começar simulação</button></div>
+        <div id="bs-start-msg" class="bs-msg"></div>
+    </form>
+</section>
+
+<div id="bs-empty" class="rg-card rg-empty">Ainda não há nenhuma simulação para esta cultura.</div>
+
+<div id="bs-sim" style="display: none;">
+    <div class="bs-day-head">
+        <div>
+            <h4 id="bs-day-title">—</h4>
+            <p id="bs-day-sub">—</p>
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <button type="button" class="rg-btn-sec" id="bs-undo-btn" onclick="buyerSimAction('undo')">↶ Desfazer último dia</button>
+            <button type="button" class="rg-btn-sec" onclick="resetBuyerSimulation()">Terminar simulação</button>
+        </div>
+    </div>
+    <div id="bs-warn" class="bs-warn" style="display: none;"></div>
+
+    <div class="bs-grid">
+        <div class="bs-box">
+            <h5>1. Condições do dia</h5>
+            <div class="bs-cond">
+                <div><label for="bs-c-prediction">Previsão de hoje (kg)</label><input type="number" step="0.1" min="0" id="bs-c-prediction" data-k="prediction"><small id="bs-h-prediction"></small></div>
+                <div><label for="bs-c-prediction_tomorrow">Previsão de amanhã (kg)</label><input type="number" step="0.1" min="0" id="bs-c-prediction_tomorrow" data-k="prediction_tomorrow"><small id="bs-h-prediction_tomorrow"></small></div>
+                <div><label for="bs-c-price">Preço de venda (€/kg)</label><input type="number" step="0.01" min="0" id="bs-c-price" data-k="price"><small id="bs-h-price"></small></div>
+                <div><label for="bs-c-temperature">Temperatura (°C)</label><input type="number" step="0.1" id="bs-c-temperature" data-k="temperature"><small id="bs-h-temperature"></small></div>
+                <div><label for="bs-c-humidity">Humidade (%)</label><input type="number" step="0.1" min="0" max="100" id="bs-c-humidity" data-k="humidity"><small id="bs-h-humidity"></small></div>
+                <div style="display: flex; align-items: flex-end;"><button type="button" class="rg-btn-sec" style="width: 100%;" onclick="updateBuyerSimToday(this)">Atualizar recomendação</button></div>
+            </div>
+        </div>
+
+        <div class="bs-box">
+            <h5>2. Armazém no início do dia</h5>
+            <div class="ba-state" style="margin-bottom: 8px;">
+                <div><span>Stock</span><strong id="bs-s-stock">—</strong></div>
+                <div><span>Chega hoje</span><strong id="bs-s-arrive">—</strong></div>
+                <div><span>Cobertura</span><strong id="bs-s-cover">—</strong></div>
+                <div><span>Capacidade livre</span><strong id="bs-s-free">—</strong></div>
+            </div>
+            <div id="bs-s-oos" style="font-size: 0.78em; color: #b91c1c;"></div>
+            <table class="bs-lots">
+                <thead><tr><th>Lote</th><th class="num">Kg</th><th class="num">Idade</th><th class="num">Qualidade</th><th class="num">Vida útil</th></tr></thead>
+                <tbody id="bs-lots"></tbody>
+            </table>
+        </div>
+
+        <div class="bs-box">
+            <h5>3. Recomendação</h5>
+            <div class="bs-rec">
+                <div style="font-size: 0.78em; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .04em;">Buyer Agent</div>
+                <div class="qty" id="bs-rec-qty">—</div>
+                <p id="bs-rec-sub">—</p>
+            </div>
+            <ul class="bs-rules">
+                <li><span>Reposição do défice</span><strong id="bs-h-naive">—</strong></li>
+                <li><span>Cobertura de 3 dias</span><strong id="bs-h-dos">—</strong></li>
+                <li><span>Mín-Máx</span><strong id="bs-h-minmax">—</strong></li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="bs-close">
+        <div class="rg-field">
+            <label for="bs-order">Encomenda feita hoje (kg)</label>
+            <input type="number" id="bs-order" min="0" step="1">
+            <small>Chega amanhã. Por omissão, a recomendação.</small>
+        </div>
+        <div class="rg-field">
+            <label for="bs-demand">Procura real do dia (kg)</label>
+            <input type="number" id="bs-demand" min="0" step="0.1">
+            <small id="bs-demand-hint">Por omissão, a venda registada no histórico.</small>
+        </div>
+        <button type="button" id="bs-step-btn" class="rg-submit" onclick="advanceBuyerSimulation()">Fechar o dia e pedir a recomendação seguinte →</button>
+    </div>
+    <div id="bs-msg" class="bs-msg"></div>
+
+    <section class="rg-card" style="margin-top: 16px;">
+        <div class="rg-group-title" style="margin-top: 0;">Resultado acumulado</div>
+        <div class="rg-kpis" id="bs-kpis"></div>
+        <div class="bs-chart"><canvas id="bs-chart"></canvas></div>
+        <div class="rg-group-title">Dias simulados</div>
+        <div class="rg-scroll" style="border: 1.5px solid #d5ece8; border-radius: 10px; max-height: 360px;">
+            <table class="rg-table bs-table">
+                <thead><tr><th>Dia</th><th class="num">Recomendado</th><th class="num">Encomendado</th><th class="num">Chegou</th><th class="num">Procura</th>
+                    <th class="num">Vendido</th><th class="num">Perdido</th><th class="num">Desperdício</th><th class="num">Stock final</th><th class="num">Lucro (€)</th><th class="num">Acumulado (€)</th></tr></thead>
+                <tbody id="bs-days"></tbody>
+            </table>
+        </div>
+        <p class="rg-muted" style="font-size: 0.8em; margin-top: 10px;">
+            Cada dia segue o mesmo ciclo do simulador de treino: chega a encomenda do dia anterior, vende-se a procura real (primeiro os lotes com menos vida útil),
+            regista-se a encomenda de hoje e a fruta envelhece com a temperatura e humidade do dia (Lifecycle LC). O lucro inclui transporte, armazém, desperdício e vendas perdidas.
+            A encomenda é limitada ao máximo do modelo e à capacidade livre do armazém.
+        </p>
+    </section>
+</div>
+</div>
+
+<script>
+(function () {
+    const CSRF = '{{ csrf_token }}';
+    const COND = ['prediction', 'prediction_tomorrow', 'price', 'temperature', 'humidity'];
+    let chart = null;
+    let lastView = null;
+    const fmt = (v, d = 0) => (v === null || v === undefined) ? '—' : Number(v).toLocaleString('pt-PT', { minimumFractionDigits: d, maximumFractionDigits: d });
+    const fmtDate = s => s ? s.split('-').reverse().join('/') : '—';
+    const cultureId = () => document.getElementById('buyer-global-culture-select')?.value || '';
+    const $ = id => document.getElementById(id);
+
+    function message(text, isErr, target) {
+        const el = $(target || 'bs-msg');
+        el.className = 'bs-msg' + (isErr ? ' err' : '');
+        el.innerText = text || '';
+    }
+
+    function showState(d) {
+        if (d.status === 'error') { showEmpty(d.message); return; }
+        if (!d.has_model) { showEmpty('Ainda não há modelo do Buyer Agent treinado para esta cultura. Treine-o no separador "Treino e recomendação".'); return; }
+        if (!d.has_simulation) { showEmpty(null); return; }
+        render(d.view);
+    }
+
+    function showEmpty(msg) {
+        lastView = null;
+        $('bs-sim').style.display = 'none';
+        $('bs-empty').style.display = '';
+        $('bs-empty').innerText = msg || 'Ainda não há nenhuma simulação para esta cultura.';
+        $('bs-start-title').innerText = 'Começar uma simulação dia a dia';
+    }
+
+    window.loadBuyerSimulation = function () {
+        const id = cultureId();
+        if (!id) return;
+        fetch('/ai/buyer-simulation/?culture_id=' + encodeURIComponent(id))
+            .then(r => r.json()).then(showState)
+            .catch(() => showEmpty('O serviço do Buyer Agent está indisponível.'));
+    };
+
+    function render(v) {
+        lastView = v;
+        $('bs-empty').style.display = 'none';
+        $('bs-sim').style.display = '';
+        $('bs-start-title').innerText = 'Recomeçar a simulação';
+        const c = v.current;
+        $('bs-day-title').innerHTML = `Dia ${c.day_number} · ${fmtDate(c.date)}<span class="bs-badge">${c.in_history ? 'Histórico' : 'Depois do histórico'}</span>`;
+        $('bs-day-sub').innerText = `Início em ${fmtDate(v.start_date)} com ${fmt(v.initial_stock_kg)} kg · histórico até ${fmtDate(v.history_last_date)} · modelo treinado em ${v.model_trained_at || '—'}`;
+        $('bs-undo-btn').disabled = !v.days.length;
+
+        const warn = [];
+        if (v.model_changed) warn.push('O modelo foi treinado de novo depois do início desta simulação: as recomendações dos dias anteriores foram recalculadas com o modelo atual.');
+        if (!c.in_history) warn.push('Este dia já está depois do fim do histórico: as condições começam iguais às do dia anterior. Ajuste-as e indique a previsão antes de pedir a recomendação.');
+        $('bs-warn').style.display = warn.length ? '' : 'none';
+        $('bs-warn').innerText = warn.join(' ');
+
+        // 1. Condições
+        COND.forEach(k => {
+            const inp = $('bs-c-' + k);
+            inp.value = c.conditions[k] ?? '';
+            inp.classList.toggle('edited', c.edited.includes(k));
+            const h = c.history;
+            const hv = h ? (k === 'prediction_tomorrow' ? null : h[k]) : null;
+            $('bs-h-' + k).innerText = (hv !== null && hv !== undefined && c.edited.includes(k)) ? `Histórico: ${fmt(hv, k === 'price' ? 2 : 1)}` : (c.edited.includes(k) ? 'Alterado' : '');
+        });
+
+        // 2. Armazém
+        const s = v.state;
+        $('bs-s-stock').innerText = fmt(s.stock_kg, 1) + ' kg';
+        const today = s.in_transit.filter(t => t.days === 0).reduce((a, t) => a + t.kg, 0);
+        $('bs-s-arrive').innerText = fmt(today, 1) + ' kg';
+        $('bs-s-cover').innerText = s.coverage_days === null ? '—' : fmt(s.coverage_days, 1) + ' dias';
+        $('bs-s-free').innerText = fmt(s.free_capacity_kg) + ' kg';
+        $('bs-s-oos').innerText = s.consecutive_oos_days ? `${s.consecutive_oos_days} dia(s) seguidos com vendas perdidas.` : '';
+        $('bs-lots').innerHTML = s.lots.length ? s.lots.map(l => `<tr><td>${l.lot_id}</td><td class="num">${fmt(l.quantity_kg, 1)}</td>
+            <td class="num">${l.age_days} d</td><td class="num">${fmt(l.quality, 0)}</td><td class="num">${l.rsl_days} d</td></tr>`).join('')
+            : '<tr><td colspan="5" style="color:#94a3b8;">Sem stock.</td></tr>';
+
+        // 3. Recomendação
+        const r = v.recommendation;
+        $('bs-rec-qty').innerText = fmt(r.buyer_agent_kg) + ' kg';
+        $('bs-rec-sub').innerText = `Chega amanhã · máximo possível hoje ${fmt(r.max_effective_kg)} kg (limite do modelo ${fmt(v.max_order_limit)} kg)`;
+        $('bs-h-naive').innerText = fmt(r.heuristics.cnn_naive_kg) + ' kg';
+        $('bs-h-dos').innerText = fmt(r.heuristics.dos_3d_kg) + ' kg';
+        $('bs-h-minmax').innerText = fmt(r.heuristics.min_max_kg) + ' kg';
+
+        // Fechar o dia
+        $('bs-order').value = r.buyer_agent_kg;
+        $('bs-demand').value = c.demand_default ?? '';
+        $('bs-demand-hint').innerText = c.demand_default !== null && c.demand_default !== undefined
+            ? `Histórico: ${fmt(c.demand_default, 1)} kg. Pode alterar.` : 'Sem venda no histórico para este dia: indique a procura.';
+
+        renderResults(v);
+    }
+
+    function kpi(label, value, sub) {
+        return `<div class="rg-card rg-kpi"><div><div class="rg-kpi-label">${label}</div><div class="rg-kpi-value">${value}</div>${sub ? `<div class="rg-kpi-sub">${sub}</div>` : ''}</div></div>`;
+    }
+
+    function renderResults(v) {
+        const t = v.totals;
+        $('bs-kpis').innerHTML = [
+            kpi('Dias simulados', fmt(t.days), t.days ? `${fmt(t.followed_agent_days)} seguindo a recomendação` : ''),
+            kpi('Lucro', fmt(t.profit, 2) + '<small>€</small>'),
+            kpi('Nível de serviço', t.service_level_pct === null ? '—' : fmt(t.service_level_pct, 1) + '<small>%</small>', `${fmt(t.missed_kg, 1)} kg perdidos`),
+            kpi('Desperdício', fmt(t.waste_kg, 1) + '<small>kg</small>', `${fmt(t.ordered_kg, 1)} kg encomendados`),
+        ].join('');
+
+        const days = v.days;
+        $('bs-days').innerHTML = days.length ? days.slice().reverse().map(d => `<tr>
+            <td>${fmtDate(d.date)}</td><td class="num">${fmt(d.recommended)}</td>
+            <td class="num${Math.abs(d.entered - d.recommended) >= 0.5 ? ' diff' : ''}" title="${d.ordered !== d.entered ? 'Indicado ' + fmt(d.entered) + ' kg; limitado pelo máximo/capacidade' : ''}">${fmt(d.ordered)}${d.ordered !== d.entered ? '*' : ''}</td>
+            <td class="num">${fmt(d.arrived)}</td><td class="num">${fmt(d.demand, 1)}</td><td class="num">${fmt(d.sales, 1)}</td>
+            <td class="num">${fmt(d.missed, 1)}</td><td class="num">${fmt(d.waste, 1)}</td><td class="num">${fmt(d.stock, 1)}</td>
+            <td class="num">${fmt(d.profit, 2)}</td><td class="num">${fmt(d.cum_profit, 2)}</td></tr>`).join('')
+            : '<tr><td colspan="11" style="color:#94a3b8;">Ainda não fechou nenhum dia.</td></tr>';
+
+        if (typeof Chart === 'undefined') return;
+        if (chart) chart.destroy();
+        const labels = days.map(d => fmtDate(d.date));
+        chart = new Chart($('bs-chart'), {
+            type: 'bar',
+            data: { labels, datasets: [
+                { type: 'line', label: 'Stock no fim do dia (kg)', data: days.map(d => d.stock), borderColor: '#0f766e', backgroundColor: '#0f766e', borderWidth: 2.5, pointRadius: 2, tension: 0.2 },
+                { type: 'line', label: 'Procura real (kg)', data: days.map(d => d.demand), borderColor: '#94a3b8', backgroundColor: '#94a3b8', borderDash: [4, 4], borderWidth: 1.5, pointRadius: 0 },
+                { label: 'Encomendado (kg)', data: days.map(d => d.ordered), backgroundColor: 'rgba(37,99,235,.35)' },
+                { label: 'Desperdício (kg)', data: days.map(d => d.waste), backgroundColor: 'rgba(220,38,38,.55)' },
+            ] },
+            options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+                plugins: { title: { display: true, text: 'Stock, encomendas e procura' }, legend: { position: 'bottom', labels: { boxWidth: 12 } } },
+                scales: { x: { ticks: { maxTicksLimit: 10 } }, y: { beginAtZero: true } } },
+        });
+    }
+
+    function post(body, btn, busyText) {
+        const id = cultureId();
+        if (!id) { alert('Selecione primeiro uma cultura no topo do separador.'); return Promise.resolve(); }
+        const label = btn ? btn.innerText : '';
+        if (btn) { btn.disabled = true; btn.innerText = busyText || 'A calcular…'; }
+        message('');
+        return fetch('/ai/buyer-simulation/', {
+            method: 'POST', body: JSON.stringify({ culture_id: id, ...body }),
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest' },
+        }).then(r => r.json()).then(d => {
+            if (d.status !== 'success') { message(d.message || 'Erro na simulação.', true); return; }
+            showState(d);
+        }).catch(() => message('O serviço do Buyer Agent está indisponível.', true))
+          .finally(() => { if (btn) { btn.disabled = false; btn.innerText = label; } });
+    }
+
+    window.buyerSimAction = function (action) {
+        if (action === 'undo' && !confirm('Desfazer o último dia simulado?')) return;
+        post({ action }, action === 'undo' ? $('bs-undo-btn') : null);
+    };
+
+    window.resetBuyerSimulation = function () {
+        if (!confirm('Terminar e apagar esta simulação?')) return;
+        post({ action: 'reset' });
+    };
+
+    window.updateBuyerSimToday = function (btn) {
+        const body = { action: 'today' };
+        COND.forEach(k => { body[k] = $('bs-c-' + k).value; });
+        post(body, btn, 'A recalcular…');
+    };
+
+    window.advanceBuyerSimulation = function () {
+        const order = $('bs-order').value, demand = $('bs-demand').value;
+        if (order === '' || demand === '') { message('Indique a encomenda feita e a procura real do dia.', true); return; }
+        // Condições alteradas e não aplicadas: aplica-as antes de fechar o dia (a recomendação pode mudar)
+        if (lastView) {
+            const c = lastView.current.conditions;
+            const changed = COND.some(k => $('bs-c-' + k).value !== '' && Number($('bs-c-' + k).value) !== Number(c[k]));
+            if (changed) { message('Alterou as condições do dia: carregue em "Atualizar recomendação" antes de fechar o dia.', true); return; }
+        }
+        post({ action: 'step', order_kg: order, demand_kg: demand }, $('bs-step-btn'), 'A simular o dia…');
+    };
+
+    window.startBuyerSimulation = function () {
+        const id = cultureId();
+        if (!id) { alert('Selecione primeiro uma cultura no topo do separador.'); return; }
+        if (lastView && !confirm('Já existe uma simulação para esta cultura. Recomeçar apaga os dias simulados. Continuar?')) return;
+        const btn = $('bs-start-btn');
+        const fd = new FormData($('bs-start-form'));
+        fd.set('culture_id', id);
+        fd.set('csrfmiddlewaretoken', CSRF);
+        btn.disabled = true; btn.innerText = 'A preparar previsões e simulador…';
+        message('', false, 'bs-start-msg');
+        fetch('/ai/buyer-simulation/start/', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.json()).then(d => {
+                if (d.status !== 'success') { message(d.message || 'Erro ao começar a simulação.', true, 'bs-start-msg'); return; }
+                const climate = (d.log || []).find(l => l.includes('Clima por dia'));
+                message(climate ? climate.replace('[Django] [2/3] ', '') : 'Simulação iniciada.', false, 'bs-start-msg');
+                showState(d);
+            }).catch(() => message('Não foi possível começar a simulação.', true, 'bs-start-msg'))
+            .finally(() => { btn.disabled = false; btn.innerText = 'Começar simulação'; });
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const sel = document.getElementById('buyer-global-culture-select');
+        if (sel) sel.addEventListener('change', function () {
+            const pane = document.getElementById('ba-pane-simulation');
+            if (pane && pane.style.display !== 'none') loadBuyerSimulation();
+        });
+    });
+})();
+</script>

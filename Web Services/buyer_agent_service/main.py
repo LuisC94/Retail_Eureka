@@ -11,9 +11,12 @@ from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from engine.trainer import train_dsac, MAX_EPISODES, DEFAULT_CAPACITY, DEFAULT_RISK, STATE_DIM, MIN_DAYS
+from engine.trainer import train_dsac, MAX_EPISODES, DEFAULT_CAPACITY, DEFAULT_RISK, STATE_DIM, MIN_DAYS, TRAIN_SPLIT
 from engine.decider import decide, has_model, load_meta
 from engine.lc_kernel import resolve_lc_fruit_key
+from engine.heuristics import heuristic_orders
+from engine.validation import DEFAULT_TEST_FRACTION, MIN_TEST_DAYS, check_split, load_report, run_validation
+from engine import simulation as sim_engine
 
 app = FastAPI(
     title="Retail Eureka - Buyer Agent Web Service",
@@ -155,18 +158,32 @@ def get_model_status(user_id: Union[int, str] = Query(...), culture_id: Union[in
     }
 
 
-def _training_frame(payload: TrainRequest) -> pd.DataFrame:
-    if len(payload.train_data) < MIN_DAYS:
-        raise HTTPException(status_code=400, detail=f"São necessários pelo menos {MIN_DAYS} dias de histórico com previsões (recebidos {len(payload.train_data)}).")
-    df = pd.DataFrame([r.model_dump() for r in payload.train_data]).rename(columns={"date": "day"})
+def _market_frame(records, fruit_key, min_days=MIN_DAYS) -> pd.DataFrame:
+    if len(records) < min_days:
+        raise HTTPException(status_code=400, detail=f"São necessários pelo menos {min_days} dias de histórico com previsões (recebidos {len(records)}).")
+    df = pd.DataFrame([r.model_dump() for r in records]).rename(columns={"date": "day"})
     for col, default in (("price", 10.0), ("temperature", 22.0), ("humidity", 70.0), ("ethylene", 0.8), ("volume", 0.002)):
         df[col] = pd.to_numeric(df[col], errors="coerce")
         if df[col].isna().all():
             df[col] = default  # mesmo valor por omissão que o ambiente original usa quando a coluna não existe
         else:
             df[col] = df[col].ffill().bfill()
-    df["fruit_type"] = resolve_lc_fruit_key(payload.fruit_key)
+    df["fruit_type"] = resolve_lc_fruit_key(fruit_key)
     return df
+
+
+def _training_frame(payload: TrainRequest) -> pd.DataFrame:
+    return _market_frame(payload.train_data, payload.fruit_key)
+
+
+def _training_periods(df):
+    """Datas dos dias usados para ajustar os pesos (primeiros TRAIN_SPLIT) e para escolher o melhor modelo (restantes)."""
+    days = sorted(pd.to_datetime(df["day"]).dt.strftime("%Y-%m-%d"))
+    split = int(len(days) * TRAIN_SPLIT)
+    if split <= 0 or split >= len(days):
+        return {}
+    return {"weights_train_from": days[0], "weights_train_to": days[split - 1],
+            "selection_from": days[split], "selection_to": days[-1]}
 
 
 def _run_training(payload: TrainRequest, progress_cb=None):
@@ -176,7 +193,7 @@ def _run_training(payload: TrainRequest, progress_cb=None):
         df, d, max_capacity=payload.max_capacity, risk_factor=payload.risk_factor, episodes=payload.episodes,
         use_lc=True, owner_type=payload.owner_type, packaging=payload.packaging, progress_cb=progress_cb,
         extra_meta={"user_id": str(payload.user_id), "culture_id": str(payload.culture_id),
-                    "fruit_input": payload.fruit_key},
+                    "fruit_input": payload.fruit_key, **_training_periods(df)},
     )
 
 
@@ -248,17 +265,174 @@ def train_buyer_policy_stream(payload: TrainRequest):
     return StreamingResponse(stream(), media_type="text/event-stream")
 
 
+class ValidateRequest(BaseModel):
+    user_id: Union[int, str]
+    culture_id: Union[int, str]
+    test_fraction: float = Field(DEFAULT_TEST_FRACTION, ge=0.05, le=0.5,
+                                 description="Fração final do histórico usada como período de teste (0.2 = últimos 20 %)")
+    train_data: List[MarketRecord] = Field(..., description="Histórico com vendas reais e previsões (o mesmo formato do treino)")
+
+
+@app.get("/api/buyer/validation", tags=["Validation"])
+def get_validation_report(user_id: Union[int, str] = Query(...), culture_id: Union[int, str] = Query(...)):
+    d = model_dir(user_id, culture_id)
+    report = load_report(d) if has_model(d) else None
+    return {"user_id": user_id, "culture_id": culture_id, "has_model": has_model(d), "has_report": report is not None,
+            "is_running": training_lock(user_id, f"{culture_id}:validation").locked(), "report": report}
+
+
+@app.post("/api/buyer/validate/stream", tags=["Validation"])
+def validate_buyer_policy_stream(payload: ValidateRequest):
+    """
+    Valida o Buyer Agent JÁ TREINADO nos últimos `test_fraction` dias: simula, dia a dia, o agente e as regras
+    clássicas com as vendas, preços e clima reais. Não treina nada nem altera o modelo.
+    Server-Sent Events: {event: split}, {event: backtest} por política e no fim {event: done, report}.
+    """
+    d = model_dir(payload.user_id, payload.culture_id)
+    if not has_model(d):
+        raise HTTPException(status_code=404, detail="Não existe modelo do Buyer Agent treinado para esta cultura. Treine o agente primeiro.")
+    lock = training_lock(payload.user_id, f"{payload.culture_id}:validation")
+    if not lock.acquire(blocking=False):
+        raise HTTPException(status_code=409, detail="Já existe uma validação a decorrer para este utilizador/cultura.")
+    try:
+        df = _market_frame(payload.train_data, load_meta(d)["fruit_key"], min_days=MIN_TEST_DAYS)
+        check_split(len(df), payload.test_fraction)
+    except HTTPException:
+        lock.release()
+        raise
+    except ValueError as e:
+        lock.release()
+        raise HTTPException(status_code=400, detail=str(e))
+
+    q: "queue.Queue" = queue.Queue()
+
+    def worker():
+        try:
+            report = run_validation(df, d, test_fraction=payload.test_fraction, progress_cb=q.put)
+            q.put({"event": "done", "status": "success", "report": report})
+        except Exception as e:  # noqa: BLE001
+            q.put({"event": "error", "detail": str(e)})
+        finally:
+            lock.release()
+            q.put(None)
+
+    threading.Thread(target=worker, daemon=True).start()
+
+    def stream():
+        while True:
+            item = q.get()
+            if item is None:
+                break
+            yield f"data: {json.dumps(item, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(stream(), media_type="text/event-stream")
+
+
+# ============================================================
+# SIMULAÇÃO DIA A DIA (modelo já treinado, sem treino)
+# ============================================================
+
+class SimulationStartRequest(BaseModel):
+    user_id: Union[int, str]
+    culture_id: Union[int, str]
+    start_date: Optional[str] = Field(None, description="Primeiro dia a simular (por omissão, início dos últimos 20 % do histórico)")
+    initial_stock_kg: Optional[float] = Field(None, ge=0, description="Stock no início (por omissão 100 kg, como no treino)")
+    train_data: List[MarketRecord] = Field(..., description="Histórico com vendas reais e previsões (o mesmo formato do treino)")
+
+
+class SimulationTodayRequest(BaseModel):
+    user_id: Union[int, str]
+    culture_id: Union[int, str]
+    prediction: Optional[float] = None
+    prediction_tomorrow: Optional[float] = None
+    price: Optional[float] = None
+    temperature: Optional[float] = None
+    humidity: Optional[float] = None
+
+
+class SimulationStepRequest(BaseModel):
+    user_id: Union[int, str]
+    culture_id: Union[int, str]
+    order_kg: float = Field(..., ge=0, description="Encomenda feita no dia atual (chega amanhã)")
+    demand_kg: float = Field(..., ge=0, description="Procura real do dia atual")
+
+
+class SimulationRef(BaseModel):
+    user_id: Union[int, str]
+    culture_id: Union[int, str]
+
+
+def _sim_call(user_id, culture_id, action):
+    """Executa uma ação sobre a simulação (uma de cada vez por utilizador/cultura) e devolve a vista atualizada."""
+    d = model_dir(user_id, culture_id)
+    if not has_model(d):
+        raise HTTPException(status_code=404, detail="Não existe modelo do Buyer Agent treinado para esta cultura. Treine o agente primeiro.")
+    lock = training_lock(user_id, f"{culture_id}:simulation")
+    with lock:
+        try:
+            sim = action(d)
+            return {"status": "success", "has_model": True, "has_simulation": True, "view": sim_engine.build_view(d, sim)}
+        except sim_engine.SimulationError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+
+def _existing_sim(d):
+    sim = sim_engine.load_sim(d)
+    if sim is None:
+        raise sim_engine.SimulationError("Não há nenhuma simulação iniciada para esta cultura.")
+    return sim
+
+
+@app.get("/api/buyer/simulation", tags=["Simulation"])
+def get_simulation(user_id: Union[int, str] = Query(...), culture_id: Union[int, str] = Query(...)):
+    d = model_dir(user_id, culture_id)
+    if not has_model(d):
+        return {"status": "success", "has_model": False, "has_simulation": False}
+    if sim_engine.load_sim(d) is None:
+        return {"status": "success", "has_model": True, "has_simulation": False}
+    return _sim_call(user_id, culture_id, _existing_sim)
+
+
+@app.post("/api/buyer/simulation/start", tags=["Simulation"])
+def start_simulation(payload: SimulationStartRequest):
+    """Começa (ou recomeça) a simulação dia a dia a partir de um dia do histórico. Não treina o modelo."""
+    d = model_dir(payload.user_id, payload.culture_id)
+    if not has_model(d):
+        raise HTTPException(status_code=404, detail="Não existe modelo do Buyer Agent treinado para esta cultura. Treine o agente primeiro.")
+    df = _market_frame(payload.train_data, load_meta(d)["fruit_key"], min_days=sim_engine.MIN_CONTEXT_DAYS + 1)
+    return _sim_call(payload.user_id, payload.culture_id, lambda dd: sim_engine.start_simulation(
+        dd, df, start_date=payload.start_date, initial_stock_kg=payload.initial_stock_kg))
+
+
+@app.post("/api/buyer/simulation/today", tags=["Simulation"])
+def simulation_update_today(payload: SimulationTodayRequest):
+    """Altera as condições do dia atual (previsões, preço, clima) e recalcula a recomendação."""
+    values = payload.model_dump(exclude={"user_id", "culture_id"})
+    return _sim_call(payload.user_id, payload.culture_id, lambda dd: sim_engine.update_today(dd, _existing_sim(dd), values))
+
+
+@app.post("/api/buyer/simulation/step", tags=["Simulation"])
+def simulation_step(payload: SimulationStepRequest):
+    """Fecha o dia atual (encomenda feita + procura real) e devolve a recomendação para o dia seguinte."""
+    return _sim_call(payload.user_id, payload.culture_id,
+                     lambda dd: sim_engine.advance_day(dd, _existing_sim(dd), payload.order_kg, payload.demand_kg))
+
+
+@app.post("/api/buyer/simulation/undo", tags=["Simulation"])
+def simulation_undo(payload: SimulationRef):
+    return _sim_call(payload.user_id, payload.culture_id, lambda dd: sim_engine.undo_day(dd, _existing_sim(dd)))
+
+
+@app.delete("/api/buyer/simulation", tags=["Simulation"])
+def simulation_delete(user_id: Union[int, str] = Query(...), culture_id: Union[int, str] = Query(...)):
+    d = model_dir(user_id, culture_id)
+    sim_engine.delete_sim(d)
+    return {"status": "success", "has_model": has_model(d), "has_simulation": False}
+
+
 def _heuristics(stock_total, in_transit, pred_today, forecast):
     """Políticas de referência mostradas na interface ao lado da decisão DSAC."""
-    nxt = [f.prediction for f in forecast]
-    pos = stock_total + in_transit
-    next3 = sum(nxt[:3]) if nxt else pred_today * 3
-    tomorrow = nxt[0] if nxt else pred_today
-    dos_3d = max(0.0, next3 - pos)
-    naive = max(0.0, tomorrow - max(0.0, stock_total - pred_today) - in_transit)
-    s_min, s_max = 2.0 * pred_today, 5.0 * pred_today
-    min_max = max(0.0, s_max - pos) if pos < s_min else 0.0
-    return {"dos_3d_kg": round(dos_3d, 1), "cnn_naive_kg": round(naive, 1), "min_max_kg": round(min_max, 1)}
+    return heuristic_orders(stock_total, in_transit, pred_today, [f.prediction for f in forecast])
 
 
 @app.post("/api/buyer/decide", tags=["Inference"])
