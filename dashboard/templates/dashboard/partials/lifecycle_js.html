@@ -96,7 +96,8 @@ Mantém os nomes loadLcDecayData(targetLotId) e drawLcDecayChart(...) usados pel
                 });
         }
 
-        function lcRender(data) {
+        function lcRender(data, p) {
+            p = p || 'lc';  // prefixo dos ids: 'lc' (separador) ou 'lcm' (janela do Stock)
             const fc = data.forecast || {};
             const init = data.initial_metrics || {};
             const elapsed = (data.export_metadata && data.export_metadata.days_elapsed_total) || 0;
@@ -105,28 +106,28 @@ Mantém os nomes loadLcDecayData(targetLotId) e drawLcDecayChart(...) usados pel
             const anchor = data.lifecycle_anchor || {};
 
             // Resumo do lote
-            lcSet('lc-hero-eyebrow', [data.fruit_type, data.producer && data.producer !== data.current_owner ? `Origem: ${data.producer}` : null].filter(Boolean).join(' · ') || 'Lote');
-            lcSet('lc-banner-title', `${data.culture_name || 'Lote'} · ${data.batch_id || ('#' + data.lot_id)}`);
+            lcSet(`${p}-hero-eyebrow`, [data.fruit_type, data.producer && data.producer !== data.current_owner ? `Origem: ${data.producer}` : null].filter(Boolean).join(' · ') || 'Lote');
+            lcSet(`${p}-banner-title`, `${data.culture_name || 'Lote'} · ${data.batch_id || ('#' + data.lot_id)}`);
             const chips = [
                 ['Armazém', data.warehouse_location],
                 ['Stock', typeof data.current_stock_kg === 'number' ? `${data.current_stock_kg.toLocaleString('pt-PT', {maximumFractionDigits: 0})} kg` : data.current_stock_kg],
                 ['Início', `${lcFmtDate(data.harvest_date)}${LC_ANCHOR_LABELS[anchor.type] ? ' · ' + LC_ANCHOR_LABELS[anchor.type] : ''}`],
                 ['Idade', `${elapsed} ${elapsed === 1 ? 'dia' : 'dias'}`],
             ].filter(c => c[1] !== undefined && c[1] !== null && c[1] !== '');
-            const meta = document.getElementById('lc-banner-meta');
+            const meta = document.getElementById(`${p}-banner-meta`);
             if (meta) meta.innerHTML = chips.map(c => `<span class="lcx-chip"><b>${lcEscape(c[0])}</b>${lcEscape(c[1])}</span>`).join('');
 
             // Indicadores principais
             const remA = typeof fc.commercial_lifetime_remaining === 'number' ? fc.commercial_lifetime_remaining : fc.remaining_lifetime;
-            lcSet('lc-point-a-value', lcNum(remA, 0) ?? '—');
-            lcSet('lc-point-a-sub', ptADay > 0 ? `Ponto A ao dia ${Math.round(ptADay)}` : '—');
-            lcSet('lc-point-b-value', lcNum(fc.biological_lifetime_remaining, 0) ?? '—');
-            lcSet('lc-point-b-sub', ptBDay > 0 ? `Ponto B ao dia ${Math.round(ptBDay)}` : '—');
-            lcSet('lc-quality-score', lcNum(fc.quality_index, 0) ?? '—');
+            lcSet(`${p}-point-a-value`, lcNum(remA, 0) ?? '—');
+            lcSet(`${p}-point-a-sub`, ptADay > 0 ? `Ponto A ao dia ${Math.round(ptADay)}` : '—');
+            lcSet(`${p}-point-b-value`, lcNum(fc.biological_lifetime_remaining, 0) ?? '—');
+            lcSet(`${p}-point-b-sub`, ptBDay > 0 ? `Ponto B ao dia ${Math.round(ptBDay)}` : '—');
+            lcSet(`${p}-quality-score`, lcNum(fc.quality_index, 0) ?? '—');
             const moldPct = typeof fc.mold === 'number' ? fc.mold * 100 : null;
-            lcSet('lc-mold-value', moldPct === null ? '—' : moldPct.toFixed(moldPct < 10 ? 1 : 0));
-            lcSet('lc-mold-sub', moldPct === null ? '—' : (moldPct > 2 ? 'Risco de contaminação' : 'Sem contaminação relevante'));
-            const moldSub = document.getElementById('lc-mold-sub');
+            lcSet(`${p}-mold-value`, moldPct === null ? '—' : moldPct.toFixed(moldPct < 10 ? 1 : 0));
+            lcSet(`${p}-mold-sub`, moldPct === null ? '—' : (moldPct > 2 ? 'Risco de contaminação' : 'Sem contaminação relevante'));
+            const moldSub = document.getElementById(`${p}-mold-sub`);
             if (moldSub) moldSub.style.color = moldPct !== null && moldPct > 2 ? '#b91c1c' : '';
 
             // Indicadores físico-químicos
@@ -136,28 +137,34 @@ Mantém os nomes loadLcDecayData(targetLotId) e drawLcDecayChart(...) usados pel
                 ['acid', init.acidity, fc.acidity, 2],
             ];
             rows.forEach(([k, a, b, d]) => {
-                lcSet(`lc-tbl-init-${k}`, lcNum(a, d) ?? '—');
-                lcSet(`lc-tbl-final-${k}`, lcNum(b, d) ?? '—');
-                lcSet(`lc-tbl-delta-${k}`, lcDelta(a, b, d));
+                lcSet(`${p}-tbl-init-${k}`, lcNum(a, d) ?? '—');
+                lcSet(`${p}-tbl-final-${k}`, lcNum(b, d) ?? '—');
+                lcSet(`${p}-tbl-delta-${k}`, lcDelta(a, b, d));
             });
 
             // Condições do armazém
-            lcSet('lc-temp-value', lcNum(data.temp_today, 1) !== null ? `${lcNum(data.temp_today, 1)} °C` : '—');
-            lcSet('lc-hum-value', lcNum(data.hum_today, 0) !== null ? `${lcNum(data.hum_today, 0)} %` : '—');
-            lcSet('lc-eth-value', lcNum(data.eth_today, 2) !== null ? `${lcNum(data.eth_today, 2)} ppm` : '—');
+            lcSet(`${p}-temp-value`, lcNum(data.temp_today, 1) !== null ? `${lcNum(data.temp_today, 1)} °C` : '—');
+            lcSet(`${p}-hum-value`, lcNum(data.hum_today, 0) !== null ? `${lcNum(data.hum_today, 0)} %` : '—');
+            lcSet(`${p}-eth-value`, lcNum(data.eth_today, 2) !== null ? `${lcNum(data.eth_today, 2)} ppm` : '—');
 
-            lcSet('lc-anchor-note', anchor.type === 'RECEPTION_MEASURED'
+            lcSet(`${p}-anchor-note`, anchor.type === 'RECEPTION_MEASURED'
                 ? 'Calculado a partir da receção, com as medições registadas nesse dia.'
                 : (anchor.type === 'ESTIMATED' ? 'Data de início estimada: sem colheita ou receção associada.' : ''));
 
-            drawLcDecayChart(fc.continuous_data, fc.point_a_day, fc.point_b_day, data.current_owner_type, elapsed);
+            if (p === 'lc') drawLcDecayChart(fc.continuous_data, fc.point_a_day, fc.point_b_day, data.current_owner_type, elapsed);
+            else if (typeof lcModalDrawChart === 'function') lcModalDrawChart(fc.continuous_data, fc.point_a_day, fc.point_b_day, elapsed);
         }
 
         function drawLcDecayChart(contData, ptA, ptB, ownerType, todayDay) {
-            const canvas = document.getElementById('lc-decay-chart');
-            if (!canvas || typeof Chart === 'undefined') return;
             if (lcDecayChartObj) { lcDecayChartObj.destroy(); lcDecayChartObj = null; }
-            if (!contData || !contData.t || !contData.quality || contData.t.length === 0) return;
+            lcDecayChartObj = lcBuildDecayChart('lc-decay-chart', contData, ptA, ptB, todayDay);
+        }
+
+        // Curva de qualidade com as marcas A, B e Hoje (usada no separador e na janela do Stock)
+        function lcBuildDecayChart(canvasId, contData, ptA, ptB, todayDay) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas || typeof Chart === 'undefined') return null;
+            if (!contData || !contData.t || !contData.quality || contData.t.length === 0) return null;
 
             const tVals = contData.t;
             const points = tVals.map((t, i) => ({x: t, y: contData.quality[i]}));
@@ -190,7 +197,7 @@ Mantém os nomes loadLcDecayData(targetLotId) e drawLcDecayChart(...) usados pel
                 }
             };
 
-            lcDecayChartObj = new Chart(ctx, {
+            return new Chart(ctx, {
                 type: 'line',
                 data: {datasets: [{
                     label: 'Qualidade',

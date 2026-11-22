@@ -1,0 +1,127 @@
+{% comment %}
+JavaScript da janela "Ciclo de vida" do Stock (partials/lifecycle_modal.html). Incluir DENTRO de um bloco <script>,
+depois de partials/lifecycle_js.html (usa lcRender, lcBuildDecayChart e os auxiliares lc*).
+Mantém os nomes usados pelo resto da página: openLifecycleModal(lotId, lotType, pkgMethod), closeLifecycleModal(),
+onModalPackagingChanged(pkg) e goToLifecycleTabWithLot(lotId).
+lotType: 'stock' (Processor/Retailer, stock_id) ou 'harvest' (Producer, lot_id).
+{% endcomment %}
+        let currentModalLotId = null;
+        let currentModalLotType = null;
+        let currentModalPkg = 'bulk';
+        let lcModalChart = null;
+        let lcModalSeq = 0;
+
+        function lcModalStatus(state) {
+            const pill = document.getElementById('lcm-service-status');
+            if (!pill) return;
+            pill.classList.remove('is-online', 'is-offline', 'is-busy');
+            const label = pill.querySelector('span');
+            const text = {online: 'Modelo de ciclo de vida ativo', busy: 'A calcular…', offline: 'Modelo de ciclo de vida indisponível'}[state];
+            if (text) { pill.classList.add('is-' + state); if (label) label.textContent = text; }
+        }
+
+        function lcModalDrawChart(contData, ptA, ptB, todayDay) {
+            if (lcModalChart) { lcModalChart.destroy(); lcModalChart = null; }
+            lcModalChart = lcBuildDecayChart('lcm-decay-chart', contData, ptA, ptB, todayDay);
+        }
+
+        function openLifecycleModal(lotId, lotType, pkgMethod) {
+            const modal = document.getElementById('lifecycleForecastModal');
+            if (!modal) return;
+            currentModalLotId = lotId;
+            currentModalLotType = lotType;
+            currentModalPkg = pkgMethod || 'bulk';
+            const pkgSelect = document.getElementById('lcm-packaging-select');
+            if (pkgSelect) pkgSelect.value = currentModalPkg;
+            document.getElementById('lcm-json-download').href = `/api/lot-lifecycle-json/${encodeURIComponent(lotId)}/`;
+            document.getElementById('lcm-detail-btn').onclick = function () {
+                closeLifecycleModal();
+                goToLifecycleTabWithLot(lotId);
+            };
+            document.getElementById('lcm-content').style.display = 'none';
+            document.getElementById('lcm-loading').style.display = '';
+            document.getElementById('lcm-error').style.display = 'none';
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+            fetchModalLifecycleData(lotId, lotType, currentModalPkg, false);
+        }
+
+        function onModalPackagingChanged(newPkg) {
+            currentModalPkg = newPkg;
+            if (currentModalLotId) fetchModalLifecycleData(currentModalLotId, currentModalLotType, newPkg, true);
+        }
+
+        function fetchModalLifecycleData(lotId, lotType, pkg, isUpdateOnly) {
+            const content = document.getElementById('lcm-content');
+            const loading = document.getElementById('lcm-loading');
+            const errBox = document.getElementById('lcm-error');
+            errBox.style.display = 'none';
+            if (isUpdateOnly) content.classList.add('is-loading');
+            lcModalStatus('busy');
+
+            const queryParam = (lotType === 'stock') ? `stock_id=${encodeURIComponent(lotId)}` : `lot_id=${encodeURIComponent(lotId)}`;
+            const seq = ++lcModalSeq;
+            fetch(`/api/lot-lifecycle-forecast/?${queryParam}&packaging=${encodeURIComponent(pkg || 'bulk')}`, {credentials: 'same-origin'})
+                .then(r => r.json().catch(() => ({})).then(json => {
+                    if (!r.ok || json.status !== 'success') {
+                        const err = new Error(json.message || `Erro ${r.status}`);
+                        err.offline = r.status === 503 || json.service_status === 'OFFLINE';
+                        throw err;
+                    }
+                    return json;
+                }))
+                .then(data => {
+                    if (seq !== lcModalSeq) return;
+                    // Na primeira abertura, usa o acondicionamento registado no lote
+                    const pkgSelect = document.getElementById('lcm-packaging-select');
+                    if (!isUpdateOnly && data.packaging_method && pkgSelect) {
+                        pkgSelect.value = data.packaging_method;
+                        currentModalPkg = data.packaging_method;
+                    }
+                    loading.style.display = 'none';
+                    content.style.display = 'block';
+                    lcRender(data, 'lcm');
+                    lcModalStatus('online');
+                })
+                .catch(err => {
+                    if (seq !== lcModalSeq) return;
+                    console.error('Ciclo de vida (janela):', err);
+                    lcModalStatus(err.offline ? 'offline' : 'online');
+                    loading.style.display = 'none';
+                    errBox.textContent = err.offline
+                        ? 'O modelo de ciclo de vida está indisponível. Verifique se o serviço está ligado e tente novamente.'
+                        : (err.message || 'Não foi possível calcular o ciclo de vida deste lote.');
+                    errBox.style.display = 'block';
+                })
+                .finally(() => { if (seq === lcModalSeq) content.classList.remove('is-loading'); });
+        }
+
+        function closeLifecycleModal() {
+            const modal = document.getElementById('lifecycleForecastModal');
+            if (modal) modal.style.display = 'none';
+            document.body.style.overflow = '';
+            lcModalSeq++;
+            if (lcModalChart) { lcModalChart.destroy(); lcModalChart = null; }
+        }
+
+        function goToLifecycleTabWithLot(lotId) {
+            if (typeof switchSidebarTab === 'function') {
+                switchSidebarTab('lc-analysis');
+            } else if (typeof showTab === 'function') {
+                showTab('lc-analysis');
+            }
+            const sel = document.getElementById('lc-stock-select');
+            if (sel) {
+                sel.value = lotId;
+                loadLcDecayData(lotId);
+            }
+        }
+
+        // Fechar ao clicar fora da janela ou com a tecla Esc
+        document.addEventListener('click', function (e) {
+            if (e.target && e.target.id === 'lifecycleForecastModal') closeLifecycleModal();
+        });
+        document.addEventListener('keydown', function (e) {
+            const modal = document.getElementById('lifecycleForecastModal');
+            if (e.key === 'Escape' && modal && modal.style.display !== 'none') closeLifecycleModal();
+        });

@@ -39,7 +39,7 @@ from .forms import (
     FertilizerSyntheticForm, FertilizerOrganicForm, SoilCorrectiveForm, PestControlForm,
     MachineryForm, FuelForm, ElectricEnergyForm, IrrigationWaterForm, SoilCharacteristicForm, PlantationCropForm, MarketplaceOrderForm,
     MarketSellOrderForm,
-    TransportPlanForm, TransportDeliveryForm, ProcessorProcessingForm, VehicleForm
+    TransportPlanForm, TransportDeliveryForm, VehicleForm
 )
 
 # ----------------------------------------------------------------------
@@ -482,7 +482,6 @@ class ProcessorDashboardView(View):
         
         open_orders = marketplace_service.get_open_orders_adapted()
         closed_orders = marketplace_service.get_closed_deals_adapted(username=user.username)
-        unprocessed_orders = []
 
         try:
             user_profile = UserProfile.objects.get(user=user)
@@ -582,8 +581,6 @@ class ProcessorDashboardView(View):
             'all_sensors': Sensor.objects.all(),
             'market_order_form': MarketplaceOrderForm(initial={'role': 'Processor'}),
             'processor_stock': processor_stock,
-            'unprocessed_orders': unprocessed_orders,
-            'processing_form': ProcessorProcessingForm(),
             'product_subfamilies': ProductSubFamily.objects.all().order_by('fruit_type', 'name'),
             'instant_producers': instant_producers,
             'contract_producers': contract_producers,
@@ -1214,18 +1211,6 @@ def processor_submit_sensor(request):
         else:
             messages.error(request, "Erro de validação do formulário do sensor.")
     return redirect('processor_dashboard')
-@role_required(['Processor'])
-def processor_submit_processing(request):
-    if request.method == 'POST':
-        form = ProcessorProcessingForm(request.POST)
-        if form.is_valid():
-            packaging_type = form.cleaned_data['packaging_type']
-            preservation_treatment = form.cleaned_data['preservation_treatment']
-            messages.success(request, f"Processamento registado com sucesso ({packaging_type}, {preservation_treatment})!")
-            return redirect('processor_dashboard')
-    
-    return redirect('processor_dashboard')
-
 def _deduct_seller_stock_from_deal(deal):
     """
     Deduz o stock correspondente no vendedor quando um negócio (Deal) é fechado no Marketplace:

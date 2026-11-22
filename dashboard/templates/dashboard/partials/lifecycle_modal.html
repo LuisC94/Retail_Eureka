@@ -1,0 +1,130 @@
+{% comment %}
+Janela "Ciclo de vida" aberta a partir do Stock (botão "Ciclo de vida" de cada lote), com o mesmo aspeto do
+separador Ciclo de Vida. Usa os estilos .lcx-* de partials/lifecycle_tab.html (incluído no mesmo dashboard).
+O JavaScript está em partials/lifecycle_modal_js.html; os ids usam o prefixo "lcm-" (lcRender(data, 'lcm')).
+{% endcomment %}
+<div id="lifecycleForecastModal" class="lcm-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="lcm-title">
+<style>
+    .lcm-overlay { position: fixed; inset: 0; z-index: 2000; overflow-y: auto; background: rgba(15, 23, 42, .55); backdrop-filter: blur(4px); padding: 32px 16px; }
+    .lcm-dialog { background: #f8fafc; border-radius: 18px; width: 100%; max-width: 1080px; margin: 0 auto; padding: 22px 24px; box-shadow: 0 20px 60px rgba(15, 23, 42, .35); }
+    .lcm-close { width: 36px; height: 36px; border-radius: 10px; border: 1px solid #cbd5e1; background: #fff; color: #64748b; font-size: 20px; line-height: 1; cursor: pointer; }
+    .lcm-close:hover { color: #0f172a; border-color: #0f766e; }
+    .lcm-toolbar { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+    .lcm-toolbar .lcx-field { min-width: 240px; }
+    .lcm-loading { text-align: center; padding: 56px 20px; color: #64748b; }
+    .lcm-loading i { display: inline-block; width: 36px; height: 36px; border: 3px solid #ccfbf1; border-top-color: #0f766e; border-radius: 50%; animation: lcm-spin .8s linear infinite; }
+    @keyframes lcm-spin { to { transform: rotate(360deg); } }
+    #lcm-content.is-loading { opacity: .45; pointer-events: none; transition: opacity .2s; }
+    .lcm-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .lcm-btn-sec { height: 42px; padding: 0 16px; border-radius: 10px; border: 1px solid #cbd5e1; background: #fff; color: #334155; font-weight: 600; font-size: 0.92em; cursor: pointer; }
+    .lcm-btn-sec:hover { border-color: #0f766e; color: #0f766e; }
+    @media (max-width: 720px) { .lcm-dialog { padding: 16px; } .lcm-toolbar .lcx-field { min-width: 0; width: 100%; } }
+</style>
+<div class="lcm-dialog lcx">
+    <header class="lcx-head" style="margin-bottom: 16px;">
+        <div>
+            <h3 class="lcx-title" id="lcm-title">Ciclo de vida do lote</h3>
+            <p class="lcx-sub" id="lcm-subtitle">Vida útil prevista a partir das condições reais de armazenamento.</p>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <span id="lcm-service-status" class="lcx-pill"><i></i><span>Modelo de ciclo de vida</span></span>
+            <button type="button" class="lcm-close" onclick="closeLifecycleModal()" aria-label="Fechar">&times;</button>
+        </div>
+    </header>
+
+    <div class="lcm-toolbar">
+        <label class="lcx-field">
+            <span>Acondicionamento</span>
+            <select id="lcm-packaging-select" onchange="onModalPackagingChanged(this.value)">
+                <option value="bulk">Granel</option>
+                <option value="open_box">Caixa aberta</option>
+                <option value="perforated_bag">Saco perfurado</option>
+                <option value="map_sealed">Atmosfera modificada (MAP)</option>
+            </select>
+        </label>
+        <div class="lcm-actions">
+            <button type="button" class="lcm-btn-sec" id="lcm-detail-btn">Abrir no separador Ciclo de Vida</button>
+            <button type="button" class="lcx-btn" onclick="closeLifecycleModal()">Fechar</button>
+        </div>
+    </div>
+
+    <div id="lcm-error" class="lcx-alert" style="display: none;"></div>
+    <div id="lcm-loading" class="lcm-loading"><i></i><p>A calcular o ciclo de vida do lote…</p></div>
+
+    <div id="lcm-content" style="display: none;">
+        <section class="lcx-card lcx-hero">
+            <div>
+                <div class="lcx-eyebrow" id="lcm-hero-eyebrow">—</div>
+                <h4 id="lcm-banner-title">—</h4>
+                <div class="lcx-chips" id="lcm-banner-meta"></div>
+            </div>
+        </section>
+
+        <section class="lcx-kpis">
+            <div class="lcx-card lcx-kpi accent">
+                <div class="lcx-kpi-label">Vida comercial restante</div>
+                <div class="lcx-kpi-value"><span id="lcm-point-a-value">—</span><small>dias</small></div>
+                <div class="lcx-kpi-sub" id="lcm-point-a-sub">—</div>
+            </div>
+            <div class="lcx-card lcx-kpi">
+                <div class="lcx-kpi-label">Vida biológica restante</div>
+                <div class="lcx-kpi-value"><span id="lcm-point-b-value">—</span><small>dias</small></div>
+                <div class="lcx-kpi-sub" id="lcm-point-b-sub">—</div>
+            </div>
+            <div class="lcx-card lcx-kpi">
+                <div class="lcx-kpi-label">Índice de qualidade</div>
+                <div class="lcx-kpi-value"><span id="lcm-quality-score">—</span><small>/ 100</small></div>
+                <div class="lcx-kpi-sub">Qualidade comercial hoje</div>
+            </div>
+            <div class="lcx-card lcx-kpi">
+                <div class="lcx-kpi-label">Bolor</div>
+                <div class="lcx-kpi-value"><span id="lcm-mold-value">—</span><small>%</small></div>
+                <div class="lcx-kpi-sub" id="lcm-mold-sub">—</div>
+            </div>
+        </section>
+
+        <section class="lcx-grid">
+            <div class="lcx-card">
+                <div class="lcx-card-head">
+                    <h5>Evolução da qualidade</h5>
+                    <div class="lcx-legend">
+                        <span><i style="background:#0f766e;"></i>Ponto A · fim da vida comercial</span>
+                        <span><i style="background:#dc2626;"></i>Ponto B · fim da vida biológica</span>
+                        <span><i style="background:#475569;"></i>Hoje</span>
+                    </div>
+                </div>
+                <div style="position: relative; height: 300px; width: 100%;">
+                    <canvas id="lcm-decay-chart"></canvas>
+                </div>
+            </div>
+
+            <div class="lcx-side">
+                <div class="lcx-card">
+                    <div class="lcx-card-head"><h5>Indicadores físico-químicos</h5></div>
+                    <table class="lcx-table">
+                        <thead><tr><th>Indicador</th><th>Inicial</th><th>Hoje</th><th>Variação</th></tr></thead>
+                        <tbody>
+                            <tr><td>Firmeza <small>N</small></td><td id="lcm-tbl-init-firm">—</td><td id="lcm-tbl-final-firm">—</td><td class="lcx-delta" id="lcm-tbl-delta-firm">—</td></tr>
+                            <tr><td>Brix <small>°Bx</small></td><td id="lcm-tbl-init-brix">—</td><td id="lcm-tbl-final-brix">—</td><td class="lcx-delta" id="lcm-tbl-delta-brix">—</td></tr>
+                            <tr><td>Acidez <small>%</small></td><td id="lcm-tbl-init-acid">—</td><td id="lcm-tbl-final-acid">—</td><td class="lcx-delta" id="lcm-tbl-delta-acid">—</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="lcx-card">
+                    <div class="lcx-card-head"><h5>Condições do armazém</h5></div>
+                    <div class="lcx-conds">
+                        <div class="lcx-cond"><span>Temperatura</span><strong id="lcm-temp-value">—</strong></div>
+                        <div class="lcx-cond"><span>Humidade</span><strong id="lcm-hum-value">—</strong></div>
+                        <div class="lcx-cond"><span>Etileno</span><strong id="lcm-eth-value">—</strong></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer class="lcx-foot">
+            <span id="lcm-anchor-note"></span>
+            <a id="lcm-json-download" href="#" target="_blank" class="lcx-link">Exportar dados (JSON)</a>
+        </footer>
+    </div>
+</div>
+</div>

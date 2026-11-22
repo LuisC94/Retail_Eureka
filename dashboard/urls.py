@@ -57,7 +57,6 @@ urlpatterns = [
     path('processor/submit-warehouse/', views.processor_submit_warehouse, name='processor_submit_warehouse'),
     path('processor/submit-sensor/', views.processor_submit_sensor, name='processor_submit_sensor'),
     path('processor/accept-order/', views.processor_accept_order, name='processor_accept_order'),
-    path('processor/submit-processing/', views.processor_submit_processing, name='processor_submit_processing'),
     path('processor/request-association/', views.processor_request_association, name='processor_request_association'),
     path('retailer/', views.RetailerDashboardView.as_view(), name='retailer_dashboard'),
     path('retailer/submit-warehouse/', views.retailer_submit_warehouse, name='retailer_submit_warehouse'),

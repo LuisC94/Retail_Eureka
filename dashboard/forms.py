@@ -590,18 +590,6 @@ class TransportDeliveryForm(forms.Form):
         label='Relatório de Sensores (JSON)'
     )
 
-class ProcessorProcessingForm(forms.Form):
-    packaging_type = forms.ChoiceField(
-        choices=[('Plastic', 'Plástico'), ('Cardboard', 'Cartão'), ('Other', 'Outro')],
-        widget=forms.Select(attrs={'class': 'form-control'}),
-        label='Tipo de Embalagem'
-    )
-    preservation_treatment = forms.ChoiceField(
-        choices=[('Natural', 'Tratamento Natural'), ('Conventional', 'Convencional/Químico'), ('None', 'Nenhum')],
-        widget=forms.Select(attrs={'class': 'form-control'}),
-        label='Tratamento de Conservação'
-    )
-
 # ----------------------------------------------------------------------
 # RÓTULOS EM PORTUGUÊS (formulários do perfil Producer)
 # Aplicados aos base_fields: não alteram modelos nem dados, só o texto mostrado.
